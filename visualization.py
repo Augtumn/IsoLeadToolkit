@@ -8,8 +8,35 @@ from state import app_state
 import umap
 from sklearn.manifold import TSNE
 import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 sns.set_theme(style="whitegrid")
+
+
+def _ensure_axes(dimensions=2):
+    """Ensure the Matplotlib axis matches the requested dimensionality."""
+    try:
+        current_name = getattr(app_state.ax, 'name', '') if app_state.ax is not None else ''
+        if dimensions == 3:
+            if current_name != '3d':
+                if app_state.ax is not None:
+                    try:
+                        app_state.ax.remove()
+                    except Exception:
+                        pass
+                app_state.ax = app_state.fig.add_subplot(111, projection='3d')
+        else:
+            if current_name == '3d' or app_state.ax is None:
+                if app_state.ax is not None and current_name == '3d':
+                    try:
+                        app_state.ax.remove()
+                    except Exception:
+                        pass
+                app_state.ax = app_state.fig.add_subplot(111)
+
+        app_state.fig.subplots_adjust(left=0.08, bottom=0.12, right=0.78, top=0.9)
+    except Exception as axis_err:
+        print(f"[WARN] Unable to configure axes: {axis_err}", flush=True)
 
 
 def get_umap_embedding(params):
@@ -116,10 +143,16 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
     try:
         print(f"[DEBUG] plot_embedding called: algorithm={algorithm}, group_col={group_col}, size={size}", flush=True)
         
-        if app_state.ax is None or app_state.fig is None:
+        if app_state.fig is None:
             print("[ERROR] Plot axes not initialized", flush=True)
             return False
-        
+
+        _ensure_axes(dimensions=2)
+
+        if app_state.ax is None:
+            print("[ERROR] Failed to configure 2D axes", flush=True)
+            return False
+
         app_state.ax.clear()
         app_state.clear_plot_state()
 
@@ -273,3 +306,254 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
 def plot_umap(group_col, params, size):
     """Deprecated: Use plot_embedding instead"""
     return plot_embedding(group_col, 'UMAP', umap_params=params, size=size)
+
+
+def plot_2d_data(group_col, data_columns, size=60):
+    """Render a 2D scatter plot using selected raw measurement columns."""
+    try:
+        if app_state.fig is None:
+            print("[ERROR] Plot figure not initialized", flush=True)
+            return False
+
+        if not data_columns or len(data_columns) != 2:
+            print("[ERROR] Exactly two data columns are required for a 2D scatter plot", flush=True)
+            return False
+
+        if app_state.df_global is None or len(app_state.df_global) == 0:
+            print("[WARN] No data available for plotting", flush=True)
+            return False
+
+        missing = [col for col in data_columns if col not in app_state.df_global.columns]
+        if missing:
+            print(f"[ERROR] Missing columns for 2D plot: {missing}", flush=True)
+            return False
+
+        _ensure_axes(dimensions=2)
+
+        if app_state.ax is None:
+            print("[ERROR] Failed to configure 2D axes", flush=True)
+            return False
+
+        df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+        if df_plot.empty:
+            print("[WARN] No complete rows available for the selected 2D columns", flush=True)
+            return False
+
+        if group_col not in df_plot.columns:
+            print(f"[ERROR] Column not found: {group_col}", flush=True)
+            return False
+
+        df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
+
+        app_state.ax.clear()
+        app_state.clear_plot_state()
+
+        try:
+            app_state.fig.subplots_adjust(left=0.08, bottom=0.12, right=0.78, top=0.9)
+        except Exception:
+            pass
+
+        app_state.fig.patch.set_facecolor("#f8fafc")
+        app_state.ax.set_facecolor("#ffffff")
+        app_state.ax.grid(True, color="#e2e8f0", linewidth=0.7, alpha=0.8)
+        app_state.ax.set_axisbelow(True)
+        for spine in app_state.ax.spines.values():
+            spine.set_color("#cbd5f5")
+            spine.set_linewidth(1.0)
+
+        unique_cats = sorted(df_plot[group_col].unique())
+        palette = sns.color_palette("tab20", len(unique_cats))
+
+        scatters = []
+
+        for i, cat in enumerate(unique_cats):
+            subset = df_plot[df_plot[group_col] == cat]
+            if subset.empty:
+                continue
+
+            xs = subset[data_columns[0]].astype(float).values
+            ys = subset[data_columns[1]].astype(float).values
+            indices = subset.index.tolist()
+
+            sc = app_state.ax.scatter(
+                xs,
+                ys,
+                label=cat,
+                color=palette[i],
+                s=size,
+                alpha=0.88,
+                edgecolors="#1e293b",
+                linewidth=0.4,
+                zorder=2
+            )
+            app_state.scatter_collections.append(sc)
+            scatters.append(sc)
+
+            for j, idx in enumerate(indices):
+                key = (round(float(xs[j]), 3), round(float(ys[j]), 3))
+                app_state.sample_index_map[key] = idx
+
+        if not app_state.scatter_collections:
+            print("[ERROR] No points were plotted in 2D", flush=True)
+            return False
+
+        try:
+            legend = app_state.ax.legend(
+                title=group_col,
+                bbox_to_anchor=(1.02, 1),
+                loc='upper left',
+                fontsize=9,
+                title_fontsize=10,
+                frameon=True,
+                fancybox=True
+            )
+            legend.set_bbox_to_anchor((1.02, 1), transform=app_state.ax.transAxes)
+            frame = legend.get_frame()
+            frame.set_facecolor("#ffffff")
+            frame.set_edgecolor("#cbd5f5")
+            frame.set_alpha(0.95)
+        except Exception as legend_err:
+            print(f"[WARN] 2D legend creation error: {legend_err}", flush=True)
+        else:
+            try:
+                for leg_patch, sc in zip(legend.get_patches(), scatters):
+                    app_state.legend_to_scatter[leg_patch] = sc
+            except Exception:
+                pass
+
+        title = (
+            f"2D Scatter Plot ({data_columns[0]} vs {data_columns[1]})\n"
+            f"Colored by {group_col}"
+        )
+        app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=16)
+        app_state.ax.set_xlabel(data_columns[0], color="#334155", fontsize=11)
+        app_state.ax.set_ylabel(data_columns[1], color="#334155", fontsize=11)
+        app_state.ax.tick_params(colors="#475569", labelsize=9)
+
+        app_state.annotation = app_state.ax.annotate(
+            "",
+            xy=(0, 0),
+            xytext=(20, 20),
+            textcoords="offset points",
+            bbox=dict(boxstyle="round,pad=0.5", fc="yellow", alpha=0.8),
+            arrowprops=dict(arrowstyle="->")
+        )
+        app_state.annotation.set_visible(False)
+
+        return True
+
+    except Exception as err:
+        print(f"[ERROR] 2D plot failed: {err}", flush=True)
+        traceback.print_exc()
+        return False
+
+
+def plot_3d_data(group_col, data_columns, size=60):
+    """Render a 3D scatter plot using selected raw measurement columns."""
+    try:
+        if app_state.fig is None:
+            print("[ERROR] Plot figure not initialized", flush=True)
+            return False
+
+        if not data_columns or len(data_columns) != 3:
+            print("[ERROR] Exactly three data columns are required for a 3D scatter plot", flush=True)
+            return False
+
+        if app_state.df_global is None or len(app_state.df_global) == 0:
+            print("[WARN] No data available for plotting", flush=True)
+            return False
+
+        missing = [col for col in data_columns if col not in app_state.df_global.columns]
+        if missing:
+            print(f"[ERROR] Missing columns for 3D plot: {missing}", flush=True)
+            return False
+
+        _ensure_axes(dimensions=3)
+
+        if app_state.ax is None:
+            print("[ERROR] Failed to configure 3D axes", flush=True)
+            return False
+
+        df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+        if df_plot.empty:
+            print("[WARN] No complete rows available for the selected 3D columns", flush=True)
+            return False
+
+        if group_col not in df_plot.columns:
+            print(f"[ERROR] Column not found: {group_col}", flush=True)
+            return False
+
+        df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
+
+        app_state.ax.clear()
+        app_state.clear_plot_state()
+
+        app_state.fig.patch.set_facecolor("#f8fafc")
+        app_state.ax.set_facecolor("#ffffff")
+        app_state.ax.grid(True, color="#e2e8f0", linewidth=0.7, alpha=0.6)
+
+        unique_cats = sorted(df_plot[group_col].unique())
+        palette = sns.color_palette("tab20", len(unique_cats))
+
+        for i, cat in enumerate(unique_cats):
+            subset = df_plot[df_plot[group_col] == cat]
+            if subset.empty:
+                continue
+
+            xs = subset[data_columns[0]].astype(float).values
+            ys = subset[data_columns[1]].astype(float).values
+            zs = subset[data_columns[2]].astype(float).values
+
+            sc = app_state.ax.scatter(
+                xs,
+                ys,
+                zs,
+                label=cat,
+                color=palette[i],
+                s=size,
+                alpha=0.85,
+                edgecolors='#1e293b',
+                linewidth=0.3,
+                zorder=2
+            )
+            app_state.scatter_collections.append(sc)
+
+        if not app_state.scatter_collections:
+            print("[ERROR] No points were plotted in 3D", flush=True)
+            return False
+
+        try:
+            legend = app_state.ax.legend(
+                title=group_col,
+                bbox_to_anchor=(1.02, 1),
+                loc='upper left',
+                fontsize=9,
+                title_fontsize=10,
+                frameon=True,
+                fancybox=True
+            )
+            legend.set_bbox_to_anchor((1.02, 1), transform=app_state.ax.transAxes)
+            frame = legend.get_frame()
+            frame.set_facecolor("#ffffff")
+            frame.set_edgecolor("#cbd5f5")
+            frame.set_alpha(0.95)
+        except Exception as legend_err:
+            print(f"[WARN] 3D legend creation error: {legend_err}", flush=True)
+
+        title = (
+            f"3D Scatter Plot ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n"
+            f"Colored by {group_col}"
+        )
+        app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=16)
+        app_state.ax.set_xlabel(data_columns[0], color="#334155", fontsize=11)
+        app_state.ax.set_ylabel(data_columns[1], color="#334155", fontsize=11)
+        app_state.ax.set_zlabel(data_columns[2], color="#334155", fontsize=11)
+
+        # Disable 2D annotations for 3D renderings
+        app_state.annotation = None
+        return True
+
+    except Exception as err:
+        print(f"[ERROR] 3D plot failed: {err}", flush=True)
+        traceback.print_exc()
+        return False

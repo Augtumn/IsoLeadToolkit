@@ -15,6 +15,11 @@ class AppState:
         self.tsne_params = CONFIG['tsne_params'].copy()
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading
+        self.render_mode = 'UMAP'
+        self.selected_2d_cols = []
+        self.selected_3d_cols = []
+        self.selected_2d_confirmed = False
+        self.selected_3d_confirmed = False
         
         # Dynamic column configuration (populated from data)
         self.group_cols = []  # Available grouping columns from data
@@ -33,6 +38,8 @@ class AppState:
         self.legend_to_scatter = {}
         self.exported_indices = set()
         self.control_panel_button = None
+        self.control_panel_ref = None
+        self.initial_render_done = False
         
     def clear_plot_state(self):
         """Reset plot-specific state"""
@@ -59,4 +66,4 @@ slider_lr = None  # learning_rate
 
 # Common controls
 radio_g = None
-radio_algo = None  # Algorithm selector (UMAP/tSNE)
+radio_render_mode = None  # Render mode selector (UMAP/tSNE/2D/3D)

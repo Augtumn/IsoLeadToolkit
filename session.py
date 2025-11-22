@@ -7,7 +7,9 @@ import traceback
 from config import CONFIG
 
 
-def save_session_params(algorithm, umap_params, tsne_params, point_size, group_col, group_cols=None, data_cols=None, file_path=None, sheet_name=None):
+def save_session_params(algorithm, umap_params, tsne_params, point_size, group_col,
+                        group_cols=None, data_cols=None, file_path=None, sheet_name=None,
+                        render_mode='UMAP', selected_2d_cols=None, selected_3d_cols=None):
     """
     Save current session parameters to temporary file
     
@@ -21,6 +23,9 @@ def save_session_params(algorithm, umap_params, tsne_params, point_size, group_c
         data_cols: list, selected data columns (optional)
         file_path: str, data file path (optional)
         sheet_name: str, sheet name for xlsx (optional)
+        render_mode: str, one of 'UMAP', 'tSNE', '2D', '3D'
+        selected_2d_cols: list, chosen columns for raw 2D plots
+        selected_3d_cols: list, chosen columns for raw 3D plots
     """
     try:
         session_data = {
@@ -32,7 +37,10 @@ def save_session_params(algorithm, umap_params, tsne_params, point_size, group_c
             'group_cols': group_cols,
             'data_cols': data_cols,
             'file_path': file_path,
-            'sheet_name': sheet_name
+            'sheet_name': sheet_name,
+            'render_mode': render_mode,
+            'selected_2d_cols': selected_2d_cols or [],
+            'selected_3d_cols': selected_3d_cols or []
         }
         
         with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as f:

@@ -112,6 +112,10 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             # Update app state with selected columns
             app_state.group_cols = config_result['group_cols']
             app_state.data_cols = config_result['data_cols']
+            app_state.selected_2d_cols = []
+            app_state.selected_3d_cols = []
+            app_state.selected_2d_confirmed = False
+            app_state.selected_3d_confirmed = False
             
             print(f"[OK] Selected group columns: {app_state.group_cols}", flush=True)
             print(f"[OK] Selected data columns: {app_state.data_cols}", flush=True)

@@ -108,34 +108,43 @@ class ControlPanel:
         main_canvas.configure(yscrollcommand=scrollbar.set)
         scrollbar.config(command=main_canvas.yview)
 
-        # ========== Algorithm Selection ==========
-        self.radio_vars['algo'] = tk.StringVar(value=app_state.algorithm)
+        # ========== Algorithm & Dimensionality Selection ==========
+        if not getattr(app_state, 'render_mode', None):
+            app_state.render_mode = getattr(app_state, 'algorithm', 'UMAP')
+        self.radio_vars['render_mode'] = tk.StringVar(value=app_state.render_mode)
+
         algo_section = self._create_section(
             scrollable_frame,
-            "Algorithm",
-            "Choose the dimensionality reduction method used to project your isotope data."
+            "Projection Mode",
+            "Select between UMAP or t-SNE embeddings, or display raw measurements in either 2D or 3D space."
         )
 
-        algo_options = ttk.Frame(algo_section, style='CardBody.TFrame')
-        algo_options.pack(fill=tk.X, pady=(2, 0))
+        selection_grid = ttk.Frame(algo_section, style='CardBody.TFrame')
+        selection_grid.pack(fill=tk.X, pady=(4, 0))
 
-        ttk.Radiobutton(
-            algo_options,
-            text="UMAP",
-            variable=self.radio_vars['algo'],
-            value="UMAP",
-            command=self._on_change,
-            style='Option.TRadiobutton'
-        ).pack(anchor=tk.W, pady=2)
+        options = [
+            ("UMAP Embedding", "UMAP"),
+            ("t-SNE Embedding", "tSNE"),
+            ("2D Scatter (raw)", "2D"),
+            ("3D Scatter (raw)", "3D"),
+        ]
 
-        ttk.Radiobutton(
-            algo_options,
-            text="t-SNE",
-            variable=self.radio_vars['algo'],
-            value="tSNE",
-            command=self._on_change,
-            style='Option.TRadiobutton'
-        ).pack(anchor=tk.W, pady=2)
+        for idx, (label, value) in enumerate(options):
+            column = idx // 2
+            row = idx % 2
+            cell = ttk.Frame(selection_grid, style='CardBody.TFrame')
+            cell.grid(row=row, column=column, sticky=tk.W, padx=(0 if column == 0 else 16, 0), pady=2)
+            ttk.Radiobutton(
+                cell,
+                text=label,
+                variable=self.radio_vars['render_mode'],
+                value=value,
+                command=self._on_change,
+                style='Option.TRadiobutton'
+            ).pack(anchor=tk.W)
+
+        for col in range(2):
+            selection_grid.columnconfigure(col, weight=1)
 
         # ========== UMAP Parameters ==========
         umap_section = self._create_section(
@@ -364,20 +373,39 @@ class ControlPanel:
                 print("[DEBUG] Dictionaries not fully initialized yet", flush=True)
                 return
             
-            # Track if algorithm changed
             algorithm_changed = False
-            
-            # Update algorithm (safe with default)
-            if 'algo' in self.radio_vars:
-                old_algo = app_state.algorithm
-                app_state.algorithm = self.radio_vars['algo'].get()
-                algorithm_changed = (old_algo != app_state.algorithm)
-                print(f"[DEBUG] Algorithm changed: {old_algo} -> {app_state.algorithm}, flag={algorithm_changed}", flush=True)
-                
-                # Clear cache when algorithm changes to force re-computation
-                if algorithm_changed:
-                    print(f"[DEBUG] Clearing embedding cache due to algorithm change", flush=True)
-                    app_state.embedding_cache.clear()
+
+            if 'render_mode' in self.radio_vars:
+                requested_mode = self.radio_vars['render_mode'].get()
+                previous_mode = app_state.render_mode
+
+                if requested_mode == '3D' and len(app_state.data_cols) < 3:
+                    print("[WARN] Need at least three numeric columns for 3D view; reverting to previous mode.", flush=True)
+                    requested_mode = previous_mode if previous_mode != '3D' else 'UMAP'
+                    self.radio_vars['render_mode'].set(requested_mode)
+                elif requested_mode == '2D' and len(app_state.data_cols) < 2:
+                    print("[WARN] Need at least two numeric columns for 2D view; reverting to previous mode.", flush=True)
+                    requested_mode = previous_mode if previous_mode != '2D' else 'UMAP'
+                    self.radio_vars['render_mode'].set(requested_mode)
+
+                if requested_mode in ('UMAP', 'tSNE'):
+                    old_algo = app_state.algorithm
+                    app_state.algorithm = 'UMAP' if requested_mode == 'UMAP' else 'tSNE'
+                    algorithm_changed = (old_algo != app_state.algorithm)
+                    if algorithm_changed:
+                        print(f"[DEBUG] Algorithm changed: {old_algo} -> {app_state.algorithm}", flush=True)
+                        app_state.embedding_cache.clear()
+
+                if requested_mode != previous_mode:
+                    print(f"[DEBUG] Render mode changed: {previous_mode} -> {requested_mode}", flush=True)
+                    app_state.render_mode = requested_mode
+                    if requested_mode == '2D':
+                        app_state.selected_2d_confirmed = False
+                    elif requested_mode == '3D':
+                        app_state.selected_3d_confirmed = False
+
+            if app_state.render_mode in ('UMAP', 'tSNE'):
+                app_state.algorithm = 'UMAP' if app_state.render_mode == 'UMAP' else 'tSNE'
             
             # Update UMAP parameters - only if keys exist
             umap_changed = False

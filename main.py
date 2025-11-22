@@ -56,7 +56,10 @@ def _save_session(state_module):
         group_cols=app_state.group_cols,
         data_cols=app_state.data_cols,
         file_path=app_state.file_path,
-        sheet_name=app_state.sheet_name
+        sheet_name=app_state.sheet_name,
+        render_mode=app_state.render_mode,
+        selected_2d_cols=getattr(app_state, 'selected_2d_cols', []),
+        selected_3d_cols=app_state.selected_3d_cols
     )
 
 
@@ -86,14 +89,28 @@ def main():
         
         # Restore session parameters if available (but don't override group_cols/data_cols from data)
         if session_data:
-            # Algorithm: restore from session, default to UMAP if not available
+            # Algorithm parameters
             app_state.algorithm = session_data.get('algorithm', 'UMAP')
             print(f"[INFO] Algorithm from session: {app_state.algorithm}", flush=True)
-            
+
             app_state.umap_params.update(session_data.get('umap_params', {}))
             app_state.tsne_params.update(session_data.get('tsne_params', {}))
             app_state.point_size = session_data.get('point_size', app_state.point_size)
-            
+
+            render_mode = session_data.get('render_mode')
+            if not render_mode:
+                legacy_mode = session_data.get('plot_mode')
+                if legacy_mode == '3D':
+                    render_mode = '3D'
+                elif legacy_mode == '2D':
+                    render_mode = '2D'
+                else:
+                    render_mode = app_state.algorithm
+
+            app_state.render_mode = render_mode or 'UMAP'
+            app_state.selected_2d_cols = session_data.get('selected_2d_cols', [])
+            app_state.selected_3d_cols = session_data.get('selected_3d_cols', [])
+
             # Group column: restore from session if it exists in current data
             session_group_col = session_data.get('group_col')
             if session_group_col and session_group_col in app_state.group_cols:
@@ -102,8 +119,48 @@ def main():
         else:
             # No session data: ensure algorithm is UMAP by default
             app_state.algorithm = 'UMAP'
+            app_state.render_mode = 'UMAP'
             print(f"[INFO] No session data, using default algorithm: UMAP", flush=True)
         
+        # Determine sensible default plot mode based on available numeric columns
+        num_numeric_cols = len(app_state.data_cols)
+        if app_state.render_mode == '3D' and num_numeric_cols < 3:
+            if num_numeric_cols >= 2:
+                print("[INFO] Not enough numeric columns for 3D; switching to 2D scatter.", flush=True)
+                app_state.render_mode = '2D'
+            else:
+                print("[INFO] Not enough numeric columns for 3D; switching to UMAP.", flush=True)
+                app_state.render_mode = 'UMAP'
+
+        if app_state.render_mode == '2D' and num_numeric_cols < 2:
+            print("[INFO] Not enough numeric columns for 2D; switching to UMAP.", flush=True)
+            app_state.render_mode = 'UMAP'
+
+        if app_state.render_mode == '3D':
+            if num_numeric_cols == 3:
+                app_state.selected_3d_cols = app_state.data_cols[:3]
+            else:
+                valid_cols = [col for col in app_state.selected_3d_cols if col in app_state.data_cols][:3]
+                if len(valid_cols) == 3:
+                    app_state.selected_3d_cols = valid_cols
+                else:
+                    app_state.selected_3d_cols = []
+                    print("[INFO] Stored 3D column selection invalid or incomplete; will prompt user on demand.", flush=True)
+
+        if app_state.render_mode == '2D':
+            if num_numeric_cols == 2:
+                app_state.selected_2d_cols = app_state.data_cols[:2]
+            else:
+                valid_2d = [col for col in app_state.selected_2d_cols if col in app_state.data_cols][:2]
+                if len(valid_2d) == 2:
+                    app_state.selected_2d_cols = valid_2d
+                else:
+                    app_state.selected_2d_cols = []
+                    print("[INFO] Stored 2D column selection invalid or incomplete; will prompt user on demand.", flush=True)
+
+        if app_state.render_mode in ('UMAP', 'tSNE'):
+            app_state.algorithm = 'UMAP' if app_state.render_mode == 'UMAP' else 'tSNE'
+
         # Create plot figure (main window for visualization)
         print("[INFO] Creating plot figure...", flush=True)
         app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'])
@@ -142,6 +199,7 @@ def main():
         
         # Store reference in state module for callbacks
         state.control_panel = control_panel
+        app_state.control_panel_ref = control_panel
         
         # Connect event handlers to plot figure
         print("[INFO] Connecting event handlers...", flush=True)
