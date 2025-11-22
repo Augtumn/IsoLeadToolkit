@@ -1,0 +1,169 @@
+"""
+Sheet Selection Dialog
+Simple dialog for selecting a sheet from an Excel file
+"""
+import tkinter as tk
+from tkinter import ttk, messagebox
+import pandas as pd
+import os
+
+
+class SheetSelectionDialog:
+    """Simple dialog for selecting a sheet"""
+    
+    def __init__(self, file_path):
+        """
+        Initialize sheet selection dialog
+        
+        Args:
+            file_path: str, path to Excel file
+        """
+        self.file_path = file_path
+        self.result = None
+        self.sheets = []
+        
+        # Load sheets
+        try:
+            self.sheets = list(pd.ExcelFile(file_path).sheet_names)
+        except Exception as e:
+            print(f"[ERROR] Could not load sheets: {e}", flush=True)
+            return
+        
+        # Create main window
+        self.root = tk.Tk()
+        self.root.title("Select Sheet")
+        self.root.geometry("560x420")
+        self.root.minsize(480, 360)
+        self.root.configure(bg="#edf2f7")
+        self.root.resizable(True, True)
+
+        self.style = ttk.Style(self.root)
+        try:
+            self.style.theme_use('clam')
+        except tk.TclError:
+            pass
+
+        self._setup_styles()
+        self._create_widgets()
+        
+    def _create_widgets(self):
+        """Create GUI widgets"""
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+
+        container = ttk.Frame(self.root, padding=(24, 20, 24, 20), style='SheetDialog.TFrame')
+        container.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(2, weight=1)
+
+        title_label = ttk.Label(container, text="Choose a Sheet", style='SheetDialog.Header.TLabel')
+        title_label.grid(row=0, column=0, sticky=tk.W)
+
+        info_label = ttk.Label(
+            container,
+            text="Select the worksheet that contains the measurements you want to analyze.",
+            style='SheetDialog.Subheader.TLabel',
+            wraplength=460,
+            justify=tk.LEFT
+        )
+        info_label.grid(row=1, column=0, sticky=tk.W, pady=(6, 16))
+
+        card = ttk.Frame(container, padding=18, style='SheetDialog.Card.TFrame')
+        card.grid(row=2, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        card.columnconfigure(0, weight=1)
+        card.rowconfigure(1, weight=1)
+
+        workbook_name = os.path.basename(self.file_path)
+        list_header = ttk.Label(card, text=f"Sheets in {workbook_name}", style='SheetDialog.Body.TLabel')
+        list_header.grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
+
+        list_frame = ttk.Frame(card, style='SheetDialog.CardBody.TFrame')
+        list_frame.grid(row=1, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+
+        scrollbar = ttk.Scrollbar(list_frame)
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        self.sheet_listbox = tk.Listbox(
+            list_frame,
+            yscrollcommand=scrollbar.set,
+            height=8,
+            activestyle='dotbox',
+            selectbackground='#2563eb',
+            selectforeground='#ffffff',
+            bd=0,
+            highlightthickness=0,
+            relief=tk.FLAT,
+            font=('Segoe UI', 11)
+        )
+        self.sheet_listbox.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        scrollbar.config(command=self.sheet_listbox.yview)
+
+        for sheet in self.sheets:
+            self.sheet_listbox.insert(tk.END, sheet)
+
+        if self.sheets:
+            self.sheet_listbox.selection_set(0)
+            self.sheet_listbox.see(0)
+
+        self.sheet_listbox.bind('<Double-Button-1>', lambda e: self._ok_clicked())
+
+        footer = ttk.Frame(container, style='SheetDialog.TFrame')
+        footer.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(18, 0))
+        footer.columnconfigure(0, weight=1)
+
+        button_container = ttk.Frame(footer, style='SheetDialog.TFrame')
+        button_container.grid(row=0, column=0, sticky=tk.E)
+
+        ttk.Button(button_container, text="Cancel", style='SheetDialog.Secondary.TButton', command=self._cancel_clicked).grid(row=0, column=0, padx=(0, 12))
+        ttk.Button(button_container, text="Continue", style='SheetDialog.Accent.TButton', command=self._ok_clicked).grid(row=0, column=1)
+
+    def _setup_styles(self):
+        """Configure ttk styles for the sheet dialog"""
+        self.style.configure('SheetDialog.TFrame', background="#edf2f7")
+        self.style.configure('SheetDialog.Card.TFrame', background="#ffffff", borderwidth=1, relief='solid')
+        self.style.configure('SheetDialog.CardBody.TFrame', background="#ffffff")
+        self.style.configure('SheetDialog.Header.TLabel', background="#edf2f7", foreground="#1a202c", font=('Segoe UI', 18, 'bold'))
+        self.style.configure('SheetDialog.Subheader.TLabel', background="#edf2f7", foreground="#4a5568", font=('Segoe UI', 10))
+        self.style.configure('SheetDialog.Body.TLabel', background="#ffffff", foreground="#475569", font=('Segoe UI', 11, 'bold'))
+        self.style.configure('SheetDialog.Secondary.TButton', background="#ffffff", foreground="#2563eb", font=('Segoe UI', 10, 'bold'), padding=(10, 6))
+        self.style.map('SheetDialog.Secondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
+        self.style.configure('SheetDialog.Accent.TButton', background="#2563eb", foreground="#ffffff", font=('Segoe UI', 11, 'bold'), padding=(12, 6))
+        self.style.map('SheetDialog.Accent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')], foreground=[('disabled', '#d1d5db'), ('active', '#ffffff')])
+    
+    def _ok_clicked(self):
+        """Handle OK button click"""
+        selection = self.sheet_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Error", "Please select a sheet.")
+            return
+        
+        self.result = self.sheets[selection[0]]
+        self.root.destroy()
+    
+    def _cancel_clicked(self):
+        """Handle Cancel button click"""
+        self.result = None
+        self.root.destroy()
+    
+    def show(self):
+        """Show dialog and return selected sheet"""
+        print("[DEBUG] SheetSelectionDialog showing...", flush=True)
+        self.root.mainloop()
+        print(f"[DEBUG] Selected sheet: {self.result}", flush=True)
+        return self.result
+
+
+def get_sheet_selection(file_path):
+    """
+    Show sheet selection dialog
+    
+    Args:
+        file_path: str, path to Excel file
+    
+    Returns:
+        str, selected sheet name, or None if cancelled
+    """
+    dialog = SheetSelectionDialog(file_path)
+    return dialog.show()
