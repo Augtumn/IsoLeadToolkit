@@ -25,6 +25,7 @@ from visualization import plot_umap
 from events import on_hover, on_click, on_legend_click, on_slider_change
 from session import load_session_params, save_session_params
 from control_panel import create_control_panel
+from localization import translate, set_language, validate_language
 
 # Configure warnings
 warnings.filterwarnings("ignore", message=".*n_jobs value.*overridden.*random_state.*")
@@ -59,7 +60,8 @@ def _save_session(state_module):
         sheet_name=app_state.sheet_name,
         render_mode=app_state.render_mode,
         selected_2d_cols=getattr(app_state, 'selected_2d_cols', []),
-        selected_3d_cols=app_state.selected_3d_cols
+        selected_3d_cols=app_state.selected_3d_cols,
+        language=app_state.language
     )
 
 
@@ -73,6 +75,15 @@ def main():
         # Load previous session to get file/sheet info
         print("[INFO] Loading session parameters...", flush=True)
         session_data = load_session_params()
+
+        requested_language = None
+        if session_data:
+            requested_language = session_data.get('language')
+        if not requested_language:
+            requested_language = app_state.language or CONFIG.get('default_language')
+        if not validate_language(requested_language):
+            requested_language = CONFIG.get('default_language', 'en')
+        set_language(requested_language)
         
         # Load data with dialogs
         print("[INFO] Loading data...", flush=True)
@@ -164,12 +175,17 @@ def main():
         # Create plot figure (main window for visualization)
         print("[INFO] Creating plot figure...", flush=True)
         app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'])
-        app_state.fig.suptitle(
-            "Lead Isotope Analysis - UMAP/t-SNE Visualization",
-            fontsize=13,
-            fontweight='bold',
-            y=0.98
-        )
+        
+        def _apply_language_to_main_ui():
+            title_text = translate("Lead Isotope Analysis - UMAP/t-SNE Visualization")
+            if app_state.fig is not None:
+                app_state.fig.suptitle(title_text, fontsize=13, fontweight='bold', y=0.98)
+            if app_state.control_panel_button is not None:
+                label_text = translate("Control Panel")
+                app_state.control_panel_button.label.set_text(label_text)
+
+        app_state.register_language_listener(_apply_language_to_main_ui)
+        _apply_language_to_main_ui()
         print("[INFO] Plot figure created.", flush=True)
         
         plt.ion()
@@ -177,7 +193,12 @@ def main():
 
         # Add quick access button to reopen the control panel if it is hidden
         button_ax = app_state.fig.add_axes([0.82, 0.035, 0.14, 0.05])
-        button = Button(button_ax, 'Control Panel', color='#2563eb', hovercolor='#1d4ed8')
+        button = Button(
+            button_ax,
+            translate("Control Panel"),
+            color='#2563eb',
+            hovercolor='#1d4ed8'
+        )
         button.label.set_color('white')
         button.label.set_fontsize(10)
 
@@ -192,6 +213,7 @@ def main():
 
         button.on_clicked(_show_control_panel)
         app_state.control_panel_button = button
+        _apply_language_to_main_ui()
         
         # Create tkinter control panel (separate window)
         print("[INFO] Creating control panel...", flush=True)

@@ -2,6 +2,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from localization import translate
+
 
 class _Select3DColumnsDialog:
     """Modal dialog that lets the user pick three distinct columns for 3D plotting."""
@@ -21,7 +23,7 @@ class _Select3DColumnsDialog:
 
         self.master = master
         self.root = tk.Toplevel(master)
-        self.root.title("Select 3D Axes")
+        self.root.title(translate("Select 3D Axes"))
         self.root.configure(bg="#edf2f7")
         self.root.resizable(False, False)
         self.root.geometry("440x360")
@@ -93,13 +95,25 @@ class _Select3DColumnsDialog:
         container.bind("<Configure>", _sync_scrollregion)
         canvas.bind("<Configure>", _resize_canvas)
 
-        title = ttk.Label(container, text="Choose axes for the 3D scatter", style='Header.TLabel', wraplength=360, justify=tk.LEFT)
+        title = ttk.Label(
+            container,
+            text=translate("Choose axes for the 3D scatter"),
+            style='Header.TLabel',
+            wraplength=360,
+            justify=tk.LEFT
+        )
         title.pack(anchor=tk.W)
 
         card = ttk.Frame(container, padding=14, style='Card.TFrame')
         card.pack(fill=tk.BOTH, expand=True, pady=(12, 16))
 
-        ttk.Label(card, text="Select one column for each axis. Columns must be unique.", style='Body.TLabel', wraplength=340, justify=tk.LEFT).pack(anchor=tk.W, pady=(0, 12))
+        ttk.Label(
+            card,
+            text=translate("Select one column for each axis. Columns must be unique."),
+            style='Body.TLabel',
+            wraplength=340,
+            justify=tk.LEFT
+        ).pack(anchor=tk.W, pady=(0, 12))
 
         self.vars = {
             'x': tk.StringVar(value=self._prefill(0)),
@@ -111,7 +125,11 @@ class _Select3DColumnsDialog:
             row = ttk.Frame(card, style='Card.TFrame')
             row.pack(fill=tk.X, pady=6)
 
-            ttk.Label(row, text=f"Axis {axis.upper()}", style='Field.TLabel').pack(anchor=tk.W)
+            ttk.Label(
+                row,
+                text=translate("Axis {axis}", axis=axis.upper()),
+                style='Field.TLabel'
+            ).pack(anchor=tk.W)
 
             combo = ttk.Combobox(row, textvariable=self.vars[axis], values=self.columns, state='readonly', font=('Segoe UI', 10))
             combo.pack(fill=tk.X, pady=(4, 0))
@@ -121,8 +139,18 @@ class _Select3DColumnsDialog:
         button_row = ttk.Frame(container, style='Dialog.TFrame')
         button_row.pack(fill=tk.X)
 
-        ttk.Button(button_row, text="Cancel", style='Secondary.TButton', command=self._on_cancel).pack(side=tk.RIGHT, padx=(0, 10))
-        ttk.Button(button_row, text="Apply", style='Accent.TButton', command=self._on_ok).pack(side=tk.RIGHT)
+        ttk.Button(
+            button_row,
+            text=translate("Cancel"),
+            style='Secondary.TButton',
+            command=self._on_cancel
+        ).pack(side=tk.RIGHT, padx=(0, 10))
+        ttk.Button(
+            button_row,
+            text=translate("Apply"),
+            style='Accent.TButton',
+            command=self._on_ok
+        ).pack(side=tk.RIGHT)
 
     def _prefill(self, index):
         if len(self.preselected) > index and self.preselected[index] in self.columns:
@@ -134,10 +162,18 @@ class _Select3DColumnsDialog:
     def _on_ok(self):
         selections = [self.vars['x'].get(), self.vars['y'].get(), self.vars['z'].get()]
         if '' in selections:
-            messagebox.showwarning("Selection Required", "Please choose a column for each axis.", parent=self.root)
+            messagebox.showwarning(
+                translate("Selection Required"),
+                translate("Please choose a column for each axis."),
+                parent=self.root
+            )
             return
         if len(set(selections)) != 3:
-            messagebox.showwarning("Fields Must Differ", "Each axis must use a different data column.", parent=self.root)
+            messagebox.showwarning(
+                translate("Fields Must Differ"),
+                translate("Each axis must use a different data column."),
+                parent=self.root
+            )
             return
         try:
             print(f"[DEBUG] 3D dialog confirmed selection: {selections}", flush=True)

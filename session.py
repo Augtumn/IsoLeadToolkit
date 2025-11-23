@@ -9,7 +9,8 @@ from config import CONFIG
 
 def save_session_params(algorithm, umap_params, tsne_params, point_size, group_col,
                         group_cols=None, data_cols=None, file_path=None, sheet_name=None,
-                        render_mode='UMAP', selected_2d_cols=None, selected_3d_cols=None):
+                        render_mode='UMAP', selected_2d_cols=None, selected_3d_cols=None,
+                        language=None):
     """
     Save current session parameters to temporary file
     
@@ -40,7 +41,8 @@ def save_session_params(algorithm, umap_params, tsne_params, point_size, group_c
             'sheet_name': sheet_name,
             'render_mode': render_mode,
             'selected_2d_cols': selected_2d_cols or [],
-            'selected_3d_cols': selected_3d_cols or []
+            'selected_3d_cols': selected_3d_cols or [],
+            'language': language
         }
         
         with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as f:

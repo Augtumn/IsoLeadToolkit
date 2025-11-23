@@ -10,11 +10,22 @@ TEMP_DIR = Path.home() / '.isotopes_analysis'
 TEMP_DIR.mkdir(exist_ok=True)
 PARAMS_TEMP_FILE = TEMP_DIR / 'params.json'
 
+# Locales directory for translations
+BASE_DIR = Path(__file__).resolve().parent
+LOCALES_DIR = BASE_DIR / 'locales'
+LOCALES_DIR.mkdir(exist_ok=True)
+
 CONFIG = {
     'export_csv': 'selected_samples.csv',
     'algorithm_options': ['UMAP', 'tSNE'],
+    'default_language': 'zh',
+    'languages': {
+        'zh': '中文',
+        'en': 'English'
+    },
     'temp_dir': TEMP_DIR,
     'params_temp_file': PARAMS_TEMP_FILE,
+    'locales_dir': LOCALES_DIR,
     'umap_params': {
         'n_neighbors': 10,
         'min_dist': 0.1,

@@ -29,6 +29,9 @@ class AppState:
         self.sample_coordinates = {}
         self.artist_to_sample = {}
         self.selection_overlay = None
+        self.language = CONFIG.get('default_language', 'zh')
+        self.language_labels = CONFIG.get('languages', {'zh': '中文', 'en': 'English'})
+        self.language_listeners = []
         
         # Dynamic column configuration (populated from data)
         self.group_cols = []  # Available grouping columns from data
@@ -65,6 +68,19 @@ class AppState:
             except Exception:
                 pass
         self.selection_overlay = None
+
+    def register_language_listener(self, callback):
+        """Register a callback to be invoked when language changes."""
+        if callback and callback not in self.language_listeners:
+            self.language_listeners.append(callback)
+
+    def notify_language_change(self):
+        """Notify registered listeners about language changes."""
+        for callback in list(self.language_listeners):
+            try:
+                callback()
+            except Exception:
+                pass
 
 
 # Global state instance

@@ -7,6 +7,8 @@ from tkinter import ttk, messagebox
 import pandas as pd
 import os
 
+from localization import translate
+
 
 class SheetSelectionDialog:
     """Simple dialog for selecting a sheet"""
@@ -31,7 +33,7 @@ class SheetSelectionDialog:
         
         # Create main window
         self.root = tk.Tk()
-        self.root.title("Select Sheet")
+        self.root.title(translate("Select Sheet"))
         self.root.geometry("560x420")
         self.root.minsize(480, 360)
         self.root.configure(bg="#edf2f7")
@@ -81,12 +83,16 @@ class SheetSelectionDialog:
         container.columnconfigure(0, weight=1)
         container.rowconfigure(2, weight=1)
 
-        title_label = ttk.Label(container, text="Choose a Sheet", style='SheetDialog.Header.TLabel')
+        title_label = ttk.Label(
+            container,
+            text=translate("Choose a Sheet"),
+            style='SheetDialog.Header.TLabel'
+        )
         title_label.grid(row=0, column=0, sticky=tk.W)
 
         info_label = ttk.Label(
             container,
-            text="Select the worksheet that contains the measurements you want to analyze.",
+            text=translate("Select the worksheet that contains the measurements you want to analyze."),
             style='SheetDialog.Subheader.TLabel',
             wraplength=460,
             justify=tk.LEFT
@@ -99,7 +105,11 @@ class SheetSelectionDialog:
         card.rowconfigure(1, weight=1)
 
         workbook_name = os.path.basename(self.file_path)
-        list_header = ttk.Label(card, text=f"Sheets in {workbook_name}", style='SheetDialog.Body.TLabel')
+        list_header = ttk.Label(
+            card,
+            text=translate("Sheets in {workbook}", workbook=workbook_name),
+            style='SheetDialog.Body.TLabel'
+        )
         list_header.grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
 
         list_frame = ttk.Frame(card, style='SheetDialog.CardBody.TFrame')
@@ -141,8 +151,18 @@ class SheetSelectionDialog:
         button_container = ttk.Frame(footer, style='SheetDialog.TFrame')
         button_container.grid(row=0, column=0, sticky=tk.E)
 
-        ttk.Button(button_container, text="Cancel", style='SheetDialog.Secondary.TButton', command=self._cancel_clicked).grid(row=0, column=0, padx=(0, 12))
-        ttk.Button(button_container, text="Continue", style='SheetDialog.Accent.TButton', command=self._ok_clicked).grid(row=0, column=1)
+        ttk.Button(
+            button_container,
+            text=translate("Cancel"),
+            style='SheetDialog.Secondary.TButton',
+            command=self._cancel_clicked
+        ).grid(row=0, column=0, padx=(0, 12))
+        ttk.Button(
+            button_container,
+            text=translate("Continue"),
+            style='SheetDialog.Accent.TButton',
+            command=self._ok_clicked
+        ).grid(row=0, column=1)
 
     def _setup_styles(self):
         """Configure ttk styles for the sheet dialog"""
@@ -161,7 +181,10 @@ class SheetSelectionDialog:
         """Handle OK button click"""
         selection = self.sheet_listbox.curselection()
         if not selection:
-            messagebox.showwarning("Error", "Please select a sheet.")
+            messagebox.showwarning(
+                translate("Error"),
+                translate("Please select a sheet."),
+            )
             return
         
         self.result = self.sheets[selection[0]]

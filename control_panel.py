@@ -10,6 +10,7 @@ from tkinter import ttk, messagebox, simpledialog, filedialog
 
 import pandas as pd
 
+from localization import translate, available_languages, set_language
 from state import app_state
 import state as state_module
 from events import toggle_selection_mode
@@ -26,6 +27,7 @@ class ControlPanel:
             callback: function to call when parameters change
         """
         self.callback = callback
+        self._translations = []
 
         # Reuse Matplotlib's Tk root when available so the panel shares the
         # same event loop and remains responsive while plt.show() runs.
@@ -38,7 +40,8 @@ class ControlPanel:
 
         self.master = master
         self.root = tk.Toplevel(master)
-        self.root.title("Control Panel")
+        self.root.title(self._translate("Control Panel"))
+        self._register_translation(self.root, "Control Panel", attr='title')
         self.root.geometry("520x820")
         self.root.minsize(420, 620)
         self.root.resizable(True, True)
@@ -49,6 +52,9 @@ class ControlPanel:
         self.primary_bg = "#edf2f7"
         self.card_bg = "#ffffff"
         self.style = None
+        self._language_labels = dict(available_languages())
+        self.language_choice = None
+        self.language_combobox = None
         self._setup_styles()
         
         # Store slider references
@@ -65,6 +71,9 @@ class ControlPanel:
         self.export_excel_button = None
         
         self._create_widgets()
+        self._refresh_language()
+        self.update_selection_controls()
+        app_state.register_language_listener(self.refresh_language)
 
         # Try to raise the panel so it is not hidden behind the figure window.
         try:
@@ -82,17 +91,19 @@ class ControlPanel:
         container = ttk.Frame(self.root, padding=(18, 18, 18, 14), style='ControlPanel.TFrame')
         container.pack(fill=tk.BOTH, expand=True)
 
-        header = ttk.Label(container, text="Visualization Controls", style='Header.TLabel')
+        header = ttk.Label(container, text=self._translate("Visualization Controls"), style='Header.TLabel')
         header.pack(anchor=tk.W)
+        self._register_translation(header, "Visualization Controls")
 
         subtitle = ttk.Label(
             container,
-            text="Fine-tune algorithm settings and instantly preview the updated embedding.",
+            text=self._translate("Fine-tune algorithm settings and instantly preview the updated embedding."),
             style='Subheader.TLabel',
             wraplength=440,
             justify=tk.LEFT
         )
         subtitle.pack(anchor=tk.W, pady=(4, 14))
+        self._register_translation(subtitle, "Fine-tune algorithm settings and instantly preview the updated embedding.")
 
         canvas_frame = ttk.Frame(container, style='ControlPanel.TFrame')
         canvas_frame.pack(fill=tk.BOTH, expand=True)
@@ -123,6 +134,8 @@ class ControlPanel:
         main_canvas.configure(yscrollcommand=scrollbar.set)
         scrollbar.config(command=main_canvas.yview)
 
+        self._create_language_controls(scrollable_frame)
+
         # ========== Algorithm & Dimensionality Selection ==========
         if not getattr(app_state, 'render_mode', None):
             app_state.render_mode = getattr(app_state, 'algorithm', 'UMAP')
@@ -144,19 +157,21 @@ class ControlPanel:
             ("3D Scatter (raw)", "3D"),
         ]
 
-        for idx, (label, value) in enumerate(options):
+        for idx, (label_key, value) in enumerate(options):
             column = idx // 2
             row = idx % 2
             cell = ttk.Frame(selection_grid, style='CardBody.TFrame')
             cell.grid(row=row, column=column, sticky=tk.W, padx=(0 if column == 0 else 16, 0), pady=2)
-            ttk.Radiobutton(
+            radio = ttk.Radiobutton(
                 cell,
-                text=label,
+                text=self._translate(label_key),
                 variable=self.radio_vars['render_mode'],
                 value=value,
                 command=self._on_change,
                 style='Option.TRadiobutton'
-            ).pack(anchor=tk.W)
+            )
+            radio.pack(anchor=tk.W)
+            self._register_translation(radio, label_key)
 
         for col in range(2):
             selection_grid.columnconfigure(col, weight=1)
@@ -250,10 +265,11 @@ class ControlPanel:
 
         group_label = ttk.Label(
             common_section,
-            text="Group column",
+            text=self._translate("Group column"),
             style='FieldLabel.TLabel'
         )
         group_label.pack(anchor=tk.W, pady=(12, 4))
+        self._register_translation(group_label, "Group column")
 
         self.radio_vars['group'] = tk.StringVar(value=app_state.last_group_col or '')
 
@@ -275,35 +291,40 @@ class ControlPanel:
         else:
             placeholder = ttk.Label(
                 group_container,
-                text="Load data to unlock grouping options.",
+                text=self._translate("Load data to unlock grouping options."),
                 style='BodyMuted.TLabel',
                 wraplength=400,
                 justify=tk.LEFT
             )
             placeholder.pack(anchor=tk.W, pady=4)
             self.group_placeholder = placeholder
+            self._register_translation(placeholder, "Load data to unlock grouping options.")
 
         legend_tools = ttk.Frame(common_section, style='CardBody.TFrame')
         legend_tools.pack(fill=tk.X, pady=(12, 0))
 
-        ttk.Button(
+        filter_button = ttk.Button(
             legend_tools,
-            text="Filter legend...",
+            text=self._translate("Filter legend..."),
             style='Secondary.TButton',
             command=self._open_legend_filter
-        ).pack(side=tk.LEFT, padx=(0, 10))
+        )
+        filter_button.pack(side=tk.LEFT, padx=(0, 10))
+        self._register_translation(filter_button, "Filter legend...")
 
-        ttk.Button(
+        reload_button = ttk.Button(
             legend_tools,
-            text="Reload data...",
+            text=self._translate("Reload data..."),
             style='Secondary.TButton',
             command=self._reload_data
-        ).pack(side=tk.LEFT)
+        )
+        reload_button.pack(side=tk.LEFT)
+        self._register_translation(reload_button, "Reload data...")
 
         selection_section = self._create_section(
             scrollable_frame,
-            "数据选择",
-            "开启数据选择模式后，在二维或嵌入视图中双击或框选样本，然后在此导出结果。"
+            "Selection Tools",
+            "Enable selection mode to pick samples in 2D or embedding views, then export the results."
         )
 
         selection_row = ttk.Frame(selection_section, style='CardBody.TFrame')
@@ -311,7 +332,7 @@ class ControlPanel:
 
         self.selection_button = ttk.Button(
             selection_row,
-            text="进入数据选择",
+            text=self._translate("Enable Selection"),
             style='Secondary.TButton',
             command=self._on_toggle_selection
         )
@@ -319,50 +340,60 @@ class ControlPanel:
 
         self.selection_status = ttk.Label(
             selection_row,
-            text="当前选中: 0",
+            text=self._translate("Selected Samples: {count}", count=0),
             style='BodyMuted.TLabel'
         )
         self.selection_status.pack(side=tk.LEFT, padx=(12, 0))
+        self._register_translation(
+            self.selection_status,
+            "Selected Samples: {count}",
+            formatter=lambda: {'count': len(getattr(app_state, 'selected_indices', []))}
+        )
 
         export_row = ttk.Frame(selection_section, style='CardBody.TFrame')
         export_row.pack(fill=tk.X)
 
         self.export_csv_button = ttk.Button(
             export_row,
-            text="导出 CSV...",
+            text=self._translate("Export CSV"),
             style='Secondary.TButton',
             command=self._export_selected_csv
         )
         self.export_csv_button.pack(side=tk.LEFT, padx=(0, 12))
+        self._register_translation(self.export_csv_button, "Export CSV")
 
         self.export_excel_button = ttk.Button(
             export_row,
-            text="追加 Excel Sheet...",
+            text=self._translate("Export Excel"),
             style='Secondary.TButton',
             command=self._export_selected_excel
         )
         self.export_excel_button.pack(side=tk.LEFT)
+        self._register_translation(self.export_excel_button, "Export Excel")
 
         ttk.Separator(scrollable_frame, orient=tk.HORIZONTAL, style='SectionSeparator.TSeparator').pack(fill=tk.X, pady=12)
 
         footer_note = ttk.Label(
             container,
-            text="Adjust sliders to refresh the plot automatically. Close the panel to reclaim screen space.",
+            text=self._translate("Adjust sliders to refresh the plot automatically. Close the panel to reclaim screen space."),
             style='Footer.TLabel',
             wraplength=440,
             justify=tk.LEFT
         )
         footer_note.pack(anchor=tk.W, pady=(12, 8))
+        self._register_translation(footer_note, "Adjust sliders to refresh the plot automatically. Close the panel to reclaim screen space.")
 
         action_frame = ttk.Frame(container, style='ControlPanel.TFrame')
         action_frame.pack(fill=tk.X)
 
-        ttk.Button(
+        close_button = ttk.Button(
             action_frame,
-            text="Close Panel",
+            text=self._translate("Close Panel"),
             style='Accent.TButton',
             command=self._on_close
-        ).pack(side=tk.RIGHT, padx=(0, 4))
+        )
+        close_button.pack(side=tk.RIGHT, padx=(0, 4))
+        self._register_translation(close_button, "Close Panel")
 
         self.update_selection_controls()
 
@@ -399,14 +430,62 @@ class ControlPanel:
         self.style.configure('Secondary.TButton', background='#ffffff', foreground='#2563eb', font=('Segoe UI', 10, 'bold'), padding=(12, 6))
         self.style.map('Secondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
 
+    def _translate(self, key, **kwargs):
+        """Translate helper bound to the current app language."""
+        language = getattr(app_state, 'language', None)
+        return translate(key, language=language, **kwargs)
+
+    def _register_translation(self, widget, key, attr='text', formatter=None):
+        """Track a widget attribute for future language refreshes."""
+        if widget is None:
+            return
+        self._translations.append({
+            'widget': widget,
+            'key': key,
+            'attr': attr,
+            'formatter': formatter,
+        })
+
+    def _apply_translation(self, widget, attr, value):
+        """Apply translated text to a widget attribute."""
+        if widget is None or value is None:
+            return
+        try:
+            if attr == 'title' and hasattr(widget, 'title'):
+                widget.title(value)
+            else:
+                widget.configure(**{attr: value})
+        except Exception:
+            pass
+
+    def _refresh_language(self):
+        """Reapply translations for all registered widgets."""
+        for entry in self._translations:
+            kwargs = {}
+            if entry.get('formatter') is not None:
+                result = entry['formatter']()
+                if isinstance(result, dict):
+                    kwargs = result
+                elif isinstance(result, str):
+                    self._apply_translation(entry['widget'], entry['attr'], result)
+                    continue
+            translated = self._translate(entry['key'], **kwargs)
+            self._apply_translation(entry['widget'], entry['attr'], translated)
+
+    def _language_label(self, code):
+        """Return the human-readable label for a language code."""
+        return self._language_labels.get(code, code)
+
     def _create_section(self, parent, title, description=None):
         """Create a styled section container"""
-        section = ttk.LabelFrame(parent, text=title, padding=14, style='Card.TLabelframe')
+        section = ttk.LabelFrame(parent, text=self._translate(title), padding=14, style='Card.TLabelframe')
         section.pack(fill=tk.X, padx=6, pady=6)
+        self._register_translation(section, title)
 
         if description:
-            desc = ttk.Label(section, text=description, style='Body.TLabel', wraplength=430, justify=tk.LEFT)
+            desc = ttk.Label(section, text=self._translate(description), style='Body.TLabel', wraplength=430, justify=tk.LEFT)
             desc.pack(anchor=tk.W, pady=(0, 10))
+            self._register_translation(desc, description)
 
         return section
 
@@ -415,7 +494,9 @@ class ControlPanel:
         row = ttk.Frame(parent, style='CardBody.TFrame')
         row.pack(fill=tk.X, pady=6)
 
-        ttk.Label(row, text=label_text, style='FieldLabel.TLabel').pack(anchor=tk.W)
+        label_widget = ttk.Label(row, text=self._translate(label_text), style='FieldLabel.TLabel')
+        label_widget.pack(anchor=tk.W)
+        self._register_translation(label_widget, label_text)
 
         slider_container = ttk.Frame(row, style='CardBody.TFrame')
         slider_container.pack(fill=tk.X, pady=(4, 0))
@@ -488,6 +569,68 @@ class ControlPanel:
         self._slider_steps[key] = float(step)
 
         return slider
+
+    def _create_language_controls(self, parent):
+        """Add language selection controls."""
+        section = self._create_section(parent, "Language", "Choose the interface language.")
+
+        values = dict(available_languages()) or self._language_labels or {'en': 'English'}
+        self._language_labels = values
+        current_label = self._language_label(app_state.language)
+        if current_label not in values.values():
+            current_label = next(iter(values.values()))
+
+        label = ttk.Label(section, text=self._translate("Select Language"), style='FieldLabel.TLabel')
+        label.pack(anchor=tk.W, pady=(0, 6))
+        self._register_translation(label, "Select Language")
+
+        self.language_choice = tk.StringVar(value=current_label)
+        combo = ttk.Combobox(
+            section,
+            textvariable=self.language_choice,
+            values=list(values.values()),
+            state='readonly'
+        )
+        combo.pack(fill=tk.X)
+        combo.bind('<<ComboboxSelected>>', self._on_language_change)
+        self.language_combobox = combo
+
+    def _on_language_change(self, _event=None):
+        """Handle selection of a new interface language."""
+        if self.language_choice is None:
+            return
+
+        selection = self.language_choice.get()
+        target_code = None
+        for code, label in self._language_labels.items():
+            if label == selection:
+                target_code = code
+                break
+
+        if target_code is None:
+            return
+
+        if target_code == getattr(app_state, 'language', None):
+            return
+
+        if not set_language(target_code):
+            messagebox.showerror(
+                self._translate("Language"),
+                self._translate("Language switch failed. Please try again."),
+                parent=self.root
+            )
+            self.language_choice.set(self._language_label(app_state.language))
+            return
+
+        self.language_choice.set(self._language_label(target_code))
+        self._refresh_language()
+        self.update_selection_controls()
+
+        messagebox.showinfo(
+            self._translate("Language"),
+            self._translate("Language updated to {language}", language=self._language_label(target_code)),
+            parent=self.root
+        )
 
     def _schedule_slider_callback(self, key):
         """Debounce expensive recomputation while the slider is moving."""
@@ -570,24 +713,33 @@ class ControlPanel:
         else:
             placeholder = ttk.Label(
                 self.group_container,
-                text="Load data to unlock grouping options.",
+                text=self._translate("Load data to unlock grouping options."),
                 style='BodyMuted.TLabel',
                 wraplength=400,
                 justify=tk.LEFT
             )
             placeholder.pack(anchor=tk.W, pady=4)
             self.group_placeholder = placeholder
+            self._register_translation(placeholder, "Load data to unlock grouping options.")
 
     def _open_legend_filter(self):
         """Launch legend filter dialog to hide/show groups."""
         if not app_state.available_groups:
-            messagebox.showinfo("Legend Filter", "No legend entries are available yet.", parent=self.root)
+            messagebox.showinfo(
+                self._translate("Legend Filter"),
+                self._translate("No legend entries are available yet."),
+                parent=self.root
+            )
             return
 
         try:
             from legend_dialog import select_visible_groups
         except Exception as exc:
-            messagebox.showerror("Legend Filter", f"Unable to open filter dialog: {exc}", parent=self.root)
+            messagebox.showerror(
+                self._translate("Legend Filter"),
+                self._translate("Unable to open filter dialog: {error}", error=exc),
+                parent=self.root
+            )
             return
 
         current = app_state.visible_groups or app_state.available_groups
@@ -612,7 +764,9 @@ class ControlPanel:
 
         if getattr(self, 'selection_status', None) is not None:
             try:
-                self.selection_status.config(text=f"当前选中: {count}")
+                self.selection_status.config(
+                    text=self._translate("Selected Samples: {count}", count=count)
+                )
             except Exception:
                 pass
 
@@ -634,9 +788,15 @@ class ControlPanel:
 
         try:
             if app_state.selection_mode:
-                toggle_btn.config(text="退出数据选择", style='Accent.TButton')
+                toggle_btn.config(
+                    text=self._translate("Disable Selection"),
+                    style='Accent.TButton'
+                )
             else:
-                toggle_btn.config(text="进入数据选择", style='Secondary.TButton')
+                toggle_btn.config(
+                    text=self._translate("Enable Selection"),
+                    style='Secondary.TButton'
+                )
 
             if app_state.render_mode == '3D':
                 toggle_btn.state(['disabled'])
@@ -645,21 +805,38 @@ class ControlPanel:
         except Exception:
             pass
 
+    def refresh_language(self):
+        """Public entry point for reapplying translations."""
+        self._refresh_language()
+        self.update_selection_controls()
+
     def _get_selected_dataframe(self):
         """Return a DataFrame with the currently selected samples."""
         if not app_state.selected_indices:
-            messagebox.showinfo("导出选中数据", "请先在可视化中选择至少一个样本。", parent=self.root)
+            messagebox.showinfo(
+                self._translate("Export Selected Data"),
+                self._translate("Please select at least one sample before exporting."),
+                parent=self.root
+            )
             return None
 
         if app_state.df_global is None or app_state.df_global.empty:
-            messagebox.showwarning("导出选中数据", "当前没有可导出的数据。", parent=self.root)
+            messagebox.showwarning(
+                self._translate("Export Selected Data"),
+                self._translate("No data is available to export."),
+                parent=self.root
+            )
             return None
 
         try:
             indices = sorted(app_state.selected_indices)
             df = app_state.df_global.iloc[indices].copy()
         except Exception as exc:
-            messagebox.showerror("导出选中数据", f"无法提取选中样本：{exc}", parent=self.root)
+            messagebox.showerror(
+                self._translate("Export Selected Data"),
+                self._translate("Unable to extract selected samples: {error}", error=exc),
+                parent=self.root
+            )
             return None
         return df
 
@@ -673,8 +850,8 @@ class ControlPanel:
         """Toggle selection mode from the control panel."""
         if app_state.render_mode == '3D':
             messagebox.showinfo(
-                "数据选择",
-                "三维模式暂不支持数据选择，请先切换到二维或嵌入视图。",
+                self._translate("Selection Mode"),
+                self._translate("Selection mode is only available in 2D views"),
                 parent=self.root
             )
             return
@@ -690,8 +867,8 @@ class ControlPanel:
 
         default_name = f"selected_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         name = simpledialog.askstring(
-            "导出为 CSV",
-            "请输入导出文件名（无需扩展名）：",
+            self._translate("Export to CSV"),
+            self._translate("Enter a file name (without extension):"),
             initialvalue=default_name,
             parent=self.root
         )
@@ -701,7 +878,11 @@ class ControlPanel:
         name = name.strip()
         sanitized = self._sanitize_filename(name)
         if not sanitized:
-            messagebox.showerror("导出为 CSV", "文件名不能为空或仅包含非法字符。", parent=self.root)
+            messagebox.showerror(
+                self._translate("Export to CSV"),
+                self._translate("File name cannot be empty or only invalid characters."),
+                parent=self.root
+            )
             return
 
         target_dir = os.path.dirname(app_state.file_path) if app_state.file_path else os.getcwd()
@@ -711,8 +892,8 @@ class ControlPanel:
 
         if os.path.exists(target_path):
             overwrite = messagebox.askyesno(
-                "导出为 CSV",
-                f"文件已存在：\n{target_path}\n是否覆盖？",
+                self._translate("Export to CSV"),
+                self._translate("File already exists:\n{path}\nOverwrite?", path=target_path),
                 parent=self.root
             )
             if not overwrite:
@@ -721,12 +902,16 @@ class ControlPanel:
         try:
             df.to_csv(target_path, index=False, encoding='utf-8-sig')
         except Exception as exc:
-            messagebox.showerror("导出为 CSV", f"导出失败：{exc}", parent=self.root)
+            messagebox.showerror(
+                self._translate("Export to CSV"),
+                self._translate("Export failed: {error}", error=exc),
+                parent=self.root
+            )
             return
 
         messagebox.showinfo(
-            "导出为 CSV",
-            f"已导出 {len(df)} 条记录到：\n{target_path}",
+            self._translate("Export to CSV"),
+            self._translate("Exported {count} records to:\n{path}", count=len(df), path=target_path),
             parent=self.root
         )
 
@@ -741,9 +926,9 @@ class ControlPanel:
         else:
             workbook_path = filedialog.asksaveasfilename(
                 parent=self.root,
-                title="选择目标工作簿",
+                title=self._translate("Select target workbook"),
                 defaultextension=".xlsx",
-                filetypes=[("Excel 工作簿", "*.xlsx")],
+                filetypes=[(self._translate("Excel Workbook"), "*.xlsx")],
                 initialfile="selected_data.xlsx"
             )
             if not workbook_path:
@@ -754,8 +939,8 @@ class ControlPanel:
 
         sheet_default = f"Selected_{datetime.now().strftime('%Y%m%d_%H%M')}"
         sheet_name = simpledialog.askstring(
-            "追加至 Excel",
-            "请输入新工作表名称：",
+            self._translate("Append to Excel"),
+            self._translate("Enter a new worksheet name:"),
             initialvalue=sheet_default,
             parent=self.root
         )
@@ -764,21 +949,33 @@ class ControlPanel:
 
         sheet_name = sheet_name.strip()
         if not sheet_name:
-            messagebox.showerror("追加至 Excel", "工作表名称不能为空。", parent=self.root)
+            messagebox.showerror(
+                self._translate("Append to Excel"),
+                self._translate("Worksheet name cannot be empty."),
+                parent=self.root
+            )
             return
         if len(sheet_name) > 31:
-            messagebox.showerror("追加至 Excel", "工作表名称不能超过 31 个字符。", parent=self.root)
+            messagebox.showerror(
+                self._translate("Append to Excel"),
+                self._translate("Worksheet name cannot exceed 31 characters."),
+                parent=self.root
+            )
             return
         if any(ch in sheet_name for ch in '[]:*?/\\'):
-            messagebox.showerror("追加至 Excel", "工作表名称包含非法字符：[]:*?/\\", parent=self.root)
+            messagebox.showerror(
+                self._translate("Append to Excel"),
+                self._translate("Worksheet name contains invalid characters: []:*?/\\"),
+                parent=self.root
+            )
             return
 
         try:
             import openpyxl
         except ImportError:
             messagebox.showerror(
-                "追加至 Excel",
-                "需要安装 openpyxl 库才能写入 Excel。请先安装 openpyxl。",
+                self._translate("Append to Excel"),
+                self._translate("openpyxl is required to write Excel files. Please install openpyxl."),
                 parent=self.root
             )
             return
@@ -788,11 +985,19 @@ class ControlPanel:
             try:
                 wb = openpyxl.load_workbook(workbook_path)
             except Exception as exc:
-                messagebox.showerror("追加至 Excel", f"无法打开目标工作簿：{exc}", parent=self.root)
+                messagebox.showerror(
+                    self._translate("Append to Excel"),
+                    self._translate("Unable to open target workbook: {error}", error=exc),
+                    parent=self.root
+                )
                 return
             if sheet_name in wb.sheetnames:
                 wb.close()
-                messagebox.showerror("追加至 Excel", "指定的工作表已存在，请使用其他名称。", parent=self.root)
+                messagebox.showerror(
+                    self._translate("Append to Excel"),
+                    self._translate("Worksheet already exists. Please choose another name."),
+                    parent=self.root
+                )
                 return
             wb.close()
 
@@ -804,12 +1009,21 @@ class ControlPanel:
                 with pd.ExcelWriter(workbook_path, mode='w', engine='openpyxl') as writer:
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
         except Exception as exc:
-            messagebox.showerror("追加至 Excel", f"写入失败：{exc}", parent=self.root)
+            messagebox.showerror(
+                self._translate("Append to Excel"),
+                self._translate("Failed to write Excel file: {error}", error=exc),
+                parent=self.root
+            )
             return
 
         messagebox.showinfo(
-            "追加至 Excel",
-            f"已将 {len(df)} 条记录写入工作表 '{sheet_name}'。\n路径：{workbook_path}",
+            self._translate("Append to Excel"),
+            self._translate(
+                "Appended {count} records to worksheet '{sheet}'.\nPath: {path}",
+                count=len(df),
+                sheet=sheet_name,
+                path=workbook_path
+            ),
             parent=self.root
         )
 
@@ -818,12 +1032,20 @@ class ControlPanel:
         try:
             from data import load_data
         except Exception as exc:
-            messagebox.showerror("Reload Data", f"Unable to reload data: {exc}", parent=self.root)
+            messagebox.showerror(
+                self._translate("Reload Data"),
+                self._translate("Unable to reload data: {error}", error=exc),
+                parent=self.root
+            )
             return
 
         success = load_data(show_file_dialog=True, show_config_dialog=True)
         if not success:
-            messagebox.showinfo("Reload Data", "Data reload cancelled.", parent=self.root)
+            messagebox.showinfo(
+                self._translate("Reload Data"),
+                self._translate("Data reload cancelled."),
+                parent=self.root
+            )
             return
 
         if app_state.group_cols:
@@ -850,7 +1072,11 @@ class ControlPanel:
 
         self.update_selection_controls()
 
-        messagebox.showinfo("Reload Data", "Dataset reloaded successfully.", parent=self.root)
+        messagebox.showinfo(
+            self._translate("Reload Data"),
+            self._translate("Dataset reloaded successfully."),
+            parent=self.root
+        )
     
     def _on_change(self):
         """Handle any parameter change - with safety checks"""
@@ -992,6 +1218,11 @@ class ControlPanel:
             self._slider_after.clear()
             self.root.destroy()
         finally:
+            try:
+                if self.refresh_language in getattr(app_state, 'language_listeners', []):
+                    app_state.language_listeners.remove(self.refresh_language)
+            except Exception:
+                pass
             if getattr(self, "_owns_master", False) and getattr(self, "master", None) is not None:
                 try:
                     self.master.destroy()

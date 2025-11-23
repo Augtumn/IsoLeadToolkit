@@ -2,6 +2,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from localization import translate
+
 
 class LegendFilterDialog:
     """Simple checkbox dialog for selecting which groups remain visible."""
@@ -20,7 +22,7 @@ class LegendFilterDialog:
 
         self.master = master
         self.root = tk.Toplevel(master)
-        self.root.title("Filter Legend")
+        self.root.title(translate("Legend Filter"))
         self.root.configure(bg="#edf2f7")
         self.root.geometry("420x360")
         self.root.minsize(420, 320)
@@ -86,19 +88,41 @@ class LegendFilterDialog:
         container.bind("<Configure>", _sync_scrollregion)
         canvas.bind("<Configure>", _resize_canvas)
 
-        title = ttk.Label(container, text="Choose which groups stay visible", style='LegendHeader.TLabel', wraplength=360, justify=tk.LEFT)
+        title = ttk.Label(
+            container,
+            text=translate("Choose which groups stay visible"),
+            style='LegendHeader.TLabel',
+            wraplength=360,
+            justify=tk.LEFT
+        )
         title.pack(anchor=tk.W)
 
         card = ttk.Frame(container, padding=14, style='LegendCard.TFrame')
         card.pack(fill=tk.BOTH, expand=True, pady=(12, 16))
 
-        ttk.Label(card, text="Uncheck any legend entries you want to hide from the plot.", style='LegendBody.TLabel', wraplength=340, justify=tk.LEFT).pack(anchor=tk.W, pady=(0, 12))
+        ttk.Label(
+            card,
+            text=translate("Uncheck any legend entries you want to hide from the plot."),
+            style='LegendBody.TLabel',
+            wraplength=340,
+            justify=tk.LEFT
+        ).pack(anchor=tk.W, pady=(0, 12))
 
         toolbar = ttk.Frame(card, style='LegendCard.TFrame')
         toolbar.pack(fill=tk.X, pady=(0, 10))
 
-        ttk.Button(toolbar, text="Select all", style='LegendSecondary.TButton', command=self._select_all).pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(toolbar, text="Clear", style='LegendSecondary.TButton', command=self._clear_all).pack(side=tk.LEFT)
+        ttk.Button(
+            toolbar,
+            text=translate("Select all"),
+            style='LegendSecondary.TButton',
+            command=self._select_all
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(
+            toolbar,
+            text=translate("Clear"),
+            style='LegendSecondary.TButton',
+            command=self._clear_all
+        ).pack(side=tk.LEFT)
 
         self.vars = {}
 
@@ -142,8 +166,18 @@ class LegendFilterDialog:
         button_row = ttk.Frame(container, style='LegendDialog.TFrame')
         button_row.pack(fill=tk.X)
 
-        ttk.Button(button_row, text="Cancel", style='LegendSecondary.TButton', command=self._on_cancel).pack(side=tk.RIGHT, padx=(0, 10))
-        ttk.Button(button_row, text="Apply", style='LegendAccent.TButton', command=self._on_ok).pack(side=tk.RIGHT)
+        ttk.Button(
+            button_row,
+            text=translate("Cancel"),
+            style='LegendSecondary.TButton',
+            command=self._on_cancel
+        ).pack(side=tk.RIGHT, padx=(0, 10))
+        ttk.Button(
+            button_row,
+            text=translate("Apply"),
+            style='LegendAccent.TButton',
+            command=self._on_ok
+        ).pack(side=tk.RIGHT)
 
     def _select_all(self):
         for var in self.vars.values():
@@ -156,7 +190,11 @@ class LegendFilterDialog:
     def _on_ok(self):
         selection = [group for group, var in self.vars.items() if var.get()]
         if not selection:
-            messagebox.showwarning("Legend Filter", "Please keep at least one group visible.", parent=self.root)
+            messagebox.showwarning(
+                translate("Legend Filter"),
+                translate("Please keep at least one group visible."),
+                parent=self.root
+            )
             return
         self.result = selection
         self._close()

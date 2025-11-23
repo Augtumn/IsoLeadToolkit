@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import pandas as pd
 
+from localization import translate
+
 
 class DataConfigDialog:
     """Dialog for selecting data and grouping columns"""
@@ -31,7 +33,7 @@ class DataConfigDialog:
         
         # Create main window
         self.root = tk.Tk()
-        self.root.title("Configure Data Columns")
+        self.root.title(translate("Configure Data Columns"))
         self.root.geometry("1100x760")
         self.root.minsize(900, 640)
         self.root.configure(bg="#edf2f7")
@@ -82,12 +84,16 @@ class DataConfigDialog:
         container.columnconfigure(0, weight=1)
         container.rowconfigure(2, weight=1)
 
-        title_label = ttk.Label(container, text="Select Columns", style='DataConfig.Header.TLabel')
+        title_label = ttk.Label(
+            container,
+            text=translate("Select Columns"),
+            style='DataConfig.Header.TLabel'
+        )
         title_label.grid(row=0, column=0, sticky=tk.W)
 
         info_label = ttk.Label(
             container,
-            text="Choose grouping columns (used for coloring and filtering) and numeric data columns for embedding.",
+            text=translate("Choose grouping columns (used for coloring and filtering) and numeric data columns for embedding."),
             style='DataConfig.Subheader.TLabel',
             wraplength=760,
             justify=tk.LEFT
@@ -103,22 +109,22 @@ class DataConfigDialog:
         self._build_column_card(
             parent=content,
             column_index=0,
-            title="Grouping Columns",
-            description="Pick one or more categorical columns to color and organize the scatter plot.",
+            title=translate("Grouping Columns"),
+            description=translate("Pick one or more categorical columns to color and organize the scatter plot."),
             selection_type='group'
         )
 
         self._build_column_card(
             parent=content,
             column_index=1,
-            title="Data Columns",
-            description="Choose numeric measurements that feed into UMAP or t-SNE embeddings.",
+            title=translate("Data Columns"),
+            description=translate("Choose numeric measurements that feed into UMAP or t-SNE embeddings."),
             selection_type='data'
         )
 
         tips_label = ttk.Label(
             container,
-            text="Hint: Data columns must be numeric. Grouping columns can be any categorical field.",
+            text=translate("Hint: Data columns must be numeric. Grouping columns can be any categorical field."),
             style='DataConfig.Footer.TLabel'
         )
         tips_label.grid(row=3, column=0, sticky=tk.W, pady=(18, 10))
@@ -130,8 +136,18 @@ class DataConfigDialog:
         button_container = ttk.Frame(footer, style='DataConfig.TFrame')
         button_container.grid(row=0, column=0, sticky=tk.E)
 
-        ttk.Button(button_container, text="Cancel", style='DataConfig.Secondary.TButton', command=self._cancel_clicked).grid(row=0, column=0, padx=(0, 12))
-        ttk.Button(button_container, text="Apply", style='DataConfig.Accent.TButton', command=self._ok_clicked).grid(row=0, column=1)
+        ttk.Button(
+            button_container,
+            text=translate("Cancel"),
+            style='DataConfig.Secondary.TButton',
+            command=self._cancel_clicked
+        ).grid(row=0, column=0, padx=(0, 12))
+        ttk.Button(
+            button_container,
+            text=translate("Apply"),
+            style='DataConfig.Accent.TButton',
+            command=self._ok_clicked
+        ).grid(row=0, column=1)
 
     def _setup_styles(self):
         """Configure ttk styles for the dialog"""
@@ -169,11 +185,31 @@ class DataConfigDialog:
         toolbar.grid(row=2, column=0, sticky=tk.W, pady=(0, 10))
 
         if selection_type == 'group':
-            ttk.Button(toolbar, text="Select all", style='DataConfig.Toolbar.TButton', command=self._select_all_groups).pack(side=tk.LEFT, padx=(0, 8))
-            ttk.Button(toolbar, text="Clear", style='DataConfig.Toolbar.TButton', command=self._clear_groups).pack(side=tk.LEFT)
+            ttk.Button(
+                toolbar,
+                text=translate("Select all"),
+                style='DataConfig.Toolbar.TButton',
+                command=self._select_all_groups
+            ).pack(side=tk.LEFT, padx=(0, 8))
+            ttk.Button(
+                toolbar,
+                text=translate("Clear"),
+                style='DataConfig.Toolbar.TButton',
+                command=self._clear_groups
+            ).pack(side=tk.LEFT)
         else:
-            ttk.Button(toolbar, text="Select all", style='DataConfig.Toolbar.TButton', command=self._select_all_data).pack(side=tk.LEFT, padx=(0, 8))
-            ttk.Button(toolbar, text="Clear", style='DataConfig.Toolbar.TButton', command=self._clear_data).pack(side=tk.LEFT)
+            ttk.Button(
+                toolbar,
+                text=translate("Select all"),
+                style='DataConfig.Toolbar.TButton',
+                command=self._select_all_data
+            ).pack(side=tk.LEFT, padx=(0, 8))
+            ttk.Button(
+                toolbar,
+                text=translate("Clear"),
+                style='DataConfig.Toolbar.TButton',
+                command=self._clear_data
+            ).pack(side=tk.LEFT)
 
         canvas = tk.Canvas(card, highlightthickness=0, bd=0, background="#ffffff")
         canvas.grid(row=3, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
@@ -203,10 +239,11 @@ class DataConfigDialog:
         for col in self.all_columns:
             var = tk.BooleanVar(value=(col in self.selected_group_cols if selection_type == 'group' else col in self.selected_data_cols))
             is_numeric = pd.api.types.is_numeric_dtype(self.df[col])
-            dtype_str = " (numeric)" if is_numeric else " (text)"
+            dtype_label = translate("numeric") if is_numeric else translate("text")
+            display_text = translate("{column} ({dtype})", column=col, dtype=dtype_label)
             cb = ttk.Checkbutton(
                 scrollable_frame,
-                text=f"{col}{dtype_str}",
+                text=display_text,
                 variable=var,
                 style='DataConfig.Checkbutton.TCheckbutton'
             )
@@ -267,23 +304,33 @@ class DataConfigDialog:
         
         # Validation
         if not selected_groups:
-            messagebox.showwarning("Validation Error", "Please select at least one grouping column.")
+            messagebox.showwarning(
+                translate("Validation Error"),
+                translate("Please select at least one grouping column.")
+            )
             return
         
         if not selected_data:
-            messagebox.showwarning("Validation Error", "Please select at least one data column.")
+            messagebox.showwarning(
+                translate("Validation Error"),
+                translate("Please select at least one data column.")
+            )
             return
         
         # Check that data columns are numeric
         try:
             for col in selected_data:
                 if not pd.api.types.is_numeric_dtype(self.df[col]):
-                    messagebox.showwarning("Validation Error", 
-                                          f"Data column '{col}' is not numeric.\n"
-                                          "Please select only numeric columns for data.")
+                    messagebox.showwarning(
+                        translate("Validation Error"),
+                        translate("Data column '{column}' is not numeric. Please select only numeric columns for data.", column=col)
+                    )
                     return
         except Exception as e:
-            messagebox.showerror("Error", f"Error validating columns: {e}")
+            messagebox.showerror(
+                translate("Error"),
+                translate("Error validating columns: {error}", error=e)
+            )
             return
         
         # Store result

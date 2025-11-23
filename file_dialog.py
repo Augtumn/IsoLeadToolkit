@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import os
 
+from localization import translate as t
+
 
 class FileSelectionDialog:
     """Dialog for selecting data files"""
@@ -16,7 +18,7 @@ class FileSelectionDialog:
         self.selected_file = None
 
         self.root = tk.Tk()
-        self.root.title("Select Data File")
+        self.root.title(t("Select Data File"))
         self.root.geometry("780x420")
         self.root.minsize(640, 340)
         self.root.configure(bg="#edf2f7")
@@ -83,12 +85,12 @@ class FileSelectionDialog:
         container.columnconfigure(0, weight=1)
         container.rowconfigure(2, weight=1)
 
-        header = ttk.Label(container, text="Select Data File", style='Header.TLabel')
+        header = ttk.Label(container, text=t("Select Data File"), style='Header.TLabel')
         header.grid(row=0, column=0, sticky=tk.W)
 
         subtitle = ttk.Label(
             container,
-            text="Choose a CSV or Excel file (.csv, .xlsx, .xls) that contains the isotope dataset you want to explore.",
+            text=t("Choose a CSV or Excel file (.csv, .xlsx, .xls) that contains the isotope dataset you want to explore."),
             style='Subheader.TLabel',
             wraplength=640,
             justify=tk.LEFT
@@ -99,15 +101,15 @@ class FileSelectionDialog:
         card.grid(row=2, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
         card.columnconfigure(0, weight=1)
 
-        card_header = ttk.Label(card, text="Current selection", style='Body.TLabel')
+        card_header = ttk.Label(card, text=t("Current selection"), style='Body.TLabel')
         card_header.grid(row=0, column=0, sticky=tk.W)
 
-        self.file_label = ttk.Label(card, text="No file selected", style='Muted.TLabel', wraplength=640, justify=tk.LEFT)
+        self.file_label = ttk.Label(card, text=t("No file selected"), style='Muted.TLabel', wraplength=640, justify=tk.LEFT)
         self.file_label.grid(row=1, column=0, sticky=tk.W, pady=(6, 10))
 
         helper_text = ttk.Label(
             card,
-            text="Tip: For Excel workbooks, you can pick the sheet in the next step.",
+            text=t("Tip: For Excel workbooks, you can pick the sheet in the next step."),
             style='Body.TLabel'
         )
         helper_text.grid(row=2, column=0, sticky=tk.W)
@@ -119,8 +121,8 @@ class FileSelectionDialog:
         button_group = ttk.Frame(button_row, style='FileDialog.TFrame')
         button_group.grid(row=0, column=0, sticky=tk.W)
 
-        ttk.Button(button_group, text="Browse...", style='Accent.TButton', command=self._browse_file).grid(row=0, column=0, padx=(0, 10))
-        ttk.Button(button_group, text="Clear Selection", style='Secondary.TButton', command=self._clear_file).grid(row=0, column=1)
+        ttk.Button(button_group, text=t("Browse..."), style='Accent.TButton', command=self._browse_file).grid(row=0, column=0, padx=(0, 10))
+        ttk.Button(button_group, text=t("Clear Selection"), style='Secondary.TButton', command=self._clear_file).grid(row=0, column=1)
 
         separator = ttk.Separator(container, orient=tk.HORIZONTAL)
         separator.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=12)
@@ -132,21 +134,21 @@ class FileSelectionDialog:
         button_container = ttk.Frame(footer, style='FileDialog.TFrame')
         button_container.grid(row=0, column=0, sticky=tk.E)
 
-        ttk.Button(button_container, text="Cancel", style='Secondary.TButton', command=self._cancel_clicked).grid(row=0, column=0, padx=(0, 12))
-        ttk.Button(button_container, text="Continue", style='Accent.TButton', command=self._ok_clicked).grid(row=0, column=1)
+        ttk.Button(button_container, text=t("Cancel"), style='Secondary.TButton', command=self._cancel_clicked).grid(row=0, column=0, padx=(0, 12))
+        ttk.Button(button_container, text=t("Continue"), style='Accent.TButton', command=self._ok_clicked).grid(row=0, column=1)
     
     def _browse_file(self):
         """Open file browser"""
         print("[DEBUG] File browser opening...", flush=True)
         
         file_types = [
-            ("Excel files", "*.xlsx *.xls"),
-            ("CSV files", "*.csv"),
-            ("All files", "*.*")
+            (t("Excel files"), "*.xlsx *.xls"),
+            (t("CSV files"), "*.csv"),
+            (t("All files"), "*.*")
         ]
         
         file_path = filedialog.askopenfilename(
-            title="Select Data File",
+            title=t("Select Data File"),
             filetypes=file_types,
             defaultextension=".xlsx"
         )
@@ -161,7 +163,7 @@ class FileSelectionDialog:
     def _clear_file(self):
         """Clear selected file"""
         self.selected_file = None
-        self.file_label.config(text="No file selected", style='Muted.TLabel')
+        self.file_label.config(text=t("No file selected"), style='Muted.TLabel')
     
     def _ok_clicked(self):
         """Handle OK button click"""
