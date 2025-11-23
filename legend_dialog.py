@@ -48,6 +48,29 @@ class LegendFilterDialog:
         except Exception:
             pass
 
+    def _bind_mousewheel(self, widget, target_canvas):
+        """Enable mouse wheel scrolling for the given widget/canvas pair."""
+
+        def _on_mousewheel(event):
+            delta = 0
+            if hasattr(event, 'delta') and event.delta:
+                delta = event.delta
+            elif getattr(event, 'num', None) == 4:
+                delta = 120
+            elif getattr(event, 'num', None) == 5:
+                delta = -120
+
+            if delta == 0:
+                return
+
+            target_canvas.yview_scroll(int(-delta / 120), "units")
+            return "break"
+
+        widget.bind("<MouseWheel>", _on_mousewheel)
+        widget.bind("<Shift-MouseWheel>", _on_mousewheel)
+        widget.bind("<Button-4>", _on_mousewheel)
+        widget.bind("<Button-5>", _on_mousewheel)
+
     def _setup_styles(self):
         self.style.configure('LegendDialog.TFrame', background="#edf2f7")
         self.style.configure('LegendCard.TFrame', background="#ffffff", borderwidth=1, relief='solid')
@@ -127,7 +150,7 @@ class LegendFilterDialog:
         self.vars = {}
 
         list_canvas = tk.Canvas(card, highlightthickness=0, bd=0, background="#ffffff")
-        list_canvas.pack(fill=tk.BOTH, expand=True)
+        list_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         list_scrollbar = ttk.Scrollbar(card, orient=tk.VERTICAL, command=list_canvas.yview)
         list_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -162,6 +185,10 @@ class LegendFilterDialog:
             )
             cb.pack(anchor=tk.W, pady=4)
             self.vars[group] = var
+            self._bind_mousewheel(cb, list_canvas)
+
+        self._bind_mousewheel(list_canvas, list_canvas)
+        self._bind_mousewheel(list_frame, list_canvas)
 
         button_row = ttk.Frame(container, style='LegendDialog.TFrame')
         button_row.pack(fill=tk.X)

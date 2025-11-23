@@ -324,9 +324,15 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
             "", xy=(0, 0), xytext=(20, 20),
             textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.5", fc="yellow", alpha=0.8),
-            arrowprops=dict(arrowstyle="->")
+            arrowprops=dict(arrowstyle="->"),
+            zorder=15
         )
         app_state.annotation.set_visible(False)
+        try:
+            if app_state.annotation.arrow_patch is not None:
+                app_state.annotation.arrow_patch.set_zorder(14)
+        except Exception:
+            pass
         
         return True
         
@@ -485,9 +491,15 @@ def plot_2d_data(group_col, data_columns, size=60):
             xytext=(20, 20),
             textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.5", fc="yellow", alpha=0.8),
-            arrowprops=dict(arrowstyle="->")
+            arrowprops=dict(arrowstyle="->"),
+            zorder=15
         )
         app_state.annotation.set_visible(False)
+        try:
+            if app_state.annotation.arrow_patch is not None:
+                app_state.annotation.arrow_patch.set_zorder(14)
+        except Exception:
+            pass
 
         return True
 
