@@ -22,6 +22,13 @@ class AppState:
         self.visible_groups = None
         self.selected_2d_confirmed = False
         self.selected_3d_confirmed = False
+        self.selection_mode = False
+        self.selected_indices = set()
+        self.selection_button = None
+        self.rectangle_selector = None
+        self.sample_coordinates = {}
+        self.artist_to_sample = {}
+        self.selection_overlay = None
         
         # Dynamic column configuration (populated from data)
         self.group_cols = []  # Available grouping columns from data
@@ -50,6 +57,14 @@ class AppState:
         self.legend_to_scatter.clear()
         self.exported_indices.clear()
         self.annotation = None  # Clear annotation reference
+        self.sample_coordinates.clear()
+        self.artist_to_sample.clear()
+        if self.selection_overlay is not None:
+            try:
+                self.selection_overlay.remove()
+            except Exception:
+                pass
+        self.selection_overlay = None
 
 
 # Global state instance

@@ -2,10 +2,17 @@
 Control Panel - Interactive Parameter Adjustment
 Tkinter-based control panel for UMAP/t-SNE parameters and visualization settings
 """
+import os
+import re
 import tkinter as tk
-from tkinter import ttk, messagebox
+from datetime import datetime
+from tkinter import ttk, messagebox, simpledialog, filedialog
+
+import pandas as pd
+
 from state import app_state
 import state as state_module
+from events import toggle_selection_mode
 
 
 class ControlPanel:
@@ -51,6 +58,11 @@ class ControlPanel:
         self._slider_after = {}
         self._slider_steps = {}
         self._slider_delay_ms = 350
+
+        self.selection_button = None
+        self.selection_status = None
+        self.export_csv_button = None
+        self.export_excel_button = None
         
         self._create_widgets()
 
@@ -288,6 +300,49 @@ class ControlPanel:
             command=self._reload_data
         ).pack(side=tk.LEFT)
 
+        selection_section = self._create_section(
+            scrollable_frame,
+            "数据选择",
+            "开启数据选择模式后，在二维或嵌入视图中双击或框选样本，然后在此导出结果。"
+        )
+
+        selection_row = ttk.Frame(selection_section, style='CardBody.TFrame')
+        selection_row.pack(fill=tk.X, pady=(0, 6))
+
+        self.selection_button = ttk.Button(
+            selection_row,
+            text="进入数据选择",
+            style='Secondary.TButton',
+            command=self._on_toggle_selection
+        )
+        self.selection_button.pack(side=tk.LEFT)
+
+        self.selection_status = ttk.Label(
+            selection_row,
+            text="当前选中: 0",
+            style='BodyMuted.TLabel'
+        )
+        self.selection_status.pack(side=tk.LEFT, padx=(12, 0))
+
+        export_row = ttk.Frame(selection_section, style='CardBody.TFrame')
+        export_row.pack(fill=tk.X)
+
+        self.export_csv_button = ttk.Button(
+            export_row,
+            text="导出 CSV...",
+            style='Secondary.TButton',
+            command=self._export_selected_csv
+        )
+        self.export_csv_button.pack(side=tk.LEFT, padx=(0, 12))
+
+        self.export_excel_button = ttk.Button(
+            export_row,
+            text="追加 Excel Sheet...",
+            style='Secondary.TButton',
+            command=self._export_selected_excel
+        )
+        self.export_excel_button.pack(side=tk.LEFT)
+
         ttk.Separator(scrollable_frame, orient=tk.HORIZONTAL, style='SectionSeparator.TSeparator').pack(fill=tk.X, pady=12)
 
         footer_note = ttk.Label(
@@ -308,6 +363,8 @@ class ControlPanel:
             style='Accent.TButton',
             command=self._on_close
         ).pack(side=tk.RIGHT, padx=(0, 4))
+
+        self.update_selection_controls()
 
     def _setup_styles(self):
         """Configure ttk styles for a polished appearance"""
@@ -546,6 +603,216 @@ class ControlPanel:
         if self.callback:
             self.callback()
 
+    def update_selection_controls(self):
+        """Refresh selection-related widgets to reflect current state."""
+        if not hasattr(self, 'selection_button'):
+            return
+
+        count = len(getattr(app_state, 'selected_indices', []))
+
+        if getattr(self, 'selection_status', None) is not None:
+            try:
+                self.selection_status.config(text=f"当前选中: {count}")
+            except Exception:
+                pass
+
+        for button_attr in ('export_csv_button', 'export_excel_button'):
+            btn = getattr(self, button_attr, None)
+            if btn is None:
+                continue
+            try:
+                if count == 0:
+                    btn.state(['disabled'])
+                else:
+                    btn.state(['!disabled'])
+            except Exception:
+                pass
+
+        toggle_btn = getattr(self, 'selection_button', None)
+        if toggle_btn is None:
+            return
+
+        try:
+            if app_state.selection_mode:
+                toggle_btn.config(text="退出数据选择", style='Accent.TButton')
+            else:
+                toggle_btn.config(text="进入数据选择", style='Secondary.TButton')
+
+            if app_state.render_mode == '3D':
+                toggle_btn.state(['disabled'])
+            else:
+                toggle_btn.state(['!disabled'])
+        except Exception:
+            pass
+
+    def _get_selected_dataframe(self):
+        """Return a DataFrame with the currently selected samples."""
+        if not app_state.selected_indices:
+            messagebox.showinfo("导出选中数据", "请先在可视化中选择至少一个样本。", parent=self.root)
+            return None
+
+        if app_state.df_global is None or app_state.df_global.empty:
+            messagebox.showwarning("导出选中数据", "当前没有可导出的数据。", parent=self.root)
+            return None
+
+        try:
+            indices = sorted(app_state.selected_indices)
+            df = app_state.df_global.iloc[indices].copy()
+        except Exception as exc:
+            messagebox.showerror("导出选中数据", f"无法提取选中样本：{exc}", parent=self.root)
+            return None
+        return df
+
+    def _sanitize_filename(self, value):
+        """Sanitize user-provided filename fragments for safe saving."""
+        sanitized = re.sub(r'[\/\\:*?"<>|]+', '_', value)
+        sanitized = sanitized.strip().strip('.')
+        return sanitized
+
+    def _on_toggle_selection(self):
+        """Toggle selection mode from the control panel."""
+        if app_state.render_mode == '3D':
+            messagebox.showinfo(
+                "数据选择",
+                "三维模式暂不支持数据选择，请先切换到二维或嵌入视图。",
+                parent=self.root
+            )
+            return
+
+        toggle_selection_mode()
+        self.update_selection_controls()
+
+    def _export_selected_csv(self):
+        """Export selected samples to a CSV file."""
+        df = self._get_selected_dataframe()
+        if df is None:
+            return
+
+        default_name = f"selected_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        name = simpledialog.askstring(
+            "导出为 CSV",
+            "请输入导出文件名（无需扩展名）：",
+            initialvalue=default_name,
+            parent=self.root
+        )
+        if name is None:
+            return
+
+        name = name.strip()
+        sanitized = self._sanitize_filename(name)
+        if not sanitized:
+            messagebox.showerror("导出为 CSV", "文件名不能为空或仅包含非法字符。", parent=self.root)
+            return
+
+        target_dir = os.path.dirname(app_state.file_path) if app_state.file_path else os.getcwd()
+        if not target_dir:
+            target_dir = os.getcwd()
+        target_path = os.path.join(target_dir, f"{sanitized}.csv")
+
+        if os.path.exists(target_path):
+            overwrite = messagebox.askyesno(
+                "导出为 CSV",
+                f"文件已存在：\n{target_path}\n是否覆盖？",
+                parent=self.root
+            )
+            if not overwrite:
+                return
+
+        try:
+            df.to_csv(target_path, index=False, encoding='utf-8-sig')
+        except Exception as exc:
+            messagebox.showerror("导出为 CSV", f"导出失败：{exc}", parent=self.root)
+            return
+
+        messagebox.showinfo(
+            "导出为 CSV",
+            f"已导出 {len(df)} 条记录到：\n{target_path}",
+            parent=self.root
+        )
+
+    def _export_selected_excel(self):
+        """Append selected samples to an Excel sheet."""
+        df = self._get_selected_dataframe()
+        if df is None:
+            return
+
+        if app_state.file_path and app_state.file_path.lower().endswith(('.xlsx', '.xlsm')):
+            workbook_path = app_state.file_path
+        else:
+            workbook_path = filedialog.asksaveasfilename(
+                parent=self.root,
+                title="选择目标工作簿",
+                defaultextension=".xlsx",
+                filetypes=[("Excel 工作簿", "*.xlsx")],
+                initialfile="selected_data.xlsx"
+            )
+            if not workbook_path:
+                return
+
+        if not workbook_path.lower().endswith('.xlsx'):
+            workbook_path = f"{workbook_path}.xlsx"
+
+        sheet_default = f"Selected_{datetime.now().strftime('%Y%m%d_%H%M')}"
+        sheet_name = simpledialog.askstring(
+            "追加至 Excel",
+            "请输入新工作表名称：",
+            initialvalue=sheet_default,
+            parent=self.root
+        )
+        if sheet_name is None:
+            return
+
+        sheet_name = sheet_name.strip()
+        if not sheet_name:
+            messagebox.showerror("追加至 Excel", "工作表名称不能为空。", parent=self.root)
+            return
+        if len(sheet_name) > 31:
+            messagebox.showerror("追加至 Excel", "工作表名称不能超过 31 个字符。", parent=self.root)
+            return
+        if any(ch in sheet_name for ch in '[]:*?/\\'):
+            messagebox.showerror("追加至 Excel", "工作表名称包含非法字符：[]:*?/\\", parent=self.root)
+            return
+
+        try:
+            import openpyxl
+        except ImportError:
+            messagebox.showerror(
+                "追加至 Excel",
+                "需要安装 openpyxl 库才能写入 Excel。请先安装 openpyxl。",
+                parent=self.root
+            )
+            return
+
+        exists = os.path.exists(workbook_path)
+        if exists:
+            try:
+                wb = openpyxl.load_workbook(workbook_path)
+            except Exception as exc:
+                messagebox.showerror("追加至 Excel", f"无法打开目标工作簿：{exc}", parent=self.root)
+                return
+            if sheet_name in wb.sheetnames:
+                wb.close()
+                messagebox.showerror("追加至 Excel", "指定的工作表已存在，请使用其他名称。", parent=self.root)
+                return
+            wb.close()
+
+        try:
+            if exists:
+                with pd.ExcelWriter(workbook_path, mode='a', engine='openpyxl', if_sheet_exists='new') as writer:
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+            else:
+                with pd.ExcelWriter(workbook_path, mode='w', engine='openpyxl') as writer:
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+        except Exception as exc:
+            messagebox.showerror("追加至 Excel", f"写入失败：{exc}", parent=self.root)
+            return
+
+        messagebox.showinfo(
+            "追加至 Excel",
+            f"已将 {len(df)} 条记录写入工作表 '{sheet_name}'。\n路径：{workbook_path}",
+            parent=self.root
+        )
+
     def _reload_data(self):
         """Allow the user to pick a new dataset and refresh the UI."""
         try:
@@ -580,6 +847,8 @@ class ControlPanel:
 
         if self.callback:
             self.callback()
+
+        self.update_selection_controls()
 
         messagebox.showinfo("Reload Data", "Dataset reloaded successfully.", parent=self.root)
     

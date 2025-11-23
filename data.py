@@ -155,6 +155,8 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         app_state.df_global = df.reset_index(drop=True)
         app_state.file_path = excel_file
         app_state.sheet_name = sheet_name if sheet_name else None
+        app_state.selected_indices.clear()
+        app_state.selection_mode = False
         print(f"[OK] Loaded {len(app_state.df_global)} valid samples.", flush=True)
         return True
         

@@ -273,6 +273,8 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
                     y_val = float(ys[j])
                     key = (round(x_val, 2), round(y_val, 2))
                     app_state.sample_index_map[key] = idx
+                    app_state.sample_coordinates[idx] = (x_val, y_val)
+                    app_state.artist_to_sample[(id(sc), j)] = idx
                     
             except Exception as e:
                 print(f"[WARN] Error plotting category {cat}: {e}", flush=True)
@@ -437,6 +439,8 @@ def plot_2d_data(group_col, data_columns, size=60):
             for j, idx in enumerate(indices):
                 key = (round(float(xs[j]), 3), round(float(ys[j]), 3))
                 app_state.sample_index_map[key] = idx
+                app_state.sample_coordinates[idx] = (float(xs[j]), float(ys[j]))
+                app_state.artist_to_sample[(id(sc), j)] = idx
 
         if not app_state.scatter_collections:
             print("[ERROR] No points were plotted in 2D", flush=True)

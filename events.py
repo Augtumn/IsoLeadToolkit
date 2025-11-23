@@ -3,10 +3,228 @@ Event Handlers
 Manages user interactions: hover, click, and legend events
 """
 import pandas as pd
-import os
-from config import CONFIG
 from state import app_state
 import state as state_module
+from matplotlib.widgets import RectangleSelector
+
+
+def _notify_selection_ui():
+    """Ask the control panel to refresh selection-related widgets."""
+    panel = getattr(app_state, 'control_panel_ref', None) or getattr(state_module, 'control_panel', None)
+    if panel is None:
+        return
+
+    update_fn = getattr(panel, 'update_selection_controls', None)
+    if not callable(update_fn):
+        return
+
+    try:
+        update_fn()
+    except Exception as err:
+        print(f"[WARN] Unable to update selection controls: {err}", flush=True)
+
+
+def _disable_rectangle_selector():
+    selector = getattr(app_state, 'rectangle_selector', None)
+    if selector is None:
+        return
+    try:
+        selector.set_active(False)
+    except Exception:
+        pass
+
+
+def _ensure_rectangle_selector():
+    if not app_state.selection_mode or app_state.render_mode == '3D':
+        _disable_rectangle_selector()
+        return
+
+    if app_state.ax is None:
+        return
+
+    selector = getattr(app_state, 'rectangle_selector', None)
+
+    if selector is not None:
+        try:
+            # If the selector is bound to a different axes, rebuild it
+            if getattr(selector, 'ax', None) is not app_state.ax:
+                try:
+                    selector.disconnect_events()
+                except Exception:
+                    pass
+                app_state.rectangle_selector = None
+                selector = None
+            else:
+                selector.set_active(True)
+        except Exception:
+            app_state.rectangle_selector = None
+            selector = None
+
+    if selector is None:
+        try:
+            app_state.rectangle_selector = RectangleSelector(
+                app_state.ax,
+                _handle_rectangle_select,
+                useblit=True,
+                button=[1],
+                spancoords='data',
+                interactive=False
+            )
+        except Exception as err:
+            print(f"[WARN] Unable to initialize rectangle selector: {err}", flush=True)
+            app_state.rectangle_selector = None
+
+
+def _handle_rectangle_select(eclick, erelease):
+    try:
+        if not app_state.selection_mode or app_state.render_mode == '3D':
+            return
+
+        if any(val is None for val in (eclick.xdata, erelease.xdata, eclick.ydata, erelease.ydata)):
+            return
+
+        x_min, x_max = sorted([float(eclick.xdata), float(erelease.xdata)])
+        y_min, y_max = sorted([float(eclick.ydata), float(erelease.ydata)])
+
+        if abs(x_max - x_min) < 1e-9 or abs(y_max - y_min) < 1e-9:
+            return
+
+        indices_in_box = [
+            idx for idx, (x_val, y_val) in app_state.sample_coordinates.items()
+            if x_min <= x_val <= x_max and y_min <= y_val <= y_max
+        ]
+
+        if not indices_in_box:
+            return
+
+        current = app_state.selected_indices
+        if all(idx in current for idx in indices_in_box):
+            for idx in indices_in_box:
+                current.discard(idx)
+            print(f"[INFO] Deselected {len(indices_in_box)} samples via box selection.", flush=True)
+        else:
+            for idx in indices_in_box:
+                current.add(idx)
+            print(f"[INFO] Selected {len(indices_in_box)} samples via box selection.", flush=True)
+
+        refresh_selection_overlay()
+        _notify_selection_ui()
+    except Exception as err:
+        print(f"[WARN] Rectangle selection failed: {err}", flush=True)
+
+
+def refresh_selection_overlay():
+    """Update selection overlay scatter to highlight chosen points."""
+    try:
+        if app_state.fig is None or app_state.ax is None or app_state.render_mode == '3D':
+            if app_state.selection_overlay is not None:
+                try:
+                    app_state.selection_overlay.remove()
+                except Exception:
+                    pass
+                app_state.selection_overlay = None
+            _notify_selection_ui()
+            return
+
+        if app_state.selection_overlay is not None:
+            try:
+                app_state.selection_overlay.remove()
+            except Exception:
+                pass
+            app_state.selection_overlay = None
+
+        valid_indices = [idx for idx in app_state.selected_indices if idx in app_state.sample_coordinates]
+        removed = set(app_state.selected_indices) - set(valid_indices)
+        if removed:
+            app_state.selected_indices -= removed
+
+        if not valid_indices:
+            app_state.fig.canvas.draw_idle()
+            _notify_selection_ui()
+            return
+
+        xs = [app_state.sample_coordinates[idx][0] for idx in valid_indices]
+        ys = [app_state.sample_coordinates[idx][1] for idx in valid_indices]
+        highlight_size = max(int(app_state.point_size * 1.8), 20)
+
+        app_state.selection_overlay = app_state.ax.scatter(
+            xs,
+            ys,
+            s=[highlight_size] * len(xs),
+            facecolors='none',
+            edgecolors='#f97316',
+            linewidths=1.6,
+            zorder=6
+        )
+
+        app_state.fig.canvas.draw_idle()
+        _notify_selection_ui()
+    except Exception as err:
+        print(f"[WARN] Unable to refresh selection overlay: {err}", flush=True)
+
+
+def _resolve_sample_index(event):
+    """Attempt to map a Matplotlib event to a sample index."""
+    try:
+        for sc in app_state.scatter_collections:
+            if sc is None:
+                continue
+            try:
+                cont, ind = sc.contains(event)
+            except Exception:
+                continue
+            if not cont or 'ind' not in ind or not ind['ind']:
+                continue
+            idx_in_scatter = int(ind['ind'][0])
+            sample_idx = app_state.artist_to_sample.get((id(sc), idx_in_scatter))
+            if sample_idx is not None:
+                return sample_idx
+
+        if event is not None and event.xdata is not None and event.ydata is not None:
+            x_val = float(event.xdata)
+            y_val = float(event.ydata)
+            best_idx = None
+            best_distance = float('inf')
+            for idx, (sx, sy) in app_state.sample_coordinates.items():
+                distance = ((x_val - sx) ** 2 + (y_val - sy) ** 2) ** 0.5
+                if distance < 0.15 and distance < best_distance:
+                    best_distance = distance
+                    best_idx = idx
+            return best_idx
+    except Exception:
+        return None
+    return None
+
+
+def toggle_selection_mode(event=None):
+    """Toggle interactive selection mode for 2D plots."""
+    try:
+        desired_state = not app_state.selection_mode
+        if desired_state and app_state.render_mode == '3D':
+            print('[WARN] Selection mode is only available for 2D projections.', flush=True)
+            return
+
+        app_state.selection_mode = desired_state
+
+        if app_state.selection_mode:
+            print("[INFO] Selection mode enabled. Double-click points or drag to box select.", flush=True)
+            _ensure_rectangle_selector()
+        else:
+            print("[INFO] Selection mode disabled.", flush=True)
+            _disable_rectangle_selector()
+
+        _notify_selection_ui()
+        refresh_selection_overlay()
+    except Exception as err:
+        print(f"[WARN] Failed to toggle selection mode: {err}", flush=True)
+
+
+def sync_selection_tools():
+    """Ensure selection helpers stay in sync with current axes."""
+    if app_state.selection_mode:
+        _ensure_rectangle_selector()
+    else:
+        _disable_rectangle_selector()
 
 
 def on_hover(event):
@@ -22,74 +240,63 @@ def on_hover(event):
             return
         
         visible = False
-        
+
         for sc in app_state.scatter_collections:
             if sc is None:
                 continue
-            
+
             try:
-                # Check if cursor is over this scatter
                 cont, ind = sc.contains(event)
                 if not cont or not ind or "ind" not in ind or len(ind["ind"]) == 0:
                     continue
-                
+
                 idx_in_scatter = int(ind["ind"][0])
+                sample_idx = app_state.artist_to_sample.get((id(sc), idx_in_scatter))
+                if sample_idx is None:
+                    continue
+
                 offsets = sc.get_offsets()
-                
                 if offsets is None or len(offsets) <= idx_in_scatter:
                     continue
-                
-                # Get the exact coordinates
+
                 x, y = offsets[idx_in_scatter]
                 x, y = float(x), float(y)
-                
-                # Search through all mapped points with distance tolerance
-                best_distance = float('inf')
-                best_idx = None
-                
-                for (mapped_x, mapped_y), sample_idx in app_state.sample_index_map.items():
-                    mapped_x, mapped_y = float(mapped_x), float(mapped_y)
-                    distance = ((x - mapped_x) ** 2 + (y - mapped_y) ** 2) ** 0.5
-                    
-                    if distance < 0.1 and distance < best_distance:
-                        best_distance = distance
-                        best_idx = sample_idx
-                
-                if best_idx is not None:
-                    row = app_state.df_global.iloc[best_idx]
-                    
-                    lab_no = row['Lab No.'] if 'Lab No.' in app_state.df_global.columns else 'N/A'
-                    site = row['Discovery site'] if 'Discovery site' in app_state.df_global.columns else 'N/A'
-                    period = row['Period'] if 'Period' in app_state.df_global.columns else 'N/A'
-                    
-                    # Handle NaN values
-                    lab_no = str(lab_no) if pd.notna(lab_no) else 'N/A'
-                    site = str(site) if pd.notna(site) else 'N/A'
-                    period = str(period) if pd.notna(period) else 'N/A'
-                    
-                    txt = f"Lab: {lab_no}\nSite: {site}\nPeriod: {period}"
-                    app_state.annotation.xy = (x, y)
-                    app_state.annotation.set_text(txt)
-                    app_state.annotation.set_visible(True)
-                    visible = True
 
-                    break
-                    
-            except Exception as inner_e:
+                row = app_state.df_global.iloc[sample_idx]
+
+                lab_no = row['Lab No.'] if 'Lab No.' in app_state.df_global.columns else 'N/A'
+                site = row['Discovery site'] if 'Discovery site' in app_state.df_global.columns else 'N/A'
+                period = row['Period'] if 'Period' in app_state.df_global.columns else 'N/A'
+
+                lab_no = str(lab_no) if pd.notna(lab_no) else 'N/A'
+                site = str(site) if pd.notna(site) else 'N/A'
+                period = str(period) if pd.notna(period) else 'N/A'
+
+                txt = f"Lab: {lab_no}\nSite: {site}\nPeriod: {period}"
+                if sample_idx in app_state.selected_indices:
+                    txt += "\n状态: 已选中"
+
+                app_state.annotation.xy = (x, y)
+                app_state.annotation.set_text(txt)
+                app_state.annotation.set_visible(True)
+                visible = True
+                break
+
+            except Exception:
                 continue
-        
+
         if not visible:
             try:
                 app_state.annotation.set_visible(False)
             except:
                 pass
             
-    except Exception as e:
+    except Exception:
         pass
 
 
 def on_click(event):
-    """Handle mouse click events - export sample"""
+    """Handle mouse click events for interactive selection."""
     try:
         if app_state.render_mode == '3D':
             return
@@ -103,62 +310,35 @@ def on_click(event):
         if not hasattr(event, 'button') or event.button != 1:
             return
         
-        for sc in app_state.scatter_collections:
-            if sc is None:
-                continue
-            
-            try:
-                cont, ind = sc.contains(event)
-                if not cont or not ind or "ind" not in ind or len(ind["ind"]) == 0:
-                    continue
-                
-                idx_in_scatter = int(ind["ind"][0])
-                offsets = sc.get_offsets()
-                
-                if offsets is None or len(offsets) <= idx_in_scatter:
-                    continue
-                
-                x, y = offsets[idx_in_scatter]
-                x, y = float(x), float(y)
-                
-                # Find the sample index using distance tolerance
-                best_distance = float('inf')
-                best_idx = None
-                
-                for (mapped_x, mapped_y), sample_idx in app_state.sample_index_map.items():
-                    mapped_x, mapped_y = float(mapped_x), float(mapped_y)
-                    distance = ((x - mapped_x) ** 2 + (y - mapped_y) ** 2) ** 0.5
-                    
-                    if distance < 0.1 and distance < best_distance:
-                        best_distance = distance
-                        best_idx = sample_idx
-                
-                if best_idx is not None:
-                    # Check if already exported to prevent duplicates
-                    if best_idx in app_state.exported_indices:
-                        return
-                    
-                    app_state.exported_indices.add(best_idx)
-                    sample = app_state.df_global.iloc[[best_idx]]
-                    
-                    export_file = CONFIG['export_csv']
-                    try:
-                        if os.path.exists(export_file):
-                            existing = pd.read_csv(export_file, dtype=str)
-                            sample_export = pd.concat([existing, sample], ignore_index=True)
-                        else:
-                            sample_export = sample
-                        
-                        sample_export.to_csv(export_file, index=False, encoding='utf-8')
-                        lab_no = sample.iloc[0]['Lab No.'] if 'Lab No.' in sample.columns else 'N/A'
-                        lab_no = str(lab_no) if pd.notna(lab_no) else 'N/A'
-                        print(f"[OK] Sample exported to {export_file}: Lab No. = {lab_no}", flush=True)
-                    except Exception as export_err:
-                        print(f"[ERROR] Export failed: {export_err}", flush=True)
+        if app_state.selection_mode:
+            if getattr(event, 'dblclick', False):
+                sample_idx = _resolve_sample_index(event)
+                if sample_idx is None:
+                    print("[WARN] No point detected for selection.", flush=True)
                     return
-                    
-            except Exception as inner_e:
-                continue
+
+                try:
+                    row = app_state.df_global.iloc[sample_idx]
+                    lab_value = row['Lab No.'] if 'Lab No.' in app_state.df_global.columns else sample_idx
+                    if pd.notna(lab_value):
+                        lab_label = str(lab_value)
+                    else:
+                        lab_label = str(sample_idx)
+                except Exception:
+                    lab_label = str(sample_idx)
+
+                if sample_idx in app_state.selected_indices:
+                    app_state.selected_indices.discard(sample_idx)
+                    print(f"[INFO] Deselected sample {lab_label}.", flush=True)
+                else:
+                    app_state.selected_indices.add(sample_idx)
+                    print(f"[INFO] Selected sample {lab_label}.", flush=True)
+
+                refresh_selection_overlay()
+            return
+
+        print("[INFO] 单击导出已移除，请使用控制面板中的导出功能。", flush=True)
+        return
                 
     except Exception as e:
         print(f"[WARN] Click handler error: {e}", flush=True)
@@ -386,6 +566,12 @@ def on_slider_change(val=None):
 
             rendered_ok = False
             if app_state.render_mode == '3D':
+                if app_state.selection_mode:
+                    app_state.selection_mode = False
+                    _disable_rectangle_selector()
+                    refresh_selection_overlay()
+                    _notify_selection_ui()
+                    print("[INFO] Selection mode automatically disabled for 3D view.", flush=True)
                 if len(selected_columns_3d) != 3:
                     print("[WARN] Invalid 3D column selection; skipping plot", flush=True)
                 else:
@@ -418,6 +604,9 @@ def on_slider_change(val=None):
 
             if rendered_ok:
                 print("[DEBUG] Plot rendered successfully, calling draw_idle", flush=True)
+                refresh_selection_overlay()
+                sync_selection_tools()
+                _notify_selection_ui()
                 try:
                     app_state.fig.canvas.draw_idle()
                 except Exception as draw_err:
@@ -443,6 +632,9 @@ def on_slider_change(val=None):
                         size=app_state.point_size
                     )
                     if fallback_ok:
+                        refresh_selection_overlay()
+                        sync_selection_tools()
+                        _notify_selection_ui()
                         try:
                             app_state.fig.canvas.draw_idle()
                         except Exception:
