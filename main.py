@@ -16,6 +16,7 @@ import warnings
 import traceback
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from matplotlib.widgets import Button
 
 from config import CONFIG
@@ -27,15 +28,58 @@ from session import load_session_params, save_session_params
 from control_panel import create_control_panel
 from localization import translate, set_language, validate_language
 
+
+def _enable_high_dpi_awareness():
+    """Enable per-monitor DPI awareness on Windows to reduce blurry fonts."""
+    if not sys.platform.startswith('win'):
+        return
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            import ctypes
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+
+def _configure_matplotlib_fonts():
+    """Configure Matplotlib to use a font that supports Chinese glyphs."""
+    preferred_fonts = CONFIG.get('preferred_plot_fonts', [])
+    available_fonts = {f.name for f in font_manager.fontManager.ttflist}
+    chosen_font = None
+
+    for name in preferred_fonts:
+        if name in available_fonts:
+            chosen_font = name
+            break
+
+    if chosen_font:
+        matplotlib.rcParams['font.family'] = 'sans-serif'
+        matplotlib.rcParams['font.sans-serif'] = [chosen_font, 'Arial', 'sans-serif']
+        print(f"[INFO] Using plot font: {chosen_font}", flush=True)
+    else:
+        print("[WARN] Preferred plot fonts not found; falling back to default sans-serif font.", flush=True)
+
+    matplotlib.rcParams['axes.unicode_minus'] = False
+    dpi_value = CONFIG.get('figure_dpi')
+    if dpi_value:
+        matplotlib.rcParams['figure.dpi'] = dpi_value
+        matplotlib.rcParams['savefig.dpi'] = dpi_value
+
 # Configure warnings
 warnings.filterwarnings("ignore", message=".*n_jobs value.*overridden.*random_state.*")
 
 # Configure matplotlib backend
+_enable_high_dpi_awareness()
 try:
     matplotlib.use('TkAgg')
 except Exception:
     print("[WARN] TkAgg backend not available, using Agg", flush=True)
     matplotlib.use('Agg')
+
+_configure_matplotlib_fonts()
 
 
 def _save_session(state_module):
