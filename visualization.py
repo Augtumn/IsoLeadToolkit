@@ -206,32 +206,27 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
             print(f"[ERROR] Embedding size {embedding.shape[0]} does not match data size {len(app_state.df_global)}", flush=True)
             return False
         
-        df_plot = app_state.df_global.copy()
+        def _reset_plot_dataframe():
+            base = app_state.df_global.copy()
+            if group_col not in base.columns:
+                return None
+            base[group_col] = base[group_col].fillna('Unknown').astype(str)
+            try:
+                base['_emb_x'] = embedding[:, 0]
+                base['_emb_y'] = embedding[:, 1]
+            except Exception as emb_error:
+                print(f"[ERROR] Unable to align embedding with data: {emb_error}", flush=True)
+                return None
+            return base
+
+        df_plot = _reset_plot_dataframe()
+        if df_plot is None:
+            print(f"[ERROR] Unable to prepare plotting data for column: {group_col}", flush=True)
+            return False
         if group_col not in df_plot.columns:
             print(f"[ERROR] Column not found: {group_col}", flush=True)
             return False
-        
-        df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
 
-        all_groups = sorted(df_plot[group_col].unique())
-        app_state.available_groups = all_groups
-
-        visible_groups = app_state.visible_groups
-        if visible_groups:
-            allowed = set(visible_groups)
-            mask = df_plot[group_col].isin(allowed)
-            if not mask.any():
-                print("[INFO] No 3D data matches the selected legend filter; reverting to all groups.", flush=True)
-                app_state.visible_groups = None
-            else:
-                df_plot = df_plot[mask].copy()
-                if df_plot.empty:
-                    print("[INFO] Filtered 3D data is empty; reverting to all groups.", flush=True)
-                    df_plot = app_state.df_global.dropna(subset=data_columns).copy()
-                    df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
-                    app_state.visible_groups = None
-                    all_groups = sorted(df_plot[group_col].unique())
-                    app_state.available_groups = all_groups
         all_groups = sorted(df_plot[group_col].unique())
         app_state.available_groups = all_groups
 
@@ -244,6 +239,13 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
                 app_state.visible_groups = None
             else:
                 df_plot = df_plot[mask].copy()
+                if df_plot.empty:
+                    print("[INFO] Filtered 3D data is empty; showing all groups instead.", flush=True)
+                    df_plot = _reset_plot_dataframe()
+                    if df_plot is None:
+                        return False
+                    app_state.visible_groups = None
+                    app_state.available_groups = sorted(df_plot[group_col].unique())
 
         unique_cats = sorted(df_plot[group_col].unique())
         print(f"[DEBUG] Unique categories in {group_col}: {unique_cats}", flush=True)
@@ -252,10 +254,12 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
         scatters = []
         for i, cat in enumerate(unique_cats):
             try:
-                mask = df_plot[group_col] == cat
-                indices = df_plot[mask].index.tolist()
-                xs = embedding[mask, 0]
-                ys = embedding[mask, 1]
+                subset = df_plot[df_plot[group_col] == cat]
+                if subset.empty:
+                    continue
+                indices = subset.index.tolist()
+                xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)
+                ys = subset['_emb_y'].to_numpy(dtype=float, copy=False)
                 
                 if len(xs) == 0:
                     continue
@@ -397,6 +401,13 @@ def plot_2d_data(group_col, data_columns, size=60):
                 app_state.visible_groups = None
             else:
                 df_plot = df_plot[mask].copy()
+                if df_plot.empty:
+                    print("[INFO] Filtered 2D data is empty; reverting to all groups.", flush=True)
+                    df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+                    df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
+                    app_state.visible_groups = None
+                    all_groups = sorted(df_plot[group_col].unique())
+                    app_state.available_groups = all_groups
 
         app_state.ax.clear()
         app_state.clear_plot_state()
