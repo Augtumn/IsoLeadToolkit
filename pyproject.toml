@@ -1,0 +1,15 @@
+[project]
+name = "isotopesanalyse"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.5",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "seaborn>=0.13.2",
+    "scikit-learn>=1.5.2",
+    "umap-learn>=0.5.6",
+]

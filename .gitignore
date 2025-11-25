@@ -11,9 +11,6 @@ wheels/
 
 # Virtual environments
 .venv
-.python-version
 *.xlsx
-pyproject.toml
-README.md
 *.csv
 uv.lock
