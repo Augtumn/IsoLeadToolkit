@@ -43,6 +43,7 @@ CONFIG = {
         'n_components': 2
     },
     'show_ellipses': False,
+    'ellipse_confidence': 0.95,  # Default confidence level
     'point_size': 60,
     'figure_size': (13, 9),
     'figure_dpi': 130,

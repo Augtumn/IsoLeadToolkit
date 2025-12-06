@@ -277,6 +277,27 @@ class ControlPanel:
         ellipse_check.pack(anchor=tk.W, pady=(4, 8))
         self._register_translation(ellipse_check, "Show Confidence Ellipses")
 
+        # Ellipse Confidence Level
+        conf_frame = ttk.Frame(common_section, style='CardBody.TFrame')
+        conf_frame.pack(fill=tk.X, pady=(0, 8))
+        
+        conf_label = ttk.Label(conf_frame, text=self._translate("Confidence Level"), style='Body.TLabel')
+        conf_label.pack(side=tk.LEFT, padx=(20, 8))
+        self._register_translation(conf_label, "Confidence Level")
+        
+        self.radio_vars['confidence'] = tk.DoubleVar(value=app_state.ellipse_confidence)
+        
+        for level in [0.68, 0.95, 0.99]:
+            rb = ttk.Radiobutton(
+                conf_frame,
+                text=f"{int(level*100)}%",
+                variable=self.radio_vars['confidence'],
+                value=level,
+                command=self._on_change,
+                style='Option.TRadiobutton'
+            )
+            rb.pack(side=tk.LEFT, padx=4)
+
         group_label = ttk.Label(
             common_section,
             text=self._translate("Group column"),
@@ -1150,6 +1171,9 @@ class ControlPanel:
             # Update Ellipse setting
             if 'ellipses' in self.check_vars:
                 app_state.show_ellipses = self.check_vars['ellipses'].get()
+            
+            if 'confidence' in self.radio_vars:
+                app_state.ellipse_confidence = self.radio_vars['confidence'].get()
 
             # Update UMAP parameters - only if keys exist
             umap_changed = False
