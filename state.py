@@ -15,6 +15,7 @@ class AppState:
         self.tsne_params = CONFIG['tsne_params'].copy()
         self.pca_params = CONFIG.get('pca_params', {}).copy()
         self.show_ellipses = CONFIG.get('show_ellipses', False)
+        self.ellipse_confidence = CONFIG.get('ellipse_confidence', 0.95)
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading
         self.render_mode = 'UMAP'
@@ -31,6 +32,7 @@ class AppState:
         self.sample_coordinates = {}
         self.artist_to_sample = {}
         self.selection_overlay = None
+        self.selection_ellipse = None  # Store the confidence ellipse for selected points
         self.language = CONFIG.get('default_language', 'zh')
         self.language_labels = CONFIG.get('languages', {'zh': '中文', 'en': 'English'})
         self.language_listeners = []

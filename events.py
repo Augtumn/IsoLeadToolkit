@@ -3,9 +3,52 @@ Event Handlers
 Manages user interactions: hover, click, and legend events
 """
 import pandas as pd
+import numpy as np
+import matplotlib
+from matplotlib.patches import Ellipse
 from state import app_state
 import state as state_module
 from matplotlib.widgets import RectangleSelector
+
+
+import scipy.stats
+
+def draw_confidence_ellipse(x, y, ax, confidence=0.95, facecolor='none', **kwargs):
+    """
+    Create a plot of the covariance confidence ellipse of *x* and *y*.
+    confidence: float, e.g. 0.95 for 95% confidence interval
+    """
+    if x.size < 2 or y.size < 2:
+        return None
+
+    # Calculate n_std based on confidence level for 2D (Chi-squared with 2 DoF)
+    # ppf is the inverse of cdf
+    chi2_val = scipy.stats.chi2.ppf(confidence, df=2)
+    n_std = np.sqrt(chi2_val)
+
+    cov = np.cov(x, y)
+    pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+    
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+    
+    ellipse = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
+                      facecolor=facecolor, **kwargs)
+
+    scale_x = np.sqrt(cov[0, 0]) * n_std
+    mean_x = np.mean(x)
+    scale_y = np.sqrt(cov[1, 1]) * n_std
+    mean_y = np.mean(y)
+
+    transf = (
+        matplotlib.transforms.Affine2D()
+        .rotate_deg(45)
+        .scale(scale_x, scale_y)
+        .translate(mean_x, mean_y)
+    )
+
+    ellipse.set_transform(transf + ax.transData)
+    return ax.add_patch(ellipse)
 
 
 def _notify_selection_ui():
@@ -132,6 +175,14 @@ def refresh_selection_overlay():
             except Exception:
                 pass
             app_state.selection_overlay = None
+        
+        # Clear previous selection ellipse
+        if app_state.selection_ellipse is not None:
+            try:
+                app_state.selection_ellipse.remove()
+            except Exception:
+                pass
+            app_state.selection_ellipse = None
 
         valid_indices = [idx for idx in app_state.selected_indices if idx in app_state.sample_coordinates]
         removed = set(app_state.selected_indices) - set(valid_indices)
@@ -156,6 +207,21 @@ def refresh_selection_overlay():
             linewidths=1.6,
             zorder=6
         )
+        
+        # Draw confidence ellipse for selected points if enabled
+        if app_state.show_ellipses and len(xs) >= 3:
+            try:
+                x_arr = np.array(xs)
+                y_arr = np.array(ys)
+                # Use a distinct style for the selection ellipse
+                app_state.selection_ellipse = draw_confidence_ellipse(
+                    x_arr, y_arr, app_state.ax, 
+                    confidence=app_state.ellipse_confidence,
+                    edgecolor='#f97316', linestyle='--', linewidth=2, zorder=5, alpha=0.8
+                )
+                print(f"[INFO] Drawn {app_state.ellipse_confidence*100:.0f}% confidence ellipse for {len(xs)} selected points.", flush=True)
+            except Exception as e:
+                print(f"[WARN] Failed to draw selection ellipse: {e}", flush=True)
 
         app_state.fig.canvas.draw_idle()
         _notify_selection_ui()

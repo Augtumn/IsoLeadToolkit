@@ -43,9 +43,10 @@ def _ensure_axes(dimensions=2):
         print(f"[WARN] Unable to configure axes: {axis_err}", flush=True)
 
 
-def draw_confidence_ellipse(x, y, ax, n_std=2.0, facecolor='none', **kwargs):
+def draw_confidence_ellipse(x, y, ax, n_std=2.4477, facecolor='none', **kwargs):
     """
     Create a plot of the covariance confidence ellipse of *x* and *y*.
+    n_std=2.4477 corresponds to a 95% confidence interval for a 2D distribution.
     """
     if x.size < 2 or y.size < 2:
         return
@@ -348,12 +349,13 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 scatters.append(sc)
                 app_state.scatter_collections.append(sc)
                 
-                # Draw confidence ellipse if enabled
-                if app_state.show_ellipses:
-                    try:
-                        draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
-                    except Exception as e:
-                        print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
+                # Note: Group-level ellipses are disabled in favor of selection-based ellipses
+                # to avoid clutter with large datasets.
+                # if app_state.show_ellipses:
+                #     try:
+                #         draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
+                #     except Exception as e:
+                #         print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
 
                 # Store coordinate-to-index mapping with explicit float conversion
                 for j, idx in enumerate(indices):
@@ -541,12 +543,12 @@ def plot_2d_data(group_col, data_columns, size=60):
             app_state.scatter_collections.append(sc)
             scatters.append(sc)
 
-            # Draw confidence ellipse if enabled
-            if app_state.show_ellipses:
-                try:
-                    draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
-                except Exception as e:
-                    print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
+            # Note: Group-level ellipses are disabled in favor of selection-based ellipses
+            # if app_state.show_ellipses:
+            #     try:
+            #         draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
+            #     except Exception as e:
+            #         print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
 
             for j, idx in enumerate(indices):
                 key = (round(float(xs[j]), 3), round(float(ys[j]), 3))
