@@ -14,11 +14,13 @@ class AppState:
         self.umap_params = CONFIG['umap_params'].copy()
         self.tsne_params = CONFIG['tsne_params'].copy()
         self.pca_params = CONFIG.get('pca_params', {}).copy()
+        self.robust_pca_params = CONFIG.get('robust_pca_params', {}).copy()
         self.show_ellipses = CONFIG.get('show_ellipses', False)
         self.ellipse_confidence = CONFIG.get('ellipse_confidence', 0.95)
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading
         self.render_mode = 'UMAP'
+        self.active_subset_indices = None  # If set, analysis is restricted to these indices
         self.selected_2d_cols = []
         self.selected_3d_cols = []
         self.available_groups = []

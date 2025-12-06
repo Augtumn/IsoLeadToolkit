@@ -9,6 +9,7 @@ from state import app_state
 import umap
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+from sklearn.covariance import MinCovDet
 import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from matplotlib.patches import Ellipse
@@ -76,10 +77,95 @@ def draw_confidence_ellipse(x, y, ax, n_std=2.4477, facecolor='none', **kwargs):
     return ax.add_patch(ellipse)
 
 
+def _get_analysis_data():
+    """Helper to get the data subset for analysis (all or selected)."""
+    if app_state.active_subset_indices is not None:
+        # Filter by active subset
+        indices = sorted(list(app_state.active_subset_indices))
+        if not indices:
+            return None, None
+        X = app_state.df_global.iloc[indices][app_state.data_cols].values
+        return X, indices
+    else:
+        # Use full dataset
+        X = app_state.df_global[app_state.data_cols].values
+        indices = list(range(len(app_state.df_global)))
+        return X, indices
+
+
+def get_robust_pca_embedding(params):
+    """Get or compute Robust PCA (via MinCovDet) embedding with caching"""
+    try:
+        # Note: Robust PCA depends on the data subset, so we include a hash of indices in the key if subset is active
+        subset_key = 'full'
+        if app_state.active_subset_indices is not None:
+            subset_key = hash(tuple(sorted(list(app_state.active_subset_indices))))
+            
+        key = ('robust_pca', params['n_components'], params['random_state'], subset_key)
+        
+        if key in app_state.embedding_cache:
+            print(f"[INFO] Using cached Robust PCA embedding", flush=True)
+            result = app_state.embedding_cache[key]
+            if result is not None:
+                return result
+        
+        print(f"[INFO] Computing Robust PCA with params: {params}", flush=True)
+        X, _ = _get_analysis_data()
+        
+        if X is None or X.shape[0] == 0:
+            print(f"[ERROR] No data available for Robust PCA computation", flush=True)
+            return None
+            
+        # MinCovDet requires n_samples > n_features. 
+        # If not met, fallback to standard PCA with a warning.
+        if X.shape[0] <= X.shape[1]:
+            print(f"[WARN] Not enough samples ({X.shape[0]}) for Robust PCA (needs > {X.shape[1]} features). Falling back to standard PCA.", flush=True)
+            reducer = PCA(
+                n_components=params['n_components'],
+                random_state=params['random_state']
+            )
+            embedding = reducer.fit_transform(X)
+        else:
+            # 1. Estimate robust covariance
+            mcd = MinCovDet(random_state=params['random_state'])
+            mcd.fit(X)
+            
+            # 2. Get robust covariance and location
+            robust_cov = mcd.covariance_
+            robust_location = mcd.location_
+            
+            # 3. Center data using robust location
+            X_centered = X - robust_location
+            
+            # 4. Eigendecomposition of robust covariance
+            eigvals, eigvecs = np.linalg.eigh(robust_cov)
+            
+            # 5. Sort eigenvectors by eigenvalues in descending order
+            idx = eigvals.argsort()[::-1]
+            eigvecs = eigvecs[:, idx]
+            
+            # 6. Project data onto top components
+            # Note: We project the centered data
+            embedding = np.dot(X_centered, eigvecs[:, :params['n_components']])
+
+        app_state.embedding_cache[key] = embedding
+        print(f"[INFO] Robust PCA embedding computed: shape {embedding.shape}", flush=True)
+        return embedding
+        
+    except Exception as e:
+        print(f"[ERROR] Robust PCA computation failed: {e}", flush=True)
+        traceback.print_exc()
+        return None
+
+
 def get_pca_embedding(params):
     """Get or compute PCA embedding with caching"""
     try:
-        key = ('pca', params['n_components'], params['random_state'])
+        subset_key = 'full'
+        if app_state.active_subset_indices is not None:
+            subset_key = hash(tuple(sorted(list(app_state.active_subset_indices))))
+
+        key = ('pca', params['n_components'], params['random_state'], subset_key)
         
         if key in app_state.embedding_cache:
             print(f"[INFO] Using cached PCA embedding", flush=True)
@@ -88,9 +174,9 @@ def get_pca_embedding(params):
                 return result
         
         print(f"[INFO] Computing PCA with params: {params}", flush=True)
-        X = app_state.df_global[app_state.data_cols].values
+        X, _ = _get_analysis_data()
         
-        if X.shape[0] == 0:
+        if X is None or X.shape[0] == 0:
             print(f"[ERROR] No data available for PCA computation", flush=True)
             return None
         
@@ -113,7 +199,11 @@ def get_pca_embedding(params):
 def get_umap_embedding(params):
     """Get or compute UMAP embedding with caching"""
     try:
-        key = ('umap', params['n_neighbors'], params['min_dist'], params['random_state'])
+        subset_key = 'full'
+        if app_state.active_subset_indices is not None:
+            subset_key = hash(tuple(sorted(list(app_state.active_subset_indices))))
+
+        key = ('umap', params['n_neighbors'], params['min_dist'], params['random_state'], subset_key)
         
         if key in app_state.embedding_cache:
             print(f"[INFO] Using cached UMAP embedding", flush=True)
@@ -122,9 +212,9 @@ def get_umap_embedding(params):
                 return result
         
         print(f"[INFO] Computing UMAP with params: {params}", flush=True)
-        X = app_state.df_global[app_state.data_cols].values
+        X, _ = _get_analysis_data()
         
-        if X.shape[0] == 0:
+        if X is None or X.shape[0] == 0:
             print(f"[ERROR] No data available for UMAP computation", flush=True)
             return None
         
@@ -154,9 +244,9 @@ def get_umap_embedding(params):
 def get_tsne_embedding(params):
     """Get or compute t-SNE embedding with caching"""
     try:
-        X = app_state.df_global[app_state.data_cols].values
+        X, _ = _get_analysis_data()
         
-        if X.shape[0] == 0:
+        if X is None or X.shape[0] == 0:
             print(f"[ERROR] No data available for t-SNE computation", flush=True)
             return None
         
@@ -165,8 +255,12 @@ def get_tsne_embedding(params):
         perplexity = min(params['perplexity'], (n_samples - 1) // 3)
         perplexity = max(perplexity, 5)  # Minimum perplexity of 5
         
+        subset_key = 'full'
+        if app_state.active_subset_indices is not None:
+            subset_key = hash(tuple(sorted(list(app_state.active_subset_indices))))
+
         # Use adjusted perplexity in cache key
-        key = ('tsne', perplexity, params['learning_rate'], params['random_state'])
+        key = ('tsne', perplexity, params['learning_rate'], params['random_state'], subset_key)
         
         if key in app_state.embedding_cache:
             print(f"[INFO] Using cached t-SNE embedding", flush=True)
@@ -198,7 +292,7 @@ def get_tsne_embedding(params):
         return None
 
 
-def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None):
+def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None, robust_pca_params=None):
     """Get embedding based on selected algorithm"""
     if algorithm == 'UMAP':
         return get_umap_embedding(umap_params or CONFIG['umap_params'])
@@ -206,12 +300,14 @@ def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None
         return get_tsne_embedding(tsne_params or CONFIG['tsne_params'])
     elif algorithm == 'PCA':
         return get_pca_embedding(pca_params or CONFIG.get('pca_params', {'n_components': 2, 'random_state': 42}))
+    elif algorithm == 'RobustPCA':
+        return get_robust_pca_embedding(robust_pca_params or CONFIG.get('robust_pca_params', {'n_components': 2, 'random_state': 42}))
     else:
         print(f"[ERROR] Unknown algorithm: {algorithm}")
         return None
 
 
-def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca_params=None, size=60):
+def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca_params=None, robust_pca_params=None, size=60):
     """Update plot with specified algorithm and parameters"""
     try:
         print(f"[DEBUG] plot_embedding called: algorithm={algorithm}, group_col={group_col}, size={size}", flush=True)
@@ -250,12 +346,16 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             tsne_params = CONFIG['tsne_params']
         if pca_params is None:
             pca_params = CONFIG.get('pca_params', {'n_components': 2, 'random_state': 42})
+        if robust_pca_params is None:
+            robust_pca_params = CONFIG.get('robust_pca_params', {'n_components': 2, 'random_state': 42})
         
-        print(f"[DEBUG] Using params - UMAP: {umap_params}, tSNE: {tsne_params}, PCA: {pca_params}", flush=True)
+        print(f"[DEBUG] Using params - UMAP: {umap_params}, tSNE: {tsne_params}, PCA: {pca_params}, RobustPCA: {robust_pca_params}", flush=True)
         
         # Get embedding based on algorithm - normalize algorithm name
         embedding = None
         actual_algorithm = algorithm.strip().upper() if isinstance(algorithm, str) else str(algorithm)
+        if actual_algorithm == 'ROBUSTPCA':
+            actual_algorithm = 'RobustPCA' # Keep case for display
         
         print(f"[DEBUG] Actual algorithm (normalized): {actual_algorithm}", flush=True)
         
@@ -268,6 +368,9 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         elif actual_algorithm == 'PCA':
             print(f"[DEBUG] Computing PCA embedding", flush=True)
             embedding = get_pca_embedding(pca_params)
+        elif actual_algorithm == 'RobustPCA':
+            print(f"[DEBUG] Computing Robust PCA embedding", flush=True)
+            embedding = get_robust_pca_embedding(robust_pca_params)
         else:
             print(f"[ERROR] Unknown algorithm: {algorithm}", flush=True)
             return False
@@ -276,16 +379,20 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             print(f"[ERROR] Failed to compute {algorithm} embedding", flush=True)
             return False
         
-        if app_state.df_global is None or len(app_state.df_global) == 0:
-            print("[ERROR] No data to plot", flush=True)
-            return False
-        
-        if embedding.shape[0] != len(app_state.df_global):
-            print(f"[ERROR] Embedding size {embedding.shape[0]} does not match data size {len(app_state.df_global)}", flush=True)
+        # Determine which data subset we are plotting
+        if app_state.active_subset_indices is not None:
+            indices_to_plot = sorted(list(app_state.active_subset_indices))
+            df_source = app_state.df_global.iloc[indices_to_plot].copy()
+        else:
+            indices_to_plot = list(range(len(app_state.df_global)))
+            df_source = app_state.df_global.copy()
+
+        if embedding.shape[0] != len(df_source):
+            print(f"[ERROR] Embedding size {embedding.shape[0]} does not match data size {len(df_source)}", flush=True)
             return False
         
         def _reset_plot_dataframe():
-            base = app_state.df_global.copy()
+            base = df_source
             if group_col not in base.columns:
                 return None
             base[group_col] = base[group_col].fillna('Unknown').astype(str)
@@ -399,14 +506,18 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             print(f"[WARN] Legend creation error: {e}", flush=True)
         
         # Build title with algorithm info
+        subset_info = " (Subset)" if app_state.active_subset_indices is not None else ""
+        
         if actual_algorithm == 'UMAP':
-            title = f'UMAP (n_neighbors={umap_params["n_neighbors"]}, min_dist={umap_params["min_dist"]})\nColored by {group_col}'
+            title = f'UMAP{subset_info} (n_neighbors={umap_params["n_neighbors"]}, min_dist={umap_params["min_dist"]})\nColored by {group_col}'
         elif actual_algorithm == 'TSNE':
-            title = f't-SNE (perplexity={tsne_params["perplexity"]}, lr={tsne_params["learning_rate"]})\nColored by {group_col}'
+            title = f't-SNE{subset_info} (perplexity={tsne_params["perplexity"]}, lr={tsne_params["learning_rate"]})\nColored by {group_col}'
         elif actual_algorithm == 'PCA':
-            title = f'PCA (n_components={pca_params["n_components"]})\nColored by {group_col}'
+            title = f'PCA{subset_info} (n_components={pca_params["n_components"]})\nColored by {group_col}'
+        elif actual_algorithm == 'RobustPCA':
+            title = f'Robust PCA{subset_info} (n_components={robust_pca_params["n_components"]})\nColored by {group_col}'
         else:
-            title = f'{actual_algorithm}\nColored by {group_col}'
+            title = f'{actual_algorithm}{subset_info}\nColored by {group_col}'
         
         app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=26)
         app_state.ax.set_xlabel('Dimension 1', color="#334155", fontsize=11)
@@ -468,7 +579,13 @@ def plot_2d_data(group_col, data_columns, size=60):
             print("[ERROR] Failed to configure 2D axes", flush=True)
             return False
 
-        df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+        # Determine which data subset we are plotting
+        if app_state.active_subset_indices is not None:
+            indices_to_plot = sorted(list(app_state.active_subset_indices))
+            df_plot = app_state.df_global.iloc[indices_to_plot].dropna(subset=data_columns).copy()
+        else:
+            df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+
         if df_plot.empty:
             print("[WARN] No complete rows available for the selected 2D columns", flush=True)
             return False
@@ -584,8 +701,9 @@ def plot_2d_data(group_col, data_columns, size=60):
             except Exception:
                 pass
 
+        subset_info = " (Subset)" if app_state.active_subset_indices is not None else ""
         title = (
-            f"2D Scatter Plot ({data_columns[0]} vs {data_columns[1]})\n"
+            f"2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n"
             f"Colored by {group_col}"
         )
         app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=26)
@@ -643,7 +761,13 @@ def plot_3d_data(group_col, data_columns, size=60):
             print("[ERROR] Failed to configure 3D axes", flush=True)
             return False
 
-        df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+        # Determine which data subset we are plotting
+        if app_state.active_subset_indices is not None:
+            indices_to_plot = sorted(list(app_state.active_subset_indices))
+            df_plot = app_state.df_global.iloc[indices_to_plot].dropna(subset=data_columns).copy()
+        else:
+            df_plot = app_state.df_global.dropna(subset=data_columns).copy()
+
         if df_plot.empty:
             print("[WARN] No complete rows available for the selected 3D columns", flush=True)
             return False
@@ -709,8 +833,9 @@ def plot_3d_data(group_col, data_columns, size=60):
         except Exception as legend_err:
             print(f"[WARN] 3D legend creation error: {legend_err}", flush=True)
 
+        subset_info = " (Subset)" if app_state.active_subset_indices is not None else ""
         title = (
-            f"3D Scatter Plot ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n"
+            f"3D Scatter Plot{subset_info} ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n"
             f"Colored by {group_col}"
         )
         app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=16)

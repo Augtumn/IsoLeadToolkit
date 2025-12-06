@@ -155,6 +155,7 @@ class ControlPanel:
             ("UMAP Embedding", "UMAP"),
             ("t-SNE Embedding", "tSNE"),
             ("PCA Embedding", "PCA"),
+            ("Robust PCA", "RobustPCA"),
             ("2D Scatter (raw)", "2D"),
             ("3D Scatter (raw)", "3D"),
         ]
@@ -243,6 +244,53 @@ class ControlPanel:
             minimum=10,
             maximum=1000,
             initial=app_state.tsne_params['learning_rate'],
+            formatter=lambda v: f"{int(float(v))}",
+            step=1
+        )
+
+        # ========== PCA Parameters ==========
+        pca_section = self._create_section(
+            scrollable_frame,
+            "PCA Parameters",
+            "Standard Principal Component Analysis settings."
+        )
+
+        self._add_slider(
+            pca_section,
+            key='pca_n',
+            label_text="n_components",
+            minimum=2,
+            maximum=10,
+            initial=app_state.pca_params['n_components'],
+            formatter=lambda v: f"{int(float(v))}",
+            step=1
+        )
+
+        # ========== Robust PCA Parameters ==========
+        rpca_section = self._create_section(
+            scrollable_frame,
+            "Robust PCA Parameters",
+            "Minimum Covariance Determinant (MCD) based PCA. Resistant to outliers."
+        )
+
+        self._add_slider(
+            rpca_section,
+            key='rpca_n',
+            label_text="n_components",
+            minimum=2,
+            maximum=10,
+            initial=app_state.robust_pca_params['n_components'],
+            formatter=lambda v: f"{int(float(v))}",
+            step=1
+        )
+
+        self._add_slider(
+            rpca_section,
+            key='rpca_r',
+            label_text="random_state",
+            minimum=0,
+            maximum=200,
+            initial=app_state.robust_pca_params['random_state'],
             formatter=lambda v: f"{int(float(v))}",
             step=1
         )
@@ -405,6 +453,28 @@ class ControlPanel:
         )
         self.export_excel_button.pack(side=tk.LEFT)
         self._register_translation(self.export_excel_button, "Export Excel")
+
+        # Subset Analysis Tools
+        subset_row = ttk.Frame(selection_section, style='CardBody.TFrame')
+        subset_row.pack(fill=tk.X, pady=(12, 0))
+
+        self.analyze_subset_button = ttk.Button(
+            subset_row,
+            text=self._translate("Analyze Subset"),
+            style='Accent.TButton',
+            command=self._analyze_subset
+        )
+        self.analyze_subset_button.pack(side=tk.LEFT, padx=(0, 12))
+        self._register_translation(self.analyze_subset_button, "Analyze Subset")
+
+        self.reset_data_button = ttk.Button(
+            subset_row,
+            text=self._translate("Reset Data"),
+            style='Secondary.TButton',
+            command=self._reset_data
+        )
+        self.reset_data_button.pack(side=tk.LEFT)
+        self._register_translation(self.reset_data_button, "Reset Data")
 
         ttk.Separator(scrollable_frame, orient=tk.HORIZONTAL, style='SectionSeparator.TSeparator').pack(fill=tk.X, pady=12)
 
@@ -1113,6 +1183,49 @@ class ControlPanel:
             parent=self.root
         )
     
+    def _analyze_subset(self):
+        """Set the active subset to the currently selected indices and re-run analysis."""
+        if not app_state.selected_indices:
+            messagebox.showinfo(
+                self._translate("Analyze Subset"),
+                self._translate("Please select samples first."),
+                parent=self.root
+            )
+            return
+        
+        # Set the active subset
+        app_state.active_subset_indices = sorted(list(app_state.selected_indices))
+        
+        # Clear cache to force re-calculation
+        app_state.embedding_cache.clear()
+        
+        # Trigger update
+        if self.callback:
+            self.callback()
+            
+        messagebox.showinfo(
+            self._translate("Analyze Subset"),
+            self._translate("Analysis restricted to {count} selected samples.", count=len(app_state.active_subset_indices)),
+            parent=self.root
+        )
+
+    def _reset_data(self):
+        """Reset to full dataset."""
+        if app_state.active_subset_indices is None:
+            return
+
+        app_state.active_subset_indices = None
+        app_state.embedding_cache.clear()
+        
+        if self.callback:
+            self.callback()
+            
+        messagebox.showinfo(
+            self._translate("Reset Data"),
+            self._translate("Analysis reset to full dataset."),
+            parent=self.root
+        )
+
     def _on_change(self):
         """Handle any parameter change - with safety checks"""
         try:
@@ -1138,14 +1251,16 @@ class ControlPanel:
                     requested_mode = previous_mode if previous_mode != '2D' else 'UMAP'
                     self.radio_vars['render_mode'].set(requested_mode)
 
-                if requested_mode in ('UMAP', 'tSNE', 'PCA'):
+                if requested_mode in ('UMAP', 'tSNE', 'PCA', 'RobustPCA'):
                     old_algo = app_state.algorithm
                     if requested_mode == 'UMAP':
                         app_state.algorithm = 'UMAP'
                     elif requested_mode == 'tSNE':
                         app_state.algorithm = 'tSNE'
-                    else:
+                    elif requested_mode == 'PCA':
                         app_state.algorithm = 'PCA'
+                    else:
+                        app_state.algorithm = 'RobustPCA'
                     
                     algorithm_changed = (old_algo != app_state.algorithm)
                     if algorithm_changed:
@@ -1160,13 +1275,15 @@ class ControlPanel:
                     elif requested_mode == '3D':
                         app_state.selected_3d_confirmed = False
 
-            if app_state.render_mode in ('UMAP', 'tSNE', 'PCA'):
+            if app_state.render_mode in ('UMAP', 'tSNE', 'PCA', 'RobustPCA'):
                 if app_state.render_mode == 'UMAP':
                     app_state.algorithm = 'UMAP'
                 elif app_state.render_mode == 'tSNE':
                     app_state.algorithm = 'tSNE'
-                else:
+                elif app_state.render_mode == 'PCA':
                     app_state.algorithm = 'PCA'
+                else:
+                    app_state.algorithm = 'RobustPCA'
             
             # Update Ellipse setting
             if 'ellipses' in self.check_vars:
@@ -1230,6 +1347,43 @@ class ControlPanel:
                 print(f"[DEBUG] t-SNE parameters changed, clearing t-SNE cache", flush=True)
                 # Remove t-SNE entries from cache
                 keys_to_remove = [k for k in app_state.embedding_cache.keys() if k[0] == 'tsne']
+                for k in keys_to_remove:
+                    del app_state.embedding_cache[k]
+
+            # Update PCA parameters
+            pca_changed = False
+            if 'pca_n' in self.sliders and 'pca_n' in self.labels:
+                new_val = int(self.sliders['pca_n'].get())
+                if app_state.pca_params['n_components'] != new_val:
+                    pca_changed = True
+                app_state.pca_params['n_components'] = new_val
+                self.labels['pca_n'].config(text=f"{new_val}")
+
+            if pca_changed:
+                print(f"[DEBUG] PCA parameters changed, clearing PCA cache", flush=True)
+                keys_to_remove = [k for k in app_state.embedding_cache.keys() if k[0] == 'pca']
+                for k in keys_to_remove:
+                    del app_state.embedding_cache[k]
+
+            # Update Robust PCA parameters
+            rpca_changed = False
+            if 'rpca_n' in self.sliders and 'rpca_n' in self.labels:
+                new_val = int(self.sliders['rpca_n'].get())
+                if app_state.robust_pca_params['n_components'] != new_val:
+                    rpca_changed = True
+                app_state.robust_pca_params['n_components'] = new_val
+                self.labels['rpca_n'].config(text=f"{new_val}")
+
+            if 'rpca_r' in self.sliders and 'rpca_r' in self.labels:
+                new_val = int(self.sliders['rpca_r'].get())
+                if app_state.robust_pca_params['random_state'] != new_val:
+                    rpca_changed = True
+                app_state.robust_pca_params['random_state'] = new_val
+                self.labels['rpca_r'].config(text=f"{new_val}")
+
+            if rpca_changed:
+                print(f"[DEBUG] Robust PCA parameters changed, clearing cache", flush=True)
+                keys_to_remove = [k for k in app_state.embedding_cache.keys() if k[0] == 'robust_pca']
                 for k in keys_to_remove:
                     del app_state.embedding_cache[k]
             

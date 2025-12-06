@@ -17,7 +17,7 @@ LOCALES_DIR.mkdir(exist_ok=True)
 
 CONFIG = {
     'export_csv': 'selected_samples.csv',
-    'algorithm_options': ['UMAP', 'tSNE', 'PCA'],
+    'algorithm_options': ['UMAP', 'tSNE', 'PCA', 'RobustPCA'],
     'default_language': 'zh',
     'languages': {
         'zh': '中文',
@@ -39,6 +39,10 @@ CONFIG = {
         'n_components': 2
     },
     'pca_params': {
+        'random_state': 42,
+        'n_components': 2
+    },
+    'robust_pca_params': {
         'random_state': 42,
         'n_components': 2
     },
