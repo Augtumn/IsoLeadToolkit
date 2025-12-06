@@ -3,14 +3,18 @@ Dimensionality Reduction Visualization
 Handles UMAP and t-SNE embedding computation and plot rendering
 """
 import traceback
+import matplotlib
 from config import CONFIG
 from state import app_state
 import umap
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+from matplotlib.patches import Ellipse
+import numpy as np
 
-sns.set_theme(style="whitegrid")
+sns.set_theme()
 
 
 def _ensure_axes(dimensions=2):
@@ -37,6 +41,72 @@ def _ensure_axes(dimensions=2):
         app_state.fig.subplots_adjust(left=0.08, bottom=0.12, right=0.78, top=0.88)
     except Exception as axis_err:
         print(f"[WARN] Unable to configure axes: {axis_err}", flush=True)
+
+
+def draw_confidence_ellipse(x, y, ax, n_std=2.0, facecolor='none', **kwargs):
+    """
+    Create a plot of the covariance confidence ellipse of *x* and *y*.
+    """
+    if x.size < 2 or y.size < 2:
+        return
+
+    cov = np.cov(x, y)
+    pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+    
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+    
+    ellipse = Ellipse((0, 0), width=ell_radius_x * 2, height=ell_radius_y * 2,
+                      facecolor=facecolor, **kwargs)
+
+    scale_x = np.sqrt(cov[0, 0]) * n_std
+    mean_x = np.mean(x)
+    scale_y = np.sqrt(cov[1, 1]) * n_std
+    mean_y = np.mean(y)
+
+    transf = (
+        matplotlib.transforms.Affine2D()
+        .rotate_deg(45)
+        .scale(scale_x, scale_y)
+        .translate(mean_x, mean_y)
+    )
+
+    ellipse.set_transform(transf + ax.transData)
+    return ax.add_patch(ellipse)
+
+
+def get_pca_embedding(params):
+    """Get or compute PCA embedding with caching"""
+    try:
+        key = ('pca', params['n_components'], params['random_state'])
+        
+        if key in app_state.embedding_cache:
+            print(f"[INFO] Using cached PCA embedding", flush=True)
+            result = app_state.embedding_cache[key]
+            if result is not None:
+                return result
+        
+        print(f"[INFO] Computing PCA with params: {params}", flush=True)
+        X = app_state.df_global[app_state.data_cols].values
+        
+        if X.shape[0] == 0:
+            print(f"[ERROR] No data available for PCA computation", flush=True)
+            return None
+        
+        reducer = PCA(
+            n_components=params['n_components'],
+            random_state=params['random_state']
+        )
+        
+        embedding = reducer.fit_transform(X)
+        app_state.embedding_cache[key] = embedding
+        print(f"[INFO] PCA embedding computed: shape {embedding.shape}", flush=True)
+        return embedding
+        
+    except Exception as e:
+        print(f"[ERROR] PCA computation failed: {e}", flush=True)
+        traceback.print_exc()
+        return None
 
 
 def get_umap_embedding(params):
@@ -127,18 +197,20 @@ def get_tsne_embedding(params):
         return None
 
 
-def get_embedding(algorithm, umap_params=None, tsne_params=None):
+def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None):
     """Get embedding based on selected algorithm"""
     if algorithm == 'UMAP':
         return get_umap_embedding(umap_params or CONFIG['umap_params'])
     elif algorithm == 'tSNE':
         return get_tsne_embedding(tsne_params or CONFIG['tsne_params'])
+    elif algorithm == 'PCA':
+        return get_pca_embedding(pca_params or CONFIG.get('pca_params', {'n_components': 2, 'random_state': 42}))
     else:
         print(f"[ERROR] Unknown algorithm: {algorithm}")
         return None
 
 
-def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, size=60):
+def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca_params=None, size=60):
     """Update plot with specified algorithm and parameters"""
     try:
         print(f"[DEBUG] plot_embedding called: algorithm={algorithm}, group_col={group_col}, size={size}", flush=True)
@@ -175,8 +247,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
             umap_params = CONFIG['umap_params']
         if tsne_params is None:
             tsne_params = CONFIG['tsne_params']
+        if pca_params is None:
+            pca_params = CONFIG.get('pca_params', {'n_components': 2, 'random_state': 42})
         
-        print(f"[DEBUG] Using params - UMAP: {umap_params}, tSNE: {tsne_params}", flush=True)
+        print(f"[DEBUG] Using params - UMAP: {umap_params}, tSNE: {tsne_params}, PCA: {pca_params}", flush=True)
         
         # Get embedding based on algorithm - normalize algorithm name
         embedding = None
@@ -190,6 +264,9 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
         elif actual_algorithm == 'TSNE':
             print(f"[DEBUG] Computing tSNE embedding", flush=True)
             embedding = get_tsne_embedding(tsne_params)
+        elif actual_algorithm == 'PCA':
+            print(f"[DEBUG] Computing PCA embedding", flush=True)
+            embedding = get_pca_embedding(pca_params)
         else:
             print(f"[ERROR] Unknown algorithm: {algorithm}", flush=True)
             return False
@@ -271,6 +348,13 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
                 scatters.append(sc)
                 app_state.scatter_collections.append(sc)
                 
+                # Draw confidence ellipse if enabled
+                if app_state.show_ellipses:
+                    try:
+                        draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
+                    except Exception as e:
+                        print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
+
                 # Store coordinate-to-index mapping with explicit float conversion
                 for j, idx in enumerate(indices):
                     x_val = float(xs[j])
@@ -315,8 +399,12 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, siz
         # Build title with algorithm info
         if actual_algorithm == 'UMAP':
             title = f'UMAP (n_neighbors={umap_params["n_neighbors"]}, min_dist={umap_params["min_dist"]})\nColored by {group_col}'
-        else:  # tSNE
+        elif actual_algorithm == 'TSNE':
             title = f't-SNE (perplexity={tsne_params["perplexity"]}, lr={tsne_params["learning_rate"]})\nColored by {group_col}'
+        elif actual_algorithm == 'PCA':
+            title = f'PCA (n_components={pca_params["n_components"]})\nColored by {group_col}'
+        else:
+            title = f'{actual_algorithm}\nColored by {group_col}'
         
         app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=26)
         app_state.ax.set_xlabel('Dimension 1', color="#334155", fontsize=11)
@@ -452,6 +540,13 @@ def plot_2d_data(group_col, data_columns, size=60):
             )
             app_state.scatter_collections.append(sc)
             scatters.append(sc)
+
+            # Draw confidence ellipse if enabled
+            if app_state.show_ellipses:
+                try:
+                    draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
+                except Exception as e:
+                    print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
 
             for j, idx in enumerate(indices):
                 key = (round(float(xs[j]), 3), round(float(ys[j]), 3))
