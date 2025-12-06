@@ -42,34 +42,59 @@ class FileSelectionDialog:
 
     def _refresh_language(self):
         """Update all registered widgets with current language"""
+        current_lang = app_state.language
+        
         for item in self._translations:
             try:
                 widget = item['widget']
                 key = item['key']
                 attr = item['attr']
+                
+                # Special handling for file_label to avoid overwriting selected path
+                if widget == getattr(self, 'file_label', None) and self.selected_file:
+                    continue
+
                 if widget.winfo_exists():
+                    # Explicitly pass language to translate to ensure correct lookup
+                    translated = t(key, language=current_lang)
+                    
                     if attr == 'title':
-                        widget.title(t(key))
+                        widget.title(translated)
                     else:
-                        widget.configure(**{attr: t(key)})
+                        # Force update for some widgets if needed
+                        widget.configure(**{attr: translated})
+                        
+                        # For Comboboxes or other complex widgets, we might need more
+                        if isinstance(widget, ttk.Button):
+                            # Sometimes style changes need a redraw?
+                            pass
             except Exception:
                 pass
+        
+        # Force UI update
+        self.root.update_idletasks()
 
     def _on_language_change(self, event=None):
         """Handle language selection change"""
-        code = self.language_combobox.get().split(' - ')[0]
-        # Find code from label if needed, but here we construct "code - label"
-        # Let's reverse lookup or just store code
         selected_label = self.language_combobox.get()
-        code = next((k for k, v in self._language_labels.items() if f"{k} - {v}" == selected_label), 'en')
         
-        set_language(code)
-        app_state.language = code
-        self._refresh_language()
+        # Find code from label "code - label"
+        code = next((k for k, v in self._language_labels.items() if f"{k} - {v}" == selected_label), None)
         
-        # Update combobox values to reflect new language (if labels were translated)
-        # But here labels are static names like "English", "中文"
-        pass
+        if code is None:
+            # Fallback if format doesn't match
+            code = selected_label.split(' - ')[0]
+        
+        if code:
+            success = set_language(code)
+            
+            if success:
+                app_state.language = code
+                self._refresh_language()
+            
+            # Update combobox values to reflect new language (if labels were translated)
+            # But here labels are static names like "English", "中文"
+            pass
 
     def _setup_styles(self):
         """Configure ttk styles for a cohesive dialog appearance"""

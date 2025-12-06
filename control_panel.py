@@ -6,7 +6,7 @@ import os
 import re
 import tkinter as tk
 from datetime import datetime
-from tkinter import ttk, messagebox, simpledialog, filedialog
+from tkinter import ttk, messagebox, simpledialog, filedialog, colorchooser
 
 import pandas as pd
 
@@ -718,10 +718,11 @@ class ControlPanel:
             row = ttk.Frame(self.legend_items_frame, style='ControlPanel.TFrame')
             row.pack(fill=tk.X, pady=2)
             
-            # Color swatch
+            # Color swatch (Clickable)
             color = app_state.current_palette.get(group, '#cccccc')
-            swatch = tk.Canvas(row, width=16, height=16, bg=color, highlightthickness=0)
+            swatch = tk.Canvas(row, width=16, height=16, bg=color, highlightthickness=0, cursor="hand2")
             swatch.pack(side=tk.LEFT, padx=(0, 8))
+            swatch.bind("<Button-1>", lambda e, g=group, s=swatch: self._pick_color(g, s))
             
             # Checkbox
             is_visible = group in visible
@@ -736,6 +737,56 @@ class ControlPanel:
                 style='Option.TRadiobutton'
             )
             cb.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            
+            # Top Button (Bring to front)
+            top_btn = ttk.Button(
+                row,
+                text=self._translate("Top"),
+                width=4,
+                style='Secondary.TButton',
+                command=lambda g=group: self._bring_to_front(g)
+            )
+            top_btn.pack(side=tk.RIGHT, padx=(4, 0))
+            self._register_translation(top_btn, "Top")
+
+    def _pick_color(self, group, swatch):
+        """Open color picker for a group"""
+        current_color = app_state.current_palette.get(group, '#cccccc')
+        color = colorchooser.askcolor(initialcolor=current_color, title=f"Color for {group}")
+        
+        if color[1]: # color is ((r,g,b), hex)
+            new_hex = color[1]
+            app_state.current_palette[group] = new_hex
+            swatch.configure(bg=new_hex)
+            
+            # Update plot immediately
+            if hasattr(app_state, 'group_to_scatter') and group in app_state.group_to_scatter:
+                sc = app_state.group_to_scatter[group]
+                try:
+                    sc.set_color(new_hex)
+                    # Restore edge color which set_color might overwrite
+                    sc.set_edgecolor("#1e293b") 
+                    if app_state.fig:
+                        app_state.fig.canvas.draw_idle()
+                except Exception as e:
+                    print(f"[WARN] Failed to update color for {group}: {e}")
+
+    def _bring_to_front(self, group):
+        """Bring a group's scatter points to the front"""
+        if hasattr(app_state, 'group_to_scatter') and group in app_state.group_to_scatter:
+            sc = app_state.group_to_scatter[group]
+            try:
+                # Find max zorder
+                max_z = 2 # Default base zorder
+                if hasattr(app_state, 'scatter_collections'):
+                    for c in app_state.scatter_collections:
+                        max_z = max(max_z, c.get_zorder())
+                
+                sc.set_zorder(max_z + 1)
+                if app_state.fig:
+                    app_state.fig.canvas.draw_idle()
+            except Exception as e:
+                print(f"[WARN] Failed to bring {group} to front: {e}")
 
     def _apply_legend_filter(self):
         """Apply the filter from the legend tab"""
@@ -848,32 +899,6 @@ class ControlPanel:
             'attr': attr,
             'formatter': formatter,
         })
-
-    def _apply_translation(self, widget, attr, value):
-        """Apply translated text to a widget attribute."""
-        if widget is None or value is None:
-            return
-        try:
-            if attr == 'title' and hasattr(widget, 'title'):
-                widget.title(value)
-            else:
-                widget.configure(**{attr: value})
-        except Exception:
-            pass
-
-    def _refresh_language(self):
-        """Reapply translations for all registered widgets."""
-        for entry in self._translations:
-            kwargs = {}
-            if entry.get('formatter') is not None:
-                result = entry['formatter']()
-                if isinstance(result, dict):
-                    kwargs = result
-                elif isinstance(result, str):
-                    self._apply_translation(entry['widget'], entry['attr'], result)
-                    continue
-            translated = self._translate(entry['key'], **kwargs)
-            self._apply_translation(entry['widget'], entry['attr'], translated)
 
     def _language_label(self, code):
         """Return the human-readable label for a language code."""

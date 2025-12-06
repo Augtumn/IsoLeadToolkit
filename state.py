@@ -78,6 +78,7 @@ class AppState:
         self.scatter_collections.clear()
         self.sample_index_map.clear()
         self.legend_to_scatter.clear()
+        self.group_to_scatter = {}  # Map group name to scatter artist
         self.exported_indices.clear()
         self.annotation = None  # Clear annotation reference
         self.sample_coordinates.clear()
