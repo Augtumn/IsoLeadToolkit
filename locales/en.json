@@ -5,7 +5,6 @@
   "Legend": "Legend",
   "Refresh Legend": "Refresh Legend",
   "No legend data available.": "No legend data available.",
-  "Select all": "Select all",
   "PCA Parameters": "PCA Parameters",
   "Standard Principal Component Analysis settings.": "Standard Principal Component Analysis settings.",
   "n_components": "n_components",

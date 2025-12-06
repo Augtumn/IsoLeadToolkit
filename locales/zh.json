@@ -117,7 +117,6 @@
   "Unable to reload data: {error}": "无法重新加载数据：{error}",
   "Enable Selection": "开启框选",
   "Enable selection mode to pick samples in 2D or embedding views, then export the results.": "开启选择模式后，可在二维或嵌入视图中双击或框选样本，并在此导出结果。",
-  "Select all": "全选",
   "openpyxl is required to write Excel files. Please install openpyxl.": "写入 Excel 需要 openpyxl 库，请先安装 openpyxl。",
   "Please keep at least one group visible.": "请至少保留一个分组可见。",
   "Worksheet already exists. Please choose another name.": "工作表已存在，请使用其他名称。",
@@ -163,5 +162,7 @@
   "CSV files": "CSV 文件",
   "All files": "所有文件",
   "Search groups": "搜索分组",
-  "No legend entries match your search.": "没有符合搜索条件的图例项目。"
+  "No legend entries match your search.": "没有符合搜索条件的图例项目。",
+  "Top": "置顶"
 }
+

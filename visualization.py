@@ -883,11 +883,23 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
 
         unique_cats = sorted(df_plot[group_col].unique())
         print(f"[DEBUG] Unique categories in {group_col}: {unique_cats}", flush=True)
-        palette = sns.color_palette("tab20", len(unique_cats))
         
-        # Store palette for UI
+        # Logic to preserve colors if possible
+        if not hasattr(app_state, 'current_palette'):
+            app_state.current_palette = {}
+            
+        # Generate a default palette for all categories
+        default_palette = sns.color_palette("tab20", len(unique_cats))
+        new_palette = {}
+        
+        for i, cat in enumerate(unique_cats):
+            if cat in app_state.current_palette:
+                new_palette[cat] = app_state.current_palette[cat]
+            else:
+                new_palette[cat] = matplotlib.colors.to_hex(default_palette[i])
+        
+        app_state.current_palette = new_palette
         app_state.current_groups = unique_cats
-        app_state.current_palette = {cat: matplotlib.colors.to_hex(palette[i]) for i, cat in enumerate(unique_cats)}
         
         scatters = []
         for i, cat in enumerate(unique_cats):
@@ -902,12 +914,14 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 if len(xs) == 0:
                     continue
                 
+                color = app_state.current_palette[cat]
                 sc = app_state.ax.scatter(
-                    xs, ys, label=cat, color=palette[i], s=size,
+                    xs, ys, label=cat, color=color, s=size,
                     alpha=0.88, edgecolors="#1e293b", linewidth=0.4, zorder=2
                 )
                 scatters.append(sc)
                 app_state.scatter_collections.append(sc)
+                app_state.group_to_scatter[cat] = sc
                 
                 # Note: Group-level ellipses are disabled in favor of selection-based ellipses
                 # to avoid clutter with large datasets.
@@ -1098,11 +1112,22 @@ def plot_2d_data(group_col, data_columns, size=60):
             spine.set_linewidth(1.0)
 
         unique_cats = sorted(df_plot[group_col].unique())
-        palette = sns.color_palette("tab20", len(unique_cats))
-
-        # Store palette for UI
+        
+        # Logic to preserve colors if possible
+        if not hasattr(app_state, 'current_palette'):
+            app_state.current_palette = {}
+            
+        default_palette = sns.color_palette("tab20", len(unique_cats))
+        new_palette = {}
+        
+        for i, cat in enumerate(unique_cats):
+            if cat in app_state.current_palette:
+                new_palette[cat] = app_state.current_palette[cat]
+            else:
+                new_palette[cat] = matplotlib.colors.to_hex(default_palette[i])
+        
+        app_state.current_palette = new_palette
         app_state.current_groups = unique_cats
-        app_state.current_palette = {cat: matplotlib.colors.to_hex(palette[i]) for i, cat in enumerate(unique_cats)}
 
         scatters = []
 
@@ -1114,12 +1139,14 @@ def plot_2d_data(group_col, data_columns, size=60):
             xs = subset[data_columns[0]].astype(float).values
             ys = subset[data_columns[1]].astype(float).values
             indices = subset.index.tolist()
+            
+            color = app_state.current_palette[cat]
 
             sc = app_state.ax.scatter(
                 xs,
                 ys,
                 label=cat,
-                color=palette[i],
+                color=color,
                 s=size,
                 alpha=0.88,
                 edgecolors="#1e293b",
@@ -1128,6 +1155,7 @@ def plot_2d_data(group_col, data_columns, size=60):
             )
             app_state.scatter_collections.append(sc)
             scatters.append(sc)
+            app_state.group_to_scatter[cat] = sc
 
             # Note: Group-level ellipses are disabled in favor of selection-based ellipses
             # if app_state.show_ellipses:
