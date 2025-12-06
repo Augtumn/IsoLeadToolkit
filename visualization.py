@@ -135,6 +135,177 @@ def show_pca_loadings(parent_window=None):
     canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
 
+def show_embedding_correlation(parent_window=None):
+    """Display correlation between original features and embedding dimensions."""
+    if not hasattr(app_state, 'last_embedding') or app_state.last_embedding is None:
+        print("[WARN] No embedding data available. Run an analysis first.", flush=True)
+        return
+
+    embedding = app_state.last_embedding
+    # Get original data (scaled or raw? usually raw is better for interpretation)
+    X, _ = _get_analysis_data()
+    
+    if X is None:
+        return
+        
+    cols = app_state.data_cols
+    if not cols:
+        return
+
+    # Calculate correlation between each feature and the embedding dimensions
+    # embedding is N x 2 (usually)
+    # X is N x D
+    
+    n_dims = embedding.shape[1]
+    dim_names = [f"Dim {i+1}" for i in range(n_dims)]
+    
+    correlations = []
+    for i in range(n_dims):
+        dim_corrs = []
+        dim_data = embedding[:, i]
+        for j in range(X.shape[1]):
+            feat_data = X[:, j]
+            # Use Spearman correlation as relationships might be non-linear
+            # But Pearson is faster and standard for "linear" correlation heatmaps
+            # Let's use Pearson for consistency with the other heatmap, or Spearman?
+            # UMAP/t-SNE are non-linear, so Spearman is probably better.
+            # However, numpy corrcoef is Pearson.
+            # Let's stick to Pearson for simplicity and speed, or use pandas if available.
+            
+            # Manual Pearson calculation to avoid pandas dependency if possible, 
+            # but we used pandas in show_correlation_heatmap.
+            # Let's use numpy corrcoef.
+            corr = np.corrcoef(dim_data, feat_data)[0, 1]
+            if np.isnan(corr): corr = 0
+            dim_corrs.append(corr)
+        correlations.append(dim_corrs)
+    
+    correlations = np.array(correlations) # Shape (n_dims, n_features)
+    
+    # Create window
+    window = tk.Toplevel(parent_window)
+    window.title(f"Feature Correlation with {getattr(app_state, 'last_embedding_type', 'Embedding')} Axes")
+    window.geometry("800x400")
+    
+    fig = Figure(figsize=(8, 4), dpi=100)
+    ax = fig.add_subplot(111)
+    
+    # Plot heatmap
+    # Rows: Dimensions, Cols: Features
+    im = ax.imshow(correlations, cmap='RdBu_r', vmin=-1, vmax=1, aspect='auto')
+    
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label('Correlation Coefficient')
+    
+    ax.set_yticks(np.arange(n_dims))
+    ax.set_yticklabels(dim_names)
+    
+    ax.set_xticks(np.arange(len(cols)))
+    ax.set_xticklabels(cols, rotation=45, ha="right")
+    
+    # Annotate
+    for i in range(n_dims):
+        for j in range(len(cols)):
+            text = ax.text(j, i, f"{correlations[i, j]:.2f}",
+                           ha="center", va="center", color="k" if abs(correlations[i, j]) < 0.5 else "w")
+                           
+    ax.set_title(f"Correlation: Features vs {getattr(app_state, 'last_embedding_type', 'Embedding')} Dimensions")
+    fig.tight_layout()
+    
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
+def show_shepard_diagram(parent_window=None):
+    """Display a Shepard diagram (Distance Plot) to evaluate embedding quality."""
+    if not hasattr(app_state, 'last_embedding') or app_state.last_embedding is None:
+        print("[WARN] No embedding data available.", flush=True)
+        return
+
+    embedding = app_state.last_embedding
+    X, _ = _get_analysis_data()
+    
+    if X is None:
+        return
+
+    # Sampling for performance if N is large
+    n_samples = X.shape[0]
+    max_samples = 1000 # Limit to 1000 points (approx 500k pairs)
+    
+    if n_samples > max_samples:
+        indices = np.random.choice(n_samples, max_samples, replace=False)
+        X_sub = X[indices]
+        emb_sub = embedding[indices]
+    else:
+        X_sub = X
+        emb_sub = embedding
+        
+    from scipy.spatial.distance import pdist
+    
+    # Calculate pairwise distances
+    # Original space (Euclidean)
+    # Note: If using UMAP/t-SNE, they might use different metrics, but Euclidean is standard for input
+    d_original = pdist(X_sub)
+    
+    # Embedding space
+    d_embedding = pdist(emb_sub)
+    
+    # Calculate correlation (Spearman is better for rank preservation)
+    from scipy.stats import spearmanr
+    corr, _ = spearmanr(d_original, d_embedding)
+    
+    # Create window
+    window = tk.Toplevel(parent_window)
+    window.title(f"Shepard Diagram ({getattr(app_state, 'last_embedding_type', 'Embedding')})")
+    window.geometry("600x600")
+    
+    fig = Figure(figsize=(6, 6), dpi=100)
+    ax = fig.add_subplot(111)
+    
+    # Scatter plot
+    # Downsample pairs for plotting if too many
+    if len(d_original) > 5000:
+        plot_indices = np.random.choice(len(d_original), 5000, replace=False)
+        ax.scatter(d_original[plot_indices], d_embedding[plot_indices], alpha=0.1, s=5, c='k')
+    else:
+        ax.scatter(d_original, d_embedding, alpha=0.2, s=10, c='k')
+        
+    # Add diagonal line for reference
+    # Since scales might differ, we plot y=x but also set aspect to equal to make units consistent
+    # However, if scales are vastly different (e.g. 100 vs 1), equal aspect will hide data.
+    # Let's just plot the diagonal across the visible range if we want to show correlation trend,
+    # OR if the user specifically asked for "consistent units", we should try to normalize or use equal aspect.
+    # Given "Shepard 图的横纵坐标单位不一致，建议把对角线显示出来", the user likely wants to see
+    # how far points deviate from the identity line y=x.
+    
+    # Find the common range to draw the diagonal
+    # Use the actual data limits to avoid forcing the axes to expand to a square
+    xlims = (0, np.max(d_original))
+    ylims = (0, np.max(d_embedding))
+    
+    # Plot diagonal line y=x
+    # We plot it long enough to cover the potential intersection, but we won't let it dictate the view
+    diag_max = max(xlims[1], ylims[1])
+    ax.plot([0, diag_max], [0, diag_max], 'r--', alpha=0.5, label='x=y')
+    
+    # Explicitly set the limits to the data range so the plot doesn't zoom out to show the full diagonal line
+    ax.set_xlim(left=0, right=xlims[1] * 1.05)
+    ax.set_ylim(bottom=0, top=ylims[1] * 1.05)
+    
+    ax.legend()
+        
+    ax.set_xlabel("Original Distance")
+    ax.set_ylabel("Embedding Distance")
+    ax.set_title(f"Shepard Diagram\nSpearman Correlation: {corr:.3f}")
+    
+    fig.tight_layout()
+    
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+
 def show_correlation_heatmap(parent_window=None):
     """Display a correlation heatmap of the current dataset."""
     X, _ = _get_analysis_data()
@@ -379,6 +550,8 @@ def get_robust_pca_embedding(params):
                 app_state.current_feature_names = app_state.data_cols
 
         app_state.embedding_cache[key] = embedding
+        app_state.last_embedding = embedding
+        app_state.last_embedding_type = 'RobustPCA'
         print(f"[DEBUG] Robust PCA embedding computed: shape {embedding.shape}", flush=True)
         return embedding
         
@@ -440,6 +613,8 @@ def get_pca_embedding(params):
         app_state.current_feature_names = app_state.data_cols
         
         app_state.embedding_cache[key] = embedding
+        app_state.last_embedding = embedding
+        app_state.last_embedding_type = 'PCA'
         print(f"[DEBUG] PCA embedding computed: shape {embedding.shape}", flush=True)
         return embedding
         
@@ -487,6 +662,8 @@ def get_umap_embedding(params):
         
         embedding = reducer.fit_transform(X)
         app_state.embedding_cache[key] = embedding
+        app_state.last_embedding = embedding
+        app_state.last_embedding_type = 'UMAP'
         print(f"[DEBUG] UMAP embedding computed: shape {embedding.shape}", flush=True)
         return embedding
         
@@ -539,6 +716,8 @@ def get_tsne_embedding(params):
         
         embedding = reducer.fit_transform(X)
         app_state.embedding_cache[key] = embedding
+        app_state.last_embedding = embedding
+        app_state.last_embedding_type = 'tSNE'
         print(f"[DEBUG] t-SNE embedding computed: shape {embedding.shape}", flush=True)
         return embedding
         

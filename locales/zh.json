@@ -1,6 +1,8 @@
 {
   "Show Scree Plot": "显示碎石图",
   "Show Loadings": "显示载荷图",
+  "Show Axis Corr.": "显示轴相关性",
+  "Show Shepard Plot": "显示 Shepard 图",
   "Correlation Heatmap": "相关性热力图",
   "Data Analysis": "数据分析",
   "Tools for exploring data relationships and statistics.": "用于探索数据关系和统计信息的工具。",

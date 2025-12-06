@@ -351,7 +351,7 @@ class ControlPanel:
             formatter=lambda v: f"{int(float(v))}",
             step=1
         )
-
+        
         # t-SNE Parameters
         tsne_section = self._create_section(
             frame,
@@ -426,7 +426,7 @@ class ControlPanel:
         pca_tools.pack(fill=tk.X, pady=(8, 0))
         
         # Scree Plot Button
-        from visualization import show_scree_plot, show_pca_loadings
+        # Imports already done above
         scree_btn = ttk.Button(
             pca_tools,
             text=self._translate("Show Scree Plot"),
@@ -554,15 +554,34 @@ class ControlPanel:
         analysis_row = ttk.Frame(analysis_section, style='CardBody.TFrame')
         analysis_row.pack(fill=tk.X)
         
-        from visualization import show_correlation_heatmap
+        from visualization import show_correlation_heatmap, show_embedding_correlation, show_shepard_diagram
+        
         corr_btn = ttk.Button(
             analysis_row,
             text=self._translate("Correlation Heatmap"),
             style='Secondary.TButton',
             command=lambda: show_correlation_heatmap(self.root)
         )
-        corr_btn.pack(side=tk.LEFT)
+        corr_btn.pack(side=tk.LEFT, padx=(0, 10))
         self._register_translation(corr_btn, "Correlation Heatmap")
+
+        axis_corr_btn = ttk.Button(
+            analysis_row,
+            text=self._translate("Show Axis Corr."),
+            style='Secondary.TButton',
+            command=lambda: show_embedding_correlation(self.root)
+        )
+        axis_corr_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self._register_translation(axis_corr_btn, "Show Axis Corr.")
+        
+        shepard_btn = ttk.Button(
+            analysis_row,
+            text=self._translate("Show Shepard Plot"),
+            style='Secondary.TButton',
+            command=lambda: show_shepard_diagram(self.root)
+        )
+        shepard_btn.pack(side=tk.LEFT)
+        self._register_translation(shepard_btn, "Show Shepard Plot")
 
         selection_section = self._create_section(
             frame,
