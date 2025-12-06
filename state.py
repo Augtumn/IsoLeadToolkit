@@ -13,6 +13,8 @@ class AppState:
         self.algorithm = 'UMAP'  # Default algorithm: always start with UMAP
         self.umap_params = CONFIG['umap_params'].copy()
         self.tsne_params = CONFIG['tsne_params'].copy()
+        self.pca_params = CONFIG.get('pca_params', {}).copy()
+        self.show_ellipses = CONFIG.get('show_ellipses', False)
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading
         self.render_mode = 'UMAP'

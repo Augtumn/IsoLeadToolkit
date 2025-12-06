@@ -1,4 +1,6 @@
 {
+  "PCA Embedding": "PCA 降维",
+  "Show Confidence Ellipses": "显示置信椭圆",
   "2D": "二维",
   "2D Scatter (raw)": "二维散点（原始）",
   "3D": "三维",

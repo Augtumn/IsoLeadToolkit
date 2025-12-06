@@ -382,11 +382,19 @@ def on_legend_click(event):
                     if event.x is not None and event.y is not None:
                         if bbox.contains(event.x, event.y):
                             scatter = scatter_labels[label]
-                            scatter.set_zorder(10)
-                            for other in app_state.scatter_collections:
-                                if other and other != scatter:
-                                    other.set_zorder(1)
-                            print(f"[OK] Brought to front: {label}", flush=True)
+                            
+                            # Toggle visibility
+                            new_visible = not scatter.get_visible()
+                            scatter.set_visible(new_visible)
+                            
+                            # Update legend text alpha
+                            leg_text.set_alpha(1.0 if new_visible else 0.5)
+                            
+                            # Update legend handle alpha
+                            if i < len(legend.legendHandles):
+                                legend.legendHandles[i].set_alpha(1.0 if new_visible else 0.5)
+
+                            print(f"[OK] Toggled visibility for: {label} to {new_visible}", flush=True)
                             try:
                                 app_state.fig.canvas.draw_idle()
                             except:
@@ -394,20 +402,6 @@ def on_legend_click(event):
                             return
                 except:
                     pass
-        
-        # Fallback: if legend contains event, try to bring the first matching scatter to front
-        if legend.contains(event)[0]:
-            for label, scatter in scatter_labels.items():
-                scatter.set_zorder(10)
-                for other in app_state.scatter_collections:
-                    if other and other != scatter:
-                        other.set_zorder(1)
-                print(f"[OK] Brought to front: {label}", flush=True)
-                try:
-                    app_state.fig.canvas.draw_idle()
-                except:
-                    pass
-                return
                 
     except Exception as e:
         pass

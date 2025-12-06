@@ -61,6 +61,7 @@ class ControlPanel:
         self.sliders = {}
         self.labels = {}
         self.radio_vars = {}
+        self.check_vars = {}  # For checkboxes
         self._slider_after = {}
         self._slider_steps = {}
         self._slider_delay_ms = 350
@@ -153,6 +154,7 @@ class ControlPanel:
         options = [
             ("UMAP Embedding", "UMAP"),
             ("t-SNE Embedding", "tSNE"),
+            ("PCA Embedding", "PCA"),
             ("2D Scatter (raw)", "2D"),
             ("3D Scatter (raw)", "3D"),
         ]
@@ -262,6 +264,18 @@ class ControlPanel:
             formatter=lambda v: f"{int(float(v))}",
             step=1
         )
+
+        # Ellipse Checkbox
+        self.check_vars['ellipses'] = tk.BooleanVar(value=app_state.show_ellipses)
+        ellipse_check = ttk.Checkbutton(
+            common_section,
+            text=self._translate("Show Confidence Ellipses"),
+            variable=self.check_vars['ellipses'],
+            command=self._on_change,
+            style='Option.TRadiobutton'  # Reusing radio style for consistency
+        )
+        ellipse_check.pack(anchor=tk.W, pady=(4, 8))
+        self._register_translation(ellipse_check, "Show Confidence Ellipses")
 
         group_label = ttk.Label(
             common_section,
@@ -1103,9 +1117,15 @@ class ControlPanel:
                     requested_mode = previous_mode if previous_mode != '2D' else 'UMAP'
                     self.radio_vars['render_mode'].set(requested_mode)
 
-                if requested_mode in ('UMAP', 'tSNE'):
+                if requested_mode in ('UMAP', 'tSNE', 'PCA'):
                     old_algo = app_state.algorithm
-                    app_state.algorithm = 'UMAP' if requested_mode == 'UMAP' else 'tSNE'
+                    if requested_mode == 'UMAP':
+                        app_state.algorithm = 'UMAP'
+                    elif requested_mode == 'tSNE':
+                        app_state.algorithm = 'tSNE'
+                    else:
+                        app_state.algorithm = 'PCA'
+                    
                     algorithm_changed = (old_algo != app_state.algorithm)
                     if algorithm_changed:
                         print(f"[DEBUG] Algorithm changed: {old_algo} -> {app_state.algorithm}", flush=True)
@@ -1119,9 +1139,18 @@ class ControlPanel:
                     elif requested_mode == '3D':
                         app_state.selected_3d_confirmed = False
 
-            if app_state.render_mode in ('UMAP', 'tSNE'):
-                app_state.algorithm = 'UMAP' if app_state.render_mode == 'UMAP' else 'tSNE'
+            if app_state.render_mode in ('UMAP', 'tSNE', 'PCA'):
+                if app_state.render_mode == 'UMAP':
+                    app_state.algorithm = 'UMAP'
+                elif app_state.render_mode == 'tSNE':
+                    app_state.algorithm = 'tSNE'
+                else:
+                    app_state.algorithm = 'PCA'
             
+            # Update Ellipse setting
+            if 'ellipses' in self.check_vars:
+                app_state.show_ellipses = self.check_vars['ellipses'].get()
+
             # Update UMAP parameters - only if keys exist
             umap_changed = False
             if 'umap_n' in self.sliders and 'umap_n' in self.labels:
