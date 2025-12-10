@@ -17,6 +17,13 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from matplotlib.patches import Ellipse
 import numpy as np
 
+# Import V1V2 calculation logic
+try:
+    from V1V2 import calculate_all_parameters
+except ImportError:
+    print("[WARN] V1V2 module not found. V1V2 algorithm will not be available.", flush=True)
+    calculate_all_parameters = None
+
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -806,6 +813,53 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         elif actual_algorithm == 'RobustPCA':
             print(f"[DEBUG] Computing Robust PCA embedding", flush=True)
             embedding = get_robust_pca_embedding(robust_pca_params)
+        elif actual_algorithm == 'V1V2':
+            print(f"[DEBUG] Computing V1V2 embedding", flush=True)
+            # V1V2 requires specific columns: 206Pb/204Pb, 207Pb/204Pb, 208Pb/204Pb
+            # We need to find these columns in the dataset
+            # Heuristic: Look for columns containing "206", "207", "208"
+            
+            if calculate_all_parameters is None:
+                print("[ERROR] V1V2 module not loaded", flush=True)
+                return False
+                
+            # Get data subset
+            X, indices = _get_analysis_data()
+            if X is None:
+                return False
+                
+            # We need to map the columns in X to the required isotopes
+            # app_state.data_cols contains the column names corresponding to columns in X
+            cols = app_state.data_cols
+            
+            # Exact matching for prescribed headers
+            col_206 = "206Pb/204Pb" if "206Pb/204Pb" in cols else None
+            col_207 = "207Pb/204Pb" if "207Pb/204Pb" in cols else None
+            col_208 = "208Pb/204Pb" if "208Pb/204Pb" in cols else None
+            
+            if not (col_206 and col_207 and col_208):
+                print(f"[ERROR] Could not identify isotope columns in {cols}. Please ensure columns '206Pb/204Pb', '207Pb/204Pb', '208Pb/204Pb' are selected.", flush=True)
+                return False
+            
+            # Extract data
+            idx_206 = cols.index(col_206)
+            idx_207 = cols.index(col_207)
+            idx_208 = cols.index(col_208)
+            
+            pb206 = X[:, idx_206]
+            pb207 = X[:, idx_207]
+            pb208 = X[:, idx_208]
+            
+            try:
+                results = calculate_all_parameters(pb206, pb207, pb208, calculate_ages=False)
+                v1 = results['V1']
+                v2 = results['V2']
+                embedding = np.column_stack((v1, v2))
+                app_state.last_embedding = embedding
+                app_state.last_embedding_type = 'V1V2'
+            except Exception as e:
+                print(f"[ERROR] V1V2 calculation failed: {e}", flush=True)
+                return False
         else:
             print(f"[ERROR] Unknown algorithm: {algorithm}", flush=True)
             return False
@@ -987,12 +1041,26 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             title = f'PCA{subset_info} (n_components={pca_params["n_components"]})\nColored by {group_col}'
         elif actual_algorithm == 'RobustPCA':
             title = f'Robust PCA{subset_info} (n_components={robust_pca_params["n_components"]})\nColored by {group_col}'
+        elif actual_algorithm == 'V1V2':
+            title = f'V1-V2 Diagram{subset_info}\nColored by {group_col}'
         else:
             title = f'{actual_algorithm}{subset_info}\nColored by {group_col}'
         
         app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=20)
-        app_state.ax.set_xlabel('Dimension 1', color="#334155", fontsize=11)
-        app_state.ax.set_ylabel('Dimension 2', color="#334155", fontsize=11)
+        
+        # Set axis labels
+        if actual_algorithm == 'V1V2':
+            app_state.ax.set_xlabel("V1", fontsize=11, color="#334155")
+            app_state.ax.set_ylabel("V2", fontsize=11, color="#334155")
+        elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
+            idx_x = app_state.pca_component_indices[0] + 1
+            idx_y = app_state.pca_component_indices[1] + 1
+            app_state.ax.set_xlabel(f"PC{idx_x}", fontsize=11, color="#334155")
+            app_state.ax.set_ylabel(f"PC{idx_y}", fontsize=11, color="#334155")
+        else:
+            app_state.ax.set_xlabel(f"{actual_algorithm} Dimension 1", fontsize=11, color="#334155")
+            app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2", fontsize=11, color="#334155")
+        
         app_state.ax.tick_params(colors="#475569", labelsize=9)
         
         # Adjust layout to prevent overlap

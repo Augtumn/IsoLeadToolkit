@@ -26,6 +26,7 @@
   "Analysis reset to full dataset.": "分析已重置为完整数据集。",
   "Please select samples first.": "请先选择样本。",
   "Robust PCA": "稳健 PCA",
+  "V1-V2 Diagram": "V1-V2 图解",
   "PCA Embedding": "PCA 降维",
   "Show Confidence Ellipses": "显示置信椭圆",
   "Confidence Level": "置信度",
