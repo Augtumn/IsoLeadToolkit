@@ -15,6 +15,11 @@ from state import app_state
 import state as state_module
 from events import toggle_selection_mode
 
+try:
+    from V1V2 import calculate_all_parameters
+except ImportError:
+    calculate_all_parameters = None
+
 
 class ControlPanel:
     """Interactive control panel for algorithm parameters"""
@@ -200,6 +205,7 @@ class ControlPanel:
             ("t-SNE Embedding", "tSNE"),
             ("PCA Embedding", "PCA"),
             ("Robust PCA", "RobustPCA"),
+            ("V1-V2 Diagram", "V1V2"),
             ("2D Scatter (raw)", "2D"),
             ("3D Scatter (raw)", "3D"),
         ]
@@ -1259,6 +1265,36 @@ class ControlPanel:
         try:
             indices = sorted(app_state.selected_indices)
             df = app_state.df_global.iloc[indices].copy()
+            
+            # Attempt to calculate and append V1V2 parameters
+            if calculate_all_parameters:
+                all_cols = df.columns.tolist()
+                # Exact matching for prescribed headers
+                col_206 = "206Pb/204Pb" if "206Pb/204Pb" in all_cols else None
+                col_207 = "207Pb/204Pb" if "207Pb/204Pb" in all_cols else None
+                col_208 = "208Pb/204Pb" if "208Pb/204Pb" in all_cols else None
+                
+                if col_206 and col_207 and col_208:
+                    try:
+                        pb206 = pd.to_numeric(df[col_206], errors='coerce').values
+                        pb207 = pd.to_numeric(df[col_207], errors='coerce').values
+                        pb208 = pd.to_numeric(df[col_208], errors='coerce').values
+                        
+                        results = calculate_all_parameters(pb206, pb207, pb208, calculate_ages=True)
+                        
+                        # Append new columns
+                        df['Δα'] = results['Delta_alpha']
+                        df['Δβ'] = results['Delta_beta']
+                        df['Δγ'] = results['Delta_gamma']
+                        df['V1'] = results['V1']
+                        df['V2'] = results['V2']
+                        df['tCDT (Ma)'] = results['tCDT (Ma)']
+                        df['tSK (Ma)'] = results['tSK (Ma)']
+                        
+                        print("[INFO] Appended V1V2 parameters to export data.", flush=True)
+                    except Exception as e:
+                        print(f"[WARN] Failed to calculate V1V2 parameters for export: {e}", flush=True)
+
         except Exception as exc:
             messagebox.showerror(
                 self._translate("Export Selected Data"),

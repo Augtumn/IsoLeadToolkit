@@ -15,11 +15,10 @@ def available_languages() -> Dict[str, str]:
     return CONFIG.get('languages', {})
 
 
-def _load_language(language: str, force: bool = False) -> None:
+def _load_language(language: str) -> None:
     """Load translation file for the given language into cache."""
-    if not force and language in _TRANSLATIONS:
-        if _TRANSLATIONS[language]:
-            return
+    if language in _TRANSLATIONS:
+        return
 
     locale_path = _LOCALES_DIR / f"{language}.json"
     
@@ -35,8 +34,7 @@ def _load_language(language: str, force: bool = False) -> None:
         except UnicodeDecodeError:
             with open(locale_path, 'r', encoding='utf-8') as handle:
                 data = json.load(handle)
-    except Exception as e:
-        print(f"[ERROR] Failed to load locale file {locale_path}: {e}")
+    except Exception:
         data = {}
     
     _TRANSLATIONS[language] = data or {}
