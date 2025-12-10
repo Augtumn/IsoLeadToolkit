@@ -164,6 +164,13 @@
   "All files": "所有文件",
   "Search groups": "搜索分组",
   "No legend entries match your search.": "没有符合搜索条件的图例项目。",
-  "Top": "置顶"
+  "Top": "置顶",
+  "V1V2 Parameters": "V1V2 参数",
+  "Adjust parameters for V1-V2 diagram calculation.": "调整 V1-V2 图解的计算参数。",
+  "Scale Factor": "缩放系数",
+  "Parameter a": "参数 a",
+  "Parameter b": "参数 b",
+  "Parameter c": "参数 c",
+  "Reset to Defaults": "恢复默认值"
 }
 

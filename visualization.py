@@ -6,6 +6,12 @@ import traceback
 import matplotlib
 from config import CONFIG
 from state import app_state
+# Import events module for selection overlay refresh
+try:
+    from events import refresh_selection_overlay
+except ImportError:
+    refresh_selection_overlay = None
+
 import umap
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
@@ -851,7 +857,18 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             pb208 = X[:, idx_208]
             
             try:
-                results = calculate_all_parameters(pb206, pb207, pb208, calculate_ages=False)
+                # Get V1V2 parameters from state
+                v1v2_params = getattr(app_state, 'v1v2_params', {})
+                scale = v1v2_params.get('scale', 1.0)
+                a = v1v2_params.get('a', 0.0)
+                b = v1v2_params.get('b', 2.0367)
+                c = v1v2_params.get('c', -6.143)
+
+                results = calculate_all_parameters(
+                    pb206, pb207, pb208, 
+                    calculate_ages=False,
+                    a=a, b=b, c=c, scale=scale
+                )
                 v1 = results['V1']
                 v2 = results['V2']
                 embedding = np.column_stack((v1, v2))
@@ -1085,6 +1102,13 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 app_state.annotation.arrow_patch.set_zorder(14)
         except Exception:
             pass
+        
+        # Restore selection overlay if available
+        if refresh_selection_overlay:
+            try:
+                refresh_selection_overlay()
+            except Exception as e:
+                print(f"[WARN] Failed to restore selection overlay: {e}", flush=True)
         
         return True
         

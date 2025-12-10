@@ -185,9 +185,10 @@ def refresh_selection_overlay():
             app_state.selection_ellipse = None
 
         valid_indices = [idx for idx in app_state.selected_indices if idx in app_state.sample_coordinates]
-        removed = set(app_state.selected_indices) - set(valid_indices)
-        if removed:
-            app_state.selected_indices -= removed
+        # Do not remove invisible indices from selection state, just don't draw them
+        # removed = set(app_state.selected_indices) - set(valid_indices)
+        # if removed:
+        #     app_state.selected_indices -= removed
 
         if not valid_indices:
             app_state.fig.canvas.draw_idle()

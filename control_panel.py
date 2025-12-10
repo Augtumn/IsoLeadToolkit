@@ -316,6 +316,8 @@ class ControlPanel:
             self._register_translation(placeholder, "Load data to unlock grouping options.")
 
     def _build_algorithm_tab(self, parent):
+        from visualization import show_scree_plot, show_pca_loadings
+        
         frame = self._build_scrollable_frame(parent)
 
         # UMAP Parameters
@@ -546,6 +548,67 @@ class ControlPanel:
         self.rpca_y_spin = ttk.Spinbox(r_dim_frame, from_=1, to=10, width=3, textvariable=self.pca_y_var, command=self._on_pca_dim_change)
         self.rpca_y_spin.pack(side=tk.LEFT)
         self.rpca_y_spin.bind('<Return>', lambda e: self._on_pca_dim_change())
+
+        # V1V2 Parameters
+        v1v2_section = self._create_section(
+            frame,
+            "V1V2 Parameters",
+            "Adjust parameters for V1-V2 diagram calculation."
+        )
+
+        self._add_slider(
+            v1v2_section,
+            key='v1v2_scale',
+            label_text="Scale Factor",
+            minimum=0.1,
+            maximum=10.0,
+            initial=app_state.v1v2_params.get('scale', 1.0),
+            formatter=lambda v: f"{float(v):.1f}",
+            step=0.1
+        )
+
+        self._add_slider(
+            v1v2_section,
+            key='v1v2_a',
+            label_text="Parameter a",
+            minimum=-10.0,
+            maximum=10.0,
+            initial=app_state.v1v2_params.get('a', 0.0),
+            formatter=lambda v: f"{float(v):.2f}",
+            step=0.1
+        )
+
+        self._add_slider(
+            v1v2_section,
+            key='v1v2_b',
+            label_text="Parameter b",
+            minimum=-10.0,
+            maximum=10.0,
+            initial=app_state.v1v2_params.get('b', 2.0367),
+            formatter=lambda v: f"{float(v):.4f}",
+            step=0.0001
+        )
+
+        self._add_slider(
+            v1v2_section,
+            key='v1v2_c',
+            label_text="Parameter c",
+            minimum=-20.0,
+            maximum=20.0,
+            initial=app_state.v1v2_params.get('c', -6.143),
+            formatter=lambda v: f"{float(v):.3f}",
+            step=0.001
+        )
+
+        # Reset Button for V1V2
+        reset_btn = ttk.Button(
+            v1v2_section,
+            text=self._translate("Reset to Defaults"),
+            style='Secondary.TButton',
+            command=self._reset_v1v2_defaults
+        )
+        reset_btn.pack(anchor=tk.W, pady=(8, 0))
+        self._register_translation(reset_btn, "Reset to Defaults")
 
     def _build_tools_tab(self, parent):
         frame = self._build_scrollable_frame(parent)
@@ -1280,7 +1343,18 @@ class ControlPanel:
                         pb207 = pd.to_numeric(df[col_207], errors='coerce').values
                         pb208 = pd.to_numeric(df[col_208], errors='coerce').values
                         
-                        results = calculate_all_parameters(pb206, pb207, pb208, calculate_ages=True)
+                        # Get V1V2 parameters from state
+                        v1v2_params = getattr(app_state, 'v1v2_params', {})
+                        scale = v1v2_params.get('scale', 1.0)
+                        a = v1v2_params.get('a', 0.0)
+                        b = v1v2_params.get('b', 2.0367)
+                        c = v1v2_params.get('c', -6.143)
+
+                        results = calculate_all_parameters(
+                            pb206, pb207, pb208, 
+                            calculate_ages=True,
+                            a=a, b=b, c=c, scale=scale
+                        )
                         
                         # Append new columns
                         df['Δα'] = results['Delta_alpha']
@@ -1585,6 +1659,42 @@ class ControlPanel:
             parent=self.root
         )
 
+    def _reset_v1v2_defaults(self):
+        """Reset V1V2 parameters to their default values."""
+        defaults = {
+            'v1v2_scale': 1.0,
+            'v1v2_a': 0.0,
+            'v1v2_b': 2.0367,
+            'v1v2_c': -6.143
+        }
+        
+        for key, value in defaults.items():
+            if key in self.sliders:
+                self.sliders[key].set(value)
+                # Manually trigger update for each slider to ensure UI and state are synced
+                # But to avoid multiple re-renders, we can just update state and UI, then trigger once
+        
+        # Update state directly
+        app_state.v1v2_params['scale'] = defaults['v1v2_scale']
+        app_state.v1v2_params['a'] = defaults['v1v2_a']
+        app_state.v1v2_params['b'] = defaults['v1v2_b']
+        app_state.v1v2_params['c'] = defaults['v1v2_c']
+        
+        # Update labels
+        if 'v1v2_scale' in self.labels: self.labels['v1v2_scale'].config(text=f"{defaults['v1v2_scale']:.1f}")
+        if 'v1v2_a' in self.labels: self.labels['v1v2_a'].config(text=f"{defaults['v1v2_a']:.2f}")
+        if 'v1v2_b' in self.labels: self.labels['v1v2_b'].config(text=f"{defaults['v1v2_b']:.4f}")
+        if 'v1v2_c' in self.labels: self.labels['v1v2_c'].config(text=f"{defaults['v1v2_c']:.3f}")
+
+        # Clear cache
+        keys_to_remove = [k for k in list(app_state.embedding_cache.keys()) if isinstance(k, tuple) and len(k) > 0 and k[0] == 'v1v2']
+        for k in keys_to_remove:
+            del app_state.embedding_cache[k]
+
+        # Trigger callback
+        if self.callback:
+            self.callback()
+
     def _on_change(self):
         """Handle any parameter change - with safety checks"""
         try:
@@ -1774,6 +1884,46 @@ class ControlPanel:
             if rpca_changed:
                 print(f"[DEBUG] Robust PCA parameters changed, clearing cache", flush=True)
                 keys_to_remove = [k for k in list(app_state.embedding_cache.keys()) if isinstance(k, tuple) and len(k) > 0 and k[0] == 'robust_pca']
+                for k in keys_to_remove:
+                    del app_state.embedding_cache[k]
+            
+            # Update V1V2 parameters
+            v1v2_changed = False
+            if 'v1v2_scale' in self.sliders and 'v1v2_scale' in self.labels:
+                new_val = float(self.sliders['v1v2_scale'].get())
+                if app_state.v1v2_params.get('scale') != new_val:
+                    print(f"[DEBUG] V1V2 scale changed: {app_state.v1v2_params.get('scale')} -> {new_val}", flush=True)
+                    v1v2_changed = True
+                    app_state.v1v2_params['scale'] = new_val
+                    self.labels['v1v2_scale'].config(text=f"{new_val:.1f}")
+
+            if 'v1v2_a' in self.sliders and 'v1v2_a' in self.labels:
+                new_val = float(self.sliders['v1v2_a'].get())
+                if app_state.v1v2_params.get('a') != new_val:
+                    print(f"[DEBUG] V1V2 a changed: {app_state.v1v2_params.get('a')} -> {new_val}", flush=True)
+                    v1v2_changed = True
+                    app_state.v1v2_params['a'] = new_val
+                    self.labels['v1v2_a'].config(text=f"{new_val:.2f}")
+
+            if 'v1v2_b' in self.sliders and 'v1v2_b' in self.labels:
+                new_val = float(self.sliders['v1v2_b'].get())
+                if app_state.v1v2_params.get('b') != new_val:
+                    print(f"[DEBUG] V1V2 b changed: {app_state.v1v2_params.get('b')} -> {new_val}", flush=True)
+                    v1v2_changed = True
+                    app_state.v1v2_params['b'] = new_val
+                    self.labels['v1v2_b'].config(text=f"{new_val:.4f}")
+
+            if 'v1v2_c' in self.sliders and 'v1v2_c' in self.labels:
+                new_val = float(self.sliders['v1v2_c'].get())
+                if app_state.v1v2_params.get('c') != new_val:
+                    print(f"[DEBUG] V1V2 c changed: {app_state.v1v2_params.get('c')} -> {new_val}", flush=True)
+                    v1v2_changed = True
+                    app_state.v1v2_params['c'] = new_val
+                    self.labels['v1v2_c'].config(text=f"{new_val:.3f}")
+
+            if v1v2_changed:
+                print(f"[DEBUG] V1V2 parameters changed, clearing cache", flush=True)
+                keys_to_remove = [k for k in list(app_state.embedding_cache.keys()) if isinstance(k, tuple) and len(k) > 0 and k[0] == 'v1v2']
                 for k in keys_to_remove:
                     del app_state.embedding_cache[k]
             

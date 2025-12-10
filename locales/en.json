@@ -155,5 +155,12 @@
   "CSV files": "CSV files",
   "All files": "All files",
   "Search groups": "Search groups",
-  "No legend entries match your search.": "No legend entries match your search."
+  "No legend entries match your search.": "No legend entries match your search.",
+  "V1V2 Parameters": "V1V2 Parameters",
+  "Adjust parameters for V1-V2 diagram calculation.": "Adjust parameters for V1-V2 diagram calculation.",
+  "Scale Factor": "Scale Factor",
+  "Parameter a": "Parameter a",
+  "Parameter b": "Parameter b",
+  "Parameter c": "Parameter c",
+  "Reset to Defaults": "Reset to Defaults"
 }

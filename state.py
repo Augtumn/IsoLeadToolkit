@@ -17,6 +17,14 @@ class AppState:
         self.robust_pca_params = CONFIG.get('robust_pca_params', {'n_components': 2, 'random_state': 42, 'support_fraction': 0.75}).copy()
         if 'support_fraction' not in self.robust_pca_params:
             self.robust_pca_params['support_fraction'] = 0.75
+        
+        # V1V2 Parameters
+        self.v1v2_params = {
+            'a': 0.0,
+            'b': 2.0367,
+            'c': -6.143,
+            'scale': 1.0
+        }
             
         # PCA/RobustPCA Dimension Selection
         self.pca_component_indices = [0, 1]  # Default to PC1 and PC2
