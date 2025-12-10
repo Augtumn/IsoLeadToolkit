@@ -5,24 +5,37 @@
 ## 功能特点
 
 ### 核心功能
-- **多维度降维算法支持**
+- **多维度降维与分析算法**
   - UMAP（Uniform Manifold Approximation and Projection）
   - t-SNE（t-Distributed Stochastic Neighbor Embedding）
+  - PCA（Principal Component Analysis）
+  - Robust PCA（基于 MCD 的稳健主成分分析，抗异常值）
+  - V1-V2 图解（铅同位素构造环境判别图）
   
 - **灵活的可视化模式**
   - 2D 散点图可视化
   - 3D 交互式可视化
   - 自定义维度选择
+  - 置信椭圆显示（68%, 95%, 99%）
+
+- **高级数据分析工具**
+  - 碎石图 (Scree Plot)：评估主成分贡献率
+  - 载荷图 (Loadings Plot)：分析特征对主成分的影响
+  - 相关性热力图 (Correlation Heatmap)：特征间相关性分析
+  - Shepard 图：评估降维结果的距离保持质量
+  - 轴相关性分析：探索降维轴与原始特征的关系
 
 - **交互式数据探索**
   - 鼠标悬停显示详细信息
-  - 点击选择样本
+  - 矩形框选与点选样本
   - 批量导出选中样本数据
-  - 图例点击切换显示/隐藏分组
+  - **智能导出**：导出时自动计算铅同位素参数（Δα, Δβ, Δγ, V1, V2, tCDT, tSK）
+  - 图例交互：点击切换显示/隐藏，**右侧颜色块点击修改颜色**，**"Top"按钮置顶显示**
 
 - **参数实时调整**
   - UMAP 参数（邻居数、最小距离）
   - t-SNE 参数（困惑度、学习率）
+  - PCA/Robust PCA 参数（主成分数）
   - 点大小调整
   - 随机种子控制
 
