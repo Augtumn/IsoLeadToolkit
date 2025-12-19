@@ -331,17 +331,38 @@ def on_hover(event):
                 x, y = offsets[idx_in_scatter]
                 x, y = float(x), float(y)
 
-                row = app_state.df_global.iloc[sample_idx]
+                # Use .loc instead of .iloc to ensure we get the correct row by index label
+                # sample_idx is the original index label from df_global
+                try:
+                    row = app_state.df_global.loc[sample_idx]
+                    # Handle case where index is not unique (returns DataFrame)
+                    if isinstance(row, pd.DataFrame):
+                        row = row.iloc[0]
+                except KeyError:
+                    continue
 
-                lab_no = row['Lab No.'] if 'Lab No.' in app_state.df_global.columns else 'N/A'
-                site = row['Discovery site'] if 'Discovery site' in app_state.df_global.columns else 'N/A'
-                period = row['Period'] if 'Period' in app_state.df_global.columns else 'N/A'
+                lines = []
+                # Use configured columns if available, otherwise fallback to defaults
+                cols_to_show = getattr(app_state, 'tooltip_columns', None)
+                if cols_to_show is None:
+                    cols_to_show = ['Lab No.', 'Discovery site', 'Period']
 
-                lab_no = str(lab_no) if pd.notna(lab_no) else 'N/A'
-                site = str(site) if pd.notna(site) else 'N/A'
-                period = str(period) if pd.notna(period) else 'N/A'
-
-                txt = f"Lab: {lab_no}\nSite: {site}\nPeriod: {period}"
+                # If user deselected all columns, show at least the ID
+                if not cols_to_show:
+                     lines.append(f"ID: {sample_idx}")
+                else:
+                    found_any = False
+                    for col in cols_to_show:
+                        if col in app_state.df_global.columns:
+                            val = row[col]
+                            val_str = str(val) if pd.notna(val) else 'N/A'
+                            lines.append(f"{col}: {val_str}")
+                            found_any = True
+                    
+                    if not found_any:
+                        lines.append(f"ID: {sample_idx}")
+                
+                txt = "\n".join(lines)
                 if sample_idx in app_state.selected_indices:
                     txt += "\n状态: 已选中"
 
@@ -387,7 +408,7 @@ def on_click(event):
                     return
 
                 try:
-                    row = app_state.df_global.iloc[sample_idx]
+                    row = app_state.df_global.loc[sample_idx]
                     lab_value = row['Lab No.'] if 'Lab No.' in app_state.df_global.columns else sample_idx
                     if pd.notna(lab_value):
                         lab_label = str(lab_value)

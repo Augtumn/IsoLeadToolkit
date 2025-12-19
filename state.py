@@ -81,6 +81,10 @@ class AppState:
         self.control_panel_ref = None
         self.initial_render_done = False
         
+        # Tooltip configuration
+        self.tooltip_columns = ['Lab No.', 'Discovery site', 'Period']  # Default columns
+
+        
     def clear_plot_state(self):
         """Reset plot-specific state"""
         self.scatter_collections.clear()

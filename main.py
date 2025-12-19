@@ -106,7 +106,8 @@ def _save_session(state_module):
         render_mode=app_state.render_mode,
         selected_2d_cols=getattr(app_state, 'selected_2d_cols', []),
         selected_3d_cols=app_state.selected_3d_cols,
-        language=app_state.language
+        language=app_state.language,
+        tooltip_columns=getattr(app_state, 'tooltip_columns', None)
     )
 
 
@@ -166,6 +167,14 @@ def main():
             app_state.render_mode = render_mode or 'UMAP'
             app_state.selected_2d_cols = session_data.get('selected_2d_cols', [])
             app_state.selected_3d_cols = session_data.get('selected_3d_cols', [])
+            
+            # Restore tooltip columns
+            saved_cols = session_data.get('tooltip_columns')
+            if saved_cols is not None:
+                app_state.tooltip_columns = saved_cols
+                print(f"[DEBUG] Restored tooltip columns from session: {saved_cols}", flush=True)
+            else:
+                print(f"[DEBUG] No tooltip columns in session, using default: {app_state.tooltip_columns}", flush=True)
 
             # Group column: restore from session if it exists in current data
             session_group_col = session_data.get('group_col')

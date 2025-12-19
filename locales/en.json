@@ -162,5 +162,12 @@
   "Parameter a": "Parameter a",
   "Parameter b": "Parameter b",
   "Parameter c": "Parameter c",
-  "Reset to Defaults": "Reset to Defaults"
+  "Reset to Defaults": "Reset to Defaults",
+  "Configure Tooltip": "Configure Tooltip",
+  "Tooltip Configuration": "Tooltip Configuration",
+  "Select columns to display:": "Select columns to display:",
+  "Save": "Save",
+  "Cancel": "Cancel",
+  "No Data": "No Data",
+  "Please load data first.": "Please load data first."
 }

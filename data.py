@@ -62,7 +62,16 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         print(f"[INFO] Loading file: {excel_file}", flush=True)
         if sheet_name:
             print(f"[INFO] Using sheet: {sheet_name}", flush=True)
-            df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str)
+            # Try to use calamine engine for faster Excel reading if available
+            # Requires: pip install python-calamine pandas>=2.2.0
+            try:
+                print("[INFO] Attempting to read with calamine engine...", flush=True)
+                df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str, engine='calamine')
+            except Exception:
+                # Fallback to default (openpyxl)
+                print("[INFO] Calamine engine not available or failed, falling back to default (openpyxl).", flush=True)
+                print("[TIP] For faster Excel loading, install python-calamine: pip install python-calamine", flush=True)
+                df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str)
         else:
             # For CSV files
             print("[INFO] Loading CSV file", flush=True)
