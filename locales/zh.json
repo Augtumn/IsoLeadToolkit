@@ -171,6 +171,13 @@
   "Parameter a": "参数 a",
   "Parameter b": "参数 b",
   "Parameter c": "参数 c",
-  "Reset to Defaults": "恢复默认值"
+  "Reset to Defaults": "恢复默认值",
+  "Configure Tooltip": "配置提示框",
+  "Tooltip Configuration": "提示框配置",
+  "Select columns to display:": "选择要显示的列：",
+  "Save": "保存",
+  "Cancel": "取消",
+  "No Data": "无数据",
+  "Please load data first.": "请先加载数据。"
 }
 

@@ -988,7 +988,8 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 color = app_state.current_palette[cat]
                 sc = app_state.ax.scatter(
                     xs, ys, label=cat, color=color, s=size,
-                    alpha=0.88, edgecolors="#1e293b", linewidth=0.4, zorder=2
+                    alpha=0.88, edgecolors="#1e293b", linewidth=0.4, zorder=2,
+                    picker=5
                 )
                 scatters.append(sc)
                 app_state.scatter_collections.append(sc)
@@ -1092,8 +1093,8 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         app_state.annotation = app_state.ax.annotate(
             "", xy=(0, 0), xytext=(20, 20),
             textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.5", fc="yellow", alpha=0.8),
-            arrowprops=dict(arrowstyle="->"),
+            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cbd5e1", alpha=0.95),
+            arrowprops=dict(arrowstyle="->", color="#475569"),
             zorder=15
         )
         app_state.annotation.set_visible(False)
@@ -1314,8 +1315,8 @@ def plot_2d_data(group_col, data_columns, size=60):
             xy=(0, 0),
             xytext=(20, 20),
             textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.5", fc="yellow", alpha=0.8),
-            arrowprops=dict(arrowstyle="->"),
+            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cbd5e1", alpha=0.95),
+            arrowprops=dict(arrowstyle="->", color="#475569"),
             zorder=15
         )
         app_state.annotation.set_visible(False)

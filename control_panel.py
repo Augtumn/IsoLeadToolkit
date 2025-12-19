@@ -14,6 +14,7 @@ from localization import translate, available_languages, set_language
 from state import app_state
 import state as state_module
 from events import toggle_selection_mode
+from session import save_session_params
 
 try:
     from V1V2 import calculate_all_parameters
@@ -314,6 +315,16 @@ class ControlPanel:
             placeholder.pack(anchor=tk.W, pady=4)
             self.group_placeholder = placeholder
             self._register_translation(placeholder, "Load data to unlock grouping options.")
+
+        # Tooltip Settings
+        tooltip_btn = ttk.Button(
+            common_section,
+            text=self._translate("Configure Tooltip"),
+            command=self._open_tooltip_settings,
+            style='Accent.TButton'
+        )
+        tooltip_btn.pack(anchor=tk.W, pady=(12, 4))
+        self._register_translation(tooltip_btn, "Configure Tooltip")
 
     def _build_algorithm_tab(self, parent):
         from visualization import show_scree_plot, show_pca_loadings
@@ -1544,8 +1555,15 @@ class ControlPanel:
                 with pd.ExcelWriter(workbook_path, mode='a', engine='openpyxl', if_sheet_exists='new') as writer:
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
             else:
-                with pd.ExcelWriter(workbook_path, mode='w', engine='openpyxl') as writer:
-                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+                # Try xlsxwriter for faster writing of new files
+                try:
+                    with pd.ExcelWriter(workbook_path, mode='w', engine='xlsxwriter') as writer:
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
+                except Exception:
+                    print("[INFO] xlsxwriter not available, falling back to openpyxl", flush=True)
+                    print("[TIP] For faster Excel writing, install xlsxwriter: pip install xlsxwriter", flush=True)
+                    with pd.ExcelWriter(workbook_path, mode='w', engine='openpyxl') as writer:
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
         except Exception as exc:
             messagebox.showerror(
                 self._translate("Append to Excel"),
@@ -2001,6 +2019,104 @@ class ControlPanel:
                     self.master.destroy()
                 except Exception:
                     pass
+
+    def _open_tooltip_settings(self):
+        """Open a dialog to select columns for the tooltip."""
+        if app_state.df_global is None:
+            messagebox.showwarning(
+                self._translate("No Data"),
+                self._translate("Please load data first.")
+            )
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(self._translate("Tooltip Configuration"))
+        dialog.geometry("300x400")
+        
+        # Make it modal
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        lbl = ttk.Label(dialog, text=self._translate("Select columns to display:"))
+        lbl.pack(pady=10, padx=10, anchor=tk.W)
+        self._register_translation(lbl, "Select columns to display:")
+
+        # Scrollable frame for checkboxes
+        canvas = tk.Canvas(dialog)
+        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True, padx=10)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Bind mousewheel
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Checkboxes
+        self.tooltip_vars = {}
+        all_columns = list(app_state.df_global.columns)
+        
+        # Ensure default columns are in the list if they exist in dataframe
+        current_selection = app_state.tooltip_columns
+        if current_selection is None:
+             current_selection = []
+
+        for col in all_columns:
+            var = tk.BooleanVar(value=col in current_selection)
+            self.tooltip_vars[col] = var
+            cb = ttk.Checkbutton(scrollable_frame, text=col, variable=var)
+            cb.pack(anchor=tk.W, pady=2)
+
+        # Buttons
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(fill=tk.X, pady=10, padx=10)
+
+        def save_tooltip_config():
+            selected = [col for col, var in self.tooltip_vars.items() if var.get()]
+            app_state.tooltip_columns = selected
+            print(f"[DEBUG] Tooltip columns updated to: {selected}", flush=True)
+            
+            # Trigger immediate save to disk
+            try:
+                save_session_params(
+                    algorithm=app_state.algorithm,
+                    umap_params=app_state.umap_params,
+                    tsne_params=app_state.tsne_params,
+                    point_size=app_state.point_size,
+                    group_col=app_state.last_group_col,
+                    group_cols=app_state.group_cols,
+                    data_cols=app_state.data_cols,
+                    file_path=app_state.file_path,
+                    sheet_name=app_state.sheet_name,
+                    render_mode=app_state.render_mode,
+                    selected_2d_cols=getattr(app_state, 'selected_2d_cols', []),
+                    selected_3d_cols=app_state.selected_3d_cols,
+                    language=app_state.language,
+                    tooltip_columns=app_state.tooltip_columns
+                )
+            except Exception as e:
+                print(f"[WARN] Failed to auto-save session: {e}", flush=True)
+
+            dialog.destroy()
+
+        save_btn = ttk.Button(btn_frame, text=self._translate("Save"), command=save_tooltip_config)
+        save_btn.pack(side=tk.RIGHT, padx=5)
+        self._register_translation(save_btn, "Save")
+
+        cancel_btn = ttk.Button(btn_frame, text=self._translate("Cancel"), command=dialog.destroy)
+        cancel_btn.pack(side=tk.RIGHT)
+        self._register_translation(cancel_btn, "Cancel")
 
     def open(self):
         """Bring the control panel window back if it was hidden"""
