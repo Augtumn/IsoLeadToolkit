@@ -169,5 +169,8 @@
   "Save": "Save",
   "Cancel": "Cancel",
   "No Data": "No Data",
-  "Please load data first.": "Please load data first."
+  "Please load data first.": "Please load data first.",
+  "Configure Group Columns": "Configure Group Columns",
+  "Group Columns Configuration": "Group Columns Configuration",
+  "Select columns to use for grouping:": "Select columns to use for grouping:"
 }

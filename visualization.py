@@ -448,12 +448,17 @@ def _get_analysis_data():
         print(f"[ERROR] Data contains non-numeric values: {e}", flush=True)
         return None, None
 
-    # Handle NaNs: Drop rows with missing values to ensure algorithms work
+    # Handle NaNs: Impute missing values instead of dropping rows
     if np.isnan(X).any():
-        print("[WARN] Missing values detected in data. Dropping incomplete rows for analysis.", flush=True)
-        mask = ~np.isnan(X).any(axis=1)
-        X = X[mask]
-        indices = [indices[i] for i in range(len(indices)) if mask[i]]
+        print("[WARN] Missing values detected in data. Imputing with 0.", flush=True)
+        try:
+            imputer = SimpleImputer(strategy='constant', fill_value=0)
+            X = imputer.fit_transform(X)
+        except Exception as e:
+            print(f"[ERROR] Imputation failed: {e}. Dropping incomplete rows as fallback.", flush=True)
+            mask = ~np.isnan(X).any(axis=1)
+            X = X[mask]
+            indices = [indices[i] for i in range(len(indices)) if mask[i]]
 
     return X, indices
 

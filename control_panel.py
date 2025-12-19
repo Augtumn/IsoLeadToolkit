@@ -294,27 +294,7 @@ class ControlPanel:
         self.group_container = group_container
         self.group_placeholder = None
 
-        if app_state.group_cols:
-            for col in app_state.group_cols:
-                ttk.Radiobutton(
-                    group_container,
-                    text=col,
-                    variable=self.radio_vars['group'],
-                    value=col,
-                    command=self._on_change,
-                    style='Option.TRadiobutton'
-                ).pack(anchor=tk.W, pady=2)
-        else:
-            placeholder = ttk.Label(
-                group_container,
-                text=self._translate("Load data to unlock grouping options."),
-                style='BodyMuted.TLabel',
-                wraplength=400,
-                justify=tk.LEFT
-            )
-            placeholder.pack(anchor=tk.W, pady=4)
-            self.group_placeholder = placeholder
-            self._register_translation(placeholder, "Load data to unlock grouping options.")
+        self._refresh_group_list()
 
         # Tooltip Settings
         tooltip_btn = ttk.Button(
@@ -325,6 +305,46 @@ class ControlPanel:
         )
         tooltip_btn.pack(anchor=tk.W, pady=(12, 4))
         self._register_translation(tooltip_btn, "Configure Tooltip")
+
+        # Group Column Configuration
+        group_config_btn = ttk.Button(
+            common_section,
+            text=self._translate("Configure Group Columns"),
+            command=self._open_group_col_settings,
+            style='Secondary.TButton'
+        )
+        group_config_btn.pack(anchor=tk.W, pady=(4, 4))
+        self._register_translation(group_config_btn, "Configure Group Columns")
+
+    def _refresh_group_list(self):
+        """Refresh the list of group column radio buttons"""
+        if not hasattr(self, 'group_container'):
+            return
+            
+        for widget in self.group_container.winfo_children():
+            widget.destroy()
+
+        if app_state.group_cols:
+            for col in app_state.group_cols:
+                ttk.Radiobutton(
+                    self.group_container,
+                    text=col,
+                    variable=self.radio_vars['group'],
+                    value=col,
+                    command=self._on_change,
+                    style='Option.TRadiobutton'
+                ).pack(anchor=tk.W, pady=2)
+        else:
+            placeholder = ttk.Label(
+                self.group_container,
+                text=self._translate("Load data to unlock grouping options."),
+                style='BodyMuted.TLabel',
+                wraplength=400,
+                justify=tk.LEFT
+            )
+            placeholder.pack(anchor=tk.W, pady=4)
+            self.group_placeholder = placeholder
+            self._register_translation(placeholder, "Load data to unlock grouping options.")
 
     def _build_algorithm_tab(self, parent):
         from visualization import show_scree_plot, show_pca_loadings
@@ -1953,8 +1973,11 @@ class ControlPanel:
             # Update group column if available
             if 'group' in self.radio_vars:
                 old_group = app_state.last_group_col
-                app_state.last_group_col = self.radio_vars['group'].get()
-                print(f"[DEBUG] Group column changed: {old_group} -> {app_state.last_group_col}", flush=True)
+                new_group = self.radio_vars['group'].get()
+                if old_group != new_group:
+                    app_state.last_group_col = new_group
+                    app_state.visible_groups = None  # Reset visibility filter when group changes
+                    print(f"[DEBUG] Group column changed: {old_group} -> {new_group}. Reset visible_groups.", flush=True)
             
             # Call the callback
             print(f"[DEBUG] Calling callback", flush=True)
@@ -2041,6 +2064,46 @@ class ControlPanel:
         lbl.pack(pady=10, padx=10, anchor=tk.W)
         self._register_translation(lbl, "Select columns to display:")
 
+        # Buttons - Pack FIRST at BOTTOM to avoid being hidden
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10, padx=10)
+
+        def save_tooltip_config():
+            selected = [col for col, var in self.tooltip_vars.items() if var.get()]
+            app_state.tooltip_columns = selected
+            print(f"[DEBUG] Tooltip columns updated to: {selected}", flush=True)
+            
+            # Trigger immediate save to disk
+            try:
+                save_session_params(
+                    algorithm=app_state.algorithm,
+                    umap_params=app_state.umap_params,
+                    tsne_params=app_state.tsne_params,
+                    point_size=app_state.point_size,
+                    group_col=app_state.last_group_col,
+                    group_cols=app_state.group_cols,
+                    data_cols=app_state.data_cols,
+                    file_path=app_state.file_path,
+                    sheet_name=app_state.sheet_name,
+                    render_mode=app_state.render_mode,
+                    selected_2d_cols=getattr(app_state, 'selected_2d_cols', []),
+                    selected_3d_cols=app_state.selected_3d_cols,
+                    language=app_state.language,
+                    tooltip_columns=app_state.tooltip_columns
+                )
+            except Exception as e:
+                print(f"[WARN] Failed to auto-save session: {e}", flush=True)
+
+            dialog.destroy()
+
+        save_btn = ttk.Button(btn_frame, text=self._translate("Save"), command=save_tooltip_config)
+        save_btn.pack(side=tk.RIGHT, padx=5)
+        self._register_translation(save_btn, "Save")
+
+        cancel_btn = ttk.Button(btn_frame, text=self._translate("Cancel"), command=dialog.destroy)
+        cancel_btn.pack(side=tk.RIGHT)
+        self._register_translation(cancel_btn, "Cancel")
+
         # Scrollable frame for checkboxes
         canvas = tk.Canvas(dialog)
         scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
@@ -2078,14 +2141,45 @@ class ControlPanel:
             cb = ttk.Checkbutton(scrollable_frame, text=col, variable=var)
             cb.pack(anchor=tk.W, pady=2)
 
-        # Buttons
-        btn_frame = ttk.Frame(dialog)
-        btn_frame.pack(fill=tk.X, pady=10, padx=10)
+    def _open_group_col_settings(self):
+        """Open a dialog to select columns for grouping."""
+        if app_state.df_global is None:
+            messagebox.showwarning(
+                self._translate("No Data"),
+                self._translate("Please load data first.")
+            )
+            return
 
-        def save_tooltip_config():
-            selected = [col for col, var in self.tooltip_vars.items() if var.get()]
-            app_state.tooltip_columns = selected
-            print(f"[DEBUG] Tooltip columns updated to: {selected}", flush=True)
+        dialog = tk.Toplevel(self.root)
+        dialog.title(self._translate("Group Columns Configuration"))
+        dialog.geometry("300x400")
+        
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        lbl = ttk.Label(dialog, text=self._translate("Select columns to use for grouping:"))
+        lbl.pack(pady=10, padx=10, anchor=tk.W)
+        self._register_translation(lbl, "Select columns to use for grouping:")
+
+        # Buttons - Pack FIRST at BOTTOM
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10, padx=10)
+
+        def save_group_config():
+            selected = [col for col, var in self.group_vars.items() if var.get()]
+            if not selected:
+                messagebox.showwarning(
+                    self._translate("Validation Error"),
+                    self._translate("Please select at least one grouping column."),
+                    parent=dialog
+                )
+                return
+
+            app_state.group_cols = selected
+            print(f"[DEBUG] Group columns updated to: {selected}", flush=True)
+            
+            # Refresh UI
+            self._refresh_group_list()
             
             # Trigger immediate save to disk
             try:
@@ -2110,13 +2204,53 @@ class ControlPanel:
 
             dialog.destroy()
 
-        save_btn = ttk.Button(btn_frame, text=self._translate("Save"), command=save_tooltip_config)
+        save_btn = ttk.Button(btn_frame, text=self._translate("Save"), command=save_group_config)
         save_btn.pack(side=tk.RIGHT, padx=5)
         self._register_translation(save_btn, "Save")
 
         cancel_btn = ttk.Button(btn_frame, text=self._translate("Cancel"), command=dialog.destroy)
         cancel_btn.pack(side=tk.RIGHT)
         self._register_translation(cancel_btn, "Cancel")
+
+        # Scrollable frame
+        canvas = tk.Canvas(dialog)
+        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True, padx=10)
+        scrollbar.pack(side="right", fill="y")
+        
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Checkboxes
+        self.group_vars = {}
+        all_columns = list(app_state.df_global.columns)
+        
+        # Identify data columns to exclude
+        data_cols = set(app_state.data_cols) if app_state.data_cols else set()
+        
+        current_selection = app_state.group_cols or []
+
+        for col in all_columns:
+            # Skip if it is a data column
+            if col in data_cols:
+                continue
+
+            var = tk.BooleanVar(value=col in current_selection)
+            self.group_vars[col] = var
+            cb = ttk.Checkbutton(scrollable_frame, text=col, variable=var)
+            cb.pack(anchor=tk.W, pady=2)
 
     def open(self):
         """Bring the control panel window back if it was hidden"""

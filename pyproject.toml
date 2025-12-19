@@ -13,4 +13,6 @@ dependencies = [
     "scikit-learn>=1.5.2",
     "umap-learn>=0.5.6",
     "pyinstaller>=6.17.0",
+    "python-calamine>=0.6.1",
+    "xlsxwriter>=3.2.9",
 ]

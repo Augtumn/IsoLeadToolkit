@@ -178,6 +178,9 @@
   "Save": "保存",
   "Cancel": "取消",
   "No Data": "无数据",
-  "Please load data first.": "请先加载数据。"
+  "Please load data first.": "请先加载数据。",
+  "Configure Group Columns": "配置分组列",
+  "Group Columns Configuration": "分组列配置",
+  "Select columns to use for grouping:": "选择用于分组的列："
 }
 

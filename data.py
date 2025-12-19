@@ -105,7 +105,10 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             else:
                 # Keep as string (for grouping columns)
                 print(f"[DEBUG] Column '{col}': keeping as string/object type", flush=True)
-                df[col] = df[col].astype(str)
+                # Fill missing values with "empty"
+                df[col] = df[col].fillna("empty").astype(str)
+                # Also replace string "nan" or "NaN" if they exist
+                df[col] = df[col].replace(['nan', 'NaN', 'None'], 'empty')
         
         # Show configuration dialog if requested
         if show_config_dialog:
