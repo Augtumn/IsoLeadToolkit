@@ -98,18 +98,20 @@ class FileSelectionDialog:
 
     def _setup_styles(self):
         """Configure ttk styles for a cohesive dialog appearance"""
+        ui_font = 'Microsoft YaHei UI'
+        
         self.style.configure('FileDialog.TFrame', background="#edf2f7")
         self.style.configure('Card.TFrame', background="#ffffff", relief='flat', borderwidth=1)
         self.style.configure('Card.TLabelframe', background="#ffffff", borderwidth=1, relief='solid')
-        self.style.configure('Card.TLabelframe.Label', background="#ffffff", foreground="#1a202c", font=('Segoe UI', 12, 'bold'))
-        self.style.configure('Header.TLabel', background="#edf2f7", foreground="#1a202c", font=('Segoe UI', 18, 'bold'))
-        self.style.configure('Subheader.TLabel', background="#edf2f7", foreground="#4a5568", font=('Segoe UI', 10))
-        self.style.configure('Body.TLabel', background="#ffffff", foreground="#4a5568", font=('Segoe UI', 10))
-        self.style.configure('Path.TLabel', background="#ffffff", foreground="#1a202c", font=('Segoe UI', 11, 'bold'))
-        self.style.configure('Muted.TLabel', background="#ffffff", foreground="#94a3b8", font=('Segoe UI', 10))
-        self.style.configure('Accent.TButton', background="#2563eb", foreground="#ffffff", font=('Segoe UI', 11, 'bold'), padding=(12, 6))
+        self.style.configure('Card.TLabelframe.Label', background="#ffffff", foreground="#1a202c", font=(ui_font, 12, 'bold'))
+        self.style.configure('Header.TLabel', background="#edf2f7", foreground="#1a202c", font=(ui_font, 18, 'bold'))
+        self.style.configure('Subheader.TLabel', background="#edf2f7", foreground="#4a5568", font=(ui_font, 10))
+        self.style.configure('Body.TLabel', background="#ffffff", foreground="#4a5568", font=(ui_font, 10))
+        self.style.configure('Path.TLabel', background="#ffffff", foreground="#1a202c", font=(ui_font, 11, 'bold'))
+        self.style.configure('Muted.TLabel', background="#ffffff", foreground="#94a3b8", font=(ui_font, 10))
+        self.style.configure('Accent.TButton', background="#2563eb", foreground="#ffffff", font=(ui_font, 11, 'bold'), padding=(12, 6))
         self.style.map('Accent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')], foreground=[('disabled', '#d1d5db'), ('active', '#ffffff')])
-        self.style.configure('Secondary.TButton', background="#ffffff", foreground="#2563eb", font=('Segoe UI', 10, 'bold'), padding=(10, 5))
+        self.style.configure('Secondary.TButton', background="#ffffff", foreground="#2563eb", font=(ui_font, 10, 'bold'), padding=(10, 5))
         self.style.map('Secondary.TButton', background=[('active', '#e2e8f0')])
 
     def _create_widgets(self):

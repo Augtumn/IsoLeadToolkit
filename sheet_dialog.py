@@ -130,7 +130,7 @@ class SheetSelectionDialog:
             bd=0,
             highlightthickness=0,
             relief=tk.FLAT,
-            font=('Segoe UI', 11)
+            font=('Microsoft YaHei UI', 11)
         )
         self.sheet_listbox.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
         scrollbar.config(command=self.sheet_listbox.yview)
@@ -166,15 +166,16 @@ class SheetSelectionDialog:
 
     def _setup_styles(self):
         """Configure ttk styles for the sheet dialog"""
+        ui_font = 'Microsoft YaHei UI'
         self.style.configure('SheetDialog.TFrame', background="#edf2f7")
         self.style.configure('SheetDialog.Card.TFrame', background="#ffffff", borderwidth=1, relief='solid')
         self.style.configure('SheetDialog.CardBody.TFrame', background="#ffffff")
-        self.style.configure('SheetDialog.Header.TLabel', background="#edf2f7", foreground="#1a202c", font=('Segoe UI', 18, 'bold'))
-        self.style.configure('SheetDialog.Subheader.TLabel', background="#edf2f7", foreground="#4a5568", font=('Segoe UI', 10))
-        self.style.configure('SheetDialog.Body.TLabel', background="#ffffff", foreground="#475569", font=('Segoe UI', 11, 'bold'))
-        self.style.configure('SheetDialog.Secondary.TButton', background="#ffffff", foreground="#2563eb", font=('Segoe UI', 10, 'bold'), padding=(10, 6))
+        self.style.configure('SheetDialog.Header.TLabel', background="#edf2f7", foreground="#1a202c", font=(ui_font, 18, 'bold'))
+        self.style.configure('SheetDialog.Subheader.TLabel', background="#edf2f7", foreground="#4a5568", font=(ui_font, 10))
+        self.style.configure('SheetDialog.Body.TLabel', background="#ffffff", foreground="#475569", font=(ui_font, 11, 'bold'))
+        self.style.configure('SheetDialog.Secondary.TButton', background="#ffffff", foreground="#2563eb", font=(ui_font, 10, 'bold'), padding=(10, 6))
         self.style.map('SheetDialog.Secondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
-        self.style.configure('SheetDialog.Accent.TButton', background="#2563eb", foreground="#ffffff", font=('Segoe UI', 11, 'bold'), padding=(12, 6))
+        self.style.configure('SheetDialog.Accent.TButton', background="#2563eb", foreground="#ffffff", font=(ui_font, 11, 'bold'), padding=(12, 6))
         self.style.map('SheetDialog.Accent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')], foreground=[('disabled', '#d1d5db'), ('active', '#ffffff')])
     
     def _ok_clicked(self):

@@ -72,14 +72,15 @@ class LegendFilterDialog:
         widget.bind("<Button-5>", _on_mousewheel)
 
     def _setup_styles(self):
+        ui_font = 'Microsoft YaHei UI'
         self.style.configure('LegendDialog.TFrame', background="#edf2f7")
         self.style.configure('LegendCard.TFrame', background="#ffffff", borderwidth=1, relief='solid')
-        self.style.configure('LegendHeader.TLabel', background="#edf2f7", foreground="#1a202c", font=('Segoe UI', 14, 'bold'))
-        self.style.configure('LegendBody.TLabel', background="#ffffff", foreground="#475569", font=('Segoe UI', 10))
-        self.style.configure('LegendCheck.TCheckbutton', background="#ffffff", foreground="#1a202c", font=('Segoe UI', 10))
-        self.style.configure('LegendAccent.TButton', background="#2563eb", foreground="#ffffff", font=('Segoe UI', 10, 'bold'), padding=(12, 6))
+        self.style.configure('LegendHeader.TLabel', background="#edf2f7", foreground="#1a202c", font=(ui_font, 14, 'bold'))
+        self.style.configure('LegendBody.TLabel', background="#ffffff", foreground="#475569", font=(ui_font, 10))
+        self.style.configure('LegendCheck.TCheckbutton', background="#ffffff", foreground="#1a202c", font=(ui_font, 10))
+        self.style.configure('LegendAccent.TButton', background="#2563eb", foreground="#ffffff", font=(ui_font, 10, 'bold'), padding=(12, 6))
         self.style.map('LegendAccent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')])
-        self.style.configure('LegendSecondary.TButton', background="#ffffff", foreground="#2563eb", font=('Segoe UI', 10, 'bold'), padding=(12, 6))
+        self.style.configure('LegendSecondary.TButton', background="#ffffff", foreground="#2563eb", font=(ui_font, 10, 'bold'), padding=(12, 6))
         self.style.map('LegendSecondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
 
     def _build_ui(self):

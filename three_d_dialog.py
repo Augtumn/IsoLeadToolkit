@@ -56,24 +56,31 @@ class _Select3DColumnsDialog:
             pass
 
     def _setup_styles(self):
+        ui_font = 'Microsoft YaHei UI'
         self.style.configure('Dialog.TFrame', background="#edf2f7")
         self.style.configure('Card.TFrame', background="#ffffff", borderwidth=1, relief='solid')
-        self.style.configure('Header.TLabel', background="#edf2f7", foreground="#1a202c", font=('Segoe UI', 14, 'bold'))
-        self.style.configure('Body.TLabel', background="#ffffff", foreground="#475569", font=('Segoe UI', 10))
-        self.style.configure('Field.TLabel', background="#ffffff", foreground="#1a202c", font=('Segoe UI', 10, 'bold'))
-        self.style.configure('Accent.TButton', background="#2563eb", foreground="#ffffff", font=('Segoe UI', 10, 'bold'), padding=(12, 6))
+        self.style.configure('Header.TLabel', background="#edf2f7", foreground="#1a202c", font=(ui_font, 14, 'bold'))
+        self.style.configure('Body.TLabel', background="#ffffff", foreground="#475569", font=(ui_font, 10))
+        self.style.configure('Field.TLabel', background="#ffffff", foreground="#1a202c", font=(ui_font, 10, 'bold'))
+        self.style.configure('Accent.TButton', background="#2563eb", foreground="#ffffff", font=(ui_font, 10, 'bold'), padding=(12, 6))
         self.style.map('Accent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')])
-        self.style.configure('Secondary.TButton', background="#ffffff", foreground="#2563eb", font=('Segoe UI', 10, 'bold'), padding=(12, 6))
+        self.style.configure('Secondary.TButton', background="#ffffff", foreground="#2563eb", font=(ui_font, 10, 'bold'), padding=(12, 6))
         self.style.map('Secondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
 
     def _build_ui(self):
+        """
+        Construct the user interface.
+        
+        Sets up a scrollable canvas containing the selection widgets.
+        The layout uses a standard left-aligned canvas and right-aligned scrollbar.
+        """
         outer = ttk.Frame(self.root, style='Dialog.TFrame')
         outer.pack(fill=tk.BOTH, expand=True)
 
         canvas = tk.Canvas(outer, highlightthickness=0, bd=0, background="#edf2f7")
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
         scrollbar = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=canvas.yview)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         container = ttk.Frame(canvas, padding=(18, 18, 18, 14), style='Dialog.TFrame')

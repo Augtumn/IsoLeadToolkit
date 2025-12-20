@@ -109,7 +109,7 @@ class ControlPanel:
         self._register_translation(header, "Visualization Controls")
 
         # Data Count Label
-        self.data_count_label = ttk.Label(header_frame, text="", style='ControlPanel.TLabel')
+        self.data_count_label = ttk.Label(header_frame, text="", style='Subheader.TLabel')
         self.data_count_label.pack(side=tk.RIGHT, padx=10)
 
         # Notebook (Tabs)
@@ -174,7 +174,19 @@ class ControlPanel:
             self.data_count_label.config(text="")
 
     def _build_scrollable_frame(self, parent):
-        """Helper to create a scrollable frame inside a tab"""
+        """
+        Helper to create a scrollable frame inside a tab.
+        
+        Creates a Canvas and Scrollbar. The Scrollbar is packed to the right,
+        and the Canvas fills the remaining space to the left.
+        A frame is placed inside the canvas window.
+        
+        Args:
+            parent: The parent widget (usually a tab frame)
+            
+        Returns:
+            ttk.Frame: The inner scrollable frame where widgets should be added.
+        """
         canvas = tk.Canvas(parent, highlightthickness=0, bd=0, background=self.primary_bg)
         scrollbar = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas, style='ControlPanel.TFrame')
@@ -194,6 +206,7 @@ class ControlPanel:
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
+        # Bind to canvas and its children
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
         return scrollable_frame
@@ -791,7 +804,15 @@ class ControlPanel:
         self._refresh_legend_tab()
 
     def _refresh_legend_tab(self):
-        """Populate the legend tab with current groups and colors"""
+        """
+        Populate the legend tab with current groups and colors.
+        
+        Features:
+        - Lists all groups (up to a limit) with checkboxes for visibility.
+        - Shows a color swatch for each group (clickable to change color).
+        - Provides a 'Top' button to bring a group's points to the front (z-order).
+        - Includes a 'Select All' toggle.
+        """
         if not hasattr(self, 'legend_items_frame'):
             return
             
@@ -828,7 +849,20 @@ class ControlPanel:
         
         visible = set(app_state.visible_groups) if app_state.visible_groups else set(app_state.current_groups)
 
-        for group in app_state.current_groups:
+        # Limit the number of items to prevent UI freeze
+        max_items = 100
+        groups_to_show = app_state.current_groups[:max_items]
+        
+        if len(app_state.current_groups) > max_items:
+            warning_lbl = ttk.Label(
+                self.legend_items_frame, 
+                text=self._translate("Showing first {max} groups only.", max=max_items),
+                style='BodyMuted.TLabel'
+            )
+            warning_lbl.pack(anchor=tk.W, pady=(0, 5))
+            self._register_translation(warning_lbl, "Showing first {max} groups only.", formatter=lambda: {'max': max_items})
+
+        for group in groups_to_show:
             row = ttk.Frame(self.legend_items_frame, style='ControlPanel.TFrame')
             row.pack(fill=tk.X, pady=2)
             
@@ -864,7 +898,16 @@ class ControlPanel:
             self._register_translation(top_btn, "Top")
 
     def _pick_color(self, group, swatch):
-        """Open color picker for a group"""
+        """
+        Open a color picker dialog for a specific group.
+        
+        Updates the global palette and immediately redraws the scatter plot
+        if the group is currently displayed.
+        
+        Args:
+            group: The group identifier (e.g., name).
+            swatch: The canvas widget displaying the current color (to be updated).
+        """
         current_color = app_state.current_palette.get(group, '#cccccc')
         color = colorchooser.askcolor(initialcolor=current_color, title=f"Color for {group}")
         
@@ -886,7 +929,15 @@ class ControlPanel:
                     print(f"[WARN] Failed to update color for {group}: {e}")
 
     def _bring_to_front(self, group):
-        """Bring a group's scatter points to the front"""
+        """
+        Bring a group's scatter points to the front of the plot.
+        
+        Adjusts the z-order of the scatter collection corresponding to the group
+        to be higher than all other collections.
+        
+        Args:
+            group: The group identifier.
+        """
         if hasattr(app_state, 'group_to_scatter') and group in app_state.group_to_scatter:
             sc = app_state.group_to_scatter[group]
             try:
@@ -903,7 +954,12 @@ class ControlPanel:
                 print(f"[WARN] Failed to bring {group} to front: {e}")
 
     def _apply_legend_filter(self):
-        """Apply the filter from the legend tab"""
+        """
+        Apply the visibility filter from the legend tab.
+        
+        Updates `app_state.visible_groups` based on the checked state of each group
+        in the legend list, then triggers a plot refresh via the callback.
+        """
         selected = [g for g, var in self.legend_vars.items() if var.get()]
         
         if not selected:
@@ -977,25 +1033,29 @@ class ControlPanel:
         card = self.card_bg
 
         self.style.configure('ControlPanel.TFrame', background=primary)
-        self.style.configure('Header.TLabel', background=primary, foreground='#1a202c', font=('Segoe UI', 16, 'bold'))
-        self.style.configure('Subheader.TLabel', background=primary, foreground='#4a5568', font=('Segoe UI', 10))
-        self.style.configure('Footer.TLabel', background=primary, foreground='#4a5568', font=('Segoe UI', 9))
+        
+        # Unified Font Configuration
+        ui_font = 'Microsoft YaHei UI'
+        
+        self.style.configure('Header.TLabel', background=primary, foreground='#1a202c', font=(ui_font, 16, 'bold'))
+        self.style.configure('Subheader.TLabel', background=primary, foreground='#4a5568', font=(ui_font, 10))
+        self.style.configure('Footer.TLabel', background=primary, foreground='#4a5568', font=(ui_font, 9))
         self.style.configure('SectionSeparator.TSeparator', background='#cbd5f5', lightcolor='#cbd5f5', darkcolor='#cbd5f5')
 
         self.style.configure('Card.TLabelframe', background=card, borderwidth=1, relief='solid')
-        self.style.configure('Card.TLabelframe.Label', background=card, foreground='#1a202c', font=('Segoe UI', 12, 'bold'))
+        self.style.configure('Card.TLabelframe.Label', background=card, foreground='#1a202c', font=(ui_font, 12, 'bold'))
         self.style.configure('CardBody.TFrame', background=card)
-        self.style.configure('Body.TLabel', background=card, foreground='#4a5568', font=('Segoe UI', 10))
-        self.style.configure('BodyMuted.TLabel', background=card, foreground='#94a3b8', font=('Segoe UI', 10))
-        self.style.configure('FieldLabel.TLabel', background=card, foreground='#1a202c', font=('Segoe UI', 10, 'bold'))
-        self.style.configure('ValueLabel.TLabel', background=card, foreground='#2d3748', font=('Segoe UI', 10, 'bold'))
+        self.style.configure('Body.TLabel', background=card, foreground='#4a5568', font=(ui_font, 10))
+        self.style.configure('BodyMuted.TLabel', background=card, foreground='#94a3b8', font=(ui_font, 10))
+        self.style.configure('FieldLabel.TLabel', background=card, foreground='#1a202c', font=(ui_font, 10, 'bold'))
+        self.style.configure('ValueLabel.TLabel', background=card, foreground='#2d3748', font=(ui_font, 10, 'bold'))
 
-        self.style.configure('Option.TRadiobutton', background=card, foreground='#1a202c', padding=4, font=('Segoe UI', 10))
+        self.style.configure('Option.TRadiobutton', background=card, foreground='#1a202c', padding=4, font=(ui_font, 10))
         self.style.map('Option.TRadiobutton', background=[('active', card)], foreground=[('active', '#1a202c')])
 
-        self.style.configure('Accent.TButton', background='#2563eb', foreground='#ffffff', font=('Segoe UI', 10, 'bold'), padding=(12, 6))
+        self.style.configure('Accent.TButton', background='#2563eb', foreground='#ffffff', font=(ui_font, 10, 'bold'), padding=(12, 6))
         self.style.map('Accent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')], foreground=[('disabled', '#d1d5db'), ('active', '#ffffff'), ('pressed', '#ffffff')])
-        self.style.configure('Secondary.TButton', background='#ffffff', foreground='#2563eb', font=('Segoe UI', 10, 'bold'), padding=(12, 6))
+        self.style.configure('Secondary.TButton', background='#ffffff', foreground='#2563eb', font=(ui_font, 10, 'bold'), padding=(12, 6))
         self.style.map('Secondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
 
     def _translate(self, key, **kwargs):
@@ -1025,8 +1085,20 @@ class ControlPanel:
         self._register_translation(section, title)
 
         if description:
-            desc = ttk.Label(section, text=self._translate(description), style='Body.TLabel', wraplength=430, justify=tk.LEFT)
-            desc.pack(anchor=tk.W, pady=(0, 10))
+            # Use a smaller wraplength to ensure it fits in narrow windows (minsize=420)
+            # 420 - 2*10(panel pad) - 2*6(section pad) - 2*14(inner pad) ≈ 360
+            desc = ttk.Label(section, text=self._translate(description), style='Body.TLabel', wraplength=340, justify=tk.LEFT)
+            desc.pack(fill=tk.X, pady=(0, 10))
+            
+            # Bind configure event to update wraplength dynamically
+            def _update_wraplength(event):
+                # Adjust wraplength to be slightly less than the width of the label
+                # This ensures text wraps correctly when window is resized
+                if event.width > 20:
+                    desc.configure(wraplength=event.width - 20)
+            
+            desc.bind('<Configure>', _update_wraplength)
+            
             self._register_translation(desc, description)
 
         return section
@@ -2121,6 +2193,8 @@ class ControlPanel:
         self._register_translation(cancel_btn, "Cancel")
 
         # Scrollable frame for checkboxes
+        # Layout Note: Pack scrollbar to the RIGHT first, then canvas to the LEFT.
+        # This ensures the scrollbar remains visible even if the window is resized very narrow.
         canvas = tk.Canvas(dialog)
         scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
@@ -2133,8 +2207,8 @@ class ControlPanel:
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        canvas.pack(side="left", fill="both", expand=True, padx=10)
         scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True, padx=10)
         
         # Bind mousewheel
         def _on_mousewheel(event):
@@ -2229,6 +2303,8 @@ class ControlPanel:
         self._register_translation(cancel_btn, "Cancel")
 
         # Scrollable frame
+        # Layout Note: Pack scrollbar to the RIGHT first, then canvas to the LEFT.
+        # This ensures the scrollbar remains visible even if the window is resized very narrow.
         canvas = tk.Canvas(dialog)
         scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
@@ -2241,8 +2317,8 @@ class ControlPanel:
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        canvas.pack(side="left", fill="both", expand=True, padx=10)
         scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True, padx=10)
         
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
