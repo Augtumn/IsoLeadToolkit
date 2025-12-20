@@ -108,6 +108,10 @@ class ControlPanel:
         header.pack(side=tk.LEFT)
         self._register_translation(header, "Visualization Controls")
 
+        # Data Count Label
+        self.data_count_label = ttk.Label(header_frame, text="", style='ControlPanel.TLabel')
+        self.data_count_label.pack(side=tk.RIGHT, padx=10)
+
         # Notebook (Tabs)
         self.notebook = ttk.Notebook(container)
         self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -158,6 +162,16 @@ class ControlPanel:
         self._register_translation(close_button, "Close Panel")
 
         self.update_selection_controls()
+        self._update_data_count_label()
+
+    def _update_data_count_label(self):
+        """Update the label showing the number of loaded data rows."""
+        if app_state.df_global is not None:
+            count = len(app_state.df_global)
+            text = self._translate("Loaded Data: {count} rows", count=count)
+            self.data_count_label.config(text=text)
+        else:
+            self.data_count_label.config(text="")
 
     def _build_scrollable_frame(self, parent):
         """Helper to create a scrollable frame inside a tab"""
@@ -1623,6 +1637,8 @@ class ControlPanel:
                 parent=self.root
             )
             return
+            
+        self._update_data_count_label()
 
         if app_state.group_cols:
             if app_state.last_group_col not in app_state.group_cols:
