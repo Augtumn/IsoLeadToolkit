@@ -73,6 +73,7 @@ class ControlPanel:
         self._slider_delay_ms = 350
 
         self.selection_button = None
+        self.ellipse_selection_button = None
         self.selection_status = None
         self.export_csv_button = None
         self.export_excel_button = None
@@ -204,11 +205,17 @@ class ControlPanel:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        window_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind canvas configure to update frame width
+        def _on_canvas_configure(event):
+            canvas.itemconfig(window_id, width=event.width)
+        
+        canvas.bind("<Configure>", _on_canvas_configure)
         
         # Bind mousewheel
         def _on_mousewheel(event):
@@ -279,18 +286,6 @@ class ControlPanel:
             formatter=lambda v: f"{int(float(v))}",
             step=1
         )
-
-        # Ellipse Checkbox
-        self.check_vars['ellipses'] = tk.BooleanVar(value=app_state.show_ellipses)
-        ellipse_check = ttk.Checkbutton(
-            common_section,
-            text=self._translate("Show Confidence Ellipses"),
-            variable=self.check_vars['ellipses'],
-            command=self._on_change,
-            style='Option.TRadiobutton'
-        )
-        ellipse_check.pack(anchor=tk.W, pady=(4, 8))
-        self._register_translation(ellipse_check, "Show Confidence Ellipses")
 
         # Ellipse Confidence Level
         conf_frame = ttk.Frame(common_section, style='CardBody.TFrame')
@@ -812,6 +807,16 @@ class ControlPanel:
             command=self._on_toggle_selection
         )
         self.selection_button.pack(side=tk.LEFT)
+        self._register_translation(self.selection_button, "Enable Selection")
+
+        self.ellipse_selection_button = ttk.Button(
+            selection_row,
+            text=self._translate("Draw Ellipse"),
+            style='Secondary.TButton',
+            command=self._on_toggle_ellipse_selection
+        )
+        self.ellipse_selection_button.pack(side=tk.LEFT, padx=(12, 0))
+        self._register_translation(self.ellipse_selection_button, "Draw Ellipse")
 
         self.selection_status = ttk.Label(
             selection_row,
@@ -1588,7 +1593,7 @@ class ControlPanel:
         return sanitized
 
     def _on_toggle_selection(self):
-        """Toggle selection mode from the control panel."""
+        """Toggle export selection mode from the control panel."""
         if app_state.render_mode == '3D':
             messagebox.showinfo(
                 self._translate("Selection Mode"),
@@ -1597,7 +1602,20 @@ class ControlPanel:
             )
             return
 
-        toggle_selection_mode()
+        toggle_selection_mode('export')
+        self.update_selection_controls()
+
+    def _on_toggle_ellipse_selection(self):
+        """Toggle ellipse selection mode from the control panel."""
+        if app_state.render_mode == '3D':
+            messagebox.showinfo(
+                self._translate("Selection Mode"),
+                self._translate("Selection mode is only available in 2D views"),
+                parent=self.root
+            )
+            return
+
+        toggle_selection_mode('ellipse')
         self.update_selection_controls()
 
     def _export_selected_csv(self):

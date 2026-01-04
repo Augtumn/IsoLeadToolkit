@@ -237,8 +237,13 @@ class DataConfigDialog:
         canvas.bind("<Configure>", _resize_canvas)
 
         for col in self.all_columns:
-            var = tk.BooleanVar(value=(col in self.selected_group_cols if selection_type == 'group' else col in self.selected_data_cols))
             is_numeric = pd.api.types.is_numeric_dtype(self.df[col])
+            
+            # Filter for Data Columns: only show numeric
+            if selection_type == 'data' and not is_numeric:
+                continue
+
+            var = tk.BooleanVar(value=(col in self.selected_group_cols if selection_type == 'group' else col in self.selected_data_cols))
             dtype_label = translate("numeric") if is_numeric else translate("text")
             display_text = translate("{column} ({dtype})", column=col, dtype=dtype_label)
             cb = ttk.Checkbutton(

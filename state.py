@@ -45,7 +45,9 @@ class AppState:
         self.visible_groups = None
         self.selected_2d_confirmed = False
         self.selected_3d_confirmed = False
-        self.selection_mode = False
+        self.selection_mode = False # Deprecated in favor of selection_tool, but kept for compatibility if needed
+        self.selection_tool = None # None, 'export', 'ellipse'
+        self.draw_selection_ellipse = False
         self.selected_indices = set()
         self.selection_button = None
         self.rectangle_selector = None

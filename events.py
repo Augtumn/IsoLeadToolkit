@@ -195,6 +195,10 @@ def refresh_selection_overlay():
             _notify_selection_ui()
             return
 
+        # Save current view limits to prevent auto-scaling
+        current_xlim = app_state.ax.get_xlim()
+        current_ylim = app_state.ax.get_ylim()
+
         xs = [app_state.sample_coordinates[idx][0] for idx in valid_indices]
         ys = [app_state.sample_coordinates[idx][1] for idx in valid_indices]
         highlight_size = max(int(app_state.point_size * 1.8), 20)
@@ -210,7 +214,9 @@ def refresh_selection_overlay():
         )
         
         # Draw confidence ellipse for selected points if enabled
-        if app_state.show_ellipses and len(xs) >= 3:
+        should_draw_ellipse = app_state.show_ellipses or getattr(app_state, 'draw_selection_ellipse', False)
+        
+        if should_draw_ellipse and len(xs) >= 3:
             try:
                 x_arr = np.array(xs)
                 y_arr = np.array(ys)
@@ -223,6 +229,10 @@ def refresh_selection_overlay():
                 print(f"[INFO] Drawn {app_state.ellipse_confidence*100:.0f}% confidence ellipse for {len(xs)} selected points.", flush=True)
             except Exception as e:
                 print(f"[WARN] Failed to draw selection ellipse: {e}", flush=True)
+
+        # Restore view limits
+        app_state.ax.set_xlim(current_xlim)
+        app_state.ax.set_ylim(current_ylim)
 
         app_state.fig.canvas.draw_idle()
         _notify_selection_ui()
@@ -263,24 +273,54 @@ def _resolve_sample_index(event):
     return None
 
 
-def toggle_selection_mode(event=None):
-    """Toggle interactive selection mode for 2D plots."""
+def toggle_selection_mode(tool_type='export'):
+    """
+    Toggle interactive selection mode.
+    tool_type: 'export' or 'ellipse'
+    """
     try:
-        desired_state = not app_state.selection_mode
-        if desired_state and app_state.render_mode == '3D':
+        # If switching to the same tool that is already active, toggle it off
+        if app_state.selection_tool == tool_type:
+            new_tool = None
+        else:
+            new_tool = tool_type
+
+        if new_tool and app_state.render_mode == '3D':
             print('[WARN] Selection mode is only available for 2D projections.', flush=True)
             return
 
-        app_state.selection_mode = desired_state
+        # Disable existing tool if any
+        if app_state.selection_tool:
+             _disable_rectangle_selector()
+             # Clear selection if we are switching tools or turning off
+             if app_state.selected_indices:
+                 app_state.selected_indices.clear()
+        
+        app_state.selection_tool = new_tool
+        app_state.selection_mode = (new_tool is not None) # Keep legacy flag in sync
 
-        if app_state.selection_mode:
-            print("[INFO] Selection mode enabled. Double-click points or drag to box select.", flush=True)
+        if app_state.selection_tool:
+            print(f"[INFO] Selection tool '{new_tool}' enabled.", flush=True)
             _ensure_rectangle_selector()
+            
+            # Disable Matplotlib toolbar zoom/pan if active
+            try:
+                if app_state.fig.canvas.toolbar.mode == 'zoom rect':
+                    app_state.fig.canvas.toolbar.zoom()
+                elif app_state.fig.canvas.toolbar.mode == 'pan/zoom':
+                    app_state.fig.canvas.toolbar.pan()
+            except Exception:
+                pass
+
+            if new_tool == 'ellipse':
+                app_state.draw_selection_ellipse = True
+            else:
+                app_state.draw_selection_ellipse = False
+
         else:
-            print("[INFO] Selection mode disabled.", flush=True)
+            print("[INFO] Selection tool disabled.", flush=True)
+            app_state.draw_selection_ellipse = False
             _disable_rectangle_selector()
-            if app_state.selected_indices:
-                app_state.selected_indices.clear()
 
         _notify_selection_ui()
         refresh_selection_overlay()
@@ -290,7 +330,7 @@ def toggle_selection_mode(event=None):
 
 def sync_selection_tools():
     """Ensure selection helpers stay in sync with current axes."""
-    if app_state.selection_mode:
+    if app_state.selection_tool:
         _ensure_rectangle_selector()
     else:
         _disable_rectangle_selector()

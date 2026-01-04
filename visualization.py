@@ -445,7 +445,8 @@ def _ensure_axes(dimensions=2):
                         pass
                 app_state.ax = app_state.fig.add_subplot(111)
 
-        app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.88)
+        # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.88)
+        pass
     except Exception as axis_err:
         print(f"[WARN] Unable to configure axes: {axis_err}", flush=True)
 
@@ -837,10 +838,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         app_state.clear_plot_state()
 
         # Reserve space around the axes so the legend and titles are never clipped
-        try:
-            app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
-        except Exception:
-            pass
+        # try:
+        #     app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+        # except Exception:
+        #     pass
 
         # Manual styling removed in favor of scienceplots
         # app_state.fig.patch.set_facecolor("#f8fafc")
@@ -1151,9 +1152,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         
         # Adjust layout to prevent overlap
         try:
-            app_state.fig.tight_layout()
+            # app_state.fig.tight_layout()
             # Re-adjust margins after tight_layout to ensure legend space
-            app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            pass
         except Exception:
             pass
         
@@ -1263,7 +1265,8 @@ def plot_2d_data(group_col, data_columns, size=60):
         app_state.clear_plot_state()
 
         try:
-            app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            pass
         except Exception:
             pass
 
@@ -1380,8 +1383,9 @@ def plot_2d_data(group_col, data_columns, size=60):
         
         # Adjust layout to prevent overlap
         try:
-            app_state.fig.tight_layout()
-            app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            # app_state.fig.tight_layout()
+            # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            pass
         except Exception:
             pass
         app_state.ax.set_ylabel(data_columns[1], color="#334155", fontsize=11)
@@ -1537,8 +1541,9 @@ def plot_3d_data(group_col, data_columns, size=60):
         
         # Adjust layout to prevent overlap
         try:
-            app_state.fig.tight_layout()
-            app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            # app_state.fig.tight_layout()
+            # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+            pass
         except Exception:
             pass
 

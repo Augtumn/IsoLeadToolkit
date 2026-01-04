@@ -228,12 +228,13 @@ def main():
 
         # Create plot figure (main window for visualization)
         print("[INFO] Creating plot figure...", flush=True)
-        app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'])
+        # Use constrained_layout for adaptive layout
+        app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'], constrained_layout=True)
         
         def _apply_language_to_main_ui():
             title_text = translate("Lead Isotope Analysis - UMAP/t-SNE Visualization")
             if app_state.fig is not None:
-                app_state.fig.suptitle(title_text, fontsize=13, fontweight='bold', y=0.98)
+                app_state.fig.suptitle(title_text, fontsize=13, fontweight='bold')
             if app_state.control_panel_button is not None:
                 label_text = translate("Control Panel")
                 app_state.control_panel_button.label.set_text(label_text)
@@ -244,10 +245,12 @@ def main():
         
         plt.ion()
         # Maximize chart area - use relative positioning
-        app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
+        # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
 
         # Add quick access button - compact and positioned relatively
         # Position: Bottom Right, small
+        # With constrained_layout, we need to be careful about manual axes placement
+        # But add_axes works in figure coordinates, so it should be fine
         button_ax = app_state.fig.add_axes([0.88, 0.02, 0.10, 0.04])
         button = Button(
             button_ax,
