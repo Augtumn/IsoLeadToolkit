@@ -9,6 +9,7 @@ from datetime import datetime
 from tkinter import ttk, messagebox, simpledialog, filedialog, colorchooser
 
 import pandas as pd
+from matplotlib import font_manager
 
 from localization import translate, available_languages, set_language
 from state import app_state
@@ -68,6 +69,7 @@ class ControlPanel:
         self.labels = {}
         self.radio_vars = {}
         self.check_vars = {}  # For checkboxes
+        self.style_vars = {}  # For style checkboxes
         self._slider_after = {}
         self._slider_steps = {}
         self._slider_delay_ms = 350
@@ -269,48 +271,26 @@ class ControlPanel:
             radio.pack(anchor=tk.W)
             self._register_translation(radio, label_key)
 
-        # Common Settings
-        common_section = self._create_section(
+        # Add "Select Axis Columns" button
+        col_select_btn = ttk.Button(
+            algo_section,
+            text=self._translate("Select Axis Columns"),
+            command=self._open_column_selection,
+            style='Secondary.TButton'
+        )
+        col_select_btn.pack(anchor=tk.W, pady=(8, 4))
+        self._register_translation(col_select_btn, "Select Axis Columns")
+
+        # Data Configuration
+        data_section = self._create_section(
             frame,
-            "Common Settings",
-            "Options shared by both algorithms, including point styling and grouping."
+            "Data Configuration",
+            "Configure grouping and tooltips."
         )
-
-        self._add_slider(
-            common_section,
-            key='size',
-            label_text="Point size",
-            minimum=10,
-            maximum=200,
-            initial=app_state.point_size,
-            formatter=lambda v: f"{int(float(v))}",
-            step=1
-        )
-
-        # Ellipse Confidence Level
-        conf_frame = ttk.Frame(common_section, style='CardBody.TFrame')
-        conf_frame.pack(fill=tk.X, pady=(0, 8))
-        
-        conf_label = ttk.Label(conf_frame, text=self._translate("Confidence Level"), style='Body.TLabel')
-        conf_label.pack(side=tk.LEFT, padx=(20, 8))
-        self._register_translation(conf_label, "Confidence Level")
-        
-        self.radio_vars['confidence'] = tk.DoubleVar(value=app_state.ellipse_confidence)
-        
-        for level in [0.68, 0.95, 0.99]:
-            rb = ttk.Radiobutton(
-                conf_frame,
-                text=f"{int(level*100)}%",
-                variable=self.radio_vars['confidence'],
-                value=level,
-                command=self._on_change,
-                style='Option.TRadiobutton'
-            )
-            rb.pack(side=tk.LEFT, padx=4)
 
         # Group Column
         group_label = ttk.Label(
-            common_section,
+            data_section,
             text=self._translate("Group column"),
             style='FieldLabel.TLabel'
         )
@@ -319,26 +299,16 @@ class ControlPanel:
 
         self.radio_vars['group'] = tk.StringVar(value=app_state.last_group_col or '')
 
-        group_container = ttk.Frame(common_section, style='CardBody.TFrame')
+        group_container = ttk.Frame(data_section, style='CardBody.TFrame')
         group_container.pack(fill=tk.X)
         self.group_container = group_container
         self.group_placeholder = None
 
         self._refresh_group_list()
 
-        # Tooltip Settings
-        tooltip_btn = ttk.Button(
-            common_section,
-            text=self._translate("Configure Tooltip"),
-            command=self._open_tooltip_settings,
-            style='Accent.TButton'
-        )
-        tooltip_btn.pack(anchor=tk.W, pady=(12, 4))
-        self._register_translation(tooltip_btn, "Configure Tooltip")
-
         # Group Column Configuration
         group_config_btn = ttk.Button(
-            common_section,
+            data_section,
             text=self._translate("Configure Group Columns"),
             command=self._open_group_col_settings,
             style='Secondary.TButton'
@@ -346,37 +316,73 @@ class ControlPanel:
         group_config_btn.pack(anchor=tk.W, pady=(4, 4))
         self._register_translation(group_config_btn, "Configure Group Columns")
 
+        # Tooltip Settings
+        tooltip_btn = ttk.Button(
+            data_section,
+            text=self._translate("Configure Tooltip"),
+            command=self._open_tooltip_settings,
+            style='Accent.TButton'
+        )
+        tooltip_btn.pack(anchor=tk.W, pady=(12, 4))
+        self._register_translation(tooltip_btn, "Configure Tooltip")
+
     def _build_style_tab(self, parent):
         """Build the Style tab"""
         frame = self._build_scrollable_frame(parent)
         
-        # Style Section
-        style_section = self._create_section(
+        # --- Theme Management ---
+        theme_section = self._create_section(
             frame,
-            "Plot Style",
-            "Customize the visual appearance of the plots."
+            "Theme Management",
+            "Save and load custom plot themes."
         )
         
-        # Style Selection
-        style_label = ttk.Label(style_section, text=self._translate("Style Theme"), style='FieldLabel.TLabel')
-        style_label.pack(anchor=tk.W, pady=(0, 4))
-        self._register_translation(style_label, "Style Theme")
+        theme_frame = ttk.Frame(theme_section, style='CardBody.TFrame')
+        theme_frame.pack(fill=tk.X, pady=(0, 8))
         
-        style_options = ['science', 'ieee', 'nature']
-        self.style_var = tk.StringVar(value=getattr(app_state, 'plot_style', 'science'))
-        style_combo = ttk.Combobox(
-            style_section, 
-            textvariable=self.style_var, 
-            values=style_options,
-            state="readonly"
+        # Theme Name Entry
+        lbl_name = ttk.Label(theme_frame, text=self._translate("Theme Name:"), style='Body.TLabel')
+        lbl_name.pack(side=tk.LEFT, padx=(0, 5))
+        self._register_translation(lbl_name, "Theme Name:")
+
+        self.theme_name_var = tk.StringVar()
+        ttk.Entry(theme_frame, textvariable=self.theme_name_var, width=15).pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Save Button
+        btn_save = ttk.Button(theme_frame, text=self._translate("Save"), command=self._save_theme, style='Secondary.TButton', width=6)
+        btn_save.pack(side=tk.LEFT, padx=(0, 5))
+        self._register_translation(btn_save, "Save")
+        
+        # Load/Delete Frame
+        load_frame = ttk.Frame(theme_section, style='CardBody.TFrame')
+        load_frame.pack(fill=tk.X)
+        
+        lbl_load = ttk.Label(load_frame, text=self._translate("Load Theme:"), style='Body.TLabel')
+        lbl_load.pack(side=tk.LEFT, padx=(0, 5))
+        self._register_translation(lbl_load, "Load Theme:")
+
+        self.theme_load_combo = ttk.Combobox(load_frame, state="readonly", width=15)
+        self.theme_load_combo.pack(side=tk.LEFT, padx=(0, 10))
+        self.theme_load_combo.bind("<<ComboboxSelected>>", self._load_theme)
+        
+        btn_delete = ttk.Button(load_frame, text=self._translate("Delete"), command=self._delete_theme, style='Secondary.TButton', width=6)
+        btn_delete.pack(side=tk.LEFT)
+        self._register_translation(btn_delete, "Delete")
+        
+        # Initialize themes
+        self._refresh_theme_list()
+
+        # --- General Settings ---
+        general_section = self._create_section(
+            frame,
+            "General Settings",
+            "Basic plot appearance."
         )
-        style_combo.pack(fill=tk.X, pady=(0, 8))
-        style_combo.bind("<<ComboboxSelected>>", self._on_style_change)
         
         # Grid Checkbox
         self.grid_var = tk.BooleanVar(value=getattr(app_state, 'plot_style_grid', False))
         grid_check = ttk.Checkbutton(
-            style_section,
+            general_section,
             text=self._translate("Show Grid"),
             variable=self.grid_var,
             command=self._on_style_change,
@@ -385,14 +391,8 @@ class ControlPanel:
         grid_check.pack(anchor=tk.W, pady=(0, 12))
         self._register_translation(grid_check, "Show Grid")
         
-        # Color Scheme Section
-        color_section = self._create_section(
-            frame,
-            "Color Scheme",
-            "Select a color palette for the plot."
-        )
-        
-        color_label = ttk.Label(color_section, text=self._translate("Palette"), style='FieldLabel.TLabel')
+        # Color Scheme
+        color_label = ttk.Label(general_section, text=self._translate("Palette"), style='FieldLabel.TLabel')
         color_label.pack(anchor=tk.W, pady=(0, 4))
         self._register_translation(color_label, "Palette")
         
@@ -402,7 +402,7 @@ class ControlPanel:
         ]
         self.color_scheme_var = tk.StringVar(value=getattr(app_state, 'color_scheme', 'vibrant'))
         color_combo = ttk.Combobox(
-            color_section, 
+            general_section, 
             textvariable=self.color_scheme_var, 
             values=color_options,
             state="readonly"
@@ -410,11 +410,235 @@ class ControlPanel:
         color_combo.pack(fill=tk.X, pady=(0, 8))
         color_combo.bind("<<ComboboxSelected>>", self._on_style_change)
 
+        # --- Font Settings ---
+        font_section = self._create_section(
+            frame,
+            "Font Settings",
+            "Customize fonts and text sizes."
+        )
+        
+        # Get available fonts
+        all_system_fonts = sorted({f.name for f in font_manager.fontManager.ttflist})
+        from config import CONFIG
+        preferred_fonts = CONFIG.get('preferred_plot_fonts', [])
+        installed_preferred = [f for f in preferred_fonts if f in all_system_fonts]
+        other_fonts = [f for f in all_system_fonts if f not in installed_preferred]
+        font_options = ['<Default>'] + installed_preferred + other_fonts
+        
+        # Primary Font
+        primary_font_label = ttk.Label(font_section, text=self._translate("Primary Font (English)"), style='FieldLabel.TLabel')
+        primary_font_label.pack(anchor=tk.W, pady=(0, 4))
+        self._register_translation(primary_font_label, "Primary Font (English)")
+        
+        # Handle empty string as <Default> for display
+        current_primary = getattr(app_state, 'custom_primary_font', '')
+        if not current_primary: current_primary = '<Default>'
+        
+        self.primary_font_var = tk.StringVar(value=current_primary)
+        primary_font_combo = ttk.Combobox(
+            font_section,
+            textvariable=self.primary_font_var,
+            values=font_options,
+            state="readonly"
+        )
+        primary_font_combo.pack(fill=tk.X, pady=(0, 8))
+        primary_font_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        
+        # CJK Font
+        cjk_font_label = ttk.Label(font_section, text=self._translate("CJK Font (Chinese)"), style='FieldLabel.TLabel')
+        cjk_font_label.pack(anchor=tk.W, pady=(0, 4))
+        self._register_translation(cjk_font_label, "CJK Font (Chinese)")
+        
+        # Handle empty string as <Default> for display
+        current_cjk = getattr(app_state, 'custom_cjk_font', '')
+        if not current_cjk: current_cjk = '<Default>'
+        
+        self.cjk_font_var = tk.StringVar(value=current_cjk)
+        cjk_font_combo = ttk.Combobox(
+            font_section,
+            textvariable=self.cjk_font_var,
+            values=font_options,
+            state="readonly"
+        )
+        cjk_font_combo.pack(fill=tk.X, pady=(0, 8))
+        cjk_font_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        
+        # Font Sizes
+        size_frame = ttk.Frame(font_section, style='CardBody.TFrame')
+        size_frame.pack(fill=tk.X, pady=(8, 0))
+        
+        # Helper to create size slider
+        def add_size_slider(parent, label_key, key, default):
+            container = ttk.Frame(parent)
+            container.pack(fill=tk.X, pady=2)
+            
+            # Label
+            lbl = ttk.Label(container, text=self._translate(label_key), width=8, style='Body.TLabel')
+            lbl.pack(side=tk.LEFT)
+            self._register_translation(lbl, label_key)
+            
+            # Variable
+            var = tk.IntVar(value=app_state.plot_font_sizes.get(key, default))
+            
+            # Value Display
+            val_lbl = ttk.Label(container, text=str(var.get()), width=3)
+            val_lbl.pack(side=tk.RIGHT)
+            
+            # Slider
+            def on_change(val):
+                v = int(float(val))
+                var.set(v)
+                val_lbl.configure(text=str(v))
+                
+            scale = ttk.Scale(container, from_=6, to=36, variable=var, command=on_change)
+            scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+            scale.bind("<ButtonRelease-1>", lambda e: self._on_style_change())
+            
+            return var
+
+        self.font_size_vars = {}
+        self.font_size_vars['title'] = add_size_slider(size_frame, "Title", 'title', 14)
+        self.font_size_vars['label'] = add_size_slider(size_frame, "Label", 'label', 12)
+        self.font_size_vars['tick'] = add_size_slider(size_frame, "Tick", 'tick', 10)
+        self.font_size_vars['legend'] = add_size_slider(size_frame, "Legend", 'legend', 10)
+
+        # --- Marker Settings ---
+        marker_section = self._create_section(
+            frame,
+            "Marker Settings",
+            "Customize data point appearance."
+        )
+        
+        marker_frame = ttk.Frame(marker_section, style='CardBody.TFrame')
+        marker_frame.pack(fill=tk.X)
+        
+        # Size
+        size_lbl = ttk.Label(marker_frame, text=self._translate("Size"), style='Body.TLabel')
+        size_lbl.pack(side=tk.LEFT, padx=(0, 5))
+        self._register_translation(size_lbl, "Size")
+        self.marker_size_var = tk.IntVar(value=getattr(app_state, 'plot_marker_size', 60))
+        size_scale = ttk.Scale(marker_frame, from_=10, to=500, variable=self.marker_size_var)
+        size_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 15))
+        size_scale.bind("<ButtonRelease-1>", lambda e: self._on_style_change())
+        
+        # Alpha
+        alpha_lbl = ttk.Label(marker_frame, text=self._translate("Opacity"), style='Body.TLabel')
+        alpha_lbl.pack(side=tk.LEFT, padx=(0, 5))
+        self._register_translation(alpha_lbl, "Opacity")
+        self.marker_alpha_var = tk.DoubleVar(value=getattr(app_state, 'plot_marker_alpha', 0.8))
+        alpha_scale = ttk.Scale(marker_frame, from_=0.1, to=1.0, variable=self.marker_alpha_var)
+        alpha_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        alpha_scale.bind("<ButtonRelease-1>", lambda e: self._on_style_change())
+
+    def _refresh_theme_list(self):
+        """Load themes from disk and update combobox"""
+        from config import CONFIG
+        import json
+        theme_file = CONFIG['temp_dir'] / 'user_themes.json'
+        if theme_file.exists():
+            try:
+                with open(theme_file, 'r', encoding='utf-8') as f:
+                    app_state.saved_themes = json.load(f)
+            except Exception as e:
+                print(f"[WARN] Failed to load themes: {e}", flush=True)
+                app_state.saved_themes = {}
+        
+        self.theme_load_combo['values'] = sorted(list(app_state.saved_themes.keys()))
+
+    def _save_theme(self):
+        """Save current settings as a theme"""
+        name = self.theme_name_var.get().strip()
+        if not name:
+            messagebox.showwarning(self._translate("Warning"), self._translate("Please enter a theme name."))
+            return
+            
+        theme_data = {
+            'grid': self.grid_var.get(),
+            'color_scheme': self.color_scheme_var.get(),
+            'primary_font': self.primary_font_var.get(),
+            'cjk_font': self.cjk_font_var.get(),
+            'font_sizes': {k: v.get() for k, v in self.font_size_vars.items()},
+            'marker_size': self.marker_size_var.get(),
+            'marker_alpha': self.marker_alpha_var.get()
+        }
+        
+        app_state.saved_themes[name] = theme_data
+        
+        # Save to disk
+        from config import CONFIG
+        import json
+        theme_file = CONFIG['temp_dir'] / 'user_themes.json'
+        try:
+            with open(theme_file, 'w', encoding='utf-8') as f:
+                json.dump(app_state.saved_themes, f, indent=2)
+            messagebox.showinfo(self._translate("Success"), self._translate("Theme '{name}' saved.", name=name))
+            self._refresh_theme_list()
+        except Exception as e:
+            messagebox.showerror(self._translate("Error"), self._translate("Failed to save theme: {error}", error=e))
+
+    def _load_theme(self, event=None):
+        """Load selected theme"""
+        name = self.theme_load_combo.get()
+        if name not in app_state.saved_themes:
+            return
+            
+        data = app_state.saved_themes[name]
+        
+        # Apply to UI vars
+        self.grid_var.set(data.get('grid', False))
+        self.color_scheme_var.set(data.get('color_scheme', 'vibrant'))
+        self.primary_font_var.set(data.get('primary_font', ''))
+        self.cjk_font_var.set(data.get('cjk_font', ''))
+        
+        sizes = data.get('font_sizes', {})
+        for k, v in self.font_size_vars.items():
+            if k in sizes:
+                v.set(sizes[k])
+                
+        self.marker_size_var.set(data.get('marker_size', 60))
+        self.marker_alpha_var.set(data.get('marker_alpha', 0.8))
+        
+        # Trigger update
+        self._on_style_change()
+
+    def _delete_theme(self):
+        """Delete selected theme"""
+        name = self.theme_load_combo.get()
+        if not name: return
+        
+        if messagebox.askyesno(self._translate("Confirm"), self._translate("Delete theme '{name}'?", name=name)):
+            if name in app_state.saved_themes:
+                del app_state.saved_themes[name]
+                
+                from config import CONFIG
+                import json
+                theme_file = CONFIG['temp_dir'] / 'user_themes.json'
+                try:
+                    with open(theme_file, 'w', encoding='utf-8') as f:
+                        json.dump(app_state.saved_themes, f, indent=2)
+                    self.theme_load_combo.set('')
+                    self._refresh_theme_list()
+                except Exception as e:
+                    messagebox.showerror(self._translate("Error"), self._translate("Failed to delete theme: {error}", error=e))
+
     def _on_style_change(self, event=None):
         """Handle style changes"""
-        app_state.plot_style = self.style_var.get()
         app_state.plot_style_grid = self.grid_var.get()
         app_state.color_scheme = self.color_scheme_var.get()
+        
+        # Handle <Default> font selection
+        p_font = self.primary_font_var.get()
+        if p_font == '<Default>': p_font = ''
+        app_state.custom_primary_font = p_font
+        
+        c_font = self.cjk_font_var.get()
+        if c_font == '<Default>': c_font = ''
+        app_state.custom_cjk_font = c_font
+        
+        # Update advanced settings
+        app_state.plot_font_sizes = {k: v.get() for k, v in self.font_size_vars.items()}
+        app_state.plot_marker_size = self.marker_size_var.get()
+        app_state.plot_marker_alpha = self.marker_alpha_var.get()
         
         # Clear palette cache to force regeneration of colors based on new scheme
         if hasattr(app_state, 'current_palette'):
@@ -791,6 +1015,33 @@ class ControlPanel:
         shepard_btn.pack(side=tk.LEFT)
         self._register_translation(shepard_btn, "Show Shepard Plot")
 
+        # Confidence Ellipse Settings
+        conf_section = self._create_section(
+            frame,
+            "Confidence Ellipse",
+            "Set the confidence level for selection ellipses."
+        )
+        
+        conf_frame = ttk.Frame(conf_section, style='CardBody.TFrame')
+        conf_frame.pack(fill=tk.X, pady=(0, 8))
+        
+        conf_label = ttk.Label(conf_frame, text=self._translate("Confidence Level"), style='Body.TLabel')
+        conf_label.pack(side=tk.LEFT, padx=(0, 8))
+        self._register_translation(conf_label, "Confidence Level")
+        
+        self.radio_vars['confidence'] = tk.DoubleVar(value=app_state.ellipse_confidence)
+        
+        for level in [0.68, 0.95, 0.99]:
+            rb = ttk.Radiobutton(
+                conf_frame,
+                text=f"{int(level*100)}%",
+                variable=self.radio_vars['confidence'],
+                value=level,
+                command=self._on_change,
+                style='Option.TRadiobutton'
+            )
+            rb.pack(side=tk.LEFT, padx=4)
+
         selection_section = self._create_section(
             frame,
             "Selection Tools",
@@ -878,6 +1129,22 @@ class ControlPanel:
         frame = self._build_scrollable_frame(parent)
         self.legend_container = frame
         
+        # Legend Settings Section
+        settings_frame = ttk.Frame(frame, style='ControlPanel.TFrame')
+        settings_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Legend Columns Slider
+        self._add_slider(
+            settings_frame,
+            key='legend_cols',
+            label_text="Columns",
+            minimum=0,
+            maximum=10,
+            initial=getattr(app_state, 'legend_columns', 0),
+            formatter=lambda v: "Auto" if int(float(v)) == 0 else str(int(float(v))),
+            step=1
+        )
+
         # Add a refresh button
         refresh_btn = ttk.Button(
             frame,
@@ -987,6 +1254,22 @@ class ControlPanel:
             )
             top_btn.pack(side=tk.RIGHT, padx=(4, 0))
             self._register_translation(top_btn, "Top")
+
+    def sync_legend_ui(self):
+        """Update legend checkboxes to match app_state.visible_groups without rebuilding."""
+        if not hasattr(self, 'legend_vars'):
+            return
+            
+        visible = set(app_state.visible_groups) if app_state.visible_groups else set(app_state.current_groups)
+        
+        for group, var in self.legend_vars.items():
+            var.set(group in visible)
+            
+        # Update Select All checkbox state
+        if hasattr(self, 'select_all_var'):
+            # If visible_groups is None, it means all are visible
+            all_visible = (app_state.visible_groups is None) or (len(visible) == len(app_state.current_groups))
+            self.select_all_var.set(all_visible)
 
     def _pick_color(self, group, swatch):
         """
@@ -2162,6 +2445,13 @@ class ControlPanel:
                 app_state.point_size = int(self.sliders['size'].get())
                 self.labels['size'].config(text=f"{int(self.sliders['size'].get())}")
             
+            # Update Legend Columns
+            if 'legend_cols' in self.sliders and 'legend_cols' in self.labels:
+                val = int(self.sliders['legend_cols'].get())
+                app_state.legend_columns = val
+                txt = "Auto" if val == 0 else str(val)
+                self.labels['legend_cols'].config(text=txt)
+
             # Update group column if available
             if 'group' in self.radio_vars:
                 old_group = app_state.last_group_col
@@ -2308,8 +2598,13 @@ class ControlPanel:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        window_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Ensure frame width matches canvas width
+        def _on_canvas_configure(event):
+            canvas.itemconfig(window_id, width=event.width)
+        canvas.bind("<Configure>", _on_canvas_configure)
 
         scrollbar.pack(side="right", fill="y")
         canvas.pack(side="left", fill="both", expand=True, padx=10)
@@ -2334,6 +2629,40 @@ class ControlPanel:
             self.tooltip_vars[col] = var
             cb = ttk.Checkbutton(scrollable_frame, text=col, variable=var)
             cb.pack(anchor=tk.W, pady=2)
+
+    def _open_column_selection(self):
+        """Open dialog to select columns for 2D/3D scatter plots."""
+        if app_state.render_mode == '2D':
+            try:
+                from two_d_dialog import select_2d_columns
+                available = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+                current = getattr(app_state, 'selected_2d_cols', [])
+                selection = select_2d_columns(available, preselected=current)
+                if selection and len(selection) == 2:
+                    app_state.selected_2d_cols = selection
+                    app_state.selected_2d_confirmed = True
+                    if self.callback: self.callback()
+            except Exception as e:
+                print(f"[ERROR] Failed to open 2D column selection: {e}", flush=True)
+                messagebox.showerror(self._translate("Error"), str(e))
+        elif app_state.render_mode == '3D':
+            try:
+                from three_d_dialog import select_3d_columns
+                available = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+                current = app_state.selected_3d_cols
+                selection = select_3d_columns(available, preselected=current)
+                if selection and len(selection) == 3:
+                    app_state.selected_3d_cols = selection
+                    app_state.selected_3d_confirmed = True
+                    if self.callback: self.callback()
+            except Exception as e:
+                print(f"[ERROR] Failed to open 3D column selection: {e}", flush=True)
+                messagebox.showerror(self._translate("Error"), str(e))
+        else:
+            messagebox.showinfo(
+                self._translate("Info"), 
+                self._translate("Column selection is only available for 2D/3D modes.")
+            )
 
     def _open_group_col_settings(self):
         """Open a dialog to select columns for grouping."""
@@ -2418,8 +2747,13 @@ class ControlPanel:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        window_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Ensure frame width matches canvas width
+        def _on_canvas_configure(event):
+            canvas.itemconfig(window_id, width=event.width)
+        canvas.bind("<Configure>", _on_canvas_configure)
 
         scrollbar.pack(side="right", fill="y")
         canvas.pack(side="left", fill="both", expand=True, padx=10)

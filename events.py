@@ -522,6 +522,30 @@ def on_legend_click(event):
                             if i < len(legend.legendHandles):
                                 legend.legendHandles[i].set_alpha(1.0 if new_visible else 0.5)
 
+                            # Update app_state.visible_groups
+                            if app_state.visible_groups is None:
+                                # If None, it means all were visible. Initialize with all.
+                                app_state.visible_groups = list(app_state.current_groups)
+                            
+                            if new_visible:
+                                if label not in app_state.visible_groups:
+                                    app_state.visible_groups.append(label)
+                            else:
+                                if label in app_state.visible_groups:
+                                    app_state.visible_groups.remove(label)
+                            
+                            # If all are visible again, set to None to indicate "all"
+                            if len(app_state.visible_groups) == len(app_state.current_groups):
+                                app_state.visible_groups = None
+
+                            # Notify Control Panel to update checkboxes
+                            panel = getattr(app_state, 'control_panel_ref', None) or getattr(state_module, 'control_panel', None)
+                            if panel is not None and hasattr(panel, 'sync_legend_ui'):
+                                try:
+                                    panel.sync_legend_ui()
+                                except Exception as e:
+                                    print(f"[WARN] Failed to sync legend UI: {e}", flush=True)
+
                             print(f"[OK] Toggled visibility for: {label} to {new_visible}", flush=True)
                             try:
                                 app_state.fig.canvas.draw_idle()
@@ -592,42 +616,19 @@ def on_slider_change(val=None):
                     render_mode = '2D'
                 else:
                     preselected = [c for c in selected_columns_3d if c in available_cols]
-                    if len(preselected) == 3 and app_state.selected_3d_confirmed:
+                    if len(preselected) == 3:
                         selected_columns_3d = preselected
-                        print(f"[DEBUG] Reusing confirmed 3D columns: {selected_columns_3d}", flush=True)
-                    elif len(available_cols) == 3:
+                        if app_state.selected_3d_confirmed:
+                            print(f"[DEBUG] Reusing confirmed 3D columns: {selected_columns_3d}", flush=True)
+                        else:
+                            print(f"[DEBUG] Using existing 3D columns (unconfirmed): {selected_columns_3d}", flush=True)
+                    elif len(available_cols) >= 3:
                         selected_columns_3d = available_cols[:3]
                         app_state.selected_3d_cols = selected_columns_3d
-                        app_state.selected_3d_confirmed = True
-                        print(f"[INFO] Auto-selected 3D columns: {selected_columns_3d}", flush=True)
-                    else:
-                        need_prompt = prompt_allowed and not app_state.selected_3d_confirmed
-                        if not prompt_allowed or not need_prompt:
-                            selected_columns_3d = available_cols[:3]
-                            app_state.selected_3d_cols = selected_columns_3d
-                            app_state.selected_3d_confirmed = False
-                            print(f"[INFO] Using default 3D columns: {selected_columns_3d}", flush=True)
-                        else:
-                            try:
-                                from three_d_dialog import select_3d_columns
-                            except Exception as dialog_import_err:
-                                print(f"[WARN] Failed to import 3D selection dialog: {dialog_import_err}", flush=True)
-                                selected_columns_3d = available_cols[:3]
-                                app_state.selected_3d_cols = selected_columns_3d
-                                app_state.selected_3d_confirmed = False
-                            else:
-                                print("[INFO] Prompting user to choose 3D columns", flush=True)
-                                selection = select_3d_columns(available_cols, preselected=preselected)
-                                if selection and len(selection) == 3:
-                                    selected_columns_3d = selection
-                                    app_state.selected_3d_cols = selection
-                                    app_state.selected_3d_confirmed = True
-                                    print(f"[INFO] User selected 3D columns: {selection}", flush=True)
-                                else:
-                                    print("[INFO] 3D column selection cancelled or invalid; using first three columns by default", flush=True)
-                                    selected_columns_3d = available_cols[:3]
-                                    app_state.selected_3d_cols = selected_columns_3d
-                                    app_state.selected_3d_confirmed = False
+                        app_state.selected_3d_confirmed = False
+                        print(f"[INFO] Using default 3D columns: {selected_columns_3d}", flush=True)
+                    
+                    # Removed auto-prompt logic. User must use the button in Control Panel.
 
             if render_mode == '2D':
                 available_cols_2d = [c for c in app_state.data_cols if c in app_state.df_global.columns]
@@ -640,41 +641,23 @@ def on_slider_change(val=None):
                     preselected_2d = [c for c in selected_columns_2d if c in available_cols_2d][:2]
                     need_prompt_2d = len(available_cols_2d) > 2 and (not app_state.selected_2d_confirmed)
 
-                    if len(preselected_2d) == 2 and app_state.selected_2d_confirmed:
+                    if len(preselected_2d) == 2:
                         selected_columns_2d = preselected_2d
-                        print(f"[DEBUG] Reusing confirmed 2D columns: {selected_columns_2d}", flush=True)
-                    elif len(available_cols_2d) == 2:
+                        # If confirmed, great. If not, we just use them without prompting.
+                        # The user can change them via the "Select Axis Columns" button.
+                        if app_state.selected_2d_confirmed:
+                            print(f"[DEBUG] Reusing confirmed 2D columns: {selected_columns_2d}", flush=True)
+                        else:
+                            print(f"[DEBUG] Using existing 2D columns (unconfirmed): {selected_columns_2d}", flush=True)
+                    elif len(available_cols_2d) >= 2:
+                        # Default to first two
                         selected_columns_2d = available_cols_2d[:2]
                         app_state.selected_2d_cols = selected_columns_2d
-                        app_state.selected_2d_confirmed = True
-                        print(f"[INFO] Auto-selected 2D columns: {selected_columns_2d}", flush=True)
-                    else:
-                        if not prompt_allowed or not need_prompt_2d:
-                            selected_columns_2d = available_cols_2d[:2]
-                            app_state.selected_2d_cols = selected_columns_2d
-                            app_state.selected_2d_confirmed = False
-                            print(f"[INFO] Using default 2D columns: {selected_columns_2d}", flush=True)
-                        else:
-                            try:
-                                from two_d_dialog import select_2d_columns
-                            except Exception as dialog_import_err:
-                                print(f"[WARN] Failed to import 2D selection dialog: {dialog_import_err}", flush=True)
-                                selected_columns_2d = available_cols_2d[:2]
-                                app_state.selected_2d_cols = selected_columns_2d
-                                app_state.selected_2d_confirmed = False
-                            else:
-                                print("[INFO] Prompting user to choose 2D columns", flush=True)
-                                selection_2d = select_2d_columns(available_cols_2d, preselected=preselected_2d)
-                                if selection_2d and len(selection_2d) == 2:
-                                    selected_columns_2d = selection_2d
-                                    app_state.selected_2d_cols = selection_2d
-                                    app_state.selected_2d_confirmed = True
-                                    print(f"[INFO] User selected 2D columns: {selection_2d}", flush=True)
-                                else:
-                                    print("[INFO] 2D column selection cancelled or invalid; using first two columns by default", flush=True)
-                                    selected_columns_2d = available_cols_2d[:2]
-                                    app_state.selected_2d_cols = selected_columns_2d
-                                    app_state.selected_2d_confirmed = False
+                        # We don't set confirmed=True here so we know they are defaults
+                        app_state.selected_2d_confirmed = False 
+                        print(f"[INFO] Using default 2D columns: {selected_columns_2d}", flush=True)
+                    
+                    # Removed auto-prompt logic. User must use the button in Control Panel.
 
             if render_mode != app_state.render_mode:
                 print(f"[DEBUG] Adjusted render mode: {app_state.render_mode} -> {render_mode}", flush=True)

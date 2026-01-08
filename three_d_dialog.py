@@ -25,7 +25,7 @@ class _Select3DColumnsDialog:
         self.root = tk.Toplevel(master)
         self.root.title(translate("Select 3D Axes"))
         self.root.configure(bg="#edf2f7")
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
         self.root.geometry("440x360")
         self.root.minsize(440, 360)
 

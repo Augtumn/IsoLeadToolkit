@@ -18,6 +18,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from matplotlib.widgets import Button
+import tkinter as tk
+from tkinter import ttk
 
 from config import CONFIG
 from state import app_state
@@ -232,34 +234,21 @@ def main():
         app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'], constrained_layout=True)
         
         def _apply_language_to_main_ui():
-            title_text = translate("Lead Isotope Analysis - UMAP/t-SNE Visualization")
-            if app_state.fig is not None:
-                app_state.fig.suptitle(title_text, fontsize=13, fontweight='bold')
+            # title_text = translate("Lead Isotope Visualization Analysis")
+            # if app_state.fig is not None:
+            #     app_state.fig.suptitle(title_text, fontsize=13, fontweight='bold')
             if app_state.control_panel_button is not None:
                 label_text = translate("Control Panel")
-                app_state.control_panel_button.label.set_text(label_text)
+                if isinstance(app_state.control_panel_button, tk.Button):
+                    app_state.control_panel_button.config(text=label_text)
+                elif hasattr(app_state.control_panel_button, 'label'):
+                    app_state.control_panel_button.label.set_text(label_text)
 
         app_state.register_language_listener(_apply_language_to_main_ui)
         _apply_language_to_main_ui()
         print("[INFO] Plot figure created.", flush=True)
         
         plt.ion()
-        # Maximize chart area - use relative positioning
-        # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.85, top=0.88)
-
-        # Add quick access button - compact and positioned relatively
-        # Position: Bottom Right, small
-        # With constrained_layout, we need to be careful about manual axes placement
-        # But add_axes works in figure coordinates, so it should be fine
-        button_ax = app_state.fig.add_axes([0.88, 0.02, 0.10, 0.04])
-        button = Button(
-            button_ax,
-            translate("Control Panel"),
-            color='#2563eb',
-            hovercolor='#1d4ed8'
-        )
-        button.label.set_color('white')
-        button.label.set_fontsize(9)
 
         def _show_control_panel(event=None):
             try:
@@ -270,8 +259,40 @@ def main():
             except Exception as btn_err:
                 print(f"[WARN] Failed to open control panel: {btn_err}", flush=True)
 
-        button.on_clicked(_show_control_panel)
-        app_state.control_panel_button = button
+        # Add Control Panel button to Matplotlib Toolbar
+        try:
+            toolbar = app_state.fig.canvas.toolbar
+            if toolbar and isinstance(toolbar, tk.Widget):
+                # Add a separator
+                try:
+                    ttk.Separator(toolbar, orient='vertical').pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=2)
+                except Exception:
+                    pass # ttk might not be initialized on this root
+                
+                # Create Tkinter button
+                cp_btn = tk.Button(
+                    toolbar,
+                    text=translate("Control Panel"),
+                    command=_show_control_panel,
+                    bg='#2563eb',
+                    fg='white',
+                    font=('Segoe UI', 9),
+                    relief='flat',
+                    padx=8
+                )
+                cp_btn.pack(side=tk.LEFT, padx=2, pady=2)
+                
+                # Hover effect
+                def on_enter(e): cp_btn['background'] = '#1d4ed8'
+                def on_leave(e): cp_btn['background'] = '#2563eb'
+                cp_btn.bind("<Enter>", on_enter)
+                cp_btn.bind("<Leave>", on_leave)
+                
+                app_state.control_panel_button = cp_btn
+                
+        except Exception as tb_err:
+            print(f"[WARN] Failed to add button to toolbar: {tb_err}", flush=True)
+
         _apply_language_to_main_ui()
         
         # Create tkinter control panel (separate window)

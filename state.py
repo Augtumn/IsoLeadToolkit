@@ -87,9 +87,22 @@ class AppState:
         self.tooltip_columns = ['Lab No.', 'Discovery site', 'Period']  # Default columns
 
         # Plot Style Configuration
-        self.plot_style = 'science'
         self.plot_style_grid = False
         self.color_scheme = 'vibrant'
+        self.custom_primary_font = '' # User selected primary font
+        self.custom_cjk_font = ''     # User selected CJK font
+        
+        # Advanced Style Configuration
+        self.plot_font_sizes = {
+            'title': 14,
+            'label': 12,
+            'tick': 10,
+            'legend': 10
+        }
+        self.legend_columns = 0  # 0 means auto
+        self.plot_marker_size = 60
+        self.plot_marker_alpha = 0.8
+        self.saved_themes = {} # Dictionary to store user themes
         
     def clear_plot_state(self):
         """Reset plot-specific state"""

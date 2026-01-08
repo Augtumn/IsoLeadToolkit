@@ -36,62 +36,55 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 from tkinter import ttk
-import scienceplots
 import itertools
+from style_manager import apply_custom_style
 
 # sns.set_theme()
-# Use science style with no-latex to avoid dependency issues on Windows
-# and ensure compatibility with CJK fonts configured in main.py
-# plt.style.use(['science', 'no-latex']) # Moved to _apply_current_style
+# Use custom style manager to avoid dependency issues and ensure CJK support
 
 def _apply_current_style():
     """Apply the current plot style and color scheme from app_state."""
-    style_list = []
-    
-    # Base style
-    base_style = getattr(app_state, 'plot_style', 'science')
-    style_list.append(base_style)
-    
-    # Always disable latex to avoid issues
-    style_list.append('no-latex')
     
     # Grid
-    if getattr(app_state, 'plot_style_grid', False):
-        style_list.append('grid')
+    show_grid = getattr(app_state, 'plot_style_grid', False)
         
     # Color scheme
     color_scheme = getattr(app_state, 'color_scheme', 'vibrant')
-    if color_scheme:
-        style_list.append(color_scheme)
-        
-    # Apply styles
+    
+    # Custom Fonts
+    primary_font = getattr(app_state, 'custom_primary_font', '')
+    cjk_font = getattr(app_state, 'custom_cjk_font', '')
+    
+    # Font Sizes
+    font_sizes = getattr(app_state, 'plot_font_sizes', None)
+    
+    # Apply styles using our custom manager
     try:
-        plt.style.use(style_list)
+        apply_custom_style(show_grid, color_scheme, primary_font, cjk_font, font_sizes)
     except Exception as e:
-        print(f"[WARN] Failed to apply styles {style_list}: {e}", flush=True)
-        # Fallback to science
-        plt.style.use(['science', 'no-latex'])
-
-    # Re-apply CJK fonts
-    preferred_fonts = CONFIG.get('preferred_plot_fonts', [])
-    available_fonts = {f.name for f in font_manager.fontManager.ttflist}
-    chosen_font = None
-    for name in preferred_fonts:
-        if name in available_fonts:
-            chosen_font = name
-            break
-            
-    if chosen_font:
-        matplotlib.rcParams['font.family'] = 'sans-serif'
-        matplotlib.rcParams['font.sans-serif'] = [chosen_font, 'Arial', 'sans-serif']
-        
-    matplotlib.rcParams['axes.unicode_minus'] = False
+        print(f"[WARN] Failed to apply styles: {e}", flush=True)
+        # Fallback
+        apply_custom_style(False, 'vibrant')
     
     # Update figure background if it exists
+    # Note: We don't set facecolors here anymore because ax.clear() would reset them.
+    # Instead, we rely on _enforce_plot_style() called after clearing.
+    pass
+
+def _enforce_plot_style(ax):
+    """Enforce style settings on the specific axes instance."""
+    if ax is None:
+        return
+
+    # Enforce grid
+    show_grid = getattr(app_state, 'plot_style_grid', False)
+    ax.grid(show_grid)
+    
+    # Enforce facecolors from current rcParams
     if app_state.fig is not None:
         app_state.fig.patch.set_facecolor(plt.rcParams.get('figure.facecolor', 'white'))
-        if app_state.ax is not None:
-            app_state.ax.set_facecolor(plt.rcParams.get('axes.facecolor', 'white'))
+    
+    ax.set_facecolor(plt.rcParams.get('axes.facecolor', 'white'))
 
 def show_scree_plot(parent_window=None):
     """Display a scree plot of the explained variance for the last PCA run."""
@@ -835,6 +828,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         _apply_current_style()
 
         app_state.ax.clear()
+        _enforce_plot_style(app_state.ax)
         app_state.clear_plot_state()
 
         # Reserve space around the axes so the legend and titles are never clipped
@@ -1054,10 +1048,14 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 if len(xs) == 0:
                     continue
                 
+                # Use marker size/alpha from state if available, else default
+                marker_size = getattr(app_state, 'plot_marker_size', size)
+                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                
                 color = app_state.current_palette[cat]
                 sc = app_state.ax.scatter(
-                    xs, ys, label=cat, color=color, s=size,
-                    alpha=0.88, edgecolors="#1e293b", linewidth=0.4, zorder=2,
+                    xs, ys, label=cat, color=color, s=marker_size,
+                    alpha=marker_alpha, edgecolors="#1e293b", linewidth=0.4, zorder=2,
                     picker=5
                 )
                 scatters.append(sc)
@@ -1094,10 +1092,12 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         # Create legend
         try:
             # Only show matplotlib legend if item count is reasonable
-            if len(unique_cats) <= 20:
+            if len(unique_cats) <= 30:
+                ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
                 legend = app_state.ax.legend(
                     title=group_col, bbox_to_anchor=(1.01, 1), loc='upper left',
-                    fontsize=9, title_fontsize=10, frameon=True, fancybox=True
+                    frameon=True, fancybox=True,
+                    ncol=ncol
                 )
 
                 try:
@@ -1133,22 +1133,43 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         else:
             title = f'{actual_algorithm}{subset_info}\nColored by {group_col}'
         
-        app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=20)
+        # Smart Title Font Logic
+        # If title contains CJK characters, prioritize the CJK font to avoid mojibake
+        title_font_dict = {}
+        
+        has_cjk = any('\u4e00' <= char <= '\u9fff' for char in title)
+        if has_cjk:
+            cjk_font = getattr(app_state, 'custom_cjk_font', '')
+            if cjk_font:
+                title_font_dict['fontname'] = cjk_font
+            else:
+                # Try to find a preferred CJK font from config that is installed
+                # This is a best-effort fallback if user hasn't selected one
+                try:
+                    available = {f.name for f in font_manager.fontManager.ttflist}
+                    for f in CONFIG.get('preferred_plot_fonts', []):
+                        if f in available:
+                            title_font_dict['fontname'] = f
+                            break
+                except Exception:
+                    pass
+
+        app_state.ax.set_title(title, pad=20, **title_font_dict)
         
         # Set axis labels
         if actual_algorithm == 'V1V2':
-            app_state.ax.set_xlabel("V1", fontsize=11, color="#334155")
-            app_state.ax.set_ylabel("V2", fontsize=11, color="#334155")
+            app_state.ax.set_xlabel("V1")
+            app_state.ax.set_ylabel("V2")
         elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
             idx_x = app_state.pca_component_indices[0] + 1
             idx_y = app_state.pca_component_indices[1] + 1
-            app_state.ax.set_xlabel(f"PC{idx_x}", fontsize=11, color="#334155")
-            app_state.ax.set_ylabel(f"PC{idx_y}", fontsize=11, color="#334155")
+            app_state.ax.set_xlabel(f"PC{idx_x}")
+            app_state.ax.set_ylabel(f"PC{idx_y}")
         else:
-            app_state.ax.set_xlabel(f"{actual_algorithm} Dimension 1", fontsize=11, color="#334155")
-            app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2", fontsize=11, color="#334155")
+            app_state.ax.set_xlabel(f"{actual_algorithm} Dimension 1")
+            app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2")
         
-        app_state.ax.tick_params(colors="#475569", labelsize=9)
+        app_state.ax.tick_params()
         
         # Adjust layout to prevent overlap
         try:
@@ -1262,6 +1283,7 @@ def plot_2d_data(group_col, data_columns, size=60):
         _apply_current_style()
 
         app_state.ax.clear()
+        _enforce_plot_style(app_state.ax)
         app_state.clear_plot_state()
 
         try:
@@ -1348,15 +1370,15 @@ def plot_2d_data(group_col, data_columns, size=60):
             return False
 
         try:
-            if len(unique_cats) <= 20:
+            if len(unique_cats) <= 30:
+                ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
                 legend = app_state.ax.legend(
                     title=group_col,
                     bbox_to_anchor=(1.01, 1),
                     loc='upper left',
-                    fontsize=9,
-                    title_fontsize=10,
                     frameon=True,
-                    fancybox=True
+                    fancybox=True,
+                    ncol=ncol
                 )
                 legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
                 frame = legend.get_frame()
@@ -1376,10 +1398,10 @@ def plot_2d_data(group_col, data_columns, size=60):
             f"2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n"
             f"Colored by {group_col}"
         )
-        app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=20)
-        app_state.ax.set_xlabel(data_columns[0], color="#334155", fontsize=11)
-        app_state.ax.set_ylabel(data_columns[1], color="#334155", fontsize=11)
-        app_state.ax.tick_params(colors="#475569", labelsize=9)
+        app_state.ax.set_title(title, pad=20)
+        app_state.ax.set_xlabel(data_columns[0])
+        app_state.ax.set_ylabel(data_columns[1])
+        app_state.ax.tick_params()
         
         # Adjust layout to prevent overlap
         try:
@@ -1388,8 +1410,7 @@ def plot_2d_data(group_col, data_columns, size=60):
             pass
         except Exception:
             pass
-        app_state.ax.set_ylabel(data_columns[1], color="#334155", fontsize=11)
-        app_state.ax.tick_params(colors="#475569", labelsize=9)
+
 
         app_state.annotation = app_state.ax.annotate(
             "",
@@ -1462,6 +1483,7 @@ def plot_3d_data(group_col, data_columns, size=60):
         _apply_current_style()
 
         app_state.ax.clear()
+        _enforce_plot_style(app_state.ax)
         app_state.clear_plot_state()
 
         # Manual styling removed in favor of scienceplots
@@ -1509,15 +1531,15 @@ def plot_3d_data(group_col, data_columns, size=60):
             return False
 
         try:
-            if len(unique_cats) <= 20:
+            if len(unique_cats) <= 30:
+                ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
                 legend = app_state.ax.legend(
                     title=group_col,
                     bbox_to_anchor=(1.01, 1),
                     loc='upper left',
-                    fontsize=9,
-                    title_fontsize=10,
                     frameon=True,
-                    fancybox=True
+                    fancybox=True,
+                    ncol=ncol
                 )
                 legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
                 frame = legend.get_frame()
@@ -1534,10 +1556,10 @@ def plot_3d_data(group_col, data_columns, size=60):
             f"3D Scatter Plot{subset_info} ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n"
             f"Colored by {group_col}"
         )
-        app_state.ax.set_title(title, fontsize=13, color="#1f2937", pad=20)
-        app_state.ax.set_xlabel(data_columns[0], color="#334155", fontsize=11)
-        app_state.ax.set_ylabel(data_columns[1], color="#334155", fontsize=11)
-        app_state.ax.set_zlabel(data_columns[2], color="#334155", fontsize=11)
+        app_state.ax.set_title(title, pad=20)
+        app_state.ax.set_xlabel(data_columns[0])
+        app_state.ax.set_ylabel(data_columns[1])
+        app_state.ax.set_zlabel(data_columns[2])
         
         # Adjust layout to prevent overlap
         try:

@@ -34,8 +34,8 @@ class DataConfigDialog:
         # Create main window
         self.root = tk.Tk()
         self.root.title(translate("Configure Data Columns"))
-        self.root.geometry("1100x760")
-        self.root.minsize(900, 640)
+        self.root.geometry("850x600")
+        self.root.minsize(800, 500)
         self.root.configure(bg="#edf2f7")
         self.root.resizable(True, True)
 
@@ -62,7 +62,7 @@ class DataConfigDialog:
         scrollbar = ttk.Scrollbar(outer, orient=tk.VERTICAL, command=canvas.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        container = ttk.Frame(canvas, padding=(28, 24, 28, 20), style='DataConfig.TFrame')
+        container = ttk.Frame(canvas, padding=(10, 10, 10, 10), style='DataConfig.TFrame')
         window_id = canvas.create_window((0, 0), window=container, anchor='nw')
         canvas.configure(yscrollcommand=scrollbar.set)
 
@@ -170,8 +170,8 @@ class DataConfigDialog:
 
     def _build_column_card(self, parent, column_index, title, description, selection_type):
         """Create a card containing selectable column checkboxes"""
-        card = ttk.Frame(parent, padding=18, style='DataConfig.Card.TFrame')
-        card.grid(row=0, column=column_index, sticky=(tk.N, tk.S, tk.E, tk.W), padx=(0, 18) if column_index == 0 else (18, 0))
+        card = ttk.Frame(parent, padding=10, style='DataConfig.Card.TFrame')
+        card.grid(row=0, column=column_index, sticky=(tk.N, tk.S, tk.E, tk.W), padx=(0, 10) if column_index == 0 else (10, 0))
         card.columnconfigure(0, weight=1)
         card.rowconfigure(3, weight=1)
 
@@ -235,6 +235,21 @@ class DataConfigDialog:
 
         scrollable_frame.bind("<Configure>", _sync_scrollregion)
         canvas.bind("<Configure>", _resize_canvas)
+
+        # Enable mousewheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            return "break"
+
+        def _bind_mousewheel(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        def _unbind_mousewheel(event):
+            canvas.unbind_all("<MouseWheel>")
+
+        # Bind enter/leave events to the card to enable/disable scrolling
+        card.bind("<Enter>", _bind_mousewheel)
+        card.bind("<Leave>", _unbind_mousewheel)
 
         for col in self.all_columns:
             is_numeric = pd.api.types.is_numeric_dtype(self.df[col])

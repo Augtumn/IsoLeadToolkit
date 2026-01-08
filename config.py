@@ -67,6 +67,8 @@ CONFIG = {
         'Microsoft YaHei',
         'Microsoft YaHei UI',
         'SimHei',
+        'SimSun',
+        'NSimSun',
         'PingFang SC',
         'Source Han Sans SC',
         'Noto Sans CJK SC',
