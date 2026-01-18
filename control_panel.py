@@ -693,6 +693,18 @@ class ControlPanel:
 
         self._refresh_group_list()
 
+        # KDE Checkbox
+        self.check_vars['show_kde'] = tk.BooleanVar(value=getattr(app_state, 'show_kde', False))
+        kde_chk = ttk.Checkbutton(
+            self.group_section,
+            text=self._translate("Show Kernel Density"),
+            variable=self.check_vars['show_kde'],
+            command=self._on_change,
+            style='Option.TCheckbutton'
+        )
+        kde_chk.pack(anchor=tk.W, pady=(4, 4))
+        self._register_translation(kde_chk, "Show Kernel Density")
+
         group_config_btn = ttk.Button(
             self.group_section,
             text=self._translate("Configure Group Columns"),
@@ -1959,6 +1971,13 @@ class ControlPanel:
                     btn.state(['!disabled'])
             except Exception:
                 pass
+        
+        # Reset Focus Button Logic - DISABLED
+        # if hasattr(self, 'reset_focus_button') and self.reset_focus_button:
+        #     if app_state.active_subset_indices is None:
+        #         self.reset_focus_button.state(['disabled'])
+        #     else:
+        #         self.reset_focus_button.state(['!disabled'])
 
         toggle_btn = getattr(self, 'selection_button', None)
         if toggle_btn is None:
@@ -2495,6 +2514,10 @@ class ControlPanel:
             if 'ellipses' in self.check_vars:
                 app_state.show_ellipses = self.check_vars['ellipses'].get()
             
+            # Update KDE setting
+            if 'show_kde' in self.check_vars:
+                app_state.show_kde = self.check_vars['show_kde'].get()
+
             if 'confidence' in self.radio_vars:
                 app_state.ellipse_confidence = self.radio_vars['confidence'].get()
 
@@ -2861,11 +2884,21 @@ class ControlPanel:
                 from two_d_dialog import select_2d_columns
                 available = [c for c in app_state.data_cols if c in app_state.df_global.columns]
                 current = getattr(app_state, 'selected_2d_cols', [])
-                selection = select_2d_columns(available, preselected=current)
-                if selection and len(selection) == 2:
-                    app_state.selected_2d_cols = selection
-                    app_state.selected_2d_confirmed = True
-                    if self.callback: self.callback()
+                current_kde = getattr(app_state, 'show_2d_kde', False)
+                result = select_2d_columns(available, preselected=current, preselected_kde=current_kde)
+                
+                if result:
+                    selection, show_kde = result
+                    if selection and len(selection) == 2:
+                        app_state.selected_2d_cols = selection
+                        app_state.show_2d_kde = show_kde
+                        # Sync global KDE toggle if changed in dialog
+                        app_state.show_kde = show_kde
+                        if 'show_kde' in self.check_vars:
+                            self.check_vars['show_kde'].set(show_kde)
+                        
+                        app_state.selected_2d_confirmed = True
+                        if self.callback: self.callback()
             except Exception as e:
                 print(f"[ERROR] Failed to open 2D column selection: {e}", flush=True)
                 messagebox.showerror(self._translate("Error"), str(e))

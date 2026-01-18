@@ -34,6 +34,7 @@ class AppState:
         
         self.standardize_data = True  # Default to True for better PCA/RobustPCA performance
         self.show_ellipses = CONFIG.get('show_ellipses', False)
+        self.show_kde = False  # Global KDE toggle for 2D plots
         self.ellipse_confidence = CONFIG.get('ellipse_confidence', 0.95)
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading

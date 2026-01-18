@@ -23,6 +23,7 @@ from sklearn.impute import SimpleImputer
 import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from matplotlib.patches import Ellipse
+import pandas as pd
 import numpy as np
 
 # Import V1V2 calculation logic
@@ -1217,8 +1218,77 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             app_state.ax.set_xlim(-0.1, 1.1)
             app_state.ax.set_ylim(-0.1, h + 0.1)
 
+        # Kernel Density Estimation (KDE)
+        if getattr(app_state, 'show_kde', False):
+            try:
+                # For Ternary, we need to pre-calculate cartesian coordinates
+                if actual_algorithm == 'TERNARY':
+                    print("[INFO] Generating KDE for Ternary Plot...", flush=True)
+                    # Iterate groups to apply same normalization logic as scatter
+                    for cat in unique_cats:
+                        subset = df_plot[df_plot[group_col] == cat].copy()
+                        if subset.empty: continue
+                        
+                        ts = subset['_emb_t'].to_numpy(dtype=float)
+                        ls = subset['_emb_l'].to_numpy(dtype=float)
+                        rs = subset['_emb_r'].to_numpy(dtype=float)
+                        
+                        if getattr(app_state, 'ternary_stretch', False):
+                            def _minmax(arr):
+                                if len(arr) == 0: return arr
+                                mn, mx = np.min(arr), np.max(arr)
+                                if mx - mn < 1e-9: return np.zeros_like(arr) + 0.5 
+                                return (arr - mn) / (mx - mn)
+                            ts = _minmax(ts)
+                            ls = _minmax(ls)
+                            rs = _minmax(rs)
+                        
+                        sums = ts + ls + rs
+                        with np.errstate(divide='ignore', invalid='ignore'):
+                            sums[sums == 0] = 1.0 
+                            t_norm = ts / sums
+                            r_norm = rs / sums
+                        
+                        h = np.sqrt(3) / 2
+                        x_cart = 0.5 * t_norm + 1.0 * r_norm
+                        y_cart = h * t_norm
+                        
+                        sns.kdeplot(
+                            x=x_cart, y=y_cart,
+                            color=new_palette[cat],
+                            ax=app_state.ax,
+                            levels=10, fill=True, alpha=0.6,
+                            warn_singular=False,
+                            legend=False, zorder=1
+                        )
+                else:
+                    # Standard 2D KDE
+                    print(f"[INFO] Generating KDE for {actual_algorithm}...", flush=True)
+                    sns.kdeplot(
+                        data=df_plot,
+                        x='_emb_x',
+                        y='_emb_y',
+                        hue=group_col,
+                        palette=new_palette,
+                        ax=app_state.ax,
+                        levels=10, fill=True, alpha=0.6,
+                        warn_singular=False,
+                        legend=False,
+                        zorder=1
+                    )
+            except Exception as kde_err:
+                print(f"[WARN] Failed to render KDE: {kde_err}", flush=True)
+
         scatters = []
+        is_kde_mode = getattr(app_state, 'show_kde', False)
+        
+        # If KDE is not active, we draw scatters normally.
+        # If KDE IS active, we SKIP drawing scatters to achieve the "heatmap only" look requested.
+        
         for i, cat in enumerate(unique_cats):
+            if is_kde_mode:
+                continue
+
             try:
                 subset = df_plot[df_plot[group_col] == cat]
                 if subset.empty:
@@ -1345,22 +1415,47 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 print(f"[WARN] Error plotting category {cat}: {e}", flush=True)
                 continue
         
-        if not scatters:
+        if not scatters and not is_kde_mode:
             print("[ERROR] No data points plotted", flush=True)
             return False
-        
-        print(f"[INFO] Plot rendered: {len(scatters)} groups, {len(app_state.sample_index_map)} points", flush=True)
-        
+            
         # Create legend
         try:
+            # If KDE mode, construct proxy handles for the legend
+            handles = []
+            labels = []
+            
+            if is_kde_mode:
+                from matplotlib.patches import Patch
+                for cat in unique_cats:
+                    color = app_state.current_palette[cat]
+                    patch = Patch(facecolor=color, edgecolor='none', label=cat, alpha=0.6)
+                    handles.append(patch)
+                    labels.append(cat)
+            else:
+                # Standard scatter handles are handled automatically by ax.legend() if scatters exist? 
+                # Or we let legend() gather them but we need to ensure order?
+                # The original code relied on auto-detection or order.
+                pass
+
             # Only show matplotlib legend if item count is reasonable
             if len(unique_cats) <= 30:
                 ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
-                legend = app_state.ax.legend(
-                    title=group_col, bbox_to_anchor=(1.01, 1), loc='upper left',
-                    frameon=True, fancybox=True,
-                    ncol=ncol
-                )
+                
+                # If explicit handles created (KDE mode), pass them
+                if handles:
+                    legend = app_state.ax.legend(
+                        handles=handles, labels=labels,
+                        title=group_col, bbox_to_anchor=(1.01, 1), loc='upper left',
+                        frameon=True, fancybox=True,
+                        ncol=ncol
+                    )
+                else:
+                    legend = app_state.ax.legend(
+                        title=group_col, bbox_to_anchor=(1.01, 1), loc='upper left',
+                        frameon=True, fancybox=True,
+                        ncol=ncol
+                    )
 
                 try:
                     legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
@@ -1372,8 +1467,9 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 frame.set_edgecolor("#cbd5f5")
                 frame.set_alpha(0.95)
                 
-                for leg_patch, sc in zip(legend.get_patches(), scatters):
-                    app_state.legend_to_scatter[leg_patch] = sc
+                if not is_kde_mode:
+                    for leg_patch, sc in zip(legend.get_patches(), scatters):
+                        app_state.legend_to_scatter[leg_patch] = sc
             else:
                 print("[INFO] Too many categories for standard legend. Use Control Panel legend.", flush=True)
         except Exception as e:
@@ -1501,7 +1597,7 @@ def plot_umap(group_col, params, size):
     return plot_embedding(group_col, 'UMAP', umap_params=params, size=size)
 
 
-def plot_2d_data(group_col, data_columns, size=60):
+def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
     """Render a 2D scatter plot using selected raw measurement columns."""
     try:
         if app_state.fig is None:
@@ -1540,6 +1636,21 @@ def plot_2d_data(group_col, data_columns, size=60):
 
         if group_col not in df_plot.columns:
             print(f"[ERROR] Column not found: {group_col}", flush=True)
+            return False
+
+        # Ensure data columns are numeric for KDE and Plotting
+        try:
+            for col in data_columns:
+                df_plot[col] = pd.to_numeric(df_plot[col], errors='coerce')
+            
+            # Drop rows that became NaN after strict numeric conversion to avoid KDE errors
+            df_plot = df_plot.dropna(subset=data_columns)
+            
+            if df_plot.empty:
+                print("[WARN] No valid numeric data available for 2D plot.", flush=True)
+                return False
+        except Exception as e:
+            print(f"[ERROR] Failed to convert columns to numeric: {e}", flush=True)
             return False
 
         df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
@@ -1609,72 +1720,128 @@ def plot_2d_data(group_col, data_columns, size=60):
         app_state.current_palette = new_palette
         app_state.current_groups = unique_cats
 
+        if show_kde:
+            try:
+                sns.kdeplot(
+                    data=df_plot,
+                    x=data_columns[0],
+                    y=data_columns[1],
+                    hue=group_col,
+                    palette=new_palette,
+                    ax=app_state.ax,
+                    levels=10, fill=True, alpha=0.6,
+                    warn_singular=False,
+                    legend=False,
+                    zorder=1
+                )
+            except Exception as e:
+                print(f"[WARN] Failed to render KDE: {e}", flush=True)
+
         scatters = []
+        
+        # If Active 2D KDE mode, skip scatter plots
+        if not show_kde:
+            for i, cat in enumerate(unique_cats):
+                subset = df_plot[df_plot[group_col] == cat]
+                if subset.empty:
+                    continue
 
-        for i, cat in enumerate(unique_cats):
-            subset = df_plot[df_plot[group_col] == cat]
-            if subset.empty:
-                continue
+                xs = subset[data_columns[0]].astype(float).values
+                ys = subset[data_columns[1]].astype(float).values
+                indices = subset.index.tolist()
+                
+                color = app_state.current_palette[cat]
 
-            xs = subset[data_columns[0]].astype(float).values
-            ys = subset[data_columns[1]].astype(float).values
-            indices = subset.index.tolist()
-            
-            color = app_state.current_palette[cat]
+                sc = app_state.ax.scatter(
+                    xs,
+                    ys,
+                    label=cat,
+                    color=color,
+                    s=size,
+                    alpha=0.88,
+                    edgecolors="#1e293b",
+                    linewidth=0.4,
+                    zorder=2
+                )
+                app_state.scatter_collections.append(sc)
+                scatters.append(sc)
+                app_state.group_to_scatter[cat] = sc
 
-            sc = app_state.ax.scatter(
-                xs,
-                ys,
-                label=cat,
-                color=color,
-                s=size,
-                alpha=0.88,
-                edgecolors="#1e293b",
-                linewidth=0.4,
-                zorder=2
-            )
-            app_state.scatter_collections.append(sc)
-            scatters.append(sc)
-            app_state.group_to_scatter[cat] = sc
+                # Note: Group-level ellipses are disabled in favor of selection-based ellipses
+                # if app_state.show_ellipses:
+                #     try:
+                #         draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
+                #     except Exception as e:
+                #         print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
 
-            # Note: Group-level ellipses are disabled in favor of selection-based ellipses
-            # if app_state.show_ellipses:
-            #     try:
-            #         draw_confidence_ellipse(xs, ys, app_state.ax, edgecolor=palette[i], zorder=1)
-            #     except Exception as e:
-            #         print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
+                for j, idx in enumerate(indices):
+                    key = (round(float(xs[j]), 3), round(float(ys[j]), 3))
+                    app_state.sample_index_map[key] = idx
+                    app_state.sample_coordinates[idx] = (float(xs[j]), float(ys[j]))
+                    app_state.artist_to_sample[(id(sc), j)] = idx
 
-            for j, idx in enumerate(indices):
-                key = (round(float(xs[j]), 3), round(float(ys[j]), 3))
-                app_state.sample_index_map[key] = idx
-                app_state.sample_coordinates[idx] = (float(xs[j]), float(ys[j]))
-                app_state.artist_to_sample[(id(sc), j)] = idx
-
-        if not app_state.scatter_collections:
+        if not scatters and not show_kde:
             print("[ERROR] No points were plotted in 2D", flush=True)
             return False
 
         try:
+            # Prepare Legend
+            handles = []
+            labels = []
+            
+            if show_kde:
+                from matplotlib.patches import Patch
+                for cat in unique_cats:
+                    if cat not in app_state.current_palette: continue
+                    color = app_state.current_palette[cat]
+                    patch = Patch(facecolor=color, edgecolor='none', label=cat, alpha=0.6)
+                    handles.append(patch)
+                    labels.append(cat)
+            
             if len(unique_cats) <= 30:
                 ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
-                legend = app_state.ax.legend(
-                    title=group_col,
-                    bbox_to_anchor=(1.01, 1),
-                    loc='upper left',
-                    frameon=True,
-                    fancybox=True,
-                    ncol=ncol
-                )
-                legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
-                frame = legend.get_frame()
-                frame.set_facecolor("#ffffff")
-                frame.set_edgecolor("#cbd5f5")
-                frame.set_alpha(0.95)
                 
-                for leg_patch, sc in zip(legend.get_patches(), scatters):
-                    app_state.legend_to_scatter[leg_patch] = sc
+                # Use handles if available, otherwise just call legend which picks up scatters automatically
+                if handles:
+                    legend = app_state.ax.legend(
+                        handles=handles, labels=labels,
+                        title=group_col,
+                        bbox_to_anchor=(1.01, 1),
+                        loc='upper left',
+                        frameon=True,
+                        fancybox=True,
+                        ncol=ncol
+                    )
+                else:
+                    # For scatter plots, calling legend without handles picks up artists with labels automatically
+                    legend = app_state.ax.legend(
+                        title=group_col,
+                        bbox_to_anchor=(1.01, 1),
+                        loc='upper left',
+                        frameon=True,
+                        fancybox=True,
+                        ncol=ncol
+                    )
+                
+                # Check if legend was actually created (migth fail if no labeled artists)
+                if legend:
+                    try:
+                        legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
+                        frame = legend.get_frame()
+                        frame.set_facecolor("#ffffff")
+                        frame.set_edgecolor("#cbd5f5")
+                        frame.set_alpha(0.95)
+                        
+                        if not show_kde:
+                            # Map legend items to scatter collections for interactivity
+                            for leg_patch, sc in zip(legend.get_patches(), scatters):
+                                app_state.legend_to_scatter[leg_patch] = sc
+                    except Exception as e:
+                        print(f"[WARN] Legend styling failed: {e}", flush=True)
+
             else:
                 print("[INFO] Too many categories for standard legend. Use Control Panel legend.", flush=True)
+
         except Exception as legend_err:
             print(f"[WARN] 2D legend creation error: {legend_err}", flush=True)
 

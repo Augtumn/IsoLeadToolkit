@@ -8,10 +8,11 @@ from localization import translate
 class _Select2DColumnsDialog:
     """Modal dialog that lets the user pick two distinct columns for 2D plotting."""
 
-    def __init__(self, columns, preselected=None):
+    def __init__(self, columns, preselected=None, preselected_kde=False):
         self.columns = list(columns)
         self.columns.sort()
         self.preselected = preselected or []
+        self.preselected_kde = preselected_kde
         self.result = None
 
         master = tk._default_root
@@ -142,6 +143,17 @@ class _Select2DColumnsDialog:
             if not self.vars[axis].get() and self.columns:
                 combo.current(0)
 
+        # Add Checkbox for KDE
+        self.kde_var = tk.BooleanVar(value=self.preselected_kde)
+        kde_frame = ttk.Frame(card, style='Card.TFrame')
+        kde_frame.pack(fill=tk.X, pady=6)
+        
+        ttk.Checkbutton(
+            kde_frame,
+            text=translate("Show Kernel Density"),
+            variable=self.kde_var
+        ).pack(anchor=tk.W)
+
         button_row = ttk.Frame(container, style='Dialog.TFrame')
         button_row.pack(fill=tk.X)
 
@@ -171,10 +183,10 @@ class _Select2DColumnsDialog:
             messagebox.showwarning(
                 translate("Selection Required"),
                 translate("Please choose a column for each axis."),
-                parent=self.root
-            )
-            return
-        if len(set(selections)) != 2:
+                parent=self.root, KDE: {self.kde_var.get()}", flush=True)
+        except Exception:
+            pass
+        self.result = (selections, self.kde_var.get())!= 2:
             messagebox.showwarning(
                 translate("Fields Must Differ"),
                 translate("Each axis must use a different data column."),
@@ -209,7 +221,7 @@ class _Select2DColumnsDialog:
         return self.result
 
 
-def select_2d_columns(columns, preselected=None):
-    """Show the 2D column picker dialog and return the chosen axes."""
-    dialog = _Select2DColumnsDialog(columns, preselected=preselected)
+def select_2d_columns(columns, preselected=None, preselected_kde=False):
+    """Show the 2D column picker dialog and return the chosen axes and kde option."""
+    dialog = _Select2DColumnsDialog(columns, preselected=preselected, preselected_kde=preselected_kde)
     return dialog.show()

@@ -714,10 +714,13 @@ def on_slider_change(val=None):
                     print("[WARN] Invalid 2D column selection; skipping plot", flush=True)
                 else:
                     print(f"[DEBUG] Rendering 2D plot with columns={selected_columns_2d}", flush=True)
+                    # Check both global KDE setting and specific 2D KDE setting
+                    is_kde = getattr(app_state, 'show_kde', False) or getattr(app_state, 'show_2d_kde', False)
                     rendered_ok = plot_2d_data(
                         group_col,
                         selected_columns_2d,
-                        size=app_state.point_size
+                        size=app_state.point_size,
+                        show_kde=is_kde
                     )
             else:
                 # Use the current render mode as the algorithm name
