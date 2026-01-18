@@ -659,6 +659,27 @@ def on_slider_change(val=None):
                     
                     # Removed auto-prompt logic. User must use the button in Control Panel.
 
+            if render_mode == 'Ternary':
+                available_cols_ternary = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+                if len(available_cols_ternary) < 3:
+                     print("[WARN] Not enough numeric columns for Ternary view; falling back to UMAP", flush=True)
+                     render_mode = 'UMAP'
+                else:
+                    preselected = getattr(app_state, 'selected_ternary_cols', [])
+                    
+                    # Validate existing selection
+                    valid_preselected = [c for c in preselected if c in available_cols_ternary]
+                    
+                    if len(valid_preselected) == 3:
+                         if app_state.selected_ternary_confirmed:
+                             pass
+                         else:
+                             app_state.selected_ternary_cols = valid_preselected
+                    elif len(available_cols_ternary) >= 3:
+                         # Default
+                         app_state.selected_ternary_cols = available_cols_ternary[:3]
+                         app_state.selected_ternary_confirmed = False
+
             if render_mode != app_state.render_mode:
                 print(f"[DEBUG] Adjusted render mode: {app_state.render_mode} -> {render_mode}", flush=True)
                 app_state.render_mode = render_mode

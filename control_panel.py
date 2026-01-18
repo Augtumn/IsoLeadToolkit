@@ -10,7 +10,7 @@ from tkinter import ttk, messagebox, simpledialog, filedialog, colorchooser
 
 import pandas as pd
 from matplotlib import font_manager
-
+import style_manager
 from localization import translate, available_languages, set_language
 from state import app_state
 import state as state_module
@@ -35,6 +35,7 @@ class ControlPanel:
         """
         self.callback = callback
         self._translations = []
+        self._ternary_update_job = None # timer for debouncing scale updates
 
         # Reuse Matplotlib's Tk root when available so the panel shares the
         # same event loop and remains responsive while plt.show() runs.
@@ -251,6 +252,7 @@ class ControlPanel:
             ("PCA Embedding", "PCA"),
             ("Robust PCA", "RobustPCA"),
             ("V1-V2 Diagram", "V1V2"),
+            ("Ternary Plot", "Ternary"),
             ("2D Scatter (raw)", "2D"),
             ("3D Scatter (raw)", "3D"),
         ]
@@ -285,36 +287,8 @@ class ControlPanel:
         data_section = self._create_section(
             frame,
             "Data Configuration",
-            "Configure grouping and tooltips."
+            "Configure data to display when hovering over points."
         )
-
-        # Group Column
-        group_label = ttk.Label(
-            data_section,
-            text=self._translate("Group column"),
-            style='FieldLabel.TLabel'
-        )
-        group_label.pack(anchor=tk.W, pady=(12, 4))
-        self._register_translation(group_label, "Group column")
-
-        self.radio_vars['group'] = tk.StringVar(value=app_state.last_group_col or '')
-
-        group_container = ttk.Frame(data_section, style='CardBody.TFrame')
-        group_container.pack(fill=tk.X)
-        self.group_container = group_container
-        self.group_placeholder = None
-
-        self._refresh_group_list()
-
-        # Group Column Configuration
-        group_config_btn = ttk.Button(
-            data_section,
-            text=self._translate("Configure Group Columns"),
-            command=self._open_group_col_settings,
-            style='Secondary.TButton'
-        )
-        group_config_btn.pack(anchor=tk.W, pady=(4, 4))
-        self._register_translation(group_config_btn, "Configure Group Columns")
 
         # Tooltip Settings
         tooltip_btn = ttk.Button(
@@ -333,11 +307,35 @@ class ControlPanel:
         # --- Theme Management ---
         theme_section = self._create_section(
             frame,
-            "Theme Management",
-            "Save and load custom plot themes."
+            "Interface Theme",
+            "Select the overall look and feel of the application."
+        )
+
+        ui_theme_frame = ttk.Frame(theme_section, style='CardBody.TFrame')
+        ui_theme_frame.pack(fill=tk.X, pady=(0, 8))
+        
+        lbl_ui_theme = ttk.Label(ui_theme_frame, text=self._translate("UI Theme:"), style='Body.TLabel')
+        lbl_ui_theme.pack(side=tk.LEFT, padx=(0, 5))
+        self._register_translation(lbl_ui_theme, "UI Theme:")
+
+        self.ui_theme_var = tk.StringVar(value=getattr(app_state, 'ui_theme', 'Modern Light'))
+        ui_theme_combo = ttk.Combobox(
+            ui_theme_frame, 
+            textvariable=self.ui_theme_var, 
+            values=style_manager.style_manager_instance.get_ui_theme_names(),
+            state="readonly"
+        )
+        ui_theme_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ui_theme_combo.bind("<<ComboboxSelected>>", self._on_ui_theme_change)
+
+        # --- Saved Plot Settings ---
+        saved_section = self._create_section(
+            frame,
+            "Saved Plot Settings",
+            "Save and load custom plot parameter sets (Grid, Fonts, Palette)."
         )
         
-        theme_frame = ttk.Frame(theme_section, style='CardBody.TFrame')
+        theme_frame = ttk.Frame(saved_section, style='CardBody.TFrame')
         theme_frame.pack(fill=tk.X, pady=(0, 8))
         
         # Theme Name Entry
@@ -396,10 +394,7 @@ class ControlPanel:
         color_label.pack(anchor=tk.W, pady=(0, 4))
         self._register_translation(color_label, "Palette")
         
-        color_options = [
-            'vibrant', 'bright', 'high-vis', 'std-colors', 
-            'light', 'retro', 'muted', 'dark_background'
-        ]
+        color_options = style_manager.style_manager_instance.get_palette_names()
         self.color_scheme_var = tk.StringVar(value=getattr(app_state, 'color_scheme', 'vibrant'))
         color_combo = ttk.Combobox(
             general_section, 
@@ -418,7 +413,7 @@ class ControlPanel:
         )
         
         # Get available fonts
-        all_system_fonts = sorted({f.name for f in font_manager.fontManager.ttflist})
+        all_system_fonts = sorted(style_manager.style_manager_instance.get_available_fonts())
         from config import CONFIG
         preferred_fonts = CONFIG.get('preferred_plot_fonts', [])
         installed_preferred = [f for f in preferred_fonts if f in all_system_fonts]
@@ -683,15 +678,39 @@ class ControlPanel:
         
         frame = self._build_scrollable_frame(parent)
 
+        # --- Grouping Controls ---
+        self.group_section = self._create_section(
+            frame,
+            "Coloring / Grouping",
+            "Select column for coloring points."
+        )
+        
+        self.radio_vars['group'] = tk.StringVar(value=app_state.last_group_col or '')
+        
+        self.group_container = ttk.Frame(self.group_section, style='CardBody.TFrame')
+        self.group_container.pack(fill=tk.X)
+        self.group_placeholder = None
+
+        self._refresh_group_list()
+
+        group_config_btn = ttk.Button(
+            self.group_section,
+            text=self._translate("Configure Group Columns"),
+            command=self._open_group_col_settings,
+            style='Secondary.TButton'
+        )
+        group_config_btn.pack(anchor=tk.W, pady=(4, 0))
+        self._register_translation(group_config_btn, "Configure Group Columns")
+
         # UMAP Parameters
-        umap_section = self._create_section(
+        self.umap_section = self._create_section(
             frame,
             "UMAP Parameters",
             "Control neighbourhood size and how tightly points cluster."
         )
 
         self._add_slider(
-            umap_section,
+            self.umap_section,
             key='umap_n',
             label_text="n_neighbors",
             minimum=2,
@@ -702,7 +721,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            umap_section,
+            self.umap_section,
             key='umap_d',
             label_text="min_dist",
             minimum=0.0,
@@ -713,7 +732,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            umap_section,
+            self.umap_section,
             key='umap_r',
             label_text="random_state",
             minimum=0,
@@ -724,14 +743,14 @@ class ControlPanel:
         )
         
         # t-SNE Parameters
-        tsne_section = self._create_section(
+        self.tsne_section = self._create_section(
             frame,
             "t-SNE Parameters",
             "Adjust perplexity and learning rate to refine t-SNE embeddings."
         )
 
         self._add_slider(
-            tsne_section,
+            self.tsne_section,
             key='tsne_p',
             label_text="perplexity",
             minimum=5,
@@ -742,7 +761,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            tsne_section,
+            self.tsne_section,
             key='tsne_lr',
             label_text="learning_rate",
             minimum=10,
@@ -753,7 +772,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            tsne_section,
+            self.tsne_section,
             key='tsne_r',
             label_text="random_state",
             minimum=0,
@@ -764,14 +783,14 @@ class ControlPanel:
         )
 
         # PCA Parameters
-        pca_section = self._create_section(
+        self.pca_section = self._create_section(
             frame,
             "PCA Parameters",
             "Standard Principal Component Analysis settings."
         )
 
         self._add_slider(
-            pca_section,
+            self.pca_section,
             key='pca_n',
             label_text="n_components",
             minimum=2,
@@ -782,7 +801,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            pca_section,
+            self.pca_section,
             key='pca_r',
             label_text="random_state",
             minimum=0,
@@ -793,11 +812,9 @@ class ControlPanel:
         )
         
         # PCA Dimension Selection & Scree Plot
-        pca_tools = ttk.Frame(pca_section, style='CardBody.TFrame')
+        pca_tools = ttk.Frame(self.pca_section, style='CardBody.TFrame')
         pca_tools.pack(fill=tk.X, pady=(8, 0))
         
-        # Scree Plot Button
-        # Imports already done above
         scree_btn = ttk.Button(
             pca_tools,
             text=self._translate("Show Scree Plot"),
@@ -807,7 +824,6 @@ class ControlPanel:
         scree_btn.pack(side=tk.LEFT, padx=(0, 10))
         self._register_translation(scree_btn, "Show Scree Plot")
 
-        # Loadings Plot Button
         loadings_btn = ttk.Button(
             pca_tools,
             text=self._translate("Show Loadings"),
@@ -817,31 +833,30 @@ class ControlPanel:
         loadings_btn.pack(side=tk.LEFT, padx=(0, 10))
         self._register_translation(loadings_btn, "Show Loadings")
         
-        # Dimension Selectors
         dim_frame = ttk.Frame(pca_tools, style='CardBody.TFrame')
         dim_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        ttk.Label(dim_frame, text="X:", style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(dim_frame, text=self._translate("X:"), style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
         self.pca_x_var = tk.StringVar(value=str(app_state.pca_component_indices[0] + 1))
         self.pca_x_spin = ttk.Spinbox(dim_frame, from_=1, to=10, width=3, textvariable=self.pca_x_var, command=self._on_pca_dim_change)
         self.pca_x_spin.pack(side=tk.LEFT, padx=(0, 8))
         self.pca_x_spin.bind('<Return>', lambda e: self._on_pca_dim_change())
         
-        ttk.Label(dim_frame, text="Y:", style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(dim_frame, text=self._translate("Y:"), style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
         self.pca_y_var = tk.StringVar(value=str(app_state.pca_component_indices[1] + 1))
         self.pca_y_spin = ttk.Spinbox(dim_frame, from_=1, to=10, width=3, textvariable=self.pca_y_var, command=self._on_pca_dim_change)
         self.pca_y_spin.pack(side=tk.LEFT)
         self.pca_y_spin.bind('<Return>', lambda e: self._on_pca_dim_change())
 
         # Robust PCA Parameters
-        rpca_section = self._create_section(
+        self.rpca_section = self._create_section(
             frame,
             "Robust PCA Parameters",
             "Minimum Covariance Determinant (MCD) based PCA. Resistant to outliers."
         )
 
         self._add_slider(
-            rpca_section,
+            self.rpca_section,
             key='rpca_n',
             label_text="n_components",
             minimum=2,
@@ -852,7 +867,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            rpca_section,
+            self.rpca_section,
             key='rpca_r',
             label_text="random_state",
             minimum=0,
@@ -863,7 +878,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            rpca_section,
+            self.rpca_section,
             key='rpca_sf',
             label_text="support_fraction",
             minimum=0.5,
@@ -873,11 +888,9 @@ class ControlPanel:
             step=0.01
         )
         
-        # Robust PCA Dimension Selection & Scree Plot (Shared logic, but separate controls for clarity)
-        rpca_tools = ttk.Frame(rpca_section, style='CardBody.TFrame')
+        rpca_tools = ttk.Frame(self.rpca_section, style='CardBody.TFrame')
         rpca_tools.pack(fill=tk.X, pady=(8, 0))
         
-        # Scree Plot Button
         rpca_scree_btn = ttk.Button(
             rpca_tools,
             text=self._translate("Show Scree Plot"),
@@ -887,7 +900,6 @@ class ControlPanel:
         rpca_scree_btn.pack(side=tk.LEFT, padx=(0, 10))
         self._register_translation(rpca_scree_btn, "Show Scree Plot")
 
-        # Loadings Plot Button
         rpca_loadings_btn = ttk.Button(
             rpca_tools,
             text=self._translate("Show Loadings"),
@@ -896,31 +908,33 @@ class ControlPanel:
         )
         rpca_loadings_btn.pack(side=tk.LEFT, padx=(0, 10))
         self._register_translation(rpca_loadings_btn, "Show Loadings")
-        
-        # Dimension Selectors (Reuse the same state variables as PCA since they share the concept)
-        # But we need separate widgets to appear in this section
+
+        # RPCA Dimensions
         r_dim_frame = ttk.Frame(rpca_tools, style='CardBody.TFrame')
         r_dim_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        ttk.Label(r_dim_frame, text="X:", style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(r_dim_frame, text=self._translate("X:"), style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
         self.rpca_x_spin = ttk.Spinbox(r_dim_frame, from_=1, to=10, width=3, textvariable=self.pca_x_var, command=self._on_pca_dim_change)
         self.rpca_x_spin.pack(side=tk.LEFT, padx=(0, 8))
         self.rpca_x_spin.bind('<Return>', lambda e: self._on_pca_dim_change())
         
-        ttk.Label(r_dim_frame, text="Y:", style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(r_dim_frame, text=self._translate("Y:"), style='Body.TLabel').pack(side=tk.LEFT, padx=(0, 2))
         self.rpca_y_spin = ttk.Spinbox(r_dim_frame, from_=1, to=10, width=3, textvariable=self.pca_y_var, command=self._on_pca_dim_change)
         self.rpca_y_spin.pack(side=tk.LEFT)
         self.rpca_y_spin.bind('<Return>', lambda e: self._on_pca_dim_change())
 
+        # --- Ternary Parameters ---
+        self._build_ternary_section(frame)
+
         # V1V2 Parameters
-        v1v2_section = self._create_section(
+        self.v1v2_section = self._create_section(
             frame,
             "V1V2 Parameters",
             "Adjust parameters for V1-V2 diagram calculation."
         )
 
         self._add_slider(
-            v1v2_section,
+            self.v1v2_section,
             key='v1v2_scale',
             label_text="Scale Factor",
             minimum=0.1,
@@ -931,7 +945,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            v1v2_section,
+            self.v1v2_section,
             key='v1v2_a',
             label_text="Parameter a",
             minimum=-10.0,
@@ -942,7 +956,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            v1v2_section,
+            self.v1v2_section,
             key='v1v2_b',
             label_text="Parameter b",
             minimum=-10.0,
@@ -953,7 +967,7 @@ class ControlPanel:
         )
 
         self._add_slider(
-            v1v2_section,
+            self.v1v2_section,
             key='v1v2_c',
             label_text="Parameter c",
             minimum=-20.0,
@@ -963,15 +977,132 @@ class ControlPanel:
             step=0.001
         )
 
-        # Reset Button for V1V2
         reset_btn = ttk.Button(
-            v1v2_section,
+            self.v1v2_section,
             text=self._translate("Reset to Defaults"),
             style='Secondary.TButton',
             command=self._reset_v1v2_defaults
         )
         reset_btn.pack(anchor=tk.W, pady=(8, 0))
         self._register_translation(reset_btn, "Reset to Defaults")
+        
+        # Initial visibility update
+        self._update_algorithm_visibility()
+        
+        # Initialize sliders state if needed
+        # if app_state.render_mode == 'Ternary':
+        #     self.update_ternary_sliders_from_data(preserve_existing=True)
+
+    def _build_ternary_section(self, parent):
+        """Build the Ternary Plot controls."""
+
+        self.ternary_section = self._create_section(
+            parent,
+            "Ternary Plot",
+            "Standard Ternary Diagram (mpltern)"
+        )
+        
+        # Standard Ternary Plot - No manual range sliders (Zoom is handled by plot toolbar if needed, or Auto)
+        info_label = ttk.Label(
+            self.ternary_section, 
+            text=self._translate("Using Standard Ternary Plot.\nData is plotted as relative proportions."),
+            style='BodyMuted.TLabel',
+            wraplength=250
+        )
+        info_label.pack(anchor=tk.W, pady=8)
+        self._register_translation(info_label, "Using Standard Ternary Plot.\nData is plotted as relative proportions.")
+
+        # Auto Zoom Checkbox
+        self.ternary_auto_zoom_var = tk.BooleanVar(value=False)
+        self.ternary_auto_zoom_chk = ttk.Checkbutton(
+            self.ternary_section,
+            text=self._translate("Auto-Zoom to Data"),
+            variable=self.ternary_auto_zoom_var,
+            command=self._on_ternary_zoom_change,
+            style='Option.TCheckbutton'
+        )
+        self.ternary_auto_zoom_chk.pack(anchor=tk.W, pady=5)
+        self._register_translation(self.ternary_auto_zoom_chk, "Auto-Zoom to Data")
+
+        # Scale Control
+        scale_frame = ttk.Frame(self.ternary_section)
+        scale_frame.pack(fill=tk.X, pady=8)
+        
+        # Header with Label and Value
+        header_frame = ttk.Frame(scale_frame)
+        header_frame.pack(fill=tk.X, pady=(0, 2))
+        
+        lbl_scale = ttk.Label(header_frame, text=self._translate("Scale:"), style='Body.TLabel')
+        lbl_scale.pack(side=tk.LEFT)
+        self._register_translation(lbl_scale, "Scale:")
+        
+        current_val = getattr(app_state, 'ternary_scale', 100.0)
+        self.lbl_ternary_scale_val = ttk.Label(header_frame, text=f"{int(current_val)}")
+        self.lbl_ternary_scale_val.pack(side=tk.RIGHT)
+
+        self.ternary_scale_var = tk.DoubleVar(value=current_val)
+        
+        # Debounced Slider
+        self.ternary_scale_slider = ttk.Scale(
+            scale_frame,
+            from_=1.0,
+            to=200.0,
+            variable=self.ternary_scale_var,
+            orient=tk.HORIZONTAL,
+            command=self._on_ternary_scale_slide
+        )
+        self.ternary_scale_slider.pack(fill=tk.X)
+
+        # Stretch Checkbox
+        self.ternary_stretch_var = tk.BooleanVar(value=getattr(app_state, 'ternary_stretch', False))
+        chk_stretch = ttk.Checkbutton(
+            self.ternary_section, 
+            text=self._translate("Stretch to Fill"), 
+            variable=self.ternary_stretch_var,
+            command=self._on_stretch_change
+        )
+        chk_stretch.pack(fill=tk.X, pady=8)
+        self._register_translation(chk_stretch, "Stretch to Fill")
+
+    def _on_stretch_change(self):
+        """Handle stretch toggle."""
+        app_state.ternary_stretch = self.ternary_stretch_var.get()
+        if self.callback:
+            self.callback('alg_params')
+
+    def _on_ternary_scale_slide(self, val):
+        """Handle slider movement with debounce."""
+        try:
+            val = float(val)
+            # Update label immediately for feedback
+            self.lbl_ternary_scale_val.configure(text=f"{int(val)}")
+            
+            # Cancel previous timer
+            if self._ternary_update_job:
+                self.root.after_cancel(self._ternary_update_job)
+            
+            # Schedule new update in 150ms
+            self._ternary_update_job = self.root.after(150, lambda v=val: self._trigger_ternary_update(v))
+            
+        except ValueError:
+            pass
+
+    def _trigger_ternary_update(self, val):
+        """Execute the actual update."""
+        app_state.ternary_scale = val
+        if self.callback:
+            self.callback('alg_params')
+        self._ternary_update_job = None
+
+    def _on_ternary_zoom_change(self):
+        """Handle Auto Zoom toggle."""
+        app_state.ternary_auto_zoom = self.ternary_auto_zoom_var.get()
+        if self.callback:
+            self.callback()
+
+
+
+
 
     def _build_tools_tab(self, parent):
         frame = self._build_scrollable_frame(parent)
@@ -1402,35 +1533,94 @@ class ControlPanel:
             self.style.theme_use('clam')
         except tk.TclError:
             pass
-
-        primary = self.primary_bg
-        card = self.card_bg
-
-        self.style.configure('ControlPanel.TFrame', background=primary)
         
+        # Apply initial theme
+        current_theme = getattr(app_state, 'ui_theme', 'Modern Light')
+        self._apply_ui_theme(current_theme)
+
+    def _apply_ui_theme(self, theme_name):
+        """Apply the selected UI theme to all widgets"""
+        theme = style_manager.style_manager_instance.get_ui_theme(theme_name)
+        if not theme: return
+
+        # Store for future reference
+        self.current_ui_theme = theme
+        app_state.ui_theme = theme_name
+        
+        # Colors
+        bg = theme['bg']
+        fg = theme['fg']
+        panel_bg = theme['panel_bg']
+        header_bg = theme['header_bg']
+        accent = theme['accent']
+        secondary = theme['secondary']
+        card_bg = theme['panel_bg'] # Use panel bg as card bg for seamless look or define separate
+        
+        self.primary_bg = panel_bg
+        self.card_bg = card_bg
+        
+        # Root and main containers
+        try:
+            self.root.configure(bg=panel_bg)
+        except:
+            pass
+            
         # Unified Font Configuration
         ui_font = 'Microsoft YaHei UI'
         
-        self.style.configure('Header.TLabel', background=primary, foreground='#1a202c', font=(ui_font, 16, 'bold'))
-        self.style.configure('Subheader.TLabel', background=primary, foreground='#4a5568', font=(ui_font, 10))
-        self.style.configure('Footer.TLabel', background=primary, foreground='#4a5568', font=(ui_font, 9))
-        self.style.configure('SectionSeparator.TSeparator', background='#cbd5f5', lightcolor='#cbd5f5', darkcolor='#cbd5f5')
+        # Apply to TTK Styles
+        self.style.configure('ControlPanel.TFrame', background=panel_bg)
+        self.style.configure('Header.TLabel', background=header_bg, foreground=fg, font=(ui_font, 16, 'bold'))
+        self.style.configure('Subheader.TLabel', background=header_bg, foreground=secondary, font=(ui_font, 10))
+        self.style.configure('Footer.TLabel', background=panel_bg, foreground=secondary, font=(ui_font, 9))
+        self.style.configure('SectionSeparator.TSeparator', background=secondary)
 
-        self.style.configure('Card.TLabelframe', background=card, borderwidth=1, relief='solid')
-        self.style.configure('Card.TLabelframe.Label', background=card, foreground='#1a202c', font=(ui_font, 12, 'bold'))
-        self.style.configure('CardBody.TFrame', background=card)
-        self.style.configure('Body.TLabel', background=card, foreground='#4a5568', font=(ui_font, 10))
-        self.style.configure('BodyMuted.TLabel', background=card, foreground='#94a3b8', font=(ui_font, 10))
-        self.style.configure('FieldLabel.TLabel', background=card, foreground='#1a202c', font=(ui_font, 10, 'bold'))
-        self.style.configure('ValueLabel.TLabel', background=card, foreground='#2d3748', font=(ui_font, 10, 'bold'))
+        self.style.configure('Card.TLabelframe', background=card_bg, borderwidth=1, relief='solid')
+        self.style.configure('Card.TLabelframe.Label', background=card_bg, foreground=fg, font=(ui_font, 12, 'bold'))
+        self.style.configure('CardBody.TFrame', background=card_bg)
+        self.style.configure('Body.TLabel', background=card_bg, foreground=secondary, font=(ui_font, 10))
+        self.style.configure('BodyMuted.TLabel', background=card_bg, foreground=secondary, font=(ui_font, 10))
+        self.style.configure('FieldLabel.TLabel', background=card_bg, foreground=fg, font=(ui_font, 10, 'bold'))
+        self.style.configure('ValueLabel.TLabel', background=card_bg, foreground=fg, font=(ui_font, 10, 'bold'))
 
-        self.style.configure('Option.TRadiobutton', background=card, foreground='#1a202c', padding=4, font=(ui_font, 10))
-        self.style.map('Option.TRadiobutton', background=[('active', card)], foreground=[('active', '#1a202c')])
+        self.style.configure('Option.TRadiobutton', background=card_bg, foreground=fg, padding=4, font=(ui_font, 10))
+        self.style.map('Option.TRadiobutton', background=[('active', card_bg)], foreground=[('active', fg)])
+        
+        self.style.configure('Option.TCheckbutton', background=card_bg, foreground=fg, padding=4, font=(ui_font, 10))
+        self.style.map('Option.TCheckbutton', background=[('active', card_bg)], foreground=[('active', fg)])
+        
+        # Buttons
+        self.style.configure('Accent.TButton', background=accent, foreground='#ffffff', font=(ui_font, 10, 'bold'), padding=(12, 6))
+        self.style.map('Accent.TButton', background=[('active', accent), ('pressed', accent)], foreground=[('disabled', '#d1d5db'), ('active', '#ffffff'), ('pressed', '#ffffff')])
+        
+        # Secondary button often behaves differently in themes
+        # For dark themes, might need lighter text
+        sec_fg = accent
+        sec_bg = '#ffffff' if 'Light' in theme_name or 'Blue' in theme_name else '#374151'
+        if 'Dark' in theme_name:
+            sec_fg = '#ffffff'
+            sec_bg = '#4b5563'
+        if 'Retro' in theme_name:
+            sec_bg = '#fde68a'
+             
+        self.style.configure('Secondary.TButton', background=sec_bg, foreground=sec_fg, font=(ui_font, 10, 'bold'), padding=(12, 6))
+        self.style.map('Secondary.TButton', background=[('active', sec_bg)], foreground=[('active', sec_fg)])
 
-        self.style.configure('Accent.TButton', background='#2563eb', foreground='#ffffff', font=(ui_font, 10, 'bold'), padding=(12, 6))
-        self.style.map('Accent.TButton', background=[('active', '#1d4ed8'), ('pressed', '#1d4ed8')], foreground=[('disabled', '#d1d5db'), ('active', '#ffffff'), ('pressed', '#ffffff')])
-        self.style.configure('Secondary.TButton', background='#ffffff', foreground='#2563eb', font=(ui_font, 10, 'bold'), padding=(12, 6))
-        self.style.map('Secondary.TButton', background=[('active', '#e2e8f0')], foreground=[('active', '#1d4ed8')])
+        # Refresh matplotlib style if needed (Optional: auto-switch plot theme)
+        # Update Figure background only to match UI (keep plot area user-defined)
+        try:
+            if app_state.fig:
+                app_state.fig.patch.set_facecolor(theme['plot_bg'])
+                app_state.fig.canvas.draw_idle()
+        except:
+            pass
+
+    def _on_ui_theme_change(self, event=None):
+        """Handle UI theme change event"""
+        name = self.ui_theme_var.get()
+        self._apply_ui_theme(name)
+        # We might need to refresh widgets that don't auto-update
+        # Re-creating widgets is heavy, but config updates should propagate via style
 
     def _translate(self, key, **kwargs):
         """Translate helper bound to the current app language."""
@@ -2208,6 +2398,29 @@ class ControlPanel:
         if self.callback:
             self.callback()
 
+    def _update_algorithm_visibility(self):
+        """Show or hide algorithm controls based on current mode."""
+        mode = app_state.render_mode
+        
+        # Hide all sections first
+        for section in ['umap_section', 'tsne_section', 'pca_section', 'rpca_section', 'ternary_section', 'v1v2_section']:
+            if hasattr(self, section):
+                getattr(self, section).pack_forget()
+
+        # Show relevant section
+        if mode == 'UMAP' and hasattr(self, 'umap_section'):
+            self.umap_section.pack(fill=tk.X, padx=6, pady=6)
+        elif mode == 'tSNE' and hasattr(self, 'tsne_section'):
+            self.tsne_section.pack(fill=tk.X, padx=6, pady=6)
+        elif mode == 'PCA' and hasattr(self, 'pca_section'):
+            self.pca_section.pack(fill=tk.X, padx=6, pady=6)
+        elif mode == 'RobustPCA' and hasattr(self, 'rpca_section'):
+            self.rpca_section.pack(fill=tk.X, padx=6, pady=6)
+        elif mode == 'Ternary' and hasattr(self, 'ternary_section'):
+            self.ternary_section.pack(fill=tk.X, padx=6, pady=6)
+        elif mode == 'V1V2' and hasattr(self, 'v1v2_section'):
+            self.v1v2_section.pack(fill=tk.X, padx=6, pady=6)
+            
     def _on_change(self):
         """Handle any parameter change - with safety checks"""
         try:
@@ -2227,6 +2440,10 @@ class ControlPanel:
                 if requested_mode == '3D' and len(app_state.data_cols) < 3:
                     print("[WARN] Need at least three numeric columns for 3D view; reverting to previous mode.", flush=True)
                     requested_mode = previous_mode if previous_mode != '3D' else 'UMAP'
+                    self.radio_vars['render_mode'].set(requested_mode)
+                elif requested_mode == 'Ternary' and len(app_state.data_cols) < 3:
+                    print("[WARN] Need at least three numeric columns for Ternary view; reverting to previous mode.", flush=True)
+                    requested_mode = previous_mode if previous_mode != 'Ternary' else 'UMAP'
                     self.radio_vars['render_mode'].set(requested_mode)
                 elif requested_mode == '2D' and len(app_state.data_cols) < 2:
                     print("[WARN] Need at least two numeric columns for 2D view; reverting to previous mode.", flush=True)
@@ -2256,6 +2473,13 @@ class ControlPanel:
                         app_state.selected_2d_confirmed = False
                     elif requested_mode == '3D':
                         app_state.selected_3d_confirmed = False
+                    elif requested_mode == 'Ternary':
+                        app_state.selected_ternary_confirmed = False
+                    
+                    self._update_algorithm_visibility()
+                    # Ensure sliders reflect current data/state when switching to Ternary
+                    if requested_mode == 'Ternary':
+                        self.update_ternary_sliders_from_data(preserve_existing=True)
 
             if app_state.render_mode in ('UMAP', 'tSNE', 'PCA', 'RobustPCA'):
                 if app_state.render_mode == 'UMAP':
@@ -2658,10 +2882,24 @@ class ControlPanel:
             except Exception as e:
                 print(f"[ERROR] Failed to open 3D column selection: {e}", flush=True)
                 messagebox.showerror(self._translate("Error"), str(e))
+        elif app_state.render_mode == 'Ternary':
+            try:
+                from ternary_dialog import ask_ternary_columns
+                available = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+                current = app_state.selected_ternary_cols
+                selection = ask_ternary_columns(available, preselected=current)
+                if selection and len(selection) == 3:
+                    app_state.selected_ternary_cols = selection
+                    app_state.selected_ternary_confirmed = True
+                    self.update_ternary_sliders_from_data(preserve_existing=False) # Force reset to new data limits
+                    if self.callback: self.callback()
+            except Exception as e:
+                print(f"[ERROR] Failed to open Ternary column selection: {e}", flush=True)
+                messagebox.showerror(self._translate("Error"), str(e))
         else:
             messagebox.showinfo(
                 self._translate("Info"), 
-                self._translate("Column selection is only available for 2D/3D modes.")
+                self._translate("Column selection is only available for 2D/3D/Ternary modes.")
             )
 
     def _open_group_col_settings(self):

@@ -109,7 +109,8 @@ def _save_session(state_module):
         selected_2d_cols=getattr(app_state, 'selected_2d_cols', []),
         selected_3d_cols=app_state.selected_3d_cols,
         language=app_state.language,
-        tooltip_columns=getattr(app_state, 'tooltip_columns', None)
+        tooltip_columns=getattr(app_state, 'tooltip_columns', None),
+        ui_theme=getattr(app_state, 'ui_theme', 'Modern Light')
     )
 
 
@@ -177,6 +178,10 @@ def main():
                 print(f"[DEBUG] Restored tooltip columns from session: {saved_cols}", flush=True)
             else:
                 print(f"[DEBUG] No tooltip columns in session, using default: {app_state.tooltip_columns}", flush=True)
+
+            # Restore UI Theme
+            app_state.ui_theme = session_data.get('ui_theme', 'Modern Light')
+            print(f"[INFO] Restored UI theme: {app_state.ui_theme}", flush=True)
 
             # Group column: restore from session if it exists in current data
             session_group_col = session_data.get('group_col')

@@ -41,10 +41,16 @@ class AppState:
         self.active_subset_indices = None  # If set, analysis is restricted to these indices
         self.selected_2d_cols = []
         self.selected_3d_cols = []
+        self.selected_ternary_cols = []
+        self.ternary_scale = 100.0
+        self.ternary_factors = [1.0, 1.0, 1.0] # Scaling factors for Top, Left, Right
+        self.ternary_stretch = False # Whether to apply min-max stretching
+        self.ui_theme = 'Modern Light' # Default UI theme
         self.available_groups = []
         self.visible_groups = None
         self.selected_2d_confirmed = False
         self.selected_3d_confirmed = False
+        self.selected_ternary_confirmed = False
         self.selection_mode = False # Deprecated in favor of selection_tool, but kept for compatibility if needed
         self.selection_tool = None # None, 'export', 'ellipse'
         self.draw_selection_ellipse = False
