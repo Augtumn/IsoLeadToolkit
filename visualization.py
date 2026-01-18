@@ -4,6 +4,8 @@ Handles UMAP and t-SNE embedding computation and plot rendering
 """
 import traceback
 import matplotlib
+# Import python-ternary for Ternary plotting
+import ternary
 from config import CONFIG
 from state import app_state
 # Import events module for selection overlay refresh
@@ -421,21 +423,38 @@ def _ensure_axes(dimensions=2):
     """Ensure the Matplotlib axis matches the requested dimensionality."""
     try:
         current_name = getattr(app_state.ax, 'name', '') if app_state.ax is not None else ''
+        
+        # Determine target projection
+        target_proj = None
         if dimensions == 3:
-            if current_name != '3d':
-                if app_state.ax is not None:
-                    try:
-                        app_state.ax.remove()
-                    except Exception:
-                        pass
-                app_state.ax = app_state.fig.add_subplot(111, projection='3d')
+            target_proj = '3d'
+        elif dimensions == 'ternary':
+            target_proj = 'ternary'
         else:
-            if current_name == '3d' or app_state.ax is None:
-                if app_state.ax is not None and current_name == '3d':
-                    try:
-                        app_state.ax.remove()
-                    except Exception:
-                        pass
+            target_proj = 'rectilinear' # Standard 2D
+
+        # Check if we need to replace axes
+        needs_replacement = False
+        if app_state.ax is None:
+            needs_replacement = True
+        elif current_name != target_proj:
+            needs_replacement = True
+
+        if needs_replacement:
+            if app_state.ax is not None:
+                try:
+                    app_state.ax.remove()
+                except Exception:
+                    pass
+            
+            if target_proj == '3d':
+                app_state.ax = app_state.fig.add_subplot(111, projection='3d')
+            elif target_proj == 'ternary':
+                # python-ternary writes onto a standard 2D axes
+                app_state.ax = app_state.fig.add_subplot(111)
+                # We turn off standard axes as ternary draws its own
+                app_state.ax.axis("off")
+            else:
                 app_state.ax = app_state.fig.add_subplot(111)
 
         # app_state.fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.88)
@@ -818,11 +837,21 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             print("[ERROR] Plot axes not initialized", flush=True)
             return False
 
-        _ensure_axes(dimensions=2)
+        # Determine dimensions based on algorithm
+        actual_algorithm = algorithm.strip().upper() if isinstance(algorithm, str) else str(algorithm)
+        if actual_algorithm == 'ROBUSTPCA':
+            actual_algorithm = 'RobustPCA' # Keep case for display
+
+        target_dims = 2
+        if actual_algorithm == 'TERNARY':
+            target_dims = 'ternary'
+            
+        _ensure_axes(dimensions=target_dims)
 
         if app_state.ax is None:
-            print("[ERROR] Failed to configure 2D axes", flush=True)
+            print("[ERROR] Failed to configure axes", flush=True)
             return False
+
 
         # Apply style before clearing
         _apply_current_style()
@@ -936,6 +965,87 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             except Exception as e:
                 print(f"[ERROR] V1V2 calculation failed: {e}", flush=True)
                 return False
+        elif actual_algorithm == 'TERNARY':
+            print(f"[DEBUG] Computing Ternary embedding", flush=True)
+            cols = getattr(app_state, 'selected_ternary_cols', [])
+            if not cols or len(cols) != 3:
+                print("[ERROR] Ternary columns not selected", flush=True)
+                return False
+            
+            try:
+                # We need data rows corresponding to the analysis subset
+                X, indices = _get_analysis_data()
+                if indices is None: return False
+                
+                if app_state.df_global is None: return False
+                
+                # Fetch data directly from df using indices
+                # Note: indices are integer locations in df_global if we map them right
+                # But _get_analysis_data handles subset logic.
+                # If subset is active, indices are the subset indices.
+                # So df_global.iloc[indices] gives the rows.
+                
+                df_subset = app_state.df_global.iloc[indices]
+                
+                import pandas as pd
+                c_top, c_right, c_left = cols
+                
+                # Ensure columns exist
+                missing = [c for c in cols if c not in df_subset.columns]
+                if missing:
+                    print(f"[ERROR] Missing columns for ternary plot: {missing}", flush=True)
+                    return False
+                    
+                top_vals = pd.to_numeric(df_subset[c_top], errors='coerce').fillna(0).values
+                right_vals = pd.to_numeric(df_subset[c_right], errors='coerce').fillna(0).values
+                left_vals = pd.to_numeric(df_subset[c_left], errors='coerce').fillna(0).values
+                
+                total = top_vals + right_vals + left_vals
+                mask = total > 0
+                
+                total = top_vals + right_vals + left_vals
+                mask = total > 0
+
+                
+                # Standard Ternary Logic:
+                # Just use raw values. mpltern or normalization handles the rest.
+                # However, for meaningful ternary plotting of arbitrary data (e.g. isotopes),
+                # we conceptually plot proportions: x / (x+y+z).
+                # We do NOT perform min-max scaling specific to the data range, 
+                # because the user requested "Standard Ternary Plot".
+                # Standard means vertices are 100% (or 1.0).
+                
+                # We simply pass the raw values to mpltern.
+                # mpltern expects (t, l, r). It will normalize them internally to sum to 1 for plotting position.
+                # But to be safe and explicit, let's just pass raw.
+                
+                # Order matters:
+                # If we want:
+                # Top Axis -> Variable 1 (c_top)
+                # Left Axis -> Variable 2 (c_left)
+                # Right Axis -> Variable 3 (c_right)
+                
+                # In mpltern:
+                # ax.scatter(t, l, r)
+                # t correlates with Top Vertex.
+                # l correlates with Left Vertex.
+                # r correlates with Right Vertex.
+                
+                embedding = np.column_stack((top_vals, left_vals, right_vals))
+                app_state.last_embedding = embedding
+                app_state.last_embedding_type = 'TERNARY'
+                
+                # Clear manual ranges if any, to avoid confusion in plotting
+                if hasattr(app_state, 'ternary_manual_ranges'):
+                    del app_state.ternary_manual_ranges
+                if hasattr(app_state, 'ternary_ranges'):
+                    del app_state.ternary_ranges
+
+            except Exception as e:
+
+                print(f"[ERROR] Ternary calculation failed: {e}", flush=True)
+                traceback.print_exc()
+                return False
         else:
             print(f"[ERROR] Unknown algorithm: {algorithm}", flush=True)
             return False
@@ -963,7 +1073,11 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             base[group_col] = base[group_col].fillna('Unknown').astype(str)
             try:
                 # Use selected components for PCA/RobustPCA if available
-                if actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
+                if actual_algorithm == 'TERNARY':
+                    base['_emb_t'] = embedding[:, 0]
+                    base['_emb_l'] = embedding[:, 1]
+                    base['_emb_r'] = embedding[:, 2]
+                elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
                     idx_x = app_state.pca_component_indices[0]
                     idx_y = app_state.pca_component_indices[1]
                     
@@ -1035,6 +1149,74 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         app_state.current_palette = new_palette
         app_state.current_groups = unique_cats
         
+        # Initialize custom ternary plot settings
+        if actual_algorithm == 'TERNARY':
+            # Use manually set scale from app_state (determines triangle size, but we normalize to 1.0 internally)
+            # scale controls the labels, but we will plot on a 0-1 normalized triangle then scale up.
+            # Actually, standard matplotlib implementation is easier if we work in unit coords and add custom ticks.
+            scale = getattr(app_state, 'ternary_scale', 100.0)
+            t_cols = getattr(app_state, 'selected_ternary_cols', ['Top', 'Left', 'Right'])
+            
+            # Draw Triangle Boundary
+            # Vertices: Left (0,0), Right (1,0), Top (0.5, sqrt(3)/2)
+            # But we must respect the physical Scale for axis ticks.
+            h = np.sqrt(3) / 2
+            
+            # Triangle Vertices in Cartesian coords (x,y)
+            # Left corner (Left component=scale, others=0) -> (0,0) ? No.
+            # Standard Ternary Plot definition:
+            # Axis 1 (Top): T
+            # Axis 2 (Left): L
+            # Axis 3 (Right): R
+            # Coordinates (t, l, r) where sum = Scale.
+            # Basis vectors:
+            # Let's use normalized basis (sum=1), then scale by Scale.
+            # Origin at Left vertex (L=1, T=0, R=0)? No.
+            # Let's stick to the standard symmetric equilateral triangle.
+            # Bottom-Left: (0, 0) -> Corresponds to Left=Scale check?
+            # Actually let's assume standard orientation:
+            # Left (0, 0), Right (1, 0), Top (0.5, h).
+            # If normalized composition is (t, l, r) with sum 1:
+            # x = 0.5 * t + 1.0 * r
+            # y = h * t
+            # Note: l (Left) is "implicit" at (0,0).
+            # At Top (t=1), x=0.5, y=h. Correct.
+            # At Right (r=1), x=1, y=0. Correct.
+            # At Left (l=1 => t=0, r=0), x=0, y=0. Correct.
+            
+            # Draw Boundary
+            app_state.ax.plot([0, 1, 0.5, 0], [0, 0, h, 0], 'k-', linewidth=1.5, zorder=0)
+
+            # Draw Custom Grid (Optional, simple version)
+            # Grid for levels 0.2, 0.4, 0.6, 0.8
+            grid_color = '#e2e8f0'
+            for i in range(1, 5):
+                val = i * 0.2
+                # Horizontal lines (Constant Top)
+                # y = val * h
+                # x range: from Left edge to Right Edge
+                # Left edge line: y = sqrt(3) * x => x = y / sqrt(3) = (val*h)/sqrt(3) = val*0.5
+                # Right edge line: y = -sqrt(3)*(x-1)
+                # At y=val*h: val*h = -sqrt(3)*(x-1) => x = 1 - val*0.5
+                app_state.ax.plot([val*0.5, 1 - val*0.5], [val*h, val*h], '-', color=grid_color, lw=0.8, zorder=0)
+                
+                # We can add other directions too if needed
+                # Constant Left (parallel to Right edge)
+                # Constant Right (parallel to Left edge)
+            
+            # Labels
+            app_state.ax.text(0.5, h + 0.05, t_cols[0], ha='center', va='bottom', fontsize=10, fontweight='bold')
+            app_state.ax.text(-0.05, -0.05, t_cols[1], ha='right', va='top', fontsize=10, fontweight='bold')
+            app_state.ax.text(1.05, -0.05, t_cols[2], ha='left', va='top', fontsize=10, fontweight='bold')
+            
+            # Remove axes
+            app_state.ax.axis('off')
+            app_state.ax.set_aspect('equal')
+            
+            # Adjust limits slightly to fit labels
+            app_state.ax.set_xlim(-0.1, 1.1)
+            app_state.ax.set_ylim(-0.1, h + 0.1)
+
         scatters = []
         for i, cat in enumerate(unique_cats):
             try:
@@ -1042,22 +1224,111 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 if subset.empty:
                     continue
                 indices = subset.index.tolist()
-                xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)
-                ys = subset['_emb_y'].to_numpy(dtype=float, copy=False)
                 
-                if len(xs) == 0:
-                    continue
+                # Check algorithm type for appropriate coordinate usage
+                if actual_algorithm == 'TERNARY':
+                    ts = subset['_emb_t'].to_numpy(dtype=float, copy=False)
+                    ls = subset['_emb_l'].to_numpy(dtype=float, copy=False)
+                    rs = subset['_emb_r'].to_numpy(dtype=float, copy=False)
+                    
+                    if len(ts) == 0: continue
+                    
+                    # No explicit normalization (user requested raw values)
+                    # We rely on 'scale' being set correctly above to accommodate the data range.
+                    valid_indices = indices
+
+                    # Apply axis scaling factors
+                    # REMOVED: User requested to remove manual axis factors. We now only rely on raw data 
+                    # or the "Stretch to Fill" option.
+                    t_vals = ts
+                    l_vals = ls
+                    r_vals = rs
+
+                    # Apply Min-Max Stretching if enabled (Dispersion Mode)
+                    if getattr(app_state, 'ternary_stretch', False):
+                        def _minmax(arr):
+                            if len(arr) == 0: return arr
+                            mn, mx = np.min(arr), np.max(arr)
+                            if mx - mn < 1e-9: return np.zeros_like(arr) + 0.5 # fallback for constant
+                            return (arr - mn) / (mx - mn)
+                        
+                        t_vals = _minmax(t_vals)
+                        l_vals = _minmax(l_vals)
+                        r_vals = _minmax(r_vals)
+
+                    # Normalize to sum to 1.0
+                    sums = t_vals + l_vals + r_vals
+                    # Avoid division by zero
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        sums[sums == 0] = 1.0 
+                        
+                        # Normalize components
+                        t_norm = t_vals / sums
+                        l_norm = l_vals / sums
+                        r_norm = r_vals / sums
+
+                    # Cartesian Mapping
+                    # x = 0.5 * t + 1.0 * r
+                    # y = (sqrt(3)/2) * t
+                    
+                    h = np.sqrt(3) / 2
+                    x_cart = 0.5 * t_norm + 1.0 * r_norm
+                    y_cart = h * t_norm
+
+                    marker_size = getattr(app_state, 'plot_marker_size', size)
+                    marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                    color = app_state.current_palette[cat]
+                    
+                    # Manual scatter using matplotlib
+                    sc = app_state.ax.scatter(
+                        x_cart, y_cart,
+                        label=cat, color=color, s=marker_size,
+                        alpha=marker_alpha, edgecolors="#1e293b", linewidth=0.4, zorder=2,
+                        picker=5
+                    )
+                    
+                    # Store metadata for tooltips
+                    # Note: We store (x,y) cartesian coords for picking logic
+                    # We might want to store original ternary coords too if needed for display
+                    offsets = sc.get_offsets()
+                    sc.indices = valid_indices
+                    scatters.append(sc)
+                    
+                    for j, idx in enumerate(valid_indices):
+                        if j < len(offsets):
+                            x_val, y_val = offsets[j]
+                            key = (round(float(x_val), 2), round(float(y_val), 2))
+                            app_state.sample_index_map[key] = idx
+                            app_state.sample_coordinates[idx] = (x_val, y_val)
+                            app_state.artist_to_sample[(id(sc), j)] = idx
+                    
+                else:
+                    xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)
+                    ys = subset['_emb_y'].to_numpy(dtype=float, copy=False)
+                    
+                    if len(xs) == 0:
+                        continue
+                    
+                    # Use marker size/alpha from state if available, else default
+                    marker_size = getattr(app_state, 'plot_marker_size', size)
+                    marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                    
+                    color = app_state.current_palette[cat]
+                    sc = app_state.ax.scatter(
+                        xs, ys, label=cat, color=color, s=marker_size,
+                        alpha=marker_alpha, edgecolors="#1e293b", linewidth=0.4, zorder=2,
+                        picker=5
+                    )
+                    
+                    # Store coordinate-to-index mapping with explicit float conversion
+                    for j, idx in enumerate(indices):
+                        x_val = float(xs[j])
+                        y_val = float(ys[j])
+                        key = (round(x_val, 2), round(y_val, 2))
+                        app_state.sample_index_map[key] = idx
+                        app_state.sample_coordinates[idx] = (x_val, y_val)
+                        app_state.artist_to_sample[(id(sc), j)] = idx
                 
-                # Use marker size/alpha from state if available, else default
-                marker_size = getattr(app_state, 'plot_marker_size', size)
-                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
-                
-                color = app_state.current_palette[cat]
-                sc = app_state.ax.scatter(
-                    xs, ys, label=cat, color=color, s=marker_size,
-                    alpha=marker_alpha, edgecolors="#1e293b", linewidth=0.4, zorder=2,
-                    picker=5
-                )
                 scatters.append(sc)
                 app_state.scatter_collections.append(sc)
                 app_state.group_to_scatter[cat] = sc
@@ -1070,15 +1341,6 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 #     except Exception as e:
                 #         print(f"[WARN] Failed to draw ellipse for group {cat}: {e}", flush=True)
 
-                # Store coordinate-to-index mapping with explicit float conversion
-                for j, idx in enumerate(indices):
-                    x_val = float(xs[j])
-                    y_val = float(ys[j])
-                    key = (round(x_val, 2), round(y_val, 2))
-                    app_state.sample_index_map[key] = idx
-                    app_state.sample_coordinates[idx] = (x_val, y_val)
-                    app_state.artist_to_sample[(id(sc), j)] = idx
-                    
             except Exception as e:
                 print(f"[WARN] Error plotting category {cat}: {e}", flush=True)
                 continue
@@ -1130,6 +1392,8 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             title = f'Robust PCA{subset_info} (n_components={robust_pca_params["n_components"]})\nColored by {group_col}'
         elif actual_algorithm == 'V1V2':
             title = f'V1-V2 Diagram{subset_info}\nColored by {group_col}'
+        elif actual_algorithm == 'TERNARY':
+            title = f'Ternary Plot{subset_info}\nColored by {group_col}'
         else:
             title = f'{actual_algorithm}{subset_info}\nColored by {group_col}'
         
@@ -1160,6 +1424,27 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         if actual_algorithm == 'V1V2':
             app_state.ax.set_xlabel("V1")
             app_state.ax.set_ylabel("V2")
+        elif actual_algorithm == 'TERNARY':
+            # Labels and Grid handled by python-ternary wrapper above
+            # We don't need additional labels here as corner labels are set on 'tax'
+            
+            # Ensure equilateral aspect ratio for the underlying axes to prevent distortion
+            app_state.ax.set_aspect('equal')
+            
+            # Explicitly force a label redraw to fix potential positioning issues
+            # This is a documented workaround in python-ternary for some environments
+            # try:
+            #     if tax:
+            #         tax._redraw_labels()
+            # except Exception as e:
+            #     print(f"[WARN] Failed to redraw ternary labels: {e}", flush=True)
+
+            # Remove custom Auto Zoom Logic to adhere to strict ternary lib usage.
+            # python-ternary displays the full simplex by default.
+            pass
+
+
+
         elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
             idx_x = app_state.pca_component_indices[0] + 1
             idx_y = app_state.pca_component_indices[1] + 1
@@ -1577,3 +1862,64 @@ def plot_3d_data(group_col, data_columns, size=60):
         print(f"[ERROR] 3D plot failed: {err}", flush=True)
         traceback.print_exc()
         return False
+
+
+def calculate_auto_ternary_factors():
+    """
+    Calculate optimal scaling factors for the ternary plot using geometric means.
+    This effectively centers the data in the ternary diagram (compositional centering).
+    """
+    import numpy as np
+    from scipy.stats import gmean
+    
+    try:
+        if not hasattr(app_state, 'selected_ternary_cols') or len(app_state.selected_ternary_cols) != 3:
+            print("[WARN] Factors calc: invalid col selection", flush=True)
+            return False
+
+        # Get data (using global dataset or subset?)
+        # For factors, usually better to consider ALL data active rows to prevent jumping
+        # But if user has filtered, maybe they want to center on filtered.
+        # Let's use subset if active.
+        cols = app_state.selected_ternary_cols
+        
+        if app_state.active_subset_indices is not None:
+             df = app_state.df_global.iloc[app_state.active_subset_indices].copy()
+        else:
+             df = app_state.df_global.copy()
+        
+        # Extract numerical data
+        data = df[cols].apply(pd.to_numeric, errors='coerce').fillna(0.001).values
+        
+        # Maximize with epsilon
+        data = np.maximum(data, 1e-6)
+        
+        # Geometric means
+        gmeans = gmean(data, axis=0)
+        
+        # Factors = 1 / GM
+        # Normalize so min factor is 1.0
+        factors = 1.0 / gmeans
+        min_f = np.min(factors)
+        if min_f > 0:
+            factors = factors / min_f
+        
+        app_state.ternary_factors = factors.tolist()
+        print(f"[INFO] Auto-Calculated Factors: {app_state.ternary_factors}", flush=True)
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] Auto factor calculation failed: {e}", flush=True)
+        traceback.print_exc()
+        return False
+
+
+
+
+
+
+
+
+    
+
+

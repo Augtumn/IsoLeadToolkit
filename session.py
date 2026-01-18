@@ -10,24 +10,9 @@ from config import CONFIG
 def save_session_params(algorithm, umap_params, tsne_params, point_size, group_col,
                         group_cols=None, data_cols=None, file_path=None, sheet_name=None,
                         render_mode='UMAP', selected_2d_cols=None, selected_3d_cols=None,
-                        language=None, tooltip_columns=None):
+                        language=None, tooltip_columns=None, ui_theme=None):
     """
     Save current session parameters to temporary file
-    
-    Args:
-        algorithm: 'UMAP' or 'tSNE'
-        umap_params: dict of UMAP parameters
-        tsne_params: dict of t-SNE parameters
-        point_size: int, point size
-        group_col: str, group column name
-        group_cols: list, available group columns (optional)
-        data_cols: list, selected data columns (optional)
-        file_path: str, data file path (optional)
-        sheet_name: str, sheet name for xlsx (optional)
-        render_mode: str, one of 'UMAP', 'tSNE', '2D', '3D'
-        selected_2d_cols: list, chosen columns for raw 2D plots
-        selected_3d_cols: list, chosen columns for raw 3D plots
-        tooltip_columns: list, columns to show in tooltip
     """
     try:
         session_data = {
@@ -44,7 +29,8 @@ def save_session_params(algorithm, umap_params, tsne_params, point_size, group_c
             'selected_2d_cols': selected_2d_cols or [],
             'selected_3d_cols': selected_3d_cols or [],
             'language': language,
-            'tooltip_columns': tooltip_columns
+            'tooltip_columns': tooltip_columns,
+            'ui_theme': ui_theme
         }
         
         print(f"[DEBUG] Saving session params. Tooltip columns: {tooltip_columns}", flush=True)

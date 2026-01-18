@@ -16,4 +16,6 @@ dependencies = [
     "python-calamine>=0.6.1",
     "xlsxwriter>=3.2.9",
     "scienceplots>=2.2.0",
+    "mpltern>=1.0.4",
+    "python-ternary>=1.0.8",
 ]
