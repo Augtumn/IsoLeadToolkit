@@ -9,6 +9,7 @@ from datetime import datetime
 from tkinter import ttk, messagebox, simpledialog, filedialog, colorchooser
 
 import pandas as pd
+import numpy as np
 from matplotlib import font_manager
 import style_manager
 from localization import translate, available_languages, set_language
@@ -1267,6 +1268,25 @@ class ControlPanel:
         self.reset_data_button.pack(side=tk.LEFT)
         self._register_translation(self.reset_data_button, "Reset Data")
 
+        # Data Management
+        data_mgmt_section = self._create_section(
+            frame,
+            "Data Management",
+            "Import new data files into the application."
+        )
+
+        data_mgmt_row = ttk.Frame(data_mgmt_section, style='CardBody.TFrame')
+        data_mgmt_row.pack(fill=tk.X)
+
+        self.load_data_btn = ttk.Button(
+            data_mgmt_row,
+            text=self._translate("Load New Data"),
+            style='Accent.TButton',
+            command=self._reload_data
+        )
+        self.load_data_btn.pack(side=tk.LEFT)
+        self._register_translation(self.load_data_btn, "Load New Data")
+
     def _build_legend_tab(self, parent):
         """Build the interactive legend tab"""
         frame = self._build_scrollable_frame(parent)
@@ -1552,6 +1572,9 @@ class ControlPanel:
 
     def _apply_ui_theme(self, theme_name):
         """Apply the selected UI theme to all widgets"""
+        if not theme_name:
+            theme_name = 'Modern Light'
+            
         theme = style_manager.style_manager_instance.get_ui_theme(theme_name)
         if not theme: return
 
@@ -2064,6 +2087,9 @@ class ControlPanel:
                         df['V2'] = results['V2']
                         df['tCDT (Ma)'] = results['tCDT (Ma)']
                         df['tSK (Ma)'] = results['tSK (Ma)']
+                        df['μ'] = results.get('mu', np.nan)
+                        df['ν'] = results.get('nu', np.nan)
+                        df['ω'] = results.get('omega', np.nan)
                         
                         print("[INFO] Appended V1V2 parameters to export data.", flush=True)
                     except Exception as e:

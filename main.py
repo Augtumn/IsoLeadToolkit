@@ -180,7 +180,7 @@ def main():
                 print(f"[DEBUG] No tooltip columns in session, using default: {app_state.tooltip_columns}", flush=True)
 
             # Restore UI Theme
-            app_state.ui_theme = session_data.get('ui_theme', 'Modern Light')
+            app_state.ui_theme = session_data.get('ui_theme') or 'Modern Light'
             print(f"[INFO] Restored UI theme: {app_state.ui_theme}", flush=True)
 
             # Group column: restore from session if it exists in current data

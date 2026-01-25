@@ -154,6 +154,25 @@ def calculate_tSK(Pb206_204_S, Pb207_204_S):
     for pb206, pb207 in zip(Pb206_204_S, Pb207_204_S):
         results.append(calculate_tSK_single(pb206, pb207))
     return np.array(results)
+# mu值计算
+def calculate_mu(Pb206_204_S,t):
+    t = np.maximum(t, 0)
+    # 将 Ma 转换为 年
+    t = t * 1e6
+    mu=(Pb206_204_S-a0)/(np.exp(lambda_238 * T2)-np.exp(lambda_238 * t))
+    return mu
+def calculate_nu(Pb207_204_S,t):
+    t = np.maximum(t, 0)
+    # 将 Ma 转换为 年
+    t = t * 1e6
+    nu=(Pb207_204_S-b0)/(np.exp(lambda_235 * T2)-np.exp(lambda_235 * t))
+    return nu
+def calculate_omega(Pb208_204_S,t):
+    t = np.maximum(t, 0)
+    # 将 Ma 转换为 年
+    t = t * 1e6
+    omega=(Pb208_204_S-c0)/(np.exp(lambda_232 * T2)-np.exp(lambda_232 * t))
+    return omega
 
 # ==================== Δ值计算 ====================
 def calculate_delta(Pb206_204_S, Pb207_204_S, Pb208_204_S, tCDT):
@@ -252,6 +271,11 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     V1, V2 = calculate_V1V2(Delta_alpha, Delta_beta, Delta_gamma, a=a, b=b, c=c)
     results['V1'] = V1
     results['V2'] = V2
+
+    # 计算mu
+    results['mu'] = calculate_mu(Pb206_204_S,tCDT)
+    results['nu'] = calculate_nu(Pb207_204_S,tCDT)
+    results['omega'] = calculate_omega(Pb208_204_S,tCDT)
 
     return results
 
