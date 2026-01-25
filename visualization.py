@@ -26,12 +26,224 @@ from matplotlib.patches import Ellipse
 import pandas as pd
 import numpy as np
 
-# Import V1V2 calculation logic
+# Import Geochemistry calculation logic
 try:
-    from V1V2 import calculate_all_parameters
+    import geochemistry
+    from geochemistry import calculate_all_parameters
 except ImportError:
-    print("[WARN] V1V2 module not found. V1V2 algorithm will not be available.", flush=True)
+    print("[WARN] geochemistry module not found. V1V2 algorithm will not be available.", flush=True)
+    geochemistry = None
     calculate_all_parameters = None
+
+def _draw_isochron_overlays(ax, mode):
+    """Draw isochron reference lines for Pb-Pb plots."""
+    if geochemistry is None: return
+    try:
+        params = geochemistry.engine.get_parameters()
+        
+        # Unpack constants
+        l238 = params['lambda_238']
+        l235 = params['lambda_235']
+        l232 = params['lambda_232']
+        
+        # Origin (Primordial)
+        T_start = params['T2'] 
+        a0 = params['a0']
+        b0 = params['b0']
+        c0 = params['c0']
+        u_ratio = params['U_ratio']
+
+        # Get current view limits to determine range
+        xlim = ax.get_xlim()
+        # Clamp x_min to 0 avoiding negative ratios
+        x_min = max(0, xlim[0])
+        x_max = xlim[1]
+        
+
+
+        try:
+            from geochemistry import calculate_isochron_age_from_slope, calculate_source_mu_from_isochron, calculate_source_kappa_from_slope
+        except ImportError:
+            calculate_isochron_age_from_slope = None
+            calculate_source_mu_from_isochron = None
+            calculate_source_kappa_from_slope = None
+
+        # Determine fitting mode
+        # If "Show Age Isochrons" is checked, we fit lines to groups.
+        # We rely on app_state for data
+        
+        show_fits = getattr(app_state, 'show_isochrons', True)
+        if show_fits:
+            # Fetch indices of active points
+            _, indices = _get_analysis_data()
+            if indices is None or len(indices) == 0: return
+
+            # Access raw data from global dataframe (independent of selected analysis columns)
+            df = app_state.df_global
+            if df is None: return
+
+            col_206 = "206Pb/204Pb"
+            col_207 = "207Pb/204Pb"
+            col_208 = "208Pb/204Pb"
+
+            x_col = col_206
+            y_col = None
+
+            if x_col not in df.columns: return
+
+            if mode == 'ISOCHRON1':
+                y_col = col_207
+            elif mode == 'ISOCHRON2':
+                y_col = col_208
+            
+            if not y_col or y_col not in df.columns: return
+
+            # Work with the subset
+            df_subset = df.iloc[indices]
+            
+            # Identify groups
+            group_col = app_state.last_group_col
+            current_palette = getattr(app_state, 'current_palette', {})
+
+            if not group_col or group_col not in df_subset.columns:
+                unique_groups = ['All Data']
+                group_labels = np.array(['All Data'] * len(df_subset))
+            else:
+                group_labels = df_subset[group_col].fillna('Unknown').astype(str).values
+                unique_groups = np.unique(group_labels)
+
+            
+            for grp in unique_groups:
+                # Check Visibility
+                if app_state.visible_groups and grp not in app_state.visible_groups and grp != 'All Data':
+                    continue
+
+                mask = (group_labels == grp)
+                if np.sum(mask) < 2: continue # Need points for line
+
+                # Extract X and Y for this group
+                # Use .values to get numpy array
+                if grp == 'All Data':
+                    x_grp = df_subset[x_col].values.astype(float)
+                    y_grp = df_subset[y_col].values.astype(float)
+                else:
+                    x_grp = df_subset.loc[df_subset.index[mask], x_col].values.astype(float)
+                    y_grp = df_subset.loc[df_subset.index[mask], y_col].values.astype(float)
+
+                # Clean NaNs
+                valid = ~np.isnan(x_grp) & ~np.isnan(y_grp)
+                x_grp = x_grp[valid]
+                y_grp = y_grp[valid]
+
+                if len(x_grp) < 2: continue
+
+                # Fit Line (Linear Regression)
+                # Note: This is simple Y|X regression. 
+                # For high precision geochron, York regression is preferred, but this is for visualization
+                try:
+                    slope, intercept = np.polyfit(x_grp, y_grp, 1)
+                except:
+                    continue
+                
+                # Determine Line Range
+                x_min_g, x_max_g = np.min(x_grp), np.max(x_grp)
+                if x_max_g == x_min_g: continue # Vertical line?
+
+                span = x_max_g - x_min_g
+                x_line = np.array([x_min_g - span*0.1, x_max_g + span*0.1])
+                y_line = slope * x_line + intercept
+
+                # Color
+                color = current_palette.get(grp, '#333333')
+                if grp == 'All Data': color = '#64748b'
+
+                # Plot Line
+                ax.plot(x_line, y_line, linestyle='-', color=color, linewidth=1.5, alpha=0.8, zorder=2)
+
+                # Annotate Age (Only Isochron1)
+                if mode == 'ISOCHRON1' and calculate_isochron_age_from_slope:
+                        age_ma = calculate_isochron_age_from_slope(slope)
+                        if age_ma is not None and age_ma > 0:
+                            txt_x = x_max_g
+                            txt_y = slope * txt_x + intercept
+                            # Offset annotation slightly
+                            ax.text(txt_x, txt_y, f" {age_ma:.0f} Ma", 
+                                    color=color, fontsize=9, va='center', ha='left', fontweight='bold')
+                            
+                            # Draw Growth Curve for this Group (Source Mu)
+                            if getattr(app_state, 'show_growth_curves', True) and calculate_source_mu_from_isochron:
+                                 # Calculate mu that puts the initial ratio on the single-stage growth curve
+                                 mu_source = calculate_source_mu_from_isochron(slope, intercept, age_ma)
+                                 
+                                 if mu_source > 0:
+                                     t_steps = np.linspace(0, T_start, 100)
+                                     # x = a0 + mu * (e(LT) - e(Lt))
+                                     x_growth = a0 + mu_source * (np.exp(l238 * T_start) - np.exp(l238 * t_steps))
+                                     y_growth = b0 + mu_source * u_ratio * (np.exp(l235 * T_start) - np.exp(l235 * t_steps))
+                                     
+                                     # Plot Curve
+                                     ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
+                                     
+                                     # Annotate mu at Present Day (t=0, index=0)
+                                     ax.text(x_growth[0], y_growth[0], f" μ={mu_source:.1f}", 
+                                             fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
+
+                # Annotate Kappa (Only Isochron2)
+                elif mode == 'ISOCHRON2' and calculate_source_kappa_from_slope and calculate_isochron_age_from_slope:
+                    # To calculate kappa, we need the AGE.
+                    # This implies we must also fit the 207/206 isochron for this SAME group.
+                    
+                    if col_207 and col_206 in df_subset and col_207 in df_subset:
+                        # Fetch 207/206 data for this group
+                         if grp == 'All Data':
+                            x_iso = df_subset[col_206].values.astype(float)
+                            y_iso = df_subset[col_207].values.astype(float)
+                         else:
+                            x_iso = df_subset.loc[df_subset.index[mask], col_206].values.astype(float)
+                            y_iso = df_subset.loc[df_subset.index[mask], col_207].values.astype(float)
+                         
+                         valid_iso = ~np.isnan(x_iso) & ~np.isnan(y_iso)
+                         x_iso = x_iso[valid_iso]
+                         y_iso = y_iso[valid_iso]
+                         
+                         if len(x_iso) >= 2:
+                             try:
+                                 slope_iso, intercept_iso = np.polyfit(x_iso, y_iso, 1)
+                                 age_ma = calculate_isochron_age_from_slope(slope_iso)
+                                 
+                                 if age_ma is not None and age_ma > 0:
+                                     # Now calculate Kappa using the 208/206 slope (which is 'slope' var from outer scope) AND this Age
+                                     slope_208 = slope
+                                     kappa_source = calculate_source_kappa_from_slope(slope_208, age_ma)
+                                     
+                                     # Also need Mu for Growth Curve?
+                                     # Use the Mu from 207/206 intercept
+                                     mu_source = calculate_source_mu_from_isochron(slope_iso, intercept_iso, age_ma)
+                                     
+                                     if kappa_source > 0 and mu_source > 0:
+                                          # Draw Growth Curve for 208/204 vs 206/204
+                                          # y_growth (208) = c0 + omega * (e(L2T) - e(L2t))
+                                          # omega = mu * kappa
+                                          omega_source = mu_source * kappa_source
+                                          
+                                          t_steps = np.linspace(0, T_start, 100)
+                                          # x (206)
+                                          x_growth = a0 + mu_source * (np.exp(l238 * T_start) - np.exp(l238 * t_steps))
+                                          # y (208)
+                                          y_growth = c0 + omega_source * (np.exp(l232 * T_start) - np.exp(l232 * t_steps))
+                                          
+                                          ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
+                                          
+                                          # Label
+                                          label_text = f" κ={kappa_source:.1f}\n ({age_ma:.0f}Ma)"
+                                          ax.text(x_growth[0], y_growth[0], label_text, 
+                                             fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
+                             except:
+                                 pass
+
+                    
+    except Exception as e:
+        print(f"[WARN] Failed to draw isochron overlays: {e}")
 
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
@@ -966,6 +1178,42 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             except Exception as e:
                 print(f"[ERROR] V1V2 calculation failed: {e}", flush=True)
                 return False
+        
+        elif actual_algorithm in ('ISOCHRON1', 'ISOCHRON2'):
+            print(f"[DEBUG] Computing Isochron embedding for {actual_algorithm}", flush=True)
+            # Similar to V1V2, find columns
+            X, indices = _get_analysis_data()
+            if X is None:
+                return False
+            
+            cols = app_state.data_cols
+            col_206 = "206Pb/204Pb" if "206Pb/204Pb" in cols else None
+            col_207 = "207Pb/204Pb" if "207Pb/204Pb" in cols else None
+            col_208 = "208Pb/204Pb" if "208Pb/204Pb" in cols else None
+            
+            if not (col_206 and col_207 and col_208):
+                 # Try finding partial matches if exact failure? 
+                 # Or just fail. User provided file usually has these.
+                 print(f"[ERROR] Isochron plots require 206Pb/204Pb, 207Pb/204Pb, 208Pb/204Pb columns.", flush=True)
+                 return False
+
+            idx_206 = cols.index(col_206)
+            idx_207 = cols.index(col_207)
+            idx_208 = cols.index(col_208)
+            
+            # ISOCHRON1: x=206, y=207
+            # ISOCHRON2: x=206, y=208
+            
+            x_vals = X[:, idx_206]
+            if actual_algorithm == 'ISOCHRON1':
+                y_vals = X[:, idx_207]
+            else:
+                y_vals = X[:, idx_208]
+                
+            embedding = np.column_stack((x_vals, y_vals))
+            app_state.last_embedding = embedding
+            app_state.last_embedding_type = actual_algorithm
+
         elif actual_algorithm == 'TERNARY':
             print(f"[DEBUG] Computing Ternary embedding", flush=True)
             cols = getattr(app_state, 'selected_ternary_cols', [])
@@ -1520,6 +1768,14 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         if actual_algorithm == 'V1V2':
             app_state.ax.set_xlabel("V1")
             app_state.ax.set_ylabel("V2")
+        elif actual_algorithm == 'ISOCHRON1':
+            app_state.ax.set_xlabel("206Pb/204Pb")
+            app_state.ax.set_ylabel("207Pb/204Pb")
+            _draw_isochron_overlays(app_state.ax, 'ISOCHRON1')
+        elif actual_algorithm == 'ISOCHRON2':
+            app_state.ax.set_xlabel("206Pb/204Pb")
+            app_state.ax.set_ylabel("208Pb/204Pb")
+            _draw_isochron_overlays(app_state.ax, 'ISOCHRON2')
         elif actual_algorithm == 'TERNARY':
             # Labels and Grid handled by python-ternary wrapper above
             # We don't need additional labels here as corner labels are set on 'tax'
