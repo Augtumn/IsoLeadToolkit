@@ -59,6 +59,10 @@ REGRESSION_A = 0.0
 REGRESSION_B = 2.0367
 REGRESSION_C = -6.143
 
+# 1.8 PbIso 模型曲线演化参数 (R: E1/E2)
+E1_DEFAULT = 0.0
+E2_DEFAULT = 0.0
+
 # =============================================================================
 # 2. 预设模型库
 # =============================================================================
@@ -72,7 +76,9 @@ PRESET_MODELS = {
         'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
         'mu_M': 7.8,
         'omega_M': 31.512,
-        'U_ratio': U_RATIO_NATURAL
+        'U_ratio': U_RATIO_NATURAL,
+        'E1': E1_DEFAULT,
+        'E2': E2_DEFAULT
     },
     "Stacey & Kramers (2nd Stage)": {
         'T1': T_EARTH_CANON,
@@ -82,7 +88,9 @@ PRESET_MODELS = {
         'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
         'mu_M': 9.74,
         'omega_M': 36.84, # Derived from kappa=3.78 or similar
-        'U_ratio': U_RATIO_NATURAL
+        'U_ratio': U_RATIO_NATURAL,
+        'E1': E1_DEFAULT,
+        'E2': E2_DEFAULT
     },
     "Stacey & Kramers (1st Stage)": {
         'T1': T_EARTH_CANON,
@@ -92,7 +100,9 @@ PRESET_MODELS = {
         'a1': A0, 'b1': B0, 'c1': C0, # Start from primordial
         'mu_M': 7.19,
         'omega_M': 32.21,
-        'U_ratio': U_RATIO_NATURAL
+        'U_ratio': U_RATIO_NATURAL,
+        'E1': E1_DEFAULT,
+        'E2': E2_DEFAULT
     },
     "Cumming & Richards (Model III)": {
         'T1': 4509e6, 'T2': 4509e6, 'Tsec': 0, # Continuous
@@ -100,7 +110,9 @@ PRESET_MODELS = {
         'a1': A0, 'b1': B0, 'c1': C0,
         'mu_M': 9.164,
         'omega_M': 36.8,
-        'U_ratio': U_RATIO_NATURAL
+        'U_ratio': U_RATIO_NATURAL,
+        'E1': E1_DEFAULT,
+        'E2': E2_DEFAULT
     }
 }
 
@@ -134,7 +146,8 @@ class GeochemistryEngine:
             'omega_M': OMEGA_M_DEFAULT,
             'U_ratio': U_RATIO_NATURAL,
             
-            'a': REGRESSION_A, 'b': REGRESSION_B, 'c': REGRESSION_C
+            'a': REGRESSION_A, 'b': REGRESSION_B, 'c': REGRESSION_C,
+            'E1': E1_DEFAULT, 'E2': E2_DEFAULT
         }
         self.current_model_name = "V1V2 (Geokit)"
         self._update_derived_params()
@@ -193,7 +206,7 @@ engine = GeochemistryEngine()
 # 4. 数值计算辅助函数
 # =============================================================================
 
-def _solve_age_scipy(f, bounds):
+def _solve_age_scipy(f, bounds, search_points=200):
     """
     使用 Brent 方法求解年龄方程的根
     
@@ -206,21 +219,109 @@ def _solve_age_scipy(f, bounds):
     """
     t_min, t_max = bounds
     t_max_safe = t_max - 1.0 # 避免端点奇点
-    
+
+    def _eval(val):
+        try:
+            out = f(val)
+            return out if np.isfinite(out) else np.nan
+        except Exception:
+            return np.nan
+
     try:
-        f_min = f(t_min)
-        f_max = f(t_max_safe)
-        
+        f_min = _eval(t_min)
+        f_max = _eval(t_max_safe)
+
         if np.isnan(f_min) or np.isnan(f_max):
-            return None
-            
-        # 必须异号才能求解
-        if f_min * f_max > 0:
-            return None
-            
-        return optimize.brentq(f, t_min, t_max_safe, xtol=1e-6)
+            f_min = np.nan
+            f_max = np.nan
+
+        # 如果端点满足异号，直接求解
+        if np.isfinite(f_min) and np.isfinite(f_max) and f_min * f_max <= 0:
+            return optimize.brentq(f, t_min, t_max_safe, xtol=1e-6)
+
+        # 类似 R 的 extendInt：在区间内扫描寻找变号区间
+        t_samples = np.linspace(t_min, t_max_safe, search_points)
+        f_samples = np.array([_eval(t) for t in t_samples])
+
+        for i in range(len(t_samples) - 1):
+            f1, f2 = f_samples[i], f_samples[i + 1]
+            if not (np.isfinite(f1) and np.isfinite(f2)):
+                continue
+            if f1 == 0:
+                return t_samples[i]
+            if f1 * f2 < 0:
+                return optimize.brentq(f, t_samples[i], t_samples[i + 1], xtol=1e-6)
+
+        return None
     except Exception:
         return None
+
+
+def _exp_evolution_term(lmbda, t_years, E=0.0):
+    """
+    PbIso 模型曲线的指数演化项（对应 R: exp(lambda*t)*(1 - E*(t - 1/lambda))）
+    """
+    if E == 0 or E == 0.0:
+        return np.exp(lmbda * t_years)
+    return np.exp(lmbda * t_years) * (1.0 - E * (t_years - (1.0 / lmbda)))
+
+
+def calculate_modelcurve(t_Ma, params=None, T1=None, X1=None, Y1=None, Z1=None,
+                         Mu1=None, W1=None, U8U5=None, L5=None, L8=None, L2=None,
+                         E1=None, E2=None):
+    """
+    生成 PbIso 风格的模型曲线（等价 R 的 modelcurve）
+
+    Args:
+        t_Ma: 时间或年龄 (Ma)，标量或数组
+        T1: 模型起始时间 (Ma)，默认使用 params['Tsec'] (年) 转换
+        X1/Y1/Z1: 起始同位素比值
+        Mu1/W1: 238U/204Pb 与 232Th/204Pb 模型值
+        U8U5: 238U/235U 比值（R 中为 137.88）
+        L5/L8/L2: 衰变常数
+        E1/E2: 演化参数（默认 0）
+
+    Returns:
+        dict: {'t_Ma', 'Pb206_204', 'Pb207_204', 'Pb208_204'}
+    """
+    if params is None:
+        params = engine.params
+
+    t_years = np.asarray(t_Ma, dtype=float) * 1e6
+
+    T1_years = params['Tsec'] if T1 is None else float(T1) * 1e6
+    X1_val = params['a1'] if X1 is None else float(X1)
+    Y1_val = params['b1'] if Y1 is None else float(Y1)
+    Z1_val = params['c1'] if Z1 is None else float(Z1)
+
+    Mu1_val = params.get('mu_M', 9.74) if Mu1 is None else float(Mu1)
+    W1_val = params.get('omega_M', 36.84) if W1 is None else float(W1)
+
+    U8U5_val = (1.0 / params['U_ratio']) if U8U5 is None else float(U8U5)
+    L5_val = params['lambda_235'] if L5 is None else float(L5)
+    L8_val = params['lambda_238'] if L8 is None else float(L8)
+    L2_val = params['lambda_232'] if L2 is None else float(L2)
+
+    E1_val = params.get('E1', 0.0) if E1 is None else float(E1)
+    E2_val = params.get('E2', 0.0) if E2 is None else float(E2)
+
+    e8_T1 = _exp_evolution_term(L8_val, T1_years, E1_val)
+    e8_t = _exp_evolution_term(L8_val, t_years, E1_val)
+    e5_T1 = _exp_evolution_term(L5_val, T1_years, E1_val)
+    e5_t = _exp_evolution_term(L5_val, t_years, E1_val)
+    e2_T1 = _exp_evolution_term(L2_val, T1_years, E2_val)
+    e2_t = _exp_evolution_term(L2_val, t_years, E2_val)
+
+    x = X1_val + Mu1_val * (e8_T1 - e8_t)
+    y = Y1_val + (Mu1_val / U8U5_val) * (e5_T1 - e5_t)
+    z = Z1_val + W1_val * (e2_T1 - e2_t)
+
+    return {
+        't_Ma': np.asarray(t_Ma, dtype=float),
+        'Pb206_204': x,
+        'Pb207_204': y,
+        'Pb208_204': z
+    }
 
 # =============================================================================
 # 5. 模式年龄计算
@@ -269,7 +370,7 @@ def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_ag
             R = (S207 - b0_val) / (S206 - a0_val)
             return R - u_ratio * num / denom
         
-        t_result = _solve_age_scipy(f, bounds=(-T, T))
+        t_result = _solve_age_scipy(f, bounds=(-4700e6, 4700e6))
         return t_result / 1e6 if t_result is not None else None
     
     # 数组处理
@@ -289,7 +390,7 @@ def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_ag
             R = (s207 - b0_val) / (s206 - a0_val)
             return R - u_ratio * num / denom
 
-        t_res = _solve_age_scipy(f_scalar, bounds=(-T, T))
+        t_res = _solve_age_scipy(f_scalar, bounds=(-4700e6, 4700e6))
         results.append(t_res / 1e6 if t_res is not None else np.nan)
         
     return np.array(results).reshape(S206.shape)
@@ -331,7 +432,7 @@ def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
             R = (S207 - b1_val) / (S206 - a1_val)
             return R - u_ratio * num / denom
         
-        t_result = _solve_age_scipy(f, bounds=(-T, T))
+        t_result = _solve_age_scipy(f, bounds=(-4700e6, 4700e6))
         return t_result / 1e6 if t_result is not None else None
     
     # 数组处理
@@ -351,7 +452,7 @@ def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
             R = (s207 - b1_val) / (s206 - a1_val)
             return R - u_ratio * num / denom
         
-        t_res = _solve_age_scipy(f_scalar, bounds=(-T, T))
+        t_res = _solve_age_scipy(f_scalar, bounds=(-4700e6, 4700e6))
         results.append(t_res / 1e6 if t_res is not None else np.nan)
 
     return np.array(results).reshape(S206.shape)
@@ -662,7 +763,8 @@ def calculate_initial_ratio_84(t_Ma, Pb206_204_S, Pb207_204_S, Pb208_204_S, para
 # 9. 地球化学异常 Delta Calculation
 # =============================================================================
 
-def calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params=None, T_mantle=None, use_two_stage=False):
+def calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params=None,
+                     T_mantle=None, use_two_stage=False, E1=None, E2=None):
     """
     计算 Delta 值 (Δα, Δβ, Δγ)
     
@@ -672,6 +774,7 @@ def calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params=None, T
     Args:
         T_mantle: 地幔参考曲线的起始时间
         use_two_stage: 是否使用二阶段参数计算参考曲线
+        E1/E2: 演化参数（对应 PbIso 模型曲线）
         
     Returns:
         (d_alpha, d_beta, d_gamma): 偏差值数组
@@ -685,6 +788,9 @@ def calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params=None, T
     mu_M = params['mu_M']
     omega_M = params['omega_M']
     v_M = params['v_M']
+
+    E1_val = params.get('E1', 0.0) if E1 is None else float(E1)
+    E2_val = params.get('E2', 0.0) if E2 is None else float(E2)
 
     if use_two_stage:
         T = T_mantle if T_mantle is not None else params['Tsec']
@@ -715,9 +821,9 @@ def calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params=None, T
     t_val = np.maximum(t, 0) * 1e6
     
     # 计算同期地幔参考值
-    ref206 = a_ref + mu_M * (np.exp(l238 * T) - np.exp(l238 * t_val))
-    ref207 = b_ref + v_M * (np.exp(l235 * T) - np.exp(l235 * t_val))
-    ref208 = c_ref + omega_M * (np.exp(l232 * T) - np.exp(l232 * t_val))
+    ref206 = a_ref + mu_M * (_exp_evolution_term(l238, T, E1_val) - _exp_evolution_term(l238, t_val, E1_val))
+    ref207 = b_ref + v_M * (_exp_evolution_term(l235, T, E1_val) - _exp_evolution_term(l235, t_val, E1_val))
+    ref208 = c_ref + omega_M * (_exp_evolution_term(l232, T, E2_val) - _exp_evolution_term(l232, t_val, E2_val))
     
     # 计算偏差 (千分比)
     # 注意: 若 t 为标量而 Pb 为数组，numpy会自动广播 ref 值
@@ -887,13 +993,20 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     results['tSK (Ma)'] = tSK
     
     # 3. Delta 值计算
+    E1_val = kwargs.get('E1', None)
+    E2_val = kwargs.get('E2', None)
+
     if is_two_stage:
         t_model = tSK
-        d_alpha, d_beta, d_gamma = calculate_deltas(Pb206, Pb207, Pb208, t_model, use_two_stage=True)
+        d_alpha, d_beta, d_gamma = calculate_deltas(
+            Pb206, Pb207, Pb208, t_model, use_two_stage=True, E1=E1_val, E2=E2_val
+        )
     else:
         # 默认 V1V2 逻辑: 使用 T1=4.43Ga 计算出的单阶段年龄作为基准
         t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, initial_age=engine.params['T1'])
-        d_alpha, d_beta, d_gamma = calculate_deltas(Pb206, Pb207, Pb208, t_calc, use_two_stage=False)
+        d_alpha, d_beta, d_gamma = calculate_deltas(
+            Pb206, Pb207, Pb208, t_calc, use_two_stage=False, E1=E1_val, E2=E2_val
+        )
         
     results.update({
         'Delta_alpha': d_alpha,

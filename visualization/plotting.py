@@ -142,6 +142,7 @@ def _draw_isochron_overlays(ax, mode):
                 # For high precision geochron, York regression is preferred, but this is for visualization
                 try:
                     slope, intercept = np.polyfit(x_grp, y_grp, 1)
+                    print(f"[DEBUG] Group {grp} fit slope: {slope}", flush=True) 
                 except:
                     continue
                 
@@ -172,6 +173,7 @@ def _draw_isochron_overlays(ax, mode):
                             
                             # Draw Growth Curve for this Group (Source Mu/Kappa)
                             if getattr(app_state, 'show_growth_curves', True):
+                                print(f"[DEBUG] Drawing ISOCHRON1 growth curve for {grp}", flush=True)
                                 # Determine Model Type (Single vs Two Stage)
                                 is_two_stage = 'a1' in params
                                 
@@ -193,33 +195,24 @@ def _draw_isochron_overlays(ax, mode):
                                 y_growth = None
                                 annot_text = ""
 
+                                E1_val = params.get('E1', 0.0)
+                                E2_val = params.get('E2', 0.0)
+
                                 if mode == 'ISOCHRON1': # 207Pb/204Pb vs 206Pb/204Pb
                                     # Solve for Mu
-                                    C_alpha = np.exp(l238 * T_start_curve) - np.exp(l238 * t_years)
-                                    C_beta = u_ratio * (np.exp(l235 * T_start_curve) - np.exp(l235 * t_years))
+                                    C_alpha = geochemistry._exp_evolution_term(l238, T_start_curve, E1_val) - geochemistry._exp_evolution_term(l238, t_years, E1_val)
+                                    C_beta = u_ratio * (geochemistry._exp_evolution_term(l235, T_start_curve, E1_val) - geochemistry._exp_evolution_term(l235, t_years, E1_val))
                                     
                                     denom = C_beta - slope * C_alpha
+                                    print(f"[DEBUG] Group {grp} ISOCHRON1: Age={age_ma}Ma, Slope={slope:.4f}, Denom={denom:.4e}", flush=True)
+
                                     if abs(denom) > 1e-15:
                                         mu_source = (slope * a_start + intercept - b_start) / denom
-                                        
-                                        x_growth = a_start + mu_source * (np.exp(l238 * T_start_curve) - np.exp(l238 * t_steps))
-                                        y_growth = b_start + mu_source * u_ratio * (np.exp(l235 * T_start_curve) - np.exp(l235 * t_steps))
-                                        annot_text = f" μ={mu_source:.1f}"
+                                        print(f"[DEBUG] Group {grp} ISOCHRON1: Calculated Mu={mu_source:.2f}", flush=True)
 
-                                elif mode == 'ISOCHRON2': # 208Pb/204Pb vs 206Pb/204Pb
-                                    # Solve for Kappa (Th/U)
-                                    # Slope ~ Kappa * (C_gamma / C_alpha)
-                                    C_alpha = np.exp(l238 * T_start_curve) - np.exp(l238 * t_years)
-                                    C_gamma = np.exp(l232 * T_start_curve) - np.exp(l232 * t_years)
-                                    
-                                    if abs(C_alpha) > 1e-15:
-                                        kappa_source = slope * (C_alpha / C_gamma)
-                                        # Assume model reference Mu for drawing the curve shape
-                                        mu_ref = params.get('mu_M', 9.74) 
-                                        
-                                        x_growth = a_start + mu_ref * (np.exp(l238 * T_start_curve) - np.exp(l238 * t_steps))
-                                        y_growth = c_start + mu_ref * kappa_source * (np.exp(l232 * T_start_curve) - np.exp(l232 * t_steps))
-                                        annot_text = f" κ={kappa_source:.2f}"
+                                        x_growth = a_start + mu_source * (geochemistry._exp_evolution_term(l238, T_start_curve, E1_val) - geochemistry._exp_evolution_term(l238, t_steps, E1_val))
+                                        y_growth = b_start + mu_source * u_ratio * (geochemistry._exp_evolution_term(l235, T_start_curve, E1_val) - geochemistry._exp_evolution_term(l235, t_steps, E1_val))
+                                        annot_text = f" μ={mu_source:.1f}"
 
                                 if x_growth is not None:
                                      ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
@@ -228,56 +221,65 @@ def _draw_isochron_overlays(ax, mode):
 
                 # Annotate Kappa (Only Isochron2)
                 elif mode == 'ISOCHRON2' and calculate_source_kappa_from_slope and calculate_isochron_age_from_slope:
-                    # To calculate kappa, we need the AGE.
-                    # This implies we must also fit the 207/206 isochron for this SAME group.
-                    
-                    if col_207 and col_206 in df_subset and col_207 in df_subset:
-                        # Fetch 207/206 data for this group
-                         if grp == 'All Data':
-                            x_iso = df_subset[col_206].values.astype(float)
-                            y_iso = df_subset[col_207].values.astype(float)
-                         else:
-                            x_iso = df_subset.loc[df_subset.index[mask], col_206].values.astype(float)
-                            y_iso = df_subset.loc[df_subset.index[mask], col_207].values.astype(float)
-                         
-                         valid_iso = ~np.isnan(x_iso) & ~np.isnan(y_iso)
-                         x_iso = x_iso[valid_iso]
-                         y_iso = y_iso[valid_iso]
-                         
-                         if len(x_iso) >= 2:
-                             try:
-                                 slope_iso, intercept_iso = np.polyfit(x_iso, y_iso, 1)
-                                 age_ma = calculate_isochron_age_from_slope(slope_iso)
-                                 
-                                 if age_ma is not None and age_ma > 0:
-                                     # Now calculate Kappa using the 208/206 slope (which is 'slope' var from outer scope) AND this Age
-                                     slope_208 = slope
-                                     kappa_source = calculate_source_kappa_from_slope(slope_208, age_ma)
-                                     
-                                     # Also need Mu for Growth Curve?
-                                     # Use the Mu from 207/206 intercept
-                                     mu_source = calculate_source_mu_from_isochron(slope_iso, intercept_iso, age_ma)
-                                     
-                                     if kappa_source > 0 and mu_source > 0:
-                                          # Draw Growth Curve for 208/204 vs 206/204
-                                          # y_growth (208) = c0 + omega * (e(L2T) - e(L2t))
-                                          # omega = mu * kappa
-                                          omega_source = mu_source * kappa_source
-                                          
-                                          t_steps = np.linspace(0, T_start, 100)
-                                          # x (206)
-                                          x_growth = a0 + mu_source * (np.exp(l238 * T_start) - np.exp(l238 * t_steps))
-                                          # y (208)
-                                          y_growth = c0 + omega_source * (np.exp(l232 * T_start) - np.exp(l232 * t_steps))
-                                          
-                                          ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
-                                          
-                                          # Label
-                                          label_text = f" κ={kappa_source:.1f}\n ({age_ma:.0f}Ma)"
-                                          ax.text(x_growth[0], y_growth[0], label_text, 
-                                             fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
-                             except:
-                                 pass
+                    print(f"[DEBUG] Processing ISOCHRON2 for group: {grp}", flush=True)
+                    if not getattr(app_state, 'show_growth_curves', True):
+                        print("[DEBUG] Growth curves disabled in settings", flush=True)
+                    else:
+                        # To calculate kappa, we need the AGE.
+                        # This implies we must also fit the 207/206 isochron for this SAME group.
+                        
+                        if col_207 and col_206 in df_subset and col_207 in df_subset:
+                            # Fetch 207/206 data for this group
+                            if grp == 'All Data':
+                                x_iso = df_subset[col_206].values.astype(float)
+                                y_iso = df_subset[col_207].values.astype(float)
+                            else:
+                                x_iso = df_subset.loc[df_subset.index[mask], col_206].values.astype(float)
+                                y_iso = df_subset.loc[df_subset.index[mask], col_207].values.astype(float)
+                            
+                            valid_iso = ~np.isnan(x_iso) & ~np.isnan(y_iso)
+                            x_iso = x_iso[valid_iso]
+                            y_iso = y_iso[valid_iso]
+                            
+                            print(f"[DEBUG] Group {grp}: Found {len(x_iso)} valid points for age calc", flush=True)
+
+                            if len(x_iso) >= 2:
+                                try:
+                                    slope_iso, intercept_iso = np.polyfit(x_iso, y_iso, 1)
+                                    age_ma = calculate_isochron_age_from_slope(slope_iso)
+                                    print(f"[DEBUG] Group {grp}: Calculated Age = {age_ma} Ma", flush=True)
+                                    
+                                    if age_ma is not None and age_ma > 0:
+                                        # Now calculate Kappa using the 208/206 slope (which is 'slope' var from outer scope) AND this Age
+                                        slope_208 = slope
+                                        kappa_source = calculate_source_kappa_from_slope(slope_208, age_ma)
+                                        
+                                        # Also need Mu for Growth Curve?
+                                        # Use the Mu from 207/206 intercept
+                                        mu_source = calculate_source_mu_from_isochron(slope_iso, intercept_iso, age_ma)
+                                        
+                                        if kappa_source > 0 and mu_source > 0:
+                                            E1_val = params.get('E1', 0.0)
+                                            E2_val = params.get('E2', 0.0)
+                                            # Draw Growth Curve for 208/204 vs 206/204
+                                            # y_growth (208) = c0 + omega * (e(L2T) - e(L2t))
+                                            # omega = mu * kappa
+                                            omega_source = mu_source * kappa_source
+                                            
+                                            t_steps = np.linspace(0, T_start, 100)
+                                            # x (206)
+                                            x_growth = a0 + mu_source * (geochemistry._exp_evolution_term(l238, T_start, E1_val) - geochemistry._exp_evolution_term(l238, t_steps, E1_val))
+                                            # y (208)
+                                            y_growth = c0 + omega_source * (geochemistry._exp_evolution_term(l232, T_start, E2_val) - geochemistry._exp_evolution_term(l232, t_steps, E2_val))
+                                            
+                                            ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
+                                            
+                                            # Label
+                                            label_text = f" κ={kappa_source:.1f}\n ({age_ma:.0f}Ma)"
+                                            ax.text(x_growth[0], y_growth[0], label_text, 
+                                                fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
+                                except Exception as iso2_err:
+                                    print(f"[WARN] ISOCHRON2 Curve Error: {iso2_err}", flush=True)
 
                     
     except Exception as e:
