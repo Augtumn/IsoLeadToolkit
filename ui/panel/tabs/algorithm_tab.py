@@ -57,9 +57,16 @@ class AlgorithmTabMixin:
         group_config_btn.pack(anchor=tk.W, pady=(4, 0))
         self._register_translation(group_config_btn, "Configure Group Columns")
 
+        # Mode-specific settings container
+        self.mode_section = self._create_section(
+            frame,
+            "Mode-specific Settings",
+            "Controls shown here depend on the current projection mode."
+        )
+
         # UMAP Parameters
         self.umap_section = self._create_section(
-            frame,
+            self.mode_section,
             "UMAP Parameters",
             "Control neighbourhood size and how tightly points cluster."
         )
@@ -99,7 +106,7 @@ class AlgorithmTabMixin:
         
         # t-SNE Parameters
         self.tsne_section = self._create_section(
-            frame,
+            self.mode_section,
             "t-SNE Parameters",
             "Adjust perplexity and learning rate to refine t-SNE embeddings."
         )
@@ -139,7 +146,7 @@ class AlgorithmTabMixin:
 
         # PCA Parameters
         self.pca_section = self._create_section(
-            frame,
+            self.mode_section,
             "PCA Parameters",
             "Standard Principal Component Analysis settings."
         )
@@ -205,7 +212,7 @@ class AlgorithmTabMixin:
 
         # Robust PCA Parameters
         self.rpca_section = self._create_section(
-            frame,
+            self.mode_section,
             "Robust PCA Parameters",
             "Minimum Covariance Determinant (MCD) based PCA. Resistant to outliers."
         )
@@ -279,11 +286,11 @@ class AlgorithmTabMixin:
         self.rpca_y_spin.bind('<Return>', lambda e: self._on_pca_dim_change())
 
         # --- Ternary Parameters ---
-        self._build_ternary_section(frame)
+        self._build_ternary_section(self.mode_section)
 
         # V1V2 Parameters
         self.v1v2_section = self._create_section(
-            frame,
+            self.mode_section,
             "V1V2 Time Settings",
             "Adjust time constants for V1-V2 diagram calculation."
         )
@@ -324,7 +331,7 @@ class AlgorithmTabMixin:
         
         # Isochron Parameters
         self.isochron_section = self._create_section(
-            frame,
+            self.mode_section,
             "Isochron Controls",
             "Toggle reference lines for Isochron plots."
         )
@@ -355,7 +362,7 @@ class AlgorithmTabMixin:
         
         # 2D Scatter Parameters
         self.twod_section = self._create_section(
-            frame,
+            self.mode_section,
             "2D Scatter Parameters",
             "Select axes for 2D scatter plot."
         )

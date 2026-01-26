@@ -28,35 +28,48 @@ class SettingsTabMixin:
         selection_grid = ttk.Frame(algo_section, style='CardBody.TFrame')
         selection_grid.pack(fill=tk.X, pady=(4, 0))
 
-        options = [
+        def add_mode_group(parent, title_key, options):
+            title = ttk.Label(parent, text=self._translate(title_key), style='FieldLabel.TLabel')
+            title.pack(anchor=tk.W, pady=(6, 2))
+            self._register_translation(title, title_key)
+
+            grid = ttk.Frame(parent, style='CardBody.TFrame')
+            grid.pack(fill=tk.X, pady=(0, 4))
+
+            for idx, (label_key, value) in enumerate(options):
+                column = idx % 2
+                row = idx // 2
+                cell = ttk.Frame(grid, style='CardBody.TFrame')
+                cell.grid(row=row, column=column, sticky=tk.W, padx=(0 if column == 0 else 16, 0), pady=2)
+                radio = ttk.Radiobutton(
+                    cell,
+                    text=self._translate(label_key),
+                    variable=self.radio_vars['render_mode'],
+                    value=value,
+                    command=self._on_change,
+                    style='Option.TRadiobutton'
+                )
+                radio.pack(anchor=tk.W)
+                self._register_translation(radio, label_key)
+
+        add_mode_group(selection_grid, "Embedding Modes", [
             ("UMAP Embedding", "UMAP"),
             ("t-SNE Embedding", "tSNE"),
             ("PCA Embedding", "PCA"),
             ("Robust PCA", "RobustPCA"),
-            ("V1-V2 Diagram", "V1V2"),
-            ("Ternary Plot", "Ternary"),
-            ("207Pb/204Pb - 206Pb/204Pb", "ISOCHRON1"),
-            ("208Pb/204Pb - 206Pb/204Pb", "ISOCHRON2"),
+        ])
+
+        add_mode_group(selection_grid, "Visualization Modes", [
             ("2D Scatter (raw)", "2D"),
             ("3D Scatter (raw)", "3D"),
-        ]
+            ("Ternary Plot", "Ternary"),
+        ])
 
-        for idx, (label_key, value) in enumerate(options):
-            # Use 2 columns to prevent overlap and accommodate long labels
-            column = idx % 2 
-            row = idx // 2
-            cell = ttk.Frame(selection_grid, style='CardBody.TFrame')
-            cell.grid(row=row, column=column, sticky=tk.W, padx=(0 if column == 0 else 16, 0), pady=2)
-            radio = ttk.Radiobutton(
-                cell,
-                text=self._translate(label_key),
-                variable=self.radio_vars['render_mode'],
-                value=value,
-                command=self._on_change,
-                style='Option.TRadiobutton'
-            )
-            radio.pack(anchor=tk.W)
-            self._register_translation(radio, label_key)
+        add_mode_group(selection_grid, "Geochemistry Modes", [
+            ("V1-V2 Diagram", "V1V2"),
+            ("207Pb/204Pb - 206Pb/204Pb", "ISOCHRON1"),
+            ("208Pb/204Pb - 206Pb/204Pb", "ISOCHRON2"),
+        ])
 
         # Data Configuration
         data_section = self._create_section(

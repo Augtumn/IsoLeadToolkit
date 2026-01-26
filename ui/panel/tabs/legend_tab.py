@@ -31,15 +31,26 @@ class LegendTabMixin:
             step=1
         )
 
-        # Add a refresh button
+        action_row = ttk.Frame(frame, style='ControlPanel.TFrame')
+        action_row.pack(fill=tk.X, pady=(0, 10))
+
         refresh_btn = ttk.Button(
-            frame,
+            action_row,
             text=self._translate("Refresh Legend"),
             style='Secondary.TButton',
             command=self._refresh_legend_tab
         )
-        refresh_btn.pack(anchor=tk.W, pady=(0, 10))
+        refresh_btn.pack(side=tk.LEFT)
         self._register_translation(refresh_btn, "Refresh Legend")
+
+        filter_btn = ttk.Button(
+            action_row,
+            text=self._translate("Filter Legend"),
+            style='Secondary.TButton',
+            command=self._open_legend_filter
+        )
+        filter_btn.pack(side=tk.LEFT, padx=(10, 0))
+        self._register_translation(filter_btn, "Filter Legend")
         
         self.legend_items_frame = ttk.Frame(frame, style='ControlPanel.TFrame')
         self.legend_items_frame.pack(fill=tk.BOTH, expand=True)

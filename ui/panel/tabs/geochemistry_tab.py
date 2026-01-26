@@ -72,6 +72,63 @@ class GeochemistryTabMixin:
         model_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
         model_combo.bind("<<ComboboxSelected>>", self._on_model_selected)
 
+        # Actions (move near top for quick access)
+        btn_frame = ttk.Frame(frame, style='ControlPanel.TFrame')
+        btn_frame.pack(fill=tk.X, pady=(10, 18))
+
+        def apply_changes():
+            new_params = {}
+            try:
+                # Handle Time explicitly (Ma -> years)
+                if 'T1' in self.geo_vars:
+                    new_params['T1'] = float(self.geo_vars['T1'].get()) * 1e6
+                if 'T2' in self.geo_vars:
+                    new_params['T2'] = float(self.geo_vars['T2'].get()) * 1e6
+                new_params['Tsec'] = float(self.geo_vars['Tsec'].get()) * 1e6
+                
+                # Others direct float conversion
+                direct_keys = ['lambda_238', 'lambda_235', 'lambda_232', 
+                               'a0', 'b0', 'c0', 'a1', 'b1', 'c1',
+                               'mu_M', 'omega_M', 'U_ratio']
+                               
+                for k in direct_keys:
+                    new_params[k] = float(self.geo_vars[k].get())
+                    
+                geochemistry.engine.update_parameters(new_params)
+                
+                # Trigger Data Recalculation if data exists
+                if app_state.df_global is not None:
+                    if app_state.render_mode == 'V1V2':
+                        self._on_change()
+                
+                messagebox.showinfo(self._translate("Success"), self._translate("Parameters updated successfully."))
+
+            except ValueError:
+                messagebox.showerror(self._translate("Error"), self._translate("Invalid numeric input."))
+
+        apply_btn = ttk.Button(btn_frame, text=self._translate("Apply Changes"), style='Accent.TButton', command=apply_changes)
+        apply_btn.pack(side=tk.RIGHT, padx=5)
+        self._register_translation(apply_btn, "Apply Changes")
+
+        def reset_defaults():
+            defaults = {
+                'Tsec': 3700,
+                'lambda_238': 1.55125e-10, 'lambda_235': 9.8485e-10, 'lambda_232': 4.94752e-11,
+                'a0': 9.307, 'b0': 10.294, 'c0': 29.476,
+                'a1': 11.152, 'b1': 12.998, 'c1': 31.23,
+                'mu_M': 7.8, 'omega_M': 4.04 * 7.8, 'U_ratio': 1/137.88
+            }
+            
+            for k, v in defaults.items():
+                if k in self.geo_vars:
+                    self.geo_vars[k].set(str(v))
+            
+            apply_changes()
+
+        reset_btn = ttk.Button(btn_frame, text=self._translate("Reset Defaults"), style='Secondary.TButton', command=reset_defaults)
+        reset_btn.pack(side=tk.RIGHT)
+        self._register_translation(reset_btn, "Reset Defaults")
+
         # 1. Time Constants
         sect_time = self._create_section(frame, "Time Parameters (Ma)", "Ages and time constants.")
         
@@ -132,63 +189,6 @@ class GeochemistryTabMixin:
         add_entry_grid(grid_mantle, "μ (Mantle)", current_params.get('mu_M', ''), 'mu_M', 0, 0)
         add_entry_grid(grid_mantle, "ω (Mantle)", current_params.get('omega_M', ''), 'omega_M', 0, 1)
         add_entry_grid(grid_mantle, "U Ratio (235/238)", current_params.get('U_ratio', ''), 'U_ratio', 1, 0)
-
-        # Actions
-        btn_frame = ttk.Frame(frame, style='ControlPanel.TFrame')
-        btn_frame.pack(fill=tk.X, pady=20)
-        
-        def apply_changes():
-            new_params = {}
-            try:
-                # Handle Time explicitly (Ma -> years)
-                if 'T1' in self.geo_vars:
-                    new_params['T1'] = float(self.geo_vars['T1'].get()) * 1e6
-                if 'T2' in self.geo_vars:
-                    new_params['T2'] = float(self.geo_vars['T2'].get()) * 1e6
-                new_params['Tsec'] = float(self.geo_vars['Tsec'].get()) * 1e6
-                
-                # Others direct float conversion
-                direct_keys = ['lambda_238', 'lambda_235', 'lambda_232', 
-                               'a0', 'b0', 'c0', 'a1', 'b1', 'c1',
-                               'mu_M', 'omega_M', 'U_ratio']
-                               
-                for k in direct_keys:
-                    new_params[k] = float(self.geo_vars[k].get())
-                    
-                geochemistry.engine.update_parameters(new_params)
-                
-                # Trigger Data Recalculation if data exists
-                if app_state.df_global is not None:
-                    if app_state.render_mode == 'V1V2':
-                        self._on_change()
-                
-                messagebox.showinfo(self._translate("Success"), self._translate("Parameters updated successfully."))
-
-            except ValueError:
-                messagebox.showerror(self._translate("Error"), self._translate("Invalid numeric input."))
-
-        apply_btn = ttk.Button(btn_frame, text=self._translate("Apply Changes"), style='Accent.TButton', command=apply_changes)
-        apply_btn.pack(side=tk.RIGHT, padx=5)
-        self._register_translation(apply_btn, "Apply Changes")
-
-        def reset_defaults():
-            defaults = {
-                'Tsec': 3700,
-                'lambda_238': 1.55125e-10, 'lambda_235': 9.8485e-10, 'lambda_232': 4.94752e-11,
-                'a0': 9.307, 'b0': 10.294, 'c0': 29.476,
-                'a1': 11.152, 'b1': 12.998, 'c1': 31.23,
-                'mu_M': 7.8, 'omega_M': 4.04 * 7.8, 'U_ratio': 1/137.88
-            }
-            
-            for k, v in defaults.items():
-                if k in self.geo_vars:
-                    self.geo_vars[k].set(str(v))
-            
-            apply_changes()
-
-        reset_btn = ttk.Button(btn_frame, text=self._translate("Reset Defaults"), style='Secondary.TButton', command=reset_defaults)
-        reset_btn.pack(side=tk.RIGHT)
-        self._register_translation(reset_btn, "Reset Defaults")
 
     def _on_model_selected(self, event=None):
         """Handle Geochemistry Model Selection Change"""
