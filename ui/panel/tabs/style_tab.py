@@ -117,12 +117,19 @@ class StyleTabMixin:
         color_combo.pack(fill=tk.X, pady=(0, 8))
         color_combo.bind("<<ComboboxSelected>>", self._on_style_change)
 
-        # --- Font Settings ---
-        font_section = self._create_section(
-            frame,
-            "Font Settings",
-            "Customize fonts and text sizes."
-        )
+        # --- Style Columns (Font + Marker) ---
+        style_columns = ttk.Frame(frame, style='ControlPanel.TFrame')
+        style_columns.pack(fill=tk.X, pady=(4, 0))
+        style_columns.columnconfigure(0, weight=1)
+        style_columns.columnconfigure(1, weight=1)
+
+        font_section = ttk.LabelFrame(style_columns, text=self._translate("Font Settings"), padding=14, style='Card.TLabelframe')
+        font_section.grid(row=0, column=0, sticky=tk.EW, padx=(6, 6), pady=6)
+        self._register_translation(font_section, "Font Settings")
+
+        font_desc = ttk.Label(font_section, text=self._translate("Customize fonts and text sizes."), style='Body.TLabel', wraplength=240, justify=tk.LEFT)
+        font_desc.pack(fill=tk.X, pady=(0, 10))
+        self._register_translation(font_desc, "Customize fonts and text sizes.")
         
         # Get available fonts
         all_system_fonts = sorted(style_manager_instance.get_available_fonts())
@@ -210,12 +217,13 @@ class StyleTabMixin:
         self.font_size_vars['tick'] = add_size_slider(size_frame, "Tick", 'tick', 10)
         self.font_size_vars['legend'] = add_size_slider(size_frame, "Legend", 'legend', 10)
 
-        # --- Marker Settings ---
-        marker_section = self._create_section(
-            frame,
-            "Marker Settings",
-            "Customize data point appearance."
-        )
+        marker_section = ttk.LabelFrame(style_columns, text=self._translate("Marker Settings"), padding=14, style='Card.TLabelframe')
+        marker_section.grid(row=0, column=1, sticky=tk.EW, padx=(6, 6), pady=6)
+        self._register_translation(marker_section, "Marker Settings")
+
+        marker_desc = ttk.Label(marker_section, text=self._translate("Customize data point appearance."), style='Body.TLabel', wraplength=240, justify=tk.LEFT)
+        marker_desc.pack(fill=tk.X, pady=(0, 10))
+        self._register_translation(marker_desc, "Customize data point appearance.")
         
         marker_frame = ttk.Frame(marker_section, style='CardBody.TFrame')
         marker_frame.pack(fill=tk.X)

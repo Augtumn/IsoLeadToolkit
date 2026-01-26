@@ -23,6 +23,8 @@ class ToolsTabMixin:
         
         analysis_row = ttk.Frame(analysis_section, style='CardBody.TFrame')
         analysis_row.pack(fill=tk.X)
+        analysis_row.columnconfigure(0, weight=1)
+        analysis_row.columnconfigure(1, weight=1)
         
         from visualization import show_correlation_heatmap, show_embedding_correlation, show_shepard_diagram
         
@@ -32,7 +34,7 @@ class ToolsTabMixin:
             style='Secondary.TButton',
             command=lambda: show_correlation_heatmap(self.root)
         )
-        corr_btn.pack(side=tk.LEFT, padx=(0, 10))
+        corr_btn.grid(row=0, column=0, sticky=tk.EW, padx=(0, 10), pady=(0, 6))
         self._register_translation(corr_btn, "Correlation Heatmap")
 
         axis_corr_btn = ttk.Button(
@@ -41,7 +43,7 @@ class ToolsTabMixin:
             style='Secondary.TButton',
             command=lambda: show_embedding_correlation(self.root)
         )
-        axis_corr_btn.pack(side=tk.LEFT, padx=(0, 10))
+        axis_corr_btn.grid(row=0, column=1, sticky=tk.EW, padx=(0, 0), pady=(0, 6))
         self._register_translation(axis_corr_btn, "Show Axis Corr.")
         
         shepard_btn = ttk.Button(
@@ -50,7 +52,7 @@ class ToolsTabMixin:
             style='Secondary.TButton',
             command=lambda: show_shepard_diagram(self.root)
         )
-        shepard_btn.pack(side=tk.LEFT)
+        shepard_btn.grid(row=1, column=0, sticky=tk.EW)
         self._register_translation(shepard_btn, "Show Shepard Plot")
 
         # Confidence Ellipse Settings
