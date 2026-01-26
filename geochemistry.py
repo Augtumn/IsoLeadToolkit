@@ -842,25 +842,31 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
         'Pb208_204_S': Pb208,
     }
     
+    # 获取当前模型设置
+    current_model = getattr(engine, 'current_model_name', '')
+    # V1V2 (Geokit) 模式特殊处理: 使用 T1=4.43Ga 计算 tCDT
+    is_geokit = "V1V2" in current_model or "Geokit" in current_model
+    is_two_stage = "2nd Stage" in current_model or "Stacey" in current_model
+    
     # 2. 模式年龄计算
-    tCDT = calculate_single_stage_age(Pb206, Pb207)
+    if is_geokit:
+        tCDT = calculate_single_stage_age(Pb206, Pb207, initial_age=engine.params['T1'])
+    else:
+        tCDT = calculate_single_stage_age(Pb206, Pb207)
+
     tSK = calculate_two_stage_age(Pb206, Pb207)
     
     results['tCDT (Ma)'] = tCDT
     results['tSK (Ma)'] = tSK
     
     # 3. Delta 值计算
-    # 根据当前模型选择基准。若为 Two-Stage 模型，则使用 tSK 和 Two-Stage 基准线
-    current_model = getattr(engine, 'current_model_name', '')
-    is_two_stage = "2nd Stage" in current_model
-    
     if is_two_stage:
         t_model = tSK
         d_alpha, d_beta, d_gamma = calculate_deltas(Pb206, Pb207, Pb208, t_model, use_two_stage=True)
     else:
         # 默认 V1V2 逻辑: 使用 T1=4.43Ga 计算出的单阶段年龄作为基准
-        t_single_T1 = calculate_single_stage_age(Pb206, Pb207, initial_age=engine.params['T1'])
-        d_alpha, d_beta, d_gamma = calculate_deltas(Pb206, Pb207, Pb208, t_single_T1, use_two_stage=False)
+        t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, initial_age=engine.params['T1'])
+        d_alpha, d_beta, d_gamma = calculate_deltas(Pb206, Pb207, Pb208, t_calc, use_two_stage=False)
         
     results.update({
         'Delta_alpha': d_alpha,
@@ -879,7 +885,7 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     results['V2'] = v2
     
     # 5. 源区参数反演
-    # 5.1 通用/混合参数 (基于 tSK)
+    # 使用通用/混合参数 (基于 tSK)
     mu_val = calculate_mu_sk(Pb206, Pb207, tSK)
     results['mu'] = mu_val
     results['nu'] = calculate_nu_sk(mu_val)

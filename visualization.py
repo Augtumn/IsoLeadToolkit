@@ -170,22 +170,60 @@ def _draw_isochron_overlays(ax, mode):
                             ax.text(txt_x, txt_y, f" {age_ma:.0f} Ma", 
                                     color=color, fontsize=9, va='center', ha='left', fontweight='bold')
                             
-                            # Draw Growth Curve for this Group (Source Mu)
-                            if getattr(app_state, 'show_growth_curves', True) and calculate_source_mu_from_isochron:
-                                 # Calculate mu that puts the initial ratio on the single-stage growth curve
-                                 mu_source = calculate_source_mu_from_isochron(slope, intercept, age_ma)
-                                 
-                                 if mu_source > 0:
-                                     t_steps = np.linspace(0, T_start, 100)
-                                     # x = a0 + mu * (e(LT) - e(Lt))
-                                     x_growth = a0 + mu_source * (np.exp(l238 * T_start) - np.exp(l238 * t_steps))
-                                     y_growth = b0 + mu_source * u_ratio * (np.exp(l235 * T_start) - np.exp(l235 * t_steps))
-                                     
-                                     # Plot Curve
+                            # Draw Growth Curve for this Group (Source Mu/Kappa)
+                            if getattr(app_state, 'show_growth_curves', True):
+                                # Determine Model Type (Single vs Two Stage)
+                                is_two_stage = 'a1' in params
+                                
+                                if is_two_stage:
+                                    T_start_curve = params.get('Tsec', 3.7e9)
+                                    a_start = params.get('a1', 0.0)
+                                    b_start = params.get('b1', 0.0)
+                                    c_start = params.get('c1', 0.0)
+                                else:
+                                    T_start_curve = params['T2']
+                                    a_start = params['a0']
+                                    b_start = params['b0']
+                                    c_start = params['c0']
+
+                                t_years = age_ma * 1e6
+                                t_steps = np.linspace(0, T_start_curve, 100)
+
+                                x_growth = None
+                                y_growth = None
+                                annot_text = ""
+
+                                if mode == 'ISOCHRON1': # 207Pb/204Pb vs 206Pb/204Pb
+                                    # Solve for Mu
+                                    C_alpha = np.exp(l238 * T_start_curve) - np.exp(l238 * t_years)
+                                    C_beta = u_ratio * (np.exp(l235 * T_start_curve) - np.exp(l235 * t_years))
+                                    
+                                    denom = C_beta - slope * C_alpha
+                                    if abs(denom) > 1e-15:
+                                        mu_source = (slope * a_start + intercept - b_start) / denom
+                                        
+                                        x_growth = a_start + mu_source * (np.exp(l238 * T_start_curve) - np.exp(l238 * t_steps))
+                                        y_growth = b_start + mu_source * u_ratio * (np.exp(l235 * T_start_curve) - np.exp(l235 * t_steps))
+                                        annot_text = f" μ={mu_source:.1f}"
+
+                                elif mode == 'ISOCHRON2': # 208Pb/204Pb vs 206Pb/204Pb
+                                    # Solve for Kappa (Th/U)
+                                    # Slope ~ Kappa * (C_gamma / C_alpha)
+                                    C_alpha = np.exp(l238 * T_start_curve) - np.exp(l238 * t_years)
+                                    C_gamma = np.exp(l232 * T_start_curve) - np.exp(l232 * t_years)
+                                    
+                                    if abs(C_alpha) > 1e-15:
+                                        kappa_source = slope * (C_alpha / C_gamma)
+                                        # Assume model reference Mu for drawing the curve shape
+                                        mu_ref = params.get('mu_M', 9.74) 
+                                        
+                                        x_growth = a_start + mu_ref * (np.exp(l238 * T_start_curve) - np.exp(l238 * t_steps))
+                                        y_growth = c_start + mu_ref * kappa_source * (np.exp(l232 * T_start_curve) - np.exp(l232 * t_steps))
+                                        annot_text = f" κ={kappa_source:.2f}"
+
+                                if x_growth is not None:
                                      ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
-                                     
-                                     # Annotate mu at Present Day (t=0, index=0)
-                                     ax.text(x_growth[0], y_growth[0], f" μ={mu_source:.1f}", 
+                                     ax.text(x_growth[0], y_growth[0], annot_text, 
                                              fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
 
                 # Annotate Kappa (Only Isochron2)
@@ -1158,12 +1196,13 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             pb208 = X[:, idx_208]
             
             try:
-                # Get V1V2 parameters from state
+                # Get V1V2 parameters from state or engine
                 v1v2_params = getattr(app_state, 'v1v2_params', {})
                 scale = v1v2_params.get('scale', 1.0)
-                a = v1v2_params.get('a', 0.0)
-                b = v1v2_params.get('b', 2.0367)
-                c = v1v2_params.get('c', -6.143)
+                # Pass None if not explicitly set in v1v2_params, to allow engine defaults
+                a = v1v2_params.get('a')
+                b = v1v2_params.get('b')
+                c = v1v2_params.get('c')
 
                 results = calculate_all_parameters(
                     pb206, pb207, pb208, 

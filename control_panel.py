@@ -2385,12 +2385,12 @@ class ControlPanel:
                         pb207 = pd.to_numeric(df[col_207], errors='coerce').values
                         pb208 = pd.to_numeric(df[col_208], errors='coerce').values
                         
-                        # Get V1V2 parameters from state
+                        # Get V1V2 parameters from state or engine
                         v1v2_params = getattr(app_state, 'v1v2_params', {})
                         scale = v1v2_params.get('scale', 1.0)
-                        a = v1v2_params.get('a', 0.0)
-                        b = v1v2_params.get('b', 2.0367)
-                        c = v1v2_params.get('c', -6.143)
+                        a = v1v2_params.get('a')
+                        b = v1v2_params.get('b')
+                        c = v1v2_params.get('c')
 
                         results = calculate_all_parameters(
                             pb206, pb207, pb208, 
@@ -2399,16 +2399,25 @@ class ControlPanel:
                         )
                         
                         # Append new columns
-                        df['Δα'] = results['Delta_alpha']
-                        df['Δβ'] = results['Delta_beta']
-                        df['Δγ'] = results['Delta_gamma']
+                        df['Delta_alpha'] = results['Delta_alpha']
+                        df['Delta_beta'] = results['Delta_beta']
+                        df['Delta_gamma'] = results['Delta_gamma']
                         df['V1'] = results['V1']
                         df['V2'] = results['V2']
                         df['tCDT (Ma)'] = results['tCDT (Ma)']
                         df['tSK (Ma)'] = results['tSK (Ma)']
-                        df['μ'] = results.get('mu', np.nan)
-                        df['ν'] = results.get('nu', np.nan)
-                        df['ω'] = results.get('omega', np.nan)
+                        df['mu'] = results.get('mu', np.nan)
+                        df['nu'] = results.get('nu', np.nan)
+                        df['omega'] = results.get('omega', np.nan)
+                        
+                        # Add new SK Model parameters and Initial Ratios
+                        df['mu_SK'] = results.get('mu_SK', np.nan)
+                        df['kappa_SK'] = results.get('kappa_SK', np.nan)
+                        df['omega_SK'] = results.get('omega_SK', np.nan)
+                        
+                        df['Init_206_204'] = results.get('Init_206_204', np.nan)
+                        df['Init_207_204'] = results.get('Init_207_204', np.nan)
+                        df['Init_208_204'] = results.get('Init_208_204', np.nan)
                         
                         print("[INFO] Appended V1V2 parameters to export data.", flush=True)
                     except Exception as e:
