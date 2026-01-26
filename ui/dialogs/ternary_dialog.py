@@ -104,17 +104,17 @@ class _SelectTernaryColumnsDialog:
         card = ttk.Frame(container, style='Card.TFrame', padding=16)
         card.pack(fill=tk.BOTH, expand=True)
 
-        info_text = translate("Select three columns to map to the vertices of the ternary plot (Top, Right, Left).")
+        info_text = translate("Select three columns to map to the vertices of the ternary plot (Top, Left, Right).")
         info_lbl = ttk.Label(card, text=info_text, style='Body.TLabel', wraplength=350)
         info_lbl.pack(fill=tk.X, pady=(0, 12))
 
         # Defaults
         def_top = ''
-        def_right = ''
         def_left = ''
+        def_right = ''
         if len(self.preselected) >= 1: def_top = self.preselected[0]
-        if len(self.preselected) >= 2: def_right = self.preselected[1]
-        if len(self.preselected) >= 3: def_left = self.preselected[2]
+        if len(self.preselected) >= 2: def_left = self.preselected[1]
+        if len(self.preselected) >= 3: def_right = self.preselected[2]
 
         # Top Axis
         lbl_top = ttk.Label(card, text=translate("Top Vertex (A)"), style='Field.TLabel')
@@ -124,21 +124,21 @@ class _SelectTernaryColumnsDialog:
         if def_top in self.columns:
             self.combo_top.set(def_top)
 
-        # Right Axis
-        lbl_right = ttk.Label(card, text=translate("Right Vertex (B)"), style='Field.TLabel')
-        lbl_right.pack(anchor=tk.W, pady=(4, 2))
-        self.combo_right = ttk.Combobox(card, values=self.columns, state="readonly")
-        self.combo_right.pack(fill=tk.X, pady=(0, 10))
-        if def_right in self.columns:
-            self.combo_right.set(def_right)
-
         # Left Axis
-        lbl_left = ttk.Label(card, text=translate("Left Vertex (C)"), style='Field.TLabel')
+        lbl_left = ttk.Label(card, text=translate("Left Vertex (B)"), style='Field.TLabel')
         lbl_left.pack(anchor=tk.W, pady=(4, 2))
         self.combo_left = ttk.Combobox(card, values=self.columns, state="readonly")
         self.combo_left.pack(fill=tk.X, pady=(0, 10))
         if def_left in self.columns:
             self.combo_left.set(def_left)
+
+        # Right Axis
+        lbl_right = ttk.Label(card, text=translate("Right Vertex (C)"), style='Field.TLabel')
+        lbl_right.pack(anchor=tk.W, pady=(4, 2))
+        self.combo_right = ttk.Combobox(card, values=self.columns, state="readonly")
+        self.combo_right.pack(fill=tk.X, pady=(0, 10))
+        if def_right in self.columns:
+            self.combo_right.set(def_right)
 
         # Actions
         btn_frame = ttk.Frame(container, style='Dialog.TFrame')
@@ -162,10 +162,10 @@ class _SelectTernaryColumnsDialog:
 
     def _on_ok(self):
         c_top = self.combo_top.get()
-        c_right = self.combo_right.get()
         c_left = self.combo_left.get()
+        c_right = self.combo_right.get()
 
-        if not c_top or not c_right or not c_left:
+        if not c_top or not c_left or not c_right:
             messagebox.showwarning(
                 translate("Incomplete Selection"),
                 translate("Please select columns for all three axes."),
@@ -173,7 +173,7 @@ class _SelectTernaryColumnsDialog:
             )
             return
 
-        if len({c_top, c_right, c_left}) < 3:
+        if len({c_top, c_left, c_right}) < 3:
             messagebox.showwarning(
                 translate("Duplicate Columns"),
                 translate("Please select three distinct columns."),
@@ -181,7 +181,7 @@ class _SelectTernaryColumnsDialog:
             )
             return
 
-        self.result = [c_top, c_right, c_left]
+        self.result = [c_top, c_left, c_right]
         self.root.destroy()
         if self._owns_master:
             self.master.destroy()
@@ -196,7 +196,7 @@ class _SelectTernaryColumnsDialog:
 def ask_ternary_columns(columns, preselected=None):
     """
     Open the dialog to select 3 columns.
-    Returns [col_top, col_right, col_left] or None.
+    Returns [col_top, col_left, col_right] or None.
     """
     dlg = _SelectTernaryColumnsDialog(columns, preselected)
     dlg.root.wait_window()

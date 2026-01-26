@@ -43,7 +43,8 @@ class AppState:
         self.selected_2d_cols = []
         self.selected_3d_cols = []
         self.selected_ternary_cols = []
-        self.ternary_scale = 100.0
+        self.ternary_stretch_power = 0.5
+        self.ternary_stretch_mode = 'power'  # power | minmax | hybrid
         self.ternary_factors = [1.0, 1.0, 1.0] # Scaling factors for Top, Left, Right
         self.ternary_stretch = False # Whether to apply min-max stretching
         self.ui_theme = 'Modern Light' # Default UI theme

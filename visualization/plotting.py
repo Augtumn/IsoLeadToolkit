@@ -1278,7 +1278,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 df_subset = app_state.df_global.iloc[indices]
                 
                 import pandas as pd
-                c_top, c_right, c_left = cols
+                c_top, c_left, c_right = cols
                 
                 # Ensure columns exist
                 missing = [c for c in cols if c not in df_subset.columns]
@@ -1287,16 +1287,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     return False
                     
                 top_vals = pd.to_numeric(df_subset[c_top], errors='coerce').fillna(0).values
-                right_vals = pd.to_numeric(df_subset[c_right], errors='coerce').fillna(0).values
                 left_vals = pd.to_numeric(df_subset[c_left], errors='coerce').fillna(0).values
+                right_vals = pd.to_numeric(df_subset[c_right], errors='coerce').fillna(0).values
                 
-                total = top_vals + right_vals + left_vals
-                mask = total > 0
-                
-                total = top_vals + right_vals + left_vals
-                mask = total > 0
-
-                
+                # total/mask not needed here; normalization handled later
                 # Standard Ternary Logic:
                 # Just use raw values. mpltern or normalization handles the rest.
                 # However, for meaningful ternary plotting of arbitrary data (e.g. isotopes),
@@ -1441,10 +1435,6 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         
         # Initialize custom ternary plot settings
         if actual_algorithm == 'TERNARY':
-            # Use manually set scale from app_state (determines triangle size, but we normalize to 1.0 internally)
-            # scale controls the labels, but we will plot on a 0-1 normalized triangle then scale up.
-            # Actually, standard matplotlib implementation is easier if we work in unit coords and add custom ticks.
-            scale = getattr(app_state, 'ternary_scale', 100.0)
             t_cols = getattr(app_state, 'selected_ternary_cols', ['Top', 'Left', 'Right'])
             
             # Draw Triangle Boundary
@@ -1477,22 +1467,23 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             # Draw Boundary
             app_state.ax.plot([0, 1, 0.5, 0], [0, 0, h, 0], 'k-', linewidth=1.5, zorder=0)
 
-            # Draw Custom Grid (Optional, simple version)
-            # Grid for levels 0.2, 0.4, 0.6, 0.8
+            # Draw Ternary Grid (standard geochemical style)
+            # Grid for levels 0.1..0.9 (Top, Left, Right)
             grid_color = '#e2e8f0'
-            for i in range(1, 5):
-                val = i * 0.2
-                # Horizontal lines (Constant Top)
-                # y = val * h
-                # x range: from Left edge to Right Edge
-                # Left edge line: y = sqrt(3) * x => x = y / sqrt(3) = (val*h)/sqrt(3) = val*0.5
-                # Right edge line: y = -sqrt(3)*(x-1)
-                # At y=val*h: val*h = -sqrt(3)*(x-1) => x = 1 - val*0.5
-                app_state.ax.plot([val*0.5, 1 - val*0.5], [val*h, val*h], '-', color=grid_color, lw=0.8, zorder=0)
-                
-                # We can add other directions too if needed
-                # Constant Left (parallel to Right edge)
-                # Constant Right (parallel to Left edge)
+            for i in range(1, 10):
+                val = i * 0.1
+                # Constant Top (t=val)
+                app_state.ax.plot([val*0.5, 1 - val*0.5], [val*h, val*h], '-', color=grid_color, lw=0.6, zorder=0)
+
+                # Constant Left (l=val)
+                x1, y1 = (1 - val), 0
+                x2, y2 = (0.5 * (1 - val)), h * (1 - val)
+                app_state.ax.plot([x1, x2], [y1, y2], '-', color=grid_color, lw=0.6, zorder=0)
+
+                # Constant Right (r=val)
+                x3, y3 = val, 0
+                x4, y4 = (0.5 + 0.5 * val), h * (1 - val)
+                app_state.ax.plot([x3, x4], [y3, y4], '-', color=grid_color, lw=0.6, zorder=0)
             
             # Labels
             app_state.ax.text(0.5, h + 0.05, t_cols[0], ha='center', va='bottom', fontsize=10, fontweight='bold')
@@ -1523,14 +1514,28 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                         rs = subset['_emb_r'].to_numpy(dtype=float)
                         
                         if getattr(app_state, 'ternary_stretch', False):
-                            def _minmax(arr):
-                                if len(arr) == 0: return arr
-                                mn, mx = np.min(arr), np.max(arr)
-                                if mx - mn < 1e-9: return np.zeros_like(arr) + 0.5 
-                                return (arr - mn) / (mx - mn)
-                            ts = _minmax(ts)
-                            ls = _minmax(ls)
-                            rs = _minmax(rs)
+                            if not getattr(app_state, 'ternary_factors', None) or len(app_state.ternary_factors) != 3:
+                                calculate_auto_ternary_factors()
+                            f_top, f_left, f_right = getattr(app_state, 'ternary_factors', [1.0, 1.0, 1.0])
+                            ts = ts * f_top
+                            ls = ls * f_left
+                            rs = rs * f_right
+                            mode = getattr(app_state, 'ternary_stretch_mode', 'power')
+                            if mode in ('minmax', 'hybrid'):
+                                def _minmax(arr):
+                                    if len(arr) == 0: return arr
+                                    mn, mx = np.min(arr), np.max(arr)
+                                    if mx - mn < 1e-9: return np.zeros_like(arr) + 0.5
+                                    return (arr - mn) / (mx - mn)
+                                ts = _minmax(ts)
+                                ls = _minmax(ls)
+                                rs = _minmax(rs)
+                            if mode in ('power', 'hybrid'):
+                                # Power transform spreads compositional ratios without breaking closure
+                                stretch_pow = getattr(app_state, 'ternary_stretch_power', 0.5)
+                                ts = np.power(np.clip(ts, 1e-12, None), stretch_pow)
+                                ls = np.power(np.clip(ls, 1e-12, None), stretch_pow)
+                                rs = np.power(np.clip(rs, 1e-12, None), stretch_pow)
                         
                         sums = ts + ls + rs
                         with np.errstate(divide='ignore', invalid='ignore'):
@@ -1603,17 +1608,30 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     l_vals = ls
                     r_vals = rs
 
-                    # Apply Min-Max Stretching if enabled (Dispersion Mode)
+                    # Apply compositional stretching if enabled
                     if getattr(app_state, 'ternary_stretch', False):
-                        def _minmax(arr):
-                            if len(arr) == 0: return arr
-                            mn, mx = np.min(arr), np.max(arr)
-                            if mx - mn < 1e-9: return np.zeros_like(arr) + 0.5 # fallback for constant
-                            return (arr - mn) / (mx - mn)
-                        
-                        t_vals = _minmax(t_vals)
-                        l_vals = _minmax(l_vals)
-                        r_vals = _minmax(r_vals)
+                        if not getattr(app_state, 'ternary_factors', None) or len(app_state.ternary_factors) != 3:
+                            calculate_auto_ternary_factors()
+                        f_top, f_left, f_right = getattr(app_state, 'ternary_factors', [1.0, 1.0, 1.0])
+                        t_vals = t_vals * f_top
+                        l_vals = l_vals * f_left
+                        r_vals = r_vals * f_right
+                        mode = getattr(app_state, 'ternary_stretch_mode', 'power')
+                        if mode in ('minmax', 'hybrid'):
+                            def _minmax(arr):
+                                if len(arr) == 0: return arr
+                                mn, mx = np.min(arr), np.max(arr)
+                                if mx - mn < 1e-9: return np.zeros_like(arr) + 0.5
+                                return (arr - mn) / (mx - mn)
+                            t_vals = _minmax(t_vals)
+                            l_vals = _minmax(l_vals)
+                            r_vals = _minmax(r_vals)
+                        if mode in ('power', 'hybrid'):
+                            # Power transform spreads compositional ratios without breaking closure
+                            stretch_pow = getattr(app_state, 'ternary_stretch_power', 0.5)
+                            t_vals = np.power(np.clip(t_vals, 1e-12, None), stretch_pow)
+                            l_vals = np.power(np.clip(l_vals, 1e-12, None), stretch_pow)
+                            r_vals = np.power(np.clip(r_vals, 1e-12, None), stretch_pow)
 
                     # Normalize to sum to 1.0
                     sums = t_vals + l_vals + r_vals
@@ -2241,16 +2259,25 @@ def plot_3d_data(group_col, data_columns, size=60):
         # app_state.ax.grid(True, color="#e2e8f0", linewidth=0.7, alpha=0.6)
 
         unique_cats = sorted(df_plot[group_col].unique())
-        
-        # Generate a default palette for all categories using current style cycle
+
+        # Preserve user-selected colors when possible
+        if not hasattr(app_state, 'current_palette'):
+            app_state.current_palette = {}
+
         prop_cycle = plt.rcParams['axes.prop_cycle']
         cycle_colors = prop_cycle.by_key()['color']
         color_cycle = itertools.cycle(cycle_colors)
-        palette = [next(color_cycle) for _ in range(len(unique_cats))]
-        
-        # Store palette for UI
+        default_palette = [next(color_cycle) for _ in range(len(unique_cats))]
+
+        new_palette = {}
+        for i, cat in enumerate(unique_cats):
+            if cat in app_state.current_palette:
+                new_palette[cat] = app_state.current_palette[cat]
+            else:
+                new_palette[cat] = matplotlib.colors.to_hex(default_palette[i])
+
         app_state.current_groups = unique_cats
-        app_state.current_palette = {cat: matplotlib.colors.to_hex(palette[i]) for i, cat in enumerate(unique_cats)}
+        app_state.current_palette = new_palette
 
         for i, cat in enumerate(unique_cats):
             subset = df_plot[df_plot[group_col] == cat]
@@ -2266,7 +2293,7 @@ def plot_3d_data(group_col, data_columns, size=60):
                 ys,
                 zs,
                 label=cat,
-                color=palette[i],
+                color=app_state.current_palette[cat],
                 s=size,
                 alpha=0.85,
                 edgecolors='#1e293b',

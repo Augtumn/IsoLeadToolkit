@@ -335,7 +335,9 @@ class StyleTabMixin:
     def _on_style_change(self, event=None):
         """Handle style changes"""
         app_state.plot_style_grid = self.grid_var.get()
-        app_state.color_scheme = self.color_scheme_var.get()
+        previous_scheme = getattr(app_state, 'color_scheme', None)
+        new_scheme = self.color_scheme_var.get()
+        app_state.color_scheme = new_scheme
         
         # Handle <Default> font selection
         p_font = self.primary_font_var.get()
@@ -353,8 +355,8 @@ class StyleTabMixin:
         app_state.plot_marker_size = self.marker_size_var.get()
         app_state.plot_marker_alpha = self.marker_alpha_var.get()
         
-        # Clear palette cache to force regeneration of colors based on new scheme
-        if hasattr(app_state, 'current_palette'):
+        # Clear palette cache only when scheme actually changes
+        if new_scheme != previous_scheme and hasattr(app_state, 'current_palette'):
             app_state.current_palette = {}
         
         # Trigger update

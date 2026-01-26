@@ -416,7 +416,7 @@ class AlgorithmTabMixin:
         self.ternary_auto_zoom_chk.pack(anchor=tk.W, pady=5)
         self._register_translation(self.ternary_auto_zoom_chk, "Auto-Zoom to Data")
 
-        # Scale Control
+        # Stretch Mode Control (slider with 3 modes)
         scale_frame = ttk.Frame(self.ternary_section)
         scale_frame.pack(fill=tk.X, pady=8)
         
@@ -424,26 +424,41 @@ class AlgorithmTabMixin:
         header_frame = ttk.Frame(scale_frame)
         header_frame.pack(fill=tk.X, pady=(0, 2))
         
-        lbl_scale = ttk.Label(header_frame, text=self._translate("Scale:"), style='Body.TLabel')
+        lbl_scale = ttk.Label(header_frame, text=self._translate("Stretch Mode"), style='Body.TLabel')
         lbl_scale.pack(side=tk.LEFT)
-        self._register_translation(lbl_scale, "Scale:")
+        self._register_translation(lbl_scale, "Stretch Mode")
         
-        current_val = getattr(app_state, 'ternary_scale', 100.0)
-        self.lbl_ternary_scale_val = ttk.Label(header_frame, text=f"{int(current_val)}")
+        self._stretch_modes = ['power', 'minmax', 'hybrid']
+        mode_label_map = {
+            'power': self._translate("Power"),
+            'minmax': self._translate("Min-Max"),
+            'hybrid': self._translate("Hybrid")
+        }
+        current_mode = getattr(app_state, 'ternary_stretch_mode', 'power')
+        current_idx = self._stretch_modes.index(current_mode) if current_mode in self._stretch_modes else 0
+        self.lbl_ternary_scale_val = ttk.Label(header_frame, text=mode_label_map[self._stretch_modes[current_idx]])
         self.lbl_ternary_scale_val.pack(side=tk.RIGHT)
 
-        self.ternary_scale_var = tk.DoubleVar(value=current_val)
+        self.ternary_scale_var = tk.DoubleVar(value=current_idx)
         
         # Debounced Slider
         self.ternary_scale_slider = ttk.Scale(
             scale_frame,
-            from_=1.0,
-            to=200.0,
+            from_=0,
+            to=2,
             variable=self.ternary_scale_var,
             orient=tk.HORIZONTAL,
             command=self._on_ternary_scale_slide
         )
         self.ternary_scale_slider.pack(fill=tk.X)
+
+        # Update label when language changes
+        def _refresh_mode_label():
+            mode = getattr(app_state, 'ternary_stretch_mode', 'power')
+            if mode not in self._stretch_modes:
+                mode = 'power'
+            self.lbl_ternary_scale_val.configure(text=mode_label_map[mode])
+        self._register_translation(self.lbl_ternary_scale_val, "Stretch Mode", formatter=lambda: _refresh_mode_label() or "Stretch Mode")
 
         # Stretch Checkbox
         self.ternary_stretch_var = tk.BooleanVar(value=getattr(app_state, 'ternary_stretch', False))
@@ -467,7 +482,7 @@ class AlgorithmTabMixin:
         try:
             val = float(val)
             # Update label immediately for feedback
-            self.lbl_ternary_scale_val.configure(text=f"{int(val)}")
+            self.lbl_ternary_scale_val.configure(text=f"{val:.2f}")
             
             # Cancel previous timer
             if self._ternary_update_job:
@@ -481,9 +496,23 @@ class AlgorithmTabMixin:
 
     def _trigger_ternary_update(self, val):
         """Execute the actual update."""
-        app_state.ternary_scale = val
-        if self.callback:
-            self.callback('alg_params')
+        # Snap to discrete modes
+        idx = int(round(val))
+        idx = max(0, min(2, idx))
+        mode = self._stretch_modes[idx]
+        app_state.ternary_stretch_mode = mode
+        # Update label
+        mode_label_map = {
+            'power': self._translate("Power"),
+            'minmax': self._translate("Min-Max"),
+            'hybrid': self._translate("Hybrid")
+        }
+        self.lbl_ternary_scale_val.configure(text=mode_label_map.get(mode, mode))
+        # Ensure stretch is enabled when adjusting strength
+        app_state.ternary_stretch = True
+        if hasattr(self, 'ternary_stretch_var'):
+            self.ternary_stretch_var.set(True)
+        self._on_change()
         self._ternary_update_job = None
 
     def _on_ternary_zoom_change(self):
