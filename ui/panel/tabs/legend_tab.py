@@ -247,7 +247,7 @@ class LegendTabMixin:
             return
 
         try:
-            from legend_dialog import select_visible_groups
+            from ui.dialogs.legend_dialog import select_visible_groups
         except Exception as exc:
             messagebox.showerror(
                 self._translate("Legend Filter"),

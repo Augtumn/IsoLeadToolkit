@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import json
 
-from visualization import style_manager
+from visualization.style_manager import style_manager_instance
 from core import app_state, CONFIG
 
 
@@ -34,7 +34,7 @@ class StyleTabMixin:
         ui_theme_combo = ttk.Combobox(
             ui_theme_frame, 
             textvariable=self.ui_theme_var, 
-            values=style_manager.style_manager_instance.get_ui_theme_names(),
+            values=style_manager_instance.get_ui_theme_names(),
             state="readonly"
         )
         ui_theme_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -106,7 +106,7 @@ class StyleTabMixin:
         color_label.pack(anchor=tk.W, pady=(0, 4))
         self._register_translation(color_label, "Palette")
         
-        color_options = style_manager.style_manager_instance.get_palette_names()
+        color_options = style_manager_instance.get_palette_names()
         self.color_scheme_var = tk.StringVar(value=getattr(app_state, 'color_scheme', 'vibrant'))
         color_combo = ttk.Combobox(
             general_section, 
@@ -125,7 +125,7 @@ class StyleTabMixin:
         )
         
         # Get available fonts
-        all_system_fonts = sorted(style_manager.style_manager_instance.get_available_fonts())
+        all_system_fonts = sorted(style_manager_instance.get_available_fonts())
         preferred_fonts = CONFIG.get('preferred_plot_fonts', [])
         installed_preferred = [f for f in preferred_fonts if f in all_system_fonts]
         other_fonts = [f for f in all_system_fonts if f not in installed_preferred]
@@ -375,7 +375,7 @@ class StyleTabMixin:
         if not theme_name:
             theme_name = 'Modern Light'
             
-        theme = style_manager.style_manager_instance.get_ui_theme(theme_name)
+        theme = style_manager_instance.get_ui_theme(theme_name)
         if not theme:
             return
 
