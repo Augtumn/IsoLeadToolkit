@@ -5,9 +5,6 @@ Handles application startup, configuration, and cleanup
 import sys
 import warnings
 import traceback
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib import font_manager
 import tkinter as tk
 from tkinter import ttk
 
@@ -16,9 +13,6 @@ from . import (
     load_session_params, save_session_params,
     translate, set_language, validate_language
 )
-from data.loader import load_data
-from visualization.events import on_hover, on_click, on_legend_click, on_slider_change
-from ui.panel import create_control_panel
 
 
 def _enable_high_dpi_awareness():
@@ -38,6 +32,8 @@ def _enable_high_dpi_awareness():
 
 def _configure_matplotlib_fonts():
     """Configure Matplotlib to use a font that supports Chinese glyphs."""
+    import matplotlib
+    from matplotlib import font_manager
     preferred_fonts = CONFIG.get('preferred_plot_fonts', [])
     available_fonts = {f.name for f in font_manager.fontManager.ttflist}
     chosen_font = None
@@ -63,6 +59,7 @@ def _configure_matplotlib_fonts():
 
 def _configure_matplotlib():
     """Configure matplotlib backend and fonts."""
+    import matplotlib
     # Configure warnings
     warnings.filterwarnings("ignore", message=".*n_jobs value.*overridden.*random_state.*")
     
@@ -83,7 +80,6 @@ class Application:
     def __init__(self):
         """Initialize the application"""
         self.control_panel = None
-        _configure_matplotlib()
     
     def _save_session(self):
         """Helper function to save session parameters"""
@@ -223,6 +219,8 @@ class Application:
     
     def _create_plot_figure(self):
         """Create the main plot figure"""
+        import matplotlib
+        import matplotlib.pyplot as plt
         print("[INFO] Creating plot figure...", flush=True)
         # Use constrained_layout for adaptive layout
         app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'], constrained_layout=True)
@@ -305,6 +303,8 @@ class Application:
     def _setup_control_panel(self):
         """Create and setup the control panel"""
         from core import state  # Import here to avoid circular dependency
+        from ui.panel import create_control_panel  # Lazy import to speed startup
+        from visualization.events import on_slider_change  # Lazy import
         
         print("[INFO] Creating control panel...", flush=True)
         control_panel = create_control_panel(on_slider_change)
@@ -316,6 +316,7 @@ class Application:
     
     def _connect_event_handlers(self):
         """Connect event handlers to plot figure"""
+        from visualization.events import on_hover, on_click, on_legend_click  # Lazy import
         print("[INFO] Connecting event handlers...", flush=True)
         app_state.fig.canvas.mpl_connect('motion_notify_event', on_hover)
         app_state.fig.canvas.mpl_connect('button_press_event', on_click)
@@ -324,6 +325,7 @@ class Application:
     
     def _render_initial_plot(self):
         """Render the initial plot"""
+        from visualization.events import on_slider_change  # Lazy import
         print("[INFO] Rendering initial plot...", flush=True)
         on_slider_change()
         print("[INFO] Plot ready.", flush=True)
@@ -352,6 +354,7 @@ class Application:
     def run(self):
         """Initialize and run the application"""
         import core.state  # Import here to avoid circular dependency
+        from data.loader import load_data  # Lazy import to speed startup
         
         print("[INFO] Initializing application...", flush=True)
         
@@ -382,6 +385,9 @@ class Application:
             
             # Validate render mode
             self._validate_render_mode()
+
+            # Configure matplotlib after file selection to reduce startup latency
+            _configure_matplotlib()
             
             # Create plot figure
             self._create_plot_figure()
@@ -404,6 +410,8 @@ class Application:
             # Show windows
             print("[INFO] Showing windows...", flush=True)
             try:
+                import matplotlib
+                import matplotlib.pyplot as plt
                 backend = matplotlib.get_backend()
                 print(f"[INFO] Using backend: {backend}", flush=True)
                 
@@ -422,6 +430,7 @@ class Application:
                 print("[INFO] Attempting to close figures...", flush=True)
                 self._save_session()
                 try:
+                    import matplotlib.pyplot as plt
                     plt.close(app_state.fig)
                     self._cleanup()
                 except:

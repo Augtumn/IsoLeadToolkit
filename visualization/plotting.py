@@ -4,8 +4,6 @@ Handles UMAP and t-SNE embedding computation and plot rendering
 """
 import traceback
 import matplotlib
-# Import python-ternary for Ternary plotting
-import ternary
 from core.config import CONFIG
 from core.state import app_state
 # Import events module for selection overlay refresh
@@ -14,15 +12,6 @@ try:
 except ImportError:
     refresh_selection_overlay = None
 
-import umap
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-from sklearn.covariance import MinCovDet
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
-import seaborn as sns
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-from matplotlib.patches import Ellipse
 import pandas as pd
 import numpy as np
 
@@ -34,6 +23,65 @@ except ImportError:
     print("[WARN] geochemistry module not found. V1V2 algorithm will not be available.", flush=True)
     geochemistry = None
     calculate_all_parameters = None
+
+
+# Lazy-loaded heavy dependencies to speed first render
+umap = None
+TSNE = None
+PCA = None
+MinCovDet = None
+StandardScaler = None
+SimpleImputer = None
+sns = None
+Axes3D = None
+Ellipse = None
+
+
+def _lazy_import_ml():
+    global TSNE, PCA, MinCovDet, StandardScaler, SimpleImputer
+    if PCA is None:
+        from sklearn.decomposition import PCA as _PCA
+        PCA = _PCA
+    if TSNE is None:
+        from sklearn.manifold import TSNE as _TSNE
+        TSNE = _TSNE
+    if MinCovDet is None:
+        from sklearn.covariance import MinCovDet as _MinCovDet
+        MinCovDet = _MinCovDet
+    if StandardScaler is None:
+        from sklearn.preprocessing import StandardScaler as _StandardScaler
+        StandardScaler = _StandardScaler
+    if SimpleImputer is None:
+        from sklearn.impute import SimpleImputer as _SimpleImputer
+        SimpleImputer = _SimpleImputer
+
+
+def _lazy_import_umap():
+    global umap
+    if umap is None:
+        import umap as _umap
+        umap = _umap
+
+
+def _lazy_import_seaborn():
+    global sns
+    if sns is None:
+        import seaborn as _sns
+        sns = _sns
+
+
+def _lazy_import_mplot3d():
+    global Axes3D
+    if Axes3D is None:
+        from mpl_toolkits.mplot3d import Axes3D as _Axes3D  # noqa: F401
+        Axes3D = _Axes3D
+
+
+def _lazy_import_ellipse():
+    global Ellipse
+    if Ellipse is None:
+        from matplotlib.patches import Ellipse as _Ellipse
+        Ellipse = _Ellipse
 
 
 def _build_group_palette(unique_cats):
@@ -1018,6 +1066,7 @@ def _ensure_axes(dimensions=2):
                     pass
             
             if target_proj == '3d':
+                _lazy_import_mplot3d()
                 app_state.ax = app_state.fig.add_subplot(111, projection='3d')
             elif target_proj == 'ternary':
                 # python-ternary writes onto a standard 2D axes
@@ -1038,6 +1087,7 @@ def draw_confidence_ellipse(x, y, ax, n_std=2.4477, facecolor='none', **kwargs):
     Create a plot of the covariance confidence ellipse of *x* and *y*.
     n_std=2.4477 corresponds to a 95% confidence interval for a 2D distribution.
     """
+    _lazy_import_ellipse()
     if x.size < 2 or y.size < 2:
         return
 
@@ -1090,6 +1140,7 @@ def _get_analysis_data():
     if np.isnan(X).any():
         print("[WARN] Missing values detected in data. Imputing with 0.", flush=True)
         try:
+            _lazy_import_ml()
             imputer = SimpleImputer(strategy='constant', fill_value=0)
             X = imputer.fit_transform(X)
         except Exception as e:
@@ -1104,6 +1155,7 @@ def _get_analysis_data():
 def get_robust_pca_embedding(params):
     """Get or compute Robust PCA (via MinCovDet) embedding with caching"""
     try:
+        _lazy_import_ml()
         # Note: Robust PCA depends on the data subset, so we include a hash of indices in the key if subset is active
         subset_key = 'full'
         if app_state.active_subset_indices is not None:
@@ -1220,6 +1272,7 @@ def get_robust_pca_embedding(params):
 def get_pca_embedding(params):
     """Get or compute PCA embedding with caching"""
     try:
+        _lazy_import_ml()
         subset_key = 'full'
         if app_state.active_subset_indices is not None:
             subset_key = hash(tuple(sorted(list(app_state.active_subset_indices))))
@@ -1283,6 +1336,7 @@ def get_pca_embedding(params):
 def get_umap_embedding(params):
     """Get or compute UMAP embedding with caching"""
     try:
+        _lazy_import_umap()
         subset_key = 'full'
         if app_state.active_subset_indices is not None:
             subset_key = hash(tuple(sorted(list(app_state.active_subset_indices))))
@@ -1332,6 +1386,7 @@ def get_umap_embedding(params):
 def get_tsne_embedding(params):
     """Get or compute t-SNE embedding with caching"""
     try:
+        _lazy_import_ml()
         X, _ = _get_analysis_data()
         
         if X is None or X.shape[0] == 0:
@@ -1813,6 +1868,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         # Kernel Density Estimation (KDE)
         if getattr(app_state, 'show_kde', False):
             try:
+                _lazy_import_seaborn()
                 # For Ternary, we need to pre-calculate cartesian coordinates
                 if actual_algorithm == 'TERNARY':
                     print("[INFO] Generating KDE for Ternary Plot...", flush=True)
@@ -2336,6 +2392,7 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
 
         if show_kde:
             try:
+                _lazy_import_seaborn()
                 sns.kdeplot(
                     data=df_plot,
                     x=data_columns[0],
