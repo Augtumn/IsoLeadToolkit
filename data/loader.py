@@ -21,13 +21,14 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
     Returns:
         bool, success status
     """
+    progress = None
     try:
         # Show file selection dialog if requested
         if show_file_dialog:
             print("[INFO] Showing file selection dialog...", flush=True)
             from ui.dialogs.file_dialog import get_file_sheet_selection
             
-            file_result = get_file_sheet_selection()
+            file_result = get_file_sheet_selection(default_file=app_state.file_path)
             
             if file_result is None:
                 print("[ERROR] File selection cancelled by user", flush=True)
@@ -43,7 +44,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
                 print("[INFO] Excel file detected, showing sheet selection...", flush=True)
                 from ui.dialogs.sheet_dialog import get_sheet_selection
                 
-                selected_sheet = get_sheet_selection(excel_file)
+                selected_sheet = get_sheet_selection(excel_file, default_sheet=app_state.sheet_name)
                 
                 if selected_sheet is None:
                     print("[ERROR] Sheet selection cancelled by user", flush=True)
@@ -60,6 +61,11 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             return False
             
         print(f"[INFO] Loading file: {excel_file}", flush=True)
+        try:
+            from ui.dialogs.progress_dialog import ProgressDialog
+            progress = ProgressDialog("Loading Data", "Reading file...")
+        except Exception:
+            progress = None
         if sheet_name:
             print(f"[INFO] Using sheet: {sheet_name}", flush=True)
             # Try to use calamine engine for faster Excel reading if available
@@ -77,6 +83,8 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             print("[INFO] Loading CSV file", flush=True)
             df = pd.read_csv(excel_file, dtype=str)
         
+        if progress:
+            progress.update_message("Parsing columns...")
         df.columns = df.columns.astype(str).str.strip()
         
         # Column name mapping (for known datasets)
@@ -112,18 +120,31 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         
         # Show configuration dialog if requested
         if show_config_dialog:
+            if progress:
+                progress.close()
+                progress = None
             print("[INFO] Showing data configuration dialog...", flush=True)
             from ui.dialogs.data_config import get_data_configuration
             
-            config_result = get_data_configuration(df)
+            config_result = get_data_configuration(
+                df,
+                default_group_cols=app_state.group_cols,
+                default_data_cols=app_state.data_cols
+            )
             
             if config_result is None:
                 print("[ERROR] Configuration cancelled by user", flush=True)
                 return False
             
             # Update app state with selected columns
-            app_state.group_cols = config_result['group_cols']
+            selected_groups = config_result['group_cols']
+            missing_groups = [col for col in selected_groups if col not in df.columns]
+            if missing_groups:
+                print(f"[WARN] Dropping missing group columns: {missing_groups}", flush=True)
+            app_state.group_cols = [col for col in selected_groups if col in df.columns]
             app_state.data_cols = config_result['data_cols']
+            if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
+                app_state.last_group_col = app_state.group_cols[0] if app_state.group_cols else None
             app_state.selected_2d_cols = []
             app_state.selected_3d_cols = []
             app_state.selected_2d_confirmed = False
@@ -155,6 +176,8 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
                 print(f"[ERROR] Missing group column: {col}", flush=True)
                 return False
         
+        if progress:
+            progress.update_message("Cleaning data...")
         print(f"[INFO] Before cleanup: {len(df)} rows", flush=True)
         df = df.dropna(subset=app_state.data_cols).copy()
         
@@ -170,9 +193,16 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         app_state.selected_indices.clear()
         app_state.selection_mode = False
         print(f"[OK] Loaded {len(app_state.df_global)} valid samples.", flush=True)
+        if progress:
+            progress.close()
         return True
         
     except Exception as e:
+        try:
+            if progress:
+                progress.close()
+        except Exception:
+            pass
         print(f"[ERROR] Data loading failed: {e}", flush=True)
         traceback.print_exc()
         return False

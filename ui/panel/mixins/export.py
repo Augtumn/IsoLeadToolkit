@@ -20,6 +20,23 @@ except ImportError:
 class PanelExportMixin:
     """Mixin providing data export and management methods for the ControlPanel"""
 
+    def _build_export_parameters(self):
+        """Build a flat table of export parameters."""
+        rows = []
+
+        def add_row(key, value):
+            rows.append({'Parameter': key, 'Value': value})
+
+        try:
+            from data import geochemistry
+            params = geochemistry.engine.get_parameters()
+            for key, value in sorted(params.items()):
+                add_row(key, value)
+        except Exception:
+            pass
+
+        return pd.DataFrame(rows)
+
     def _get_selected_dataframe(self):
         """Return a DataFrame with the currently selected samples."""
         if not app_state.selected_indices:
@@ -49,12 +66,19 @@ class PanelExportMixin:
                 col_206 = "206Pb/204Pb" if "206Pb/204Pb" in all_cols else None
                 col_207 = "207Pb/204Pb" if "207Pb/204Pb" in all_cols else None
                 col_208 = "208Pb/204Pb" if "208Pb/204Pb" in all_cols else None
+                lower_map = {col.lower(): col for col in all_cols}
+                age_col = None
+                for key in ("age", "age (ma)", "age(ma)", "age_ma", "t", "t (ma)", "t(ma)", "t_ma"):
+                    if key in lower_map:
+                        age_col = lower_map[key]
+                        break
                 
                 if col_206 and col_207 and col_208:
                     try:
                         pb206 = pd.to_numeric(df[col_206], errors='coerce').values
                         pb207 = pd.to_numeric(df[col_207], errors='coerce').values
                         pb208 = pd.to_numeric(df[col_208], errors='coerce').values
+                        t_ma = pd.to_numeric(df[age_col], errors='coerce').values if age_col else None
                         
                         # Get V1V2 parameters from state or engine
                         v1v2_params = getattr(app_state, 'v1v2_params', {})
@@ -66,10 +90,11 @@ class PanelExportMixin:
                         results = calculate_all_parameters(
                             pb206, pb207, pb208, 
                             calculate_ages=True,
-                            a=a, b=b, c=c, scale=scale
+                            a=a, b=b, c=c, scale=scale,
+                            t_Ma=t_ma
                         )
                         
-                        # Append new columns
+                        # Append new columns (core)
                         df['Delta_alpha'] = results['Delta_alpha']
                         df['Delta_beta'] = results['Delta_beta']
                         df['Delta_gamma'] = results['Delta_gamma']
@@ -77,18 +102,27 @@ class PanelExportMixin:
                         df['V2'] = results['V2']
                         df['tCDT (Ma)'] = results['tCDT (Ma)']
                         df['tSK (Ma)'] = results['tSK (Ma)']
-                        df['mu'] = results.get('mu', np.nan)
-                        df['nu'] = results.get('nu', np.nan)
-                        df['omega'] = results.get('omega', np.nan)
-                        
-                        # Add new SK Model parameters and Initial Ratios
-                        df['mu_SK'] = results.get('mu_SK', np.nan)
-                        df['kappa_SK'] = results.get('kappa_SK', np.nan)
-                        df['omega_SK'] = results.get('omega_SK', np.nan)
-                        
-                        df['Init_206_204'] = results.get('Init_206_204', np.nan)
-                        df['Init_207_204'] = results.get('Init_207_204', np.nan)
-                        df['Init_208_204'] = results.get('Init_208_204', np.nan)
+
+                        # Export only parameters for the active geochemistry model
+                        current_model = ""
+                        try:
+                            from data import geochemistry
+                            current_model = getattr(geochemistry.engine, 'current_model_name', '')
+                        except Exception:
+                            current_model = ""
+
+                        if "1st Stage" in current_model or current_model.endswith("(1st Stage)"):
+                            df['mu_SK1'] = results.get('mu_SK', np.nan)
+                            df['kappa_SK1'] = results.get('kappa_SK', np.nan)
+                            df['omega_SK1'] = results.get('omega_SK', np.nan)
+                        elif "2nd Stage" in current_model or current_model.endswith("(2nd Stage)"):
+                            df['mu_SK2'] = results.get('mu_SK', np.nan)
+                            df['kappa_SK2'] = results.get('kappa_SK', np.nan)
+                            df['omega_SK2'] = results.get('omega_SK', np.nan)
+                        else:
+                            df['mu_singleStage'] = results.get('mu', np.nan)
+                            df['nu_singleStage'] = results.get('nu', np.nan)
+                            df['omega_singleStage'] = results.get('omega', np.nan)
                         
                         print("[INFO] Appended V1V2 parameters to export data.", flush=True)
                     except Exception as e:
@@ -151,6 +185,9 @@ class PanelExportMixin:
 
         try:
             df.to_csv(target_path, index=False, encoding='utf-8-sig')
+            params_df = self._build_export_parameters()
+            params_path = os.path.join(target_dir, f"{sanitized}_params.csv")
+            params_df.to_csv(params_path, index=False, encoding='utf-8-sig')
         except Exception as exc:
             messagebox.showerror(
                 self._translate("Export to CSV"),
@@ -255,15 +292,21 @@ class PanelExportMixin:
             if exists:
                 with pd.ExcelWriter(workbook_path, mode='a', engine='openpyxl', if_sheet_exists='new') as writer:
                     df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    params_df = self._build_export_parameters()
+                    params_df.to_excel(writer, sheet_name=f"{sheet_name}_params", index=False)
             else:
                 # Try xlsxwriter for faster writing of new files
                 try:
                     with pd.ExcelWriter(workbook_path, mode='w', engine='xlsxwriter') as writer:
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        params_df = self._build_export_parameters()
+                        params_df.to_excel(writer, sheet_name=f"{sheet_name}_params", index=False)
                 except Exception:
                     print("[INFO] xlsxwriter not available, falling back to openpyxl", flush=True)
                     with pd.ExcelWriter(workbook_path, mode='w', engine='openpyxl') as writer:
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        params_df = self._build_export_parameters()
+                        params_df.to_excel(writer, sheet_name=f"{sheet_name}_params", index=False)
         except Exception as exc:
             messagebox.showerror(
                 self._translate("Append to Excel"),

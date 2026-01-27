@@ -69,11 +69,8 @@ class SettingsTabMixin:
 
         add_mode_group(selection_grid, "Geochemistry Modes", [
             ("V1-V2 Diagram", "V1V2"),
-            ("207Pb/204Pb - 206Pb/204Pb", "ISOCHRON1"),
-            ("208Pb/204Pb - 206Pb/204Pb", "ISOCHRON2"),
             ("Pb Evolution 206-207", "PB_EVOL_76"),
             ("Pb Evolution 206-208", "PB_EVOL_86"),
-            ("Model Age Diagram", "PB_MODEL_AGE"),
             ("Mu vs Age", "PB_MU_AGE"),
             ("Kappa vs Age", "PB_KAPPA_AGE"),
         ])

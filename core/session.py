@@ -56,13 +56,26 @@ def load_session_params():
     """
     try:
         params_file = CONFIG['params_temp_file']
-        
+        legacy_params_file = CONFIG.get('legacy_params_temp_file')
+
         if not params_file.exists():
-            print("[INFO] No previous session found", flush=True)
-            return None
-        
+            if legacy_params_file is not None and legacy_params_file.exists():
+                params_file = legacy_params_file
+            else:
+                print("[INFO] No previous session found", flush=True)
+                return None
+
         with open(params_file, 'r', encoding='utf-8') as f:
             session_data = json.load(f)
+
+        if legacy_params_file and params_file == legacy_params_file:
+            # Migrate to preferred location for faster future loads.
+            try:
+                with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as out:
+                    json.dump(session_data, out, indent=2, ensure_ascii=False)
+                print(f"[INFO] Migrated session parameters to {CONFIG['params_temp_file']}", flush=True)
+            except Exception:
+                pass
         
         print(f"[INFO] Session parameters loaded from {params_file}", flush=True)
         print(f"[INFO] Previous algorithm: {session_data.get('algorithm', 'UMAP')}", flush=True)

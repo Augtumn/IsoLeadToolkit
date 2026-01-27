@@ -201,7 +201,8 @@ def refresh_selection_overlay():
 
         xs = [app_state.sample_coordinates[idx][0] for idx in valid_indices]
         ys = [app_state.sample_coordinates[idx][1] for idx in valid_indices]
-        highlight_size = max(int(app_state.point_size * 1.8), 20)
+        base_marker_size = getattr(app_state, 'plot_marker_size', app_state.point_size)
+        highlight_size = max(int(base_marker_size * 1.8), 20)
 
         app_state.selection_overlay = app_state.ax.scatter(
             xs,

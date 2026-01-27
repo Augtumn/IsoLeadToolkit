@@ -358,6 +358,11 @@ class Application:
         try:
             # Load session
             session_data = self._load_session()
+            if session_data:
+                app_state.file_path = session_data.get('file_path') or app_state.file_path
+                app_state.sheet_name = session_data.get('sheet_name') or app_state.sheet_name
+                app_state.group_cols = session_data.get('group_cols') or []
+                app_state.data_cols = session_data.get('data_cols') or []
             
             # Load data with dialogs
             print("[INFO] Loading data...", flush=True)

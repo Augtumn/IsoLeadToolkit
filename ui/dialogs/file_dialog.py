@@ -13,16 +13,17 @@ from core.state import app_state
 class FileSelectionDialog:
     """Dialog for selecting data files"""
     
-    def __init__(self):
+    def __init__(self, default_file=None):
         """Initialize file selection dialog"""
         self.result = None
         self.selected_file = None
+        self.default_file = default_file if default_file and os.path.exists(default_file) else None
         self._translations = []
 
         self.root = tk.Tk()
         self.root.title(t("Select Data File"))
-        self.root.geometry("780x480")
-        self.root.minsize(640, 400)
+        self.root.geometry("820x520")
+        self.root.minsize(760, 480)
         self.root.configure(bg="#edf2f7")
         self.root.resizable(True, True)
 
@@ -35,6 +36,11 @@ class FileSelectionDialog:
         self._setup_styles()
         self._create_widgets()
         self._refresh_language()
+        if self.default_file:
+            self.selected_file = self.default_file
+            display_path = os.path.basename(self.default_file)
+            directory = os.path.dirname(self.default_file)
+            self.file_label.config(text=f"{display_path}\n{directory}", style='Path.TLabel')
 
     def _register_translation(self, widget, key, attr='text'):
         """Register a widget for translation updates"""
@@ -256,10 +262,14 @@ class FileSelectionDialog:
             (t("All files"), "*.*")
         ]
         
+        initial_dir = os.path.dirname(self.selected_file) if self.selected_file else None
+        initial_file = os.path.basename(self.selected_file) if self.selected_file else None
         file_path = filedialog.askopenfilename(
             title=t("Select Data File"),
             filetypes=file_types,
-            defaultextension=".xlsx"
+            defaultextension=".xlsx",
+            initialdir=initial_dir,
+            initialfile=initial_file
         )
         
         if file_path:
@@ -296,12 +306,12 @@ class FileSelectionDialog:
         return self.result
 
 
-def get_file_sheet_selection():
+def get_file_sheet_selection(default_file=None):
     """
     Show file selection dialog
     
     Returns:
         dict with 'file' key, or None if cancelled
     """
-    dialog = FileSelectionDialog()
+    dialog = FileSelectionDialog(default_file=default_file)
     return dialog.show()

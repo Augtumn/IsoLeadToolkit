@@ -12,7 +12,7 @@ from core.localization import translate
 class DataConfigDialog:
     """Dialog for selecting data and grouping columns"""
     
-    def __init__(self, df):
+    def __init__(self, df, default_group_cols=None, default_data_cols=None):
         """
         Initialize data configuration dialog
         
@@ -25,17 +25,11 @@ class DataConfigDialog:
         # Get available columns
         self.all_columns = list(df.columns)
         
-        # Initialize with empty selections
-        self.selected_group_cols = set()
-        self.selected_data_cols = set()
-        self.group_checkbuttons = {}
-        self.data_checkbuttons = {}
-        
         # Create main window
         self.root = tk.Tk()
         self.root.title(translate("Configure Data Columns"))
-        self.root.geometry("850x600")
-        self.root.minsize(800, 500)
+        self.root.geometry("980x700")
+        self.root.minsize(900, 620)
         self.root.configure(bg="#edf2f7")
         self.root.resizable(True, True)
 
@@ -44,6 +38,17 @@ class DataConfigDialog:
             self.style.theme_use('clam')
         except tk.TclError:
             pass
+
+        # Initialize with defaults (if provided) and filter to available columns
+        available_cols = set(self.all_columns)
+        self.selected_group_cols = set(default_group_cols or []).intersection(available_cols)
+        self.selected_data_cols = set(default_data_cols or []).intersection(available_cols)
+        self.group_checkbuttons = {}
+        self.data_checkbuttons = {}
+        self.group_widgets = []
+        self.data_widgets = []
+        self.group_search_var = tk.StringVar(master=self.root)
+        self.data_search_var = tk.StringVar(master=self.root)
 
         self._setup_styles()
         self._create_widgets_with_scroll()
@@ -173,7 +178,7 @@ class DataConfigDialog:
         card = ttk.Frame(parent, padding=10, style='DataConfig.Card.TFrame')
         card.grid(row=0, column=column_index, sticky=(tk.N, tk.S, tk.E, tk.W), padx=(0, 10) if column_index == 0 else (10, 0))
         card.columnconfigure(0, weight=1)
-        card.rowconfigure(3, weight=1)
+        card.rowconfigure(4, weight=1)
 
         header = ttk.Label(card, text=title, style='DataConfig.SectionHeader.TLabel')
         header.grid(row=0, column=0, sticky=tk.W)
@@ -197,6 +202,12 @@ class DataConfigDialog:
                 style='DataConfig.Toolbar.TButton',
                 command=self._clear_groups
             ).pack(side=tk.LEFT)
+            ttk.Button(
+                toolbar,
+                text=translate("Recommend"),
+                style='DataConfig.Toolbar.TButton',
+                command=self._recommend_groups
+            ).pack(side=tk.LEFT, padx=(8, 0))
         else:
             ttk.Button(
                 toolbar,
@@ -210,12 +221,28 @@ class DataConfigDialog:
                 style='DataConfig.Toolbar.TButton',
                 command=self._clear_data
             ).pack(side=tk.LEFT)
+            ttk.Button(
+                toolbar,
+                text=translate("Recommend"),
+                style='DataConfig.Toolbar.TButton',
+                command=self._recommend_data
+            ).pack(side=tk.LEFT, padx=(8, 0))
+
+        # Search field
+        search_frame = ttk.Frame(card, style='DataConfig.CardBody.TFrame')
+        search_frame.grid(row=3, column=0, sticky=tk.EW, pady=(6, 10))
+        search_frame.columnconfigure(1, weight=1)
+        ttk.Label(search_frame, text=translate("Search"), style='DataConfig.Body.TLabel').grid(row=0, column=0, sticky=tk.W, padx=(0, 6))
+        search_var = self.group_search_var if selection_type == 'group' else self.data_search_var
+        search_entry = ttk.Entry(search_frame, textvariable=search_var)
+        search_entry.grid(row=0, column=1, sticky=tk.EW)
+        search_entry.bind('<KeyRelease>', lambda e, s=selection_type: self._filter_columns(s))
 
         canvas = tk.Canvas(card, highlightthickness=0, bd=0, background="#ffffff")
-        canvas.grid(row=3, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        canvas.grid(row=4, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         scrollbar = ttk.Scrollbar(card, orient=tk.VERTICAL, command=canvas.yview)
-        scrollbar.grid(row=3, column=1, sticky=(tk.N, tk.S))
+        scrollbar.grid(row=4, column=1, sticky=(tk.N, tk.S))
 
         scrollable_frame = ttk.Frame(canvas, style='DataConfig.CardBody.TFrame')
         canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
@@ -272,9 +299,11 @@ class DataConfigDialog:
             if selection_type == 'group':
                 cb.configure(command=lambda c=col, v=var: self._on_group_check(c, v))
                 self.group_checkbuttons[col] = var
+                self.group_widgets.append({'col': col, 'widget': cb, 'text': display_text})
             else:
                 cb.configure(command=lambda c=col, v=var: self._on_data_check(c, v))
                 self.data_checkbuttons[col] = var
+                self.data_widgets.append({'col': col, 'widget': cb, 'text': display_text})
 
         return card
     
@@ -315,6 +344,52 @@ class DataConfigDialog:
         for col, var in self.data_checkbuttons.items():
             var.set(False)
             self.selected_data_cols.discard(col)
+
+    def _filter_columns(self, selection_type):
+        query = (self.group_search_var.get() if selection_type == 'group' else self.data_search_var.get()).strip().lower()
+        widgets = self.group_widgets if selection_type == 'group' else self.data_widgets
+        for item in widgets:
+            widget = item['widget']
+            text = item['text'].lower()
+            if not query or query in text:
+                if not widget.winfo_ismapped():
+                    widget.pack(anchor=tk.W, pady=3)
+            else:
+                if widget.winfo_ismapped():
+                    widget.pack_forget()
+
+    def _recommend_groups(self):
+        """Recommend grouping columns based on common names"""
+        preferred = ['序号', '样品', '样品编号', 'Sample', 'Sample ID', 'ID', 'Group', '组']
+        # Clear current
+        self._clear_groups()
+        # Pick preferred if present
+        for name in preferred:
+            if name in self.group_checkbuttons:
+                self.group_checkbuttons[name].set(True)
+                self.selected_group_cols.add(name)
+                return
+        # Fallback: first non-numeric column
+        for col in self.all_columns:
+            if not pd.api.types.is_numeric_dtype(self.df[col]) and col in self.group_checkbuttons:
+                self.group_checkbuttons[col].set(True)
+                self.selected_group_cols.add(col)
+                return
+
+    def _recommend_data(self):
+        """Recommend data columns for isotope plotting"""
+        preferred = ['206Pb/204Pb', '207Pb/204Pb', '208Pb/204Pb']
+        self._clear_data()
+        found = [c for c in preferred if c in self.data_checkbuttons]
+        if found:
+            for col in found:
+                self.data_checkbuttons[col].set(True)
+                self.selected_data_cols.add(col)
+            return
+        # Fallback: select all numeric columns
+        for col, var in self.data_checkbuttons.items():
+            var.set(True)
+            self.selected_data_cols.add(col)
     
     def _ok_clicked(self):
         """Handle OK button click"""
@@ -372,7 +447,7 @@ class DataConfigDialog:
         return self.result
 
 
-def get_data_configuration(df):
+def get_data_configuration(df, default_group_cols=None, default_data_cols=None):
     """
     Show data configuration dialog
     
@@ -382,5 +457,9 @@ def get_data_configuration(df):
     Returns:
         dict with keys 'group_cols' and 'data_cols', or None if cancelled
     """
-    dialog = DataConfigDialog(df)
+    dialog = DataConfigDialog(
+        df,
+        default_group_cols=default_group_cols,
+        default_data_cols=default_data_cols
+    )
     return dialog.show()

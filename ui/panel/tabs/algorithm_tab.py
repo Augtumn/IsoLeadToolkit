@@ -288,58 +288,17 @@ class AlgorithmTabMixin:
         # --- Ternary Parameters ---
         self._build_ternary_section(self.mode_section)
 
-        # V1V2 Parameters
-        self.v1v2_section = self._create_section(
+        # Geochemistry Plot Controls
+        self.geochem_section = self._create_section(
             self.mode_section,
-            "V1V2 Time Settings",
-            "Adjust time constants for V1-V2 diagram calculation."
+            "Geochemistry Plot Controls",
+            "Toggle model curves, paleoisochrons and age lines."
         )
 
-        # Helper to add entry in Grid Layout
-        def add_v1v2_entry(parent_frame, label_key, default_val, var_key):
-            # Container
-            cell = ttk.Frame(parent_frame, style='ControlPanel.TFrame')
-            cell.pack(fill=tk.X, pady=4)
-            
-            lbl = ttk.Label(cell, text=self._translate(label_key), style='Body.TLabel')
-            lbl.pack(anchor=tk.W)
-            self._register_translation(lbl, label_key)
-            
-            var = tk.StringVar(value=str(default_val))
-            self.geo_vars[var_key] = var
-            
-            entry = ttk.Entry(cell, textvariable=var)
-            entry.pack(fill=tk.X, expand=True)
-
-            # Bind return to apply
-            entry.bind('<Return>', lambda e: self._on_v1v2_param_change())
-            entry.bind('<FocusOut>', lambda e: self._on_v1v2_param_change())
-            
-            return var
-        
-        # We need to access current Geometry params (T1, T2)
-        try:
-            current_params = geochemistry.engine.get_parameters()
-        except AttributeError:
-            current_params = {}
-
-        # T1 Input (Model Age Calculation)
-        add_v1v2_entry(self.v1v2_section, "T1 (Ma) - Model Age", current_params.get('T1', 4430e6)/1e6, 'T1_v1v2')
-        
-        # T2 Input (Mantle Calculation)
-        add_v1v2_entry(self.v1v2_section, "T2 (Ma) - Standard Earth Age", current_params.get('T2', 4570e6)/1e6, 'T2_v1v2')
-        
-        # Isochron Parameters
-        self.isochron_section = self._create_section(
-            self.mode_section,
-            "Isochron Controls",
-            "Toggle reference lines for Isochron plots."
-        )
-        
         # Isochron Line Toggle
         self.check_vars['show_isochrons'] = tk.BooleanVar(value=getattr(app_state, 'show_isochrons', True))
         chk_iso = ttk.Checkbutton(
-            self.isochron_section,
+            self.geochem_section,
             text=self._translate("Show Age Isochrons"),
             variable=self.check_vars['show_isochrons'],
             command=self._on_change,
@@ -347,25 +306,6 @@ class AlgorithmTabMixin:
         )
         chk_iso.pack(anchor=tk.W, pady=2)
         self._register_translation(chk_iso, "Show Age Isochrons")
-        
-        # Growth Curve Toggle
-        self.check_vars['show_growth_curves'] = tk.BooleanVar(value=getattr(app_state, 'show_growth_curves', True))
-        chk_growth = ttk.Checkbutton(
-            self.isochron_section,
-            text=self._translate("Show Growth Curves"),
-            variable=self.check_vars['show_growth_curves'],
-            command=self._on_change,
-            style='Option.TCheckbutton'
-        )
-        chk_growth.pack(anchor=tk.W, pady=2)
-        self._register_translation(chk_growth, "Show Growth Curves")
-
-        # Geochemistry Plot Controls
-        self.geochem_section = self._create_section(
-            self.mode_section,
-            "Geochemistry Plot Controls",
-            "Toggle model curves, paleoisochrons and age lines."
-        )
 
         self.check_vars['show_model_curves'] = tk.BooleanVar(
             value=getattr(app_state, 'show_model_curves', True)
@@ -379,6 +319,8 @@ class AlgorithmTabMixin:
         )
         chk_model_curves.pack(anchor=tk.W, pady=2)
         self._register_translation(chk_model_curves, "Show Model Curves")
+
+        # Model curve selection removed: curves follow current model only
 
         self.check_vars['show_paleoisochrons'] = tk.BooleanVar(
             value=getattr(app_state, 'show_paleoisochrons', True)
@@ -574,29 +516,7 @@ class AlgorithmTabMixin:
         if self.callback:
             self.callback()
 
-    def _on_v1v2_param_change(self):
-        """Update V1V2 time parameters directly."""
-        try:
-            from data import geochemistry as geo_module
-        except ImportError:
-            return
-
-        try:
-            new_params = {}
-            if 'T1_v1v2' in self.geo_vars:
-                new_params['T1'] = float(self.geo_vars['T1_v1v2'].get()) * 1e6
-            if 'T2_v1v2' in self.geo_vars:
-                new_params['T2'] = float(self.geo_vars['T2_v1v2'].get()) * 1e6
-            
-            if new_params and geo_module:
-                geo_module.engine.update_parameters(new_params)
-                print(f"[DEBUG] V1V2 Time Params Updated: {new_params}", flush=True)
-                
-                # Trigger re-render if active
-                if app_state.render_mode == 'V1V2':
-                    self._on_change()
-        except ValueError:
-            pass  # Ignore invalid typing while typing
+    # Model curve selection handler removed
 
     def _refresh_2d_combos(self):
         """Update 2D scatter axis comboboxes with available columns."""
@@ -731,7 +651,7 @@ class AlgorithmTabMixin:
         
         # Hide all sections first
         for section in ['umap_section', 'tsne_section', 'pca_section', 'rpca_section', 
-                        'ternary_section', 'v1v2_section', 'isochron_section', 'geochem_section', 'twod_section']:
+                        'ternary_section', 'geochem_section', 'twod_section']:
             if hasattr(self, section):
                 getattr(self, section).pack_forget()
 
@@ -746,12 +666,10 @@ class AlgorithmTabMixin:
             self.rpca_section.pack(fill=tk.X, padx=6, pady=6)
         elif mode == 'Ternary' and hasattr(self, 'ternary_section'):
             self.ternary_section.pack(fill=tk.X, padx=6, pady=6)
-        elif mode == 'V1V2' and hasattr(self, 'v1v2_section'):
-            self.v1v2_section.pack(fill=tk.X, padx=6, pady=6)
-        elif mode in ('ISOCHRON1', 'ISOCHRON2') and hasattr(self, 'isochron_section'):
-            self.isochron_section.pack(fill=tk.X, padx=6, pady=6)
-        elif mode in ('PB_EVOL_76', 'PB_EVOL_86', 'PB_MODEL_AGE',
-                      'PB_MU_AGE', 'PB_KAPPA_AGE') and hasattr(self, 'geochem_section'):
+        elif mode in ('PB_EVOL_76', 'PB_EVOL_86'):
+            if hasattr(self, 'geochem_section'):
+                self.geochem_section.pack(fill=tk.X, padx=6, pady=6)
+        elif mode in ('PB_MU_AGE', 'PB_KAPPA_AGE') and hasattr(self, 'geochem_section'):
             self.geochem_section.pack(fill=tk.X, padx=6, pady=6)
         elif mode == '2D' and hasattr(self, 'twod_section'):
             self.twod_section.pack(fill=tk.X, padx=6, pady=6)

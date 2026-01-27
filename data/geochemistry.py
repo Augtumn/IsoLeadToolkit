@@ -75,9 +75,22 @@ PRESET_MODELS = {
         'Tsec': 3700e6,    # Age1
         'a0': 9.307, 'b0': 10.294, 'c0': 29.476,
         'a1': 11.152, 'b1': 12.998, 'c1': 31.23,
-        'mu_M': 7.90,
-        'omega_M': 31.92,
+        'mu_M': 7.8,
+        'omega_M': 4.04 * 7.8,
         'U_ratio': 1.0 / 137.88,
+        'E1': E1_DEFAULT,
+        'E2': E2_DEFAULT
+    },
+    "V1V2 (Chen 1982)": {
+        # Chen et al. (1982): single-stage mantle lead, mu=7.8, Th/U=4.13
+        'T1': T_EARTH_CANON,
+        'T2': T_EARTH_CANON,
+        'Tsec': 0.0,
+        'a0': 9.307, 'b0': 10.294, 'c0': 29.476,
+        'a1': 9.307, 'b1': 10.294, 'c1': 29.476,
+        'mu_M': 7.8,
+        'omega_M': 7.8 * 4.13,
+        'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
         'E2': E2_DEFAULT
     },
@@ -951,7 +964,7 @@ def calculate_source_kappa_from_slope(slope_208_206, age_ma, params=None):
 # 11. 主入口函数
 # =============================================================================
 
-def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ages=True, a=None, b=None, c=None, scale=1.0, **kwargs):
+def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ages=True, a=None, b=None, c=None, scale=1.0, t_Ma=None, **kwargs):
     """
     计算所有地球化学参数 (主调用接口)
     
@@ -964,6 +977,7 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     Args:
         Pb206_204_S, ...: 同位素比值数据
         a, b, c: 可选的 V1V2 回归参数覆盖
+        t_Ma: 样品真实年龄 (Ma)，用于 CalcMu/CalcKa/Calc*in（若未提供则使用 tSK）
         
     Returns:
         dict: 包含所有计算结果的字典
@@ -994,6 +1008,16 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
         tCDT = calculate_single_stage_age(Pb206, Pb207)
 
     tSK = calculate_two_stage_age(Pb206, Pb207)
+
+    if t_Ma is None:
+        t_input = tSK
+    else:
+        t_input = np.asarray(t_Ma, dtype=float)
+        if t_input.ndim == 0:
+            if not np.isfinite(t_input):
+                t_input = tSK
+        else:
+            t_input = np.where(np.isfinite(t_input), t_input, tSK)
     
     results['tCDT (Ma)'] = tCDT
     results['tSK (Ma)'] = tSK
@@ -1031,22 +1055,22 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     results['V2'] = v2
     
     # 5. 源区参数反演
-    # 使用通用/混合参数 (基于 tSK)
-    mu_val = calculate_mu_sk(Pb206, Pb207, tSK, params=params_calc)
+    # 使用真实年龄（若提供），否则回退到 tSK
+    mu_val = calculate_mu_sk(Pb206, Pb207, t_input, params=params_calc)
     results['mu'] = mu_val
     results['nu'] = calculate_nu_sk(mu_val, params=params_calc)
-    results['omega'] = calculate_omega_sk(Pb208, tSK, params=params_calc)
+    results['omega'] = calculate_omega_sk(Pb208, t_input, params=params_calc)
     
     # 5.2 R语言 PbIso 对应参数 (严格 SK 模型)
-    mu_sk = calculate_mu_sk_model(Pb206, Pb207, tSK, params=params_calc)
-    kappa_sk = calculate_kappa_sk_model(Pb208, Pb206, tSK, params=params_calc)
+    mu_sk = calculate_mu_sk_model(Pb206, Pb207, t_input, params=params_calc)
+    kappa_sk = calculate_kappa_sk_model(Pb208, Pb206, t_input, params=params_calc)
     results['mu_SK'] = mu_sk
     results['kappa_SK'] = kappa_sk
     results['omega_SK'] = kappa_sk * mu_sk # Omega = Kappa * Mu
     
-    # 6. 初始比值反演 (基于 tSK)
-    results['Init_206_204'] = calculate_initial_ratio_64(tSK, Pb206, Pb207, params=params_calc)
-    results['Init_207_204'] = calculate_initial_ratio_74(tSK, Pb206, Pb207, params=params_calc)
-    results['Init_208_204'] = calculate_initial_ratio_84(tSK, Pb206, Pb207, Pb208, params=params_calc)
+    # 6. 初始比值反演 (基于真实年龄或 tSK)
+    results['Init_206_204'] = calculate_initial_ratio_64(t_input, Pb206, Pb207, params=params_calc)
+    results['Init_207_204'] = calculate_initial_ratio_74(t_input, Pb206, Pb207, params=params_calc)
+    results['Init_208_204'] = calculate_initial_ratio_84(t_input, Pb206, Pb207, Pb208, params=params_calc)
     
     return results

@@ -31,6 +31,7 @@ class AppState:
         self.show_paleoisochrons = True
         self.show_model_age_lines = True
         self.paleoisochron_ages = [3000, 2000, 1000, 0]
+        self.model_curve_models = None  # None means all preset models
             
         # PCA/RobustPCA Dimension Selection
         self.pca_component_indices = [0, 1]  # Default to PC1 and PC2

@@ -95,6 +95,11 @@ def _draw_isochron_overlays(ax, mode):
     """Draw isochron reference lines for Pb-Pb plots."""
     if geochemistry is None: return
     try:
+        # Map Pb evolution modes to isochron overlay types
+        if mode == 'PB_EVOL_76':
+            mode = 'ISOCHRON1'
+        elif mode == 'PB_EVOL_86':
+            mode = 'ISOCHRON2'
         params = geochemistry.engine.get_parameters()
         
         # Unpack constants
@@ -401,11 +406,17 @@ def _draw_model_curves(ax, mode, params_list):
 
     for params in params_list:
         try:
-            t_max = params.get('Tsec', geochemistry.engine.params['Tsec']) / 1e6
+            tsec = params.get('Tsec', geochemistry.engine.params['Tsec'])
+            if tsec and tsec > 0:
+                t_max = tsec / 1e6
+                t1_override = tsec
+            else:
+                t_max = params.get('T2', params.get('T1', geochemistry.engine.params['T2'])) / 1e6
+                t1_override = params.get('T2', params.get('T1', geochemistry.engine.params['T2']))
             t_vals = np.linspace(0, t_max, 200)
-            curve = geochemistry.calculate_modelcurve(t_vals, params=params)
+            curve = geochemistry.calculate_modelcurve(t_vals, params=params, T1=t1_override / 1e6)
             x_vals = curve['Pb206_204']
-            if mode in ('PB_EVOL_76', 'PB_MODEL_AGE'):
+            if mode == 'PB_EVOL_76':
                 y_vals = curve['Pb207_204']
             else:
                 y_vals = curve['Pb208_204']
@@ -429,7 +440,9 @@ def _draw_paleoisochrons(ax, mode, ages_ma, params):
         l238 = params['lambda_238']
         l235 = params['lambda_235']
         l232 = params['lambda_232']
-        T1 = params['Tsec']
+        T1 = params.get('Tsec', 0.0)
+        if T1 <= 0:
+            T1 = params.get('T2', params.get('T1', T1))
         X1 = params['a1']
         Y1 = params['b1']
         Z1 = params['c1']
@@ -447,7 +460,7 @@ def _draw_paleoisochrons(ax, mode, ages_ma, params):
             e8T = np.exp(l238 * T1)
             e8t = np.exp(l238 * t)
 
-            if mode in ('PB_EVOL_76', 'PB_MODEL_AGE'):
+            if mode == 'PB_EVOL_76':
                 e5T = np.exp(l235 * T1)
                 e5t = np.exp(l235 * t)
                 slope = (e5T - e5t) / (U8U5 * (e8T - e8t))
@@ -464,8 +477,8 @@ def _draw_paleoisochrons(ax, mode, ages_ma, params):
                 linestyle='--',
                 color='#94a3b8',
                 linewidth=getattr(app_state, 'paleoisochron_width', 0.9),
-                alpha=0.7,
-                zorder=0,
+                alpha=0.85,
+                zorder=3,
                 label='_nolegend_'
             )
             # Label paleoisochron (age)
@@ -491,11 +504,16 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
         return
     try:
         t_sk = geochemistry.calculate_two_stage_age(pb206, pb207, params=params)
-        curve = geochemistry.calculate_modelcurve(t_sk, params=params)
+        t_cdt = geochemistry.calculate_single_stage_age(pb206, pb207, params=params)
+        if params.get('Tsec', 0.0) <= 0:
+            t_model = t_cdt
+            t1_override = params.get('T2', params.get('T1', None))
+        else:
+            t_model = np.where(np.isfinite(t_sk), t_sk, t_cdt)
+            t1_override = params.get('Tsec', None)
+        curve = geochemistry.calculate_modelcurve(t_model, params=params, T1=t1_override / 1e6 if t1_override else None)
         x_curve = np.asarray(curve['Pb206_204'])
         y_curve = np.asarray(curve['Pb207_204'])
-        X1 = params['a1']
-        Y1 = params['b1']
 
         # Limit number of lines for readability
         max_lines = 200
@@ -507,16 +525,55 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
             if np.isnan(pb206[i]) or np.isnan(pb207[i]) or np.isnan(x_curve[i]) or np.isnan(y_curve[i]):
                 continue
             ax.plot(
-                [X1, pb206[i]], [Y1, pb207[i]],
+                [x_curve[i], pb206[i]], [y_curve[i], pb207[i]],
                 color='#cbd5f5',
                 linewidth=getattr(app_state, 'model_age_line_width', 0.7),
-                alpha=0.6,
-                zorder=0,
+                alpha=0.7,
+                zorder=1,
                 label='_nolegend_'
             )
             ax.scatter(x_curve[i], y_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
     except Exception as err:
         print(f"[WARN] Failed to draw model age lines: {err}", flush=True)
+
+
+def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params):
+    """Draw model age construction lines for 206/204 vs 208/204."""
+    if geochemistry is None:
+        return
+    try:
+        t_sk = geochemistry.calculate_two_stage_age(pb206, pb207, params=params)
+        t_cdt = geochemistry.calculate_single_stage_age(pb206, pb207, params=params)
+        if params.get('Tsec', 0.0) <= 0:
+            t_model = t_cdt
+            t1_override = params.get('T2', params.get('T1', None))
+        else:
+            t_model = np.where(np.isfinite(t_sk), t_sk, t_cdt)
+            t1_override = params.get('Tsec', None)
+        curve = geochemistry.calculate_modelcurve(t_model, params=params, T1=t1_override / 1e6 if t1_override else None)
+        x_curve = np.asarray(curve['Pb206_204'])
+        z_curve = np.asarray(curve['Pb208_204'])
+
+        # Limit number of lines for readability
+        max_lines = 200
+        idxs = np.arange(len(pb206))
+        if len(idxs) > max_lines:
+            idxs = np.random.choice(idxs, size=max_lines, replace=False)
+
+        for i in idxs:
+            if np.isnan(pb206[i]) or np.isnan(pb208[i]) or np.isnan(x_curve[i]) or np.isnan(z_curve[i]):
+                continue
+            ax.plot(
+                [x_curve[i], pb206[i]], [z_curve[i], pb208[i]],
+                color='#cbd5f5',
+                linewidth=getattr(app_state, 'model_age_line_width', 0.7),
+                alpha=0.7,
+                zorder=1,
+                label='_nolegend_'
+            )
+            ax.scatter(x_curve[i], z_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
+    except Exception as err:
+        print(f"[WARN] Failed to draw model age lines (206-208): {err}", flush=True)
 
                     
     except Exception as e:
@@ -1356,6 +1413,8 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             actual_algorithm = 'RobustPCA' # Keep case for display
         if actual_algorithm in ('PB_MODELS_76', 'PB_MODELS_86'):
             actual_algorithm = 'PB_EVOL_76' if actual_algorithm.endswith('_76') else 'PB_EVOL_86'
+        if actual_algorithm in ('ISOCHRON1', 'ISOCHRON2'):
+            actual_algorithm = 'PB_EVOL_76' if actual_algorithm == 'ISOCHRON1' else 'PB_EVOL_86'
 
         target_dims = 2
         if actual_algorithm == 'TERNARY':
@@ -1484,43 +1543,9 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 print(f"[ERROR] V1V2 calculation failed: {e}", flush=True)
                 return False
         
-        elif actual_algorithm in ('ISOCHRON1', 'ISOCHRON2'):
-            print(f"[DEBUG] Computing Isochron embedding for {actual_algorithm}", flush=True)
-            # Similar to V1V2, find columns
-            X, indices = _get_analysis_data()
-            if X is None:
-                return False
-            
-            cols = app_state.data_cols
-            col_206 = "206Pb/204Pb" if "206Pb/204Pb" in cols else None
-            col_207 = "207Pb/204Pb" if "207Pb/204Pb" in cols else None
-            col_208 = "208Pb/204Pb" if "208Pb/204Pb" in cols else None
-            
-            if not (col_206 and col_207 and col_208):
-                 # Try finding partial matches if exact failure? 
-                 # Or just fail. User provided file usually has these.
-                 print(f"[ERROR] Isochron plots require 206Pb/204Pb, 207Pb/204Pb, 208Pb/204Pb columns.", flush=True)
-                 return False
-
-            idx_206 = cols.index(col_206)
-            idx_207 = cols.index(col_207)
-            idx_208 = cols.index(col_208)
-            
-            # ISOCHRON1: x=206, y=207
-            # ISOCHRON2: x=206, y=208
-            
-            x_vals = X[:, idx_206]
-            if actual_algorithm == 'ISOCHRON1':
-                y_vals = X[:, idx_207]
-            else:
-                y_vals = X[:, idx_208]
-                
-            embedding = np.column_stack((x_vals, y_vals))
-            app_state.last_embedding = embedding
-            app_state.last_embedding_type = actual_algorithm
-
+        # ISOCHRON modes removed; overlays now available in Pb evolution plots
         elif actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86',
-                                  'PB_MODEL_AGE', 'PB_MU_AGE', 'PB_KAPPA_AGE'):
+                                  'PB_MU_AGE', 'PB_KAPPA_AGE'):
             print(f"[DEBUG] Computing Geochemistry embedding for {actual_algorithm}", flush=True)
             if geochemistry is None:
                 print("[ERROR] Geochemistry module not loaded", flush=True)
@@ -1553,7 +1578,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     kappa_vals = geochemistry.calculate_kappa_sk_model(pb208, pb206, t_ma)
                     embedding = np.column_stack((t_ma, kappa_vals))
             else:
-                if actual_algorithm in ('PB_EVOL_76', 'PB_MODEL_AGE'):
+                if actual_algorithm == 'PB_EVOL_76':
                     embedding = np.column_stack((pb206, pb207))
                 else:
                     embedding = np.column_stack((pb206, pb208))
@@ -2044,18 +2069,14 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             title = f'Embedding - Robust PCA{subset_info} (n_components={robust_pca_params["n_components"]})\nColored by {group_col}'
         elif actual_algorithm == 'V1V2':
             title = f'Geochem - V1-V2 Diagram{subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'ISOCHRON1':
-            title = f'Geochem - Isochron (207/204 vs 206/204){subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'ISOCHRON2':
-            title = f'Geochem - Isochron (208/204 vs 206/204){subset_info}\nColored by {group_col}'
+        # ISOCHRON modes removed
         elif actual_algorithm == 'TERNARY':
             title = f'Raw - Ternary Plot{subset_info}\nColored by {group_col}'
         elif actual_algorithm == 'PB_EVOL_76':
             title = f'Geochem - Pb Evolution / Model Curves (206-207){subset_info}\nColored by {group_col}'
         elif actual_algorithm == 'PB_EVOL_86':
             title = f'Geochem - Pb Evolution / Model Curves (206-208){subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PB_MODEL_AGE':
-            title = f'Geochem - Model Age Diagram{subset_info}\nColored by {group_col}'
+        # PB_MODEL_AGE removed
         elif actual_algorithm == 'PB_MU_AGE':
             title = f'Geochem - Mu vs Age{subset_info}\nColored by {group_col}'
         elif actual_algorithm == 'PB_KAPPA_AGE':
@@ -2090,15 +2111,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         if actual_algorithm == 'V1V2':
             app_state.ax.set_xlabel("V1")
             app_state.ax.set_ylabel("V2")
-        elif actual_algorithm == 'ISOCHRON1':
-            app_state.ax.set_xlabel("206Pb/204Pb")
-            app_state.ax.set_ylabel("207Pb/204Pb")
-            _draw_isochron_overlays(app_state.ax, 'ISOCHRON1')
-        elif actual_algorithm == 'ISOCHRON2':
-            app_state.ax.set_xlabel("206Pb/204Pb")
-            app_state.ax.set_ylabel("208Pb/204Pb")
-            _draw_isochron_overlays(app_state.ax, 'ISOCHRON2')
-        elif actual_algorithm in ('PB_EVOL_76', 'PB_MODEL_AGE'):
+        elif actual_algorithm == 'PB_EVOL_76':
             app_state.ax.set_xlabel("206Pb/204Pb")
             app_state.ax.set_ylabel("207Pb/204Pb")
         elif actual_algorithm in ('PB_EVOL_86',):
@@ -2141,34 +2154,33 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2")
 
         # Geochemistry overlays
-        if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86', 'PB_MODEL_AGE'):
+        if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
             params = geochemistry.engine.get_parameters() if geochemistry else {}
             if getattr(app_state, 'show_model_curves', True):
-                if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
-                    params_list = []
-                    try:
-                        for model in geochemistry.PRESET_MODELS.values():
-                            merged = geochemistry.engine.get_parameters()
-                            merged.update(model)
-                            params_list.append(merged)
-                    except Exception:
-                        params_list = [params]
-                else:
-                    params_list = [params]
+                params_list = [params]
                 _draw_model_curves(app_state.ax, actual_algorithm, params_list)
+
+            if getattr(app_state, 'show_isochrons', True) or getattr(app_state, 'show_growth_curves', True):
+                _draw_isochron_overlays(app_state.ax, actual_algorithm)
 
             if getattr(app_state, 'show_paleoisochrons', True):
                 ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
                 _draw_paleoisochrons(app_state.ax, actual_algorithm, ages, params)
 
-            if actual_algorithm == 'PB_MODEL_AGE' and getattr(app_state, 'show_model_age_lines', True):
+            if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86') and getattr(app_state, 'show_model_age_lines', True):
                 df_subset, _ = _get_subset_dataframe()
                 if df_subset is not None:
                     col_206, col_207, _ = _get_pb_columns(df_subset.columns)
                     if col_206 and col_207:
                         pb206 = pd.to_numeric(df_subset[col_206], errors='coerce').values
                         pb207 = pd.to_numeric(df_subset[col_207], errors='coerce').values
-                        _draw_model_age_lines(app_state.ax, pb206, pb207, params)
+                        if actual_algorithm == 'PB_EVOL_76':
+                            _draw_model_age_lines(app_state.ax, pb206, pb207, params)
+                        else:
+                            col_208 = "208Pb/204Pb" if "208Pb/204Pb" in df_subset.columns else None
+                            if col_208:
+                                pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
+                                _draw_model_age_lines_86(app_state.ax, pb206, pb207, pb208, params)
         
         app_state.ax.tick_params()
         

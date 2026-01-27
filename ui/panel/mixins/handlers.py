@@ -92,10 +92,10 @@ class PanelHandlersMixin:
             # Update Isochron settings
             if 'show_isochrons' in self.check_vars:
                 app_state.show_isochrons = self.check_vars['show_isochrons'].get()
-            if 'show_growth_curves' in self.check_vars:
-                app_state.show_growth_curves = self.check_vars['show_growth_curves'].get()
             if 'show_model_curves' in self.check_vars:
                 app_state.show_model_curves = self.check_vars['show_model_curves'].get()
+                # Keep model age curves in sync with model curves (single control)
+                app_state.show_growth_curves = app_state.show_model_curves
             if 'show_paleoisochrons' in self.check_vars:
                 app_state.show_paleoisochrons = self.check_vars['show_paleoisochrons'].get()
             if 'show_model_age_lines' in self.check_vars:

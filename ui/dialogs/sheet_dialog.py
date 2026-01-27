@@ -13,7 +13,7 @@ from core.localization import translate
 class SheetSelectionDialog:
     """Simple dialog for selecting a sheet"""
     
-    def __init__(self, file_path):
+    def __init__(self, file_path, default_sheet=None):
         """
         Initialize sheet selection dialog
         
@@ -22,6 +22,7 @@ class SheetSelectionDialog:
         """
         self.file_path = file_path
         self.result = None
+        self.default_sheet = default_sheet
         self.sheets = []
         
         # Load sheets
@@ -34,8 +35,8 @@ class SheetSelectionDialog:
         # Create main window
         self.root = tk.Tk()
         self.root.title(translate("Select Sheet"))
-        self.root.geometry("560x420")
-        self.root.minsize(480, 360)
+        self.root.geometry("620x460")
+        self.root.minsize(560, 420)
         self.root.configure(bg="#edf2f7")
         self.root.resizable(True, True)
 
@@ -139,8 +140,13 @@ class SheetSelectionDialog:
             self.sheet_listbox.insert(tk.END, sheet)
 
         if self.sheets:
-            self.sheet_listbox.selection_set(0)
-            self.sheet_listbox.see(0)
+            if self.default_sheet in self.sheets:
+                idx = self.sheets.index(self.default_sheet)
+                self.sheet_listbox.selection_set(idx)
+                self.sheet_listbox.see(idx)
+            else:
+                self.sheet_listbox.selection_set(0)
+                self.sheet_listbox.see(0)
 
         self.sheet_listbox.bind('<Double-Button-1>', lambda e: self._ok_clicked())
 
@@ -204,7 +210,7 @@ class SheetSelectionDialog:
         return self.result
 
 
-def get_sheet_selection(file_path):
+def get_sheet_selection(file_path, default_sheet=None):
     """
     Show sheet selection dialog
     
@@ -214,5 +220,5 @@ def get_sheet_selection(file_path):
     Returns:
         str, selected sheet name, or None if cancelled
     """
-    dialog = SheetSelectionDialog(file_path)
+    dialog = SheetSelectionDialog(file_path, default_sheet=default_sheet)
     return dialog.show()

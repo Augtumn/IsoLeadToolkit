@@ -182,9 +182,9 @@ class GeochemistryTabMixin:
                 # 若已有数据，则触发重算更新图形。
                 if app_state.df_global is not None:
                     if app_state.render_mode in (
-                        'V1V2', 'ISOCHRON1', 'ISOCHRON2',
+                        'V1V2',
                         'PB_EVOL_76', 'PB_EVOL_86',
-                        'PB_MODEL_AGE', 'PB_MU_AGE', 'PB_KAPPA_AGE',
+                        'PB_MU_AGE', 'PB_KAPPA_AGE',
                     ):
                         self._on_change()
 
@@ -263,8 +263,11 @@ class GeochemistryTabMixin:
             # 若已有数据且处于地化模式，则自动刷新图像
             if app_state.df_global is not None:
                 if app_state.render_mode in (
-                    'V1V2', 'ISOCHRON1', 'ISOCHRON2',
+                    'V1V2',
                     'PB_EVOL_76', 'PB_EVOL_86',
-                    'PB_MODEL_AGE', 'PB_MU_AGE', 'PB_KAPPA_AGE',
+                    'PB_MU_AGE', 'PB_KAPPA_AGE',
                 ):
-                    self._on_change()
+                    if self.callback:
+                        self.callback()
+                    else:
+                        self._on_change()
