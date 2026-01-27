@@ -226,6 +226,21 @@ class Application:
         print("[INFO] Creating plot figure...", flush=True)
         # Use constrained_layout for adaptive layout
         app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'], constrained_layout=True)
+
+        # Auto-adjust layout on resize to avoid clipping
+        def _on_resize(event):
+            try:
+                if app_state.fig is None:
+                    return
+                app_state.fig.set_constrained_layout(True)
+                app_state.fig.tight_layout()
+                app_state.fig.canvas.draw_idle()
+            except Exception:
+                pass
+        try:
+            app_state.fig.canvas.mpl_connect('resize_event', _on_resize)
+        except Exception:
+            pass
         
         def _apply_language_to_main_ui():
             if app_state.control_panel_button is not None:

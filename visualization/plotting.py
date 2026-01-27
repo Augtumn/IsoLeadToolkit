@@ -215,7 +215,14 @@ def _draw_isochron_overlays(ax, mode):
                 if grp == 'All Data': color = '#64748b'
 
                 # Plot Line
-                ax.plot(x_line, y_line, linestyle='-', color=color, linewidth=1.5, alpha=0.8, zorder=2)
+                ax.plot(
+                    x_line, y_line,
+                    linestyle='-',
+                    color=color,
+                    linewidth=getattr(app_state, 'isochron_line_width', 1.5),
+                    alpha=0.8,
+                    zorder=2
+                )
 
                 # Annotate Age (Only Isochron1)
                 if mode == 'ISOCHRON1' and calculate_isochron_age_from_slope:
@@ -271,7 +278,14 @@ def _draw_isochron_overlays(ax, mode):
                                         annot_text = f" μ={mu_source:.1f}"
 
                                 if x_growth is not None:
-                                     ax.plot(x_growth, y_growth, linestyle=':', color=color, alpha=0.6, linewidth=1.0, zorder=1.5)
+                                     ax.plot(
+                                         x_growth, y_growth,
+                                         linestyle=':',
+                                         color=color,
+                                         alpha=0.6,
+                                         linewidth=getattr(app_state, 'model_curve_width', 1.2),
+                                         zorder=1.5
+                                     )
                                      ax.text(x_growth[0], y_growth[0], annot_text, 
                                              fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
 
@@ -398,7 +412,7 @@ def _draw_model_curves(ax, mode, params_list):
             ax.plot(
                 x_vals, y_vals,
                 color=next(color_cycle),
-                linewidth=1.2,
+                linewidth=getattr(app_state, 'model_curve_width', 1.2),
                 alpha=0.8,
                 zorder=1,
                 label='_nolegend_'
@@ -445,7 +459,15 @@ def _draw_paleoisochrons(ax, mode, ages_ma, params):
                 intercept = Z1 - slope * X1
 
             y_vals = slope * x_vals + intercept
-            ax.plot(x_vals, y_vals, linestyle='--', color='#94a3b8', linewidth=0.9, alpha=0.7, zorder=0, label='_nolegend_')
+            ax.plot(
+                x_vals, y_vals,
+                linestyle='--',
+                color='#94a3b8',
+                linewidth=getattr(app_state, 'paleoisochron_width', 0.9),
+                alpha=0.7,
+                zorder=0,
+                label='_nolegend_'
+            )
             # Label paleoisochron (age)
             if len(x_vals) > 0:
                 label_x = x_vals[-1]
@@ -484,7 +506,14 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
         for i in idxs:
             if np.isnan(pb206[i]) or np.isnan(pb207[i]) or np.isnan(x_curve[i]) or np.isnan(y_curve[i]):
                 continue
-            ax.plot([X1, pb206[i]], [Y1, pb207[i]], color='#cbd5f5', linewidth=0.7, alpha=0.6, zorder=0, label='_nolegend_')
+            ax.plot(
+                [X1, pb206[i]], [Y1, pb207[i]],
+                color='#cbd5f5',
+                linewidth=getattr(app_state, 'model_age_line_width', 0.7),
+                alpha=0.6,
+                zorder=0,
+                label='_nolegend_'
+            )
             ax.scatter(x_curve[i], y_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
     except Exception as err:
         print(f"[WARN] Failed to draw model age lines: {err}", flush=True)
@@ -529,10 +558,22 @@ def _apply_current_style():
         # Fallback
         apply_custom_style(False, 'vibrant')
     
-    # Update figure background if it exists
-    # Note: We don't set facecolors here anymore because ax.clear() would reset them.
-    # Instead, we rely on _enforce_plot_style() called after clearing.
-    pass
+    # Apply common rcParams for sizing and grid
+    try:
+        fig_w, fig_h = getattr(app_state, 'plot_figsize', (13, 9))
+        plt.rcParams['figure.figsize'] = (float(fig_w), float(fig_h))
+        plt.rcParams['figure.dpi'] = float(getattr(app_state, 'plot_dpi', 130))
+        plt.rcParams['figure.facecolor'] = getattr(app_state, 'plot_facecolor', '#ffffff')
+        plt.rcParams['axes.facecolor'] = getattr(app_state, 'axes_facecolor', '#ffffff')
+        plt.rcParams['grid.color'] = getattr(app_state, 'grid_color', '#e2e8f0')
+        plt.rcParams['grid.linewidth'] = float(getattr(app_state, 'grid_linewidth', 0.6))
+        plt.rcParams['grid.alpha'] = float(getattr(app_state, 'grid_alpha', 0.7))
+        plt.rcParams['grid.linestyle'] = getattr(app_state, 'grid_linestyle', '--')
+        plt.rcParams['xtick.direction'] = getattr(app_state, 'tick_direction', 'out')
+        plt.rcParams['ytick.direction'] = getattr(app_state, 'tick_direction', 'out')
+        plt.rcParams['axes.linewidth'] = float(getattr(app_state, 'axis_linewidth', 1.0))
+    except Exception as err:
+        print(f"[WARN] Failed to apply rcParams style: {err}", flush=True)
 
 def _enforce_plot_style(ax):
     """Enforce style settings on the specific axes instance."""
@@ -541,13 +582,24 @@ def _enforce_plot_style(ax):
 
     # Enforce grid
     show_grid = getattr(app_state, 'plot_style_grid', False)
-    ax.grid(show_grid)
+    ax.grid(
+        show_grid,
+        color=getattr(app_state, 'grid_color', '#e2e8f0'),
+        linewidth=getattr(app_state, 'grid_linewidth', 0.6),
+        alpha=getattr(app_state, 'grid_alpha', 0.7),
+        linestyle=getattr(app_state, 'grid_linestyle', '--')
+    )
     
     # Enforce facecolors from current rcParams
     if app_state.fig is not None:
         app_state.fig.patch.set_facecolor(plt.rcParams.get('figure.facecolor', 'white'))
     
     ax.set_facecolor(plt.rcParams.get('axes.facecolor', 'white'))
+    ax.tick_params(direction=getattr(app_state, 'tick_direction', 'out'))
+    for spine in ax.spines.values():
+        spine.set_linewidth(getattr(app_state, 'axis_linewidth', 1.0))
+    ax.spines['top'].set_visible(getattr(app_state, 'show_top_spine', True))
+    ax.spines['right'].set_visible(getattr(app_state, 'show_right_spine', True))
 
 def show_scree_plot(parent_window=None):
     """Display a scree plot of the explained variance for the last PCA run."""
@@ -1851,7 +1903,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     sc = app_state.ax.scatter(
                         x_cart, y_cart,
                         label=cat, color=color, s=marker_size,
-                        alpha=marker_alpha, edgecolors="#1e293b", linewidth=0.4, zorder=2,
+                        alpha=marker_alpha,
+                        edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                        linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                        zorder=2,
                         picker=5
                     )
                     
@@ -1884,7 +1939,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     color = app_state.current_palette[cat]
                     sc = app_state.ax.scatter(
                         xs, ys, label=cat, color=color, s=marker_size,
-                        alpha=marker_alpha, edgecolors="#1e293b", linewidth=0.4, zorder=2,
+                        alpha=marker_alpha,
+                        edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                        linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                        zorder=2,
                         picker=5
                     )
                     
@@ -2303,8 +2361,8 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
                     color=color,
                     s=size,
                     alpha=0.88,
-                    edgecolors="#1e293b",
-                    linewidth=0.4,
+                    edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                    linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
                     zorder=2
                 )
                 app_state.scatter_collections.append(sc)
@@ -2508,8 +2566,8 @@ def plot_3d_data(group_col, data_columns, size=60):
                 color=app_state.current_palette[cat],
                 s=size,
                 alpha=0.85,
-                edgecolors='#1e293b',
-                linewidth=0.3,
+                edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
                 zorder=2
             )
             app_state.scatter_collections.append(sc)

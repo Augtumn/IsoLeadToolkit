@@ -116,6 +116,25 @@ class AppState:
         self.legend_columns = 0  # 0 means auto
         self.plot_marker_size = 60
         self.plot_marker_alpha = 0.8
+        # Common plot styling
+        self.plot_figsize = CONFIG.get('figure_size', (13, 9))
+        self.plot_dpi = CONFIG.get('figure_dpi', 130)
+        self.plot_facecolor = '#ffffff'
+        self.axes_facecolor = '#ffffff'
+        self.grid_color = '#e2e8f0'
+        self.grid_linewidth = 0.6
+        self.grid_alpha = 0.7
+        self.grid_linestyle = '--'
+        self.tick_direction = 'out'  # in | out | inout
+        self.axis_linewidth = 1.0
+        self.show_top_spine = True
+        self.show_right_spine = True
+        self.scatter_edgecolor = '#1e293b'
+        self.scatter_edgewidth = 0.4
+        self.model_curve_width = 1.2
+        self.paleoisochron_width = 0.9
+        self.model_age_line_width = 0.7
+        self.isochron_line_width = 1.5
         self.saved_themes = {} # Dictionary to store user themes
         
     def clear_plot_state(self):
