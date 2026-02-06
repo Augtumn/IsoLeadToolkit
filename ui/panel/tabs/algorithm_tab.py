@@ -335,6 +335,31 @@ class AlgorithmTabMixin:
         chk_paleo.pack(anchor=tk.W, pady=2)
         self._register_translation(chk_paleo, "Show Paleoisochrons")
 
+        # Paleoisochron density (step in Ma)
+        paleo_step_frame = ttk.Frame(self.geochem_section, style='CardBody.TFrame')
+        paleo_step_frame.pack(fill=tk.X, pady=(2, 4))
+        paleo_step_label = ttk.Label(
+            paleo_step_frame,
+            text=self._translate("Paleoisochron Step (Ma):"),
+            style='Body.TLabel'
+        )
+        paleo_step_label.pack(side=tk.LEFT)
+        self._register_translation(paleo_step_label, "Paleoisochron Step (Ma):")
+
+        self.paleo_step_var = tk.StringVar(value=str(getattr(app_state, 'paleoisochron_step', 1000)))
+        paleo_step_spin = ttk.Spinbox(
+            paleo_step_frame,
+            from_=50,
+            to=5000,
+            increment=50,
+            width=6,
+            textvariable=self.paleo_step_var,
+            command=self._on_change
+        )
+        paleo_step_spin.pack(side=tk.LEFT, padx=(8, 0))
+        paleo_step_spin.bind('<Return>', lambda e: self._on_change())
+        paleo_step_spin.bind('<FocusOut>', lambda e: self._on_change())
+
         self.check_vars['show_model_age_lines'] = tk.BooleanVar(
             value=getattr(app_state, 'show_model_age_lines', True)
         )
