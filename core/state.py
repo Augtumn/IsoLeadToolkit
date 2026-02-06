@@ -30,7 +30,12 @@ class AppState:
         self.show_model_curves = True
         self.show_paleoisochrons = True
         self.show_model_age_lines = True
-        self.paleoisochron_ages = [3000, 2000, 1000, 0]
+        self.paleoisochron_min_age = 0
+        self.paleoisochron_max_age = 3000
+        self.paleoisochron_step = 1000
+        self.paleoisochron_ages = list(
+            range(self.paleoisochron_max_age, self.paleoisochron_min_age - 1, -self.paleoisochron_step)
+        )
         self.model_curve_models = None  # None means all preset models
             
         # PCA/RobustPCA Dimension Selection

@@ -101,6 +101,25 @@ class PanelHandlersMixin:
             if 'show_model_age_lines' in self.check_vars:
                 app_state.show_model_age_lines = self.check_vars['show_model_age_lines'].get()
 
+            # Update paleoisochron density (step in Ma)
+            if hasattr(self, 'paleo_step_var'):
+                try:
+                    step_val = int(float(self.paleo_step_var.get()))
+                except (TypeError, ValueError):
+                    step_val = getattr(app_state, 'paleoisochron_step', 1000)
+                if step_val < 10:
+                    step_val = 10
+                app_state.paleoisochron_step = step_val
+
+                min_age = int(getattr(app_state, 'paleoisochron_min_age', 0))
+                max_age = int(getattr(app_state, 'paleoisochron_max_age', 3000))
+                if max_age < min_age:
+                    max_age, min_age = min_age, max_age
+                ages = list(range(max_age, min_age - 1, -step_val))
+                if not ages or ages[-1] != min_age:
+                    ages.append(min_age)
+                app_state.paleoisochron_ages = ages
+
             if 'confidence' in self.radio_vars:
                 app_state.ellipse_confidence = self.radio_vars['confidence'].get()
 

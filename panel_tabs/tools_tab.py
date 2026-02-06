@@ -140,6 +140,15 @@ class ToolsTabMixin:
         self.export_excel_button.pack(side=tk.LEFT)
         self._register_translation(self.export_excel_button, "Export Excel")
 
+        self.export_plot_button = ttk.Button(
+            export_row,
+            text=self._translate("Export Plot (Plotnine)"),
+            style='Secondary.TButton',
+            command=self._export_plotnine_image
+        )
+        self.export_plot_button.pack(side=tk.LEFT, padx=(12, 0))
+        self._register_translation(self.export_plot_button, "Export Plot (Plotnine)")
+
         # Subset Analysis Tools
         subset_row = ttk.Frame(selection_section, style='CardBody.TFrame')
         subset_row.pack(fill=tk.X, pady=(12, 0))
