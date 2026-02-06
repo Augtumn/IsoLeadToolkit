@@ -130,6 +130,20 @@ PRESET_MODELS = {
         'U_ratio': U_RATIO_NATURAL,
         'E1': 5e-11,
         'E2': 3.7e-11
+    },
+    "Maltese & Mezger (2020)": {
+        # BSE evolution model: initial BSE composition at t1 = 4.498 Ga
+        # From Maltese & Mezger (2020), GCA
+        'T1': 4498e6,
+        'T2': 4498e6,
+        'Tsec': 0.0,
+        'a0': A0, 'b0': B0, 'c0': C0,
+        'a1': 9.345, 'b1': 10.37, 'c1': 29.51,
+        'mu_M': 8.63,
+        'omega_M': 34.8,  # kappa~4.05 -> omega ~ 34.8
+        'U_ratio': U_RATIO_NATURAL,
+        'E1': E1_DEFAULT,
+        'E2': E2_DEFAULT
     }
 }
 
