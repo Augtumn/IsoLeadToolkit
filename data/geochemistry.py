@@ -81,18 +81,19 @@ PRESET_MODELS = {
         'E1': E1_DEFAULT,
         'E2': E2_DEFAULT
     },
-    "V1V2 (Chen 1982)": {
-        # Chen et al. (1982): single-stage mantle lead, mu=7.8, Th/U=4.13
+    "V1V2 (Zhu 1993)": {
+        # Zhu (1993): Pb isotope 3D topological projection (forced through origin)
         'T1': T_EARTH_CANON,
         'T2': T_EARTH_CANON,
         'Tsec': 0.0,
-        'a0': 9.307, 'b0': 10.294, 'c0': 29.476,
-        'a1': 9.307, 'b1': 10.294, 'c1': 29.476,
+        'a0': A0, 'b0': B0, 'c0': C0,
+        'a1': A0, 'b1': B0, 'c1': C0,
         'mu_M': 7.8,
-        'omega_M': 7.8 * 4.13,
+        'omega_M': 7.8 * 4.04,
         'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
-        'E2': E2_DEFAULT
+        'E2': E2_DEFAULT,
+        'v1v2_formula': 'zhu1993'
     },
     "Stacey & Kramers (2nd Stage)": {
         # PbIso Table 1: T1 = 3700 Ma for SK2
@@ -874,6 +875,11 @@ def calculate_v1v2_coordinates(d_alpha, d_beta, d_gamma, params=None):
     来源: Zhu (1995)
     """
     if params is None: params = engine.params
+    if params.get('v1v2_formula') == 'zhu1993':
+        # Explicit coefficients reported in Zhu (1993)
+        v1 = 0.44073 * d_alpha + 0.89764 * d_gamma
+        v2 = 0.84204 * d_alpha + 0.34648 * d_beta - 0.41343 * d_gamma
+        return v1, v2
     
     a, b, c = params['a'], params['b'], params['c']
     
@@ -1010,7 +1016,7 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     # 获取当前模型设置
     current_model = getattr(engine, 'current_model_name', '')
     # V1V2 (Geokit) 模式特殊处理: 使用 T1=4.43Ga 计算 tCDT
-    is_geokit = "V1V2" in current_model or "Geokit" in current_model
+    is_geokit = "Geokit" in current_model
     # 仅在明确的两阶段模型中使用两阶段逻辑
     is_two_stage = "2nd Stage" in current_model or current_model.endswith("(2nd Stage)")
     
@@ -1047,7 +1053,9 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
         )
     else:
         # 默认 V1V2 逻辑: 使用 T1=4.43Ga 计算出的单阶段年龄作为基准
-        t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, params=params_calc, initial_age=params_calc.get('T1'))
+        t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, params=params_calc, initial_age=params_calc.get('T2'))
+        if params_calc.get('v1v2_formula') == 'zhu1993':
+            t_calc = np.maximum(t_calc, 0)
         d_alpha, d_beta, d_gamma = calculate_deltas(
             Pb206, Pb207, Pb208, t_calc, params=params_calc, use_two_stage=False, E1=E1_val, E2=E2_val
         )
