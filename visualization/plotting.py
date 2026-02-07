@@ -142,6 +142,7 @@ def _draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats):
     app_state.marginal_axes = (ax_top, ax_right)
     try:
         ax.figure.set_constrained_layout(True)
+        ax.figure.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
     except Exception:
         pass
 

@@ -222,8 +222,12 @@ class Application:
         import matplotlib
         import matplotlib.pyplot as plt
         print("[INFO] Creating plot figure...", flush=True)
-        # Use constrained_layout for adaptive layout
+        # Use constrained_layout for adaptive layout (compact spacing)
         app_state.fig, app_state.ax = plt.subplots(figsize=CONFIG['figure_size'], constrained_layout=True)
+        try:
+            app_state.fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
+        except Exception:
+            pass
 
         # Auto-adjust layout on resize to avoid clipping
         def _on_resize(event):
@@ -231,6 +235,10 @@ class Application:
                 if app_state.fig is None:
                     return
                 app_state.fig.set_constrained_layout(True)
+                try:
+                    app_state.fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
+                except Exception:
+                    pass
                 app_state.fig.canvas.draw_idle()
             except Exception:
                 pass

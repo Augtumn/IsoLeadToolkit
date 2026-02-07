@@ -109,7 +109,7 @@ class AppState:
         
         # Tooltip configuration
         self.tooltip_columns = ['Lab No.', 'Discovery site', 'Period']  # Default columns
-        self.show_tooltip = True
+        self.show_tooltip = False
 
         # Plot Style Configuration
         self.plot_style_grid = False
@@ -124,7 +124,7 @@ class AppState:
             'tick': 10,
             'legend': 10
         }
-        self.show_plot_title = True
+        self.show_plot_title = False
         self.legend_columns = 0  # 0 means auto
         self.plot_marker_size = 60
         self.plot_marker_alpha = 0.8

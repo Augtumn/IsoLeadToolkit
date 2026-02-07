@@ -590,6 +590,7 @@ class StyleTabMixin:
             return
         try:
             app_state.fig.set_constrained_layout(True)
+            app_state.fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
             app_state.fig.tight_layout()
             if app_state.fig.canvas:
                 app_state.fig.canvas.draw_idle()
