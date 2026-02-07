@@ -217,6 +217,17 @@ class StyleTabMixin:
         self.font_size_vars['tick'] = add_size_slider(size_frame, "Tick", 'tick', 10)
         self.font_size_vars['legend'] = add_size_slider(size_frame, "Legend", 'legend', 10)
 
+        self.show_title_var = tk.BooleanVar(value=getattr(app_state, 'show_plot_title', True))
+        show_title_chk = ttk.Checkbutton(
+            font_section,
+            text=self._translate("Show Plot Title"),
+            variable=self.show_title_var,
+            command=self._on_style_change,
+            style='Option.TCheckbutton'
+        )
+        show_title_chk.pack(anchor=tk.W, pady=(6, 0))
+        self._register_translation(show_title_chk, "Show Plot Title")
+
         marker_section = ttk.LabelFrame(style_columns, text=self._translate("Marker Settings"), padding=14, style='Card.TLabelframe')
         marker_section.grid(row=0, column=1, sticky=tk.EW, padx=(6, 6), pady=6)
         self._register_translation(marker_section, "Marker Settings")
@@ -257,6 +268,15 @@ class StyleTabMixin:
         axes_grid.pack(fill=tk.X, pady=(4, 0))
         axes_grid.columnconfigure(0, weight=1)
         axes_grid.columnconfigure(1, weight=1)
+
+        auto_layout_btn = ttk.Button(
+            axes_section,
+            text=self._translate("Auto Layout"),
+            style='Secondary.TButton',
+            command=self._apply_auto_layout
+        )
+        auto_layout_btn.pack(anchor=tk.W, pady=(0, 8))
+        self._register_translation(auto_layout_btn, "Auto Layout")
 
         def add_labeled_entry(parent, label_key, var, row, col, width=10):
             cell = ttk.Frame(parent, style='CardBody.TFrame')
@@ -520,6 +540,7 @@ class StyleTabMixin:
         app_state.plot_font_sizes = {k: v.get() for k, v in self.font_size_vars.items()}
         app_state.plot_marker_size = self.marker_size_var.get()
         app_state.plot_marker_alpha = self.marker_alpha_var.get()
+        app_state.show_plot_title = bool(self.show_title_var.get())
 
         fig_w = _safe_float(self.figure_width_var, 13)
         fig_h = _safe_float(self.figure_height_var, 9)
@@ -562,6 +583,18 @@ class StyleTabMixin:
         # Trigger update
         if self.callback:
             self.callback()
+
+    def _apply_auto_layout(self):
+        """Apply automatic layout adjustment to the figure."""
+        if app_state.fig is None:
+            return
+        try:
+            app_state.fig.set_constrained_layout(True)
+            app_state.fig.tight_layout()
+            if app_state.fig.canvas:
+                app_state.fig.canvas.draw_idle()
+        except Exception:
+            pass
 
     def _on_ui_theme_change(self, event=None):
         """Handle UI theme change event"""

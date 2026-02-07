@@ -231,12 +231,34 @@ class Application:
                 if app_state.fig is None:
                     return
                 app_state.fig.set_constrained_layout(True)
-                app_state.fig.tight_layout()
                 app_state.fig.canvas.draw_idle()
             except Exception:
                 pass
         try:
             app_state.fig.canvas.mpl_connect('resize_event', _on_resize)
+            def _on_draw(event):
+                try:
+                    if getattr(app_state, 'paleo_label_refreshing', False):
+                        app_state.paleo_label_refreshing = False
+                        return
+                    from visualization.plotting import refresh_paleoisochron_labels
+                    refresh_paleoisochron_labels()
+                    if app_state.fig is not None and app_state.fig.canvas is not None:
+                        app_state.paleo_label_refreshing = True
+                        app_state.fig.canvas.draw_idle()
+                except Exception:
+                    app_state.paleo_label_refreshing = False
+            app_state.fig.canvas.mpl_connect('draw_event', _on_draw)
+            def _on_view_change(event):
+                try:
+                    from visualization.plotting import refresh_paleoisochron_labels
+                    refresh_paleoisochron_labels()
+                    if app_state.fig is not None and app_state.fig.canvas is not None:
+                        app_state.fig.canvas.draw_idle()
+                except Exception:
+                    pass
+            app_state.fig.canvas.mpl_connect('button_release_event', _on_view_change)
+            app_state.fig.canvas.mpl_connect('scroll_event', _on_view_change)
         except Exception:
             pass
         

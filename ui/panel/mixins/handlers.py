@@ -88,6 +88,10 @@ class PanelHandlersMixin:
             # Update KDE setting
             if 'show_kde' in self.check_vars:
                 app_state.show_kde = self.check_vars['show_kde'].get()
+            if 'show_marginal_kde' in self.check_vars:
+                app_state.show_marginal_kde = self.check_vars['show_marginal_kde'].get()
+            if 'show_tooltip' in self.check_vars:
+                app_state.show_tooltip = self.check_vars['show_tooltip'].get()
                 
             # Update Isochron settings
             if 'show_isochrons' in self.check_vars:

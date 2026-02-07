@@ -47,6 +47,7 @@ class AppState:
         self.standardize_data = True  # Default to True for better PCA/RobustPCA performance
         self.show_ellipses = CONFIG.get('show_ellipses', False)
         self.show_kde = False  # Global KDE toggle for 2D plots
+        self.show_marginal_kde = True  # Marginal KDE for 2D plots
         self.ellipse_confidence = CONFIG.get('ellipse_confidence', 0.95)
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading
@@ -75,6 +76,9 @@ class AppState:
         self.artist_to_sample = {}
         self.selection_overlay = None
         self.selection_ellipse = None  # Store the confidence ellipse for selected points
+        self.marginal_axes = None  # (top_ax, right_ax) for marginal KDE
+        self.paleoisochron_label_data = []  # Track paleoisochron labels for updates
+        self.paleo_label_refreshing = False
         self.language = CONFIG.get('default_language', 'zh')
         self.language_labels = CONFIG.get('languages', {'zh': '中文', 'en': 'English'})
         self.language_listeners = []
@@ -105,6 +109,7 @@ class AppState:
         
         # Tooltip configuration
         self.tooltip_columns = ['Lab No.', 'Discovery site', 'Period']  # Default columns
+        self.show_tooltip = True
 
         # Plot Style Configuration
         self.plot_style_grid = False
@@ -119,6 +124,7 @@ class AppState:
             'tick': 10,
             'legend': 10
         }
+        self.show_plot_title = True
         self.legend_columns = 0  # 0 means auto
         self.plot_marker_size = 60
         self.plot_marker_alpha = 0.8
@@ -142,6 +148,7 @@ class AppState:
         self.model_age_line_width = 0.7
         self.isochron_line_width = 1.5
         self.saved_themes = {} # Dictionary to store user themes
+        self.last_2d_cols = None
         
     def clear_plot_state(self):
         """Reset plot-specific state"""

@@ -55,6 +55,71 @@ class ToolsTabMixin:
         shepard_btn.grid(row=1, column=0, sticky=tk.EW)
         self._register_translation(shepard_btn, "Show Shepard Plot")
 
+        # Plot Enhancement Tools
+        plot_section = self._create_section(
+            frame,
+            "Plot Enhancements",
+            "Optional overlays to improve plot interpretation."
+        )
+        
+        plot_frame = ttk.Frame(plot_section, style='CardBody.TFrame')
+        plot_frame.pack(fill=tk.X)
+        
+        self.check_vars['show_kde'] = tk.BooleanVar(value=getattr(app_state, 'show_kde', False))
+        kde_chk = ttk.Checkbutton(
+            plot_frame,
+            text=self._translate("Show Kernel Density"),
+            variable=self.check_vars['show_kde'],
+            command=self._on_change,
+            style='Option.TCheckbutton'
+        )
+        kde_chk.pack(anchor=tk.W, pady=(0, 4))
+        self._register_translation(kde_chk, "Show Kernel Density")
+
+        self.check_vars['show_marginal_kde'] = tk.BooleanVar(
+            value=getattr(app_state, 'show_marginal_kde', False)
+        )
+        marginal_kde_chk = ttk.Checkbutton(
+            plot_frame,
+            text=self._translate("Show Marginal KDE"),
+            variable=self.check_vars['show_marginal_kde'],
+            command=self._on_change,
+            style='Option.TCheckbutton'
+        )
+        marginal_kde_chk.pack(anchor=tk.W)
+        self._register_translation(marginal_kde_chk, "Show Marginal KDE")
+
+        # Tooltip Settings
+        tooltip_section = self._create_section(
+            frame,
+            "Tooltip",
+            "Configure data to display when hovering over points."
+        )
+        tooltip_frame = ttk.Frame(tooltip_section, style='CardBody.TFrame')
+        tooltip_frame.pack(fill=tk.X)
+
+        self.check_vars['show_tooltip'] = tk.BooleanVar(
+            value=getattr(app_state, 'show_tooltip', True)
+        )
+        tooltip_chk = ttk.Checkbutton(
+            tooltip_frame,
+            text=self._translate("Show Tooltip"),
+            variable=self.check_vars['show_tooltip'],
+            command=self._on_change,
+            style='Option.TCheckbutton'
+        )
+        tooltip_chk.pack(anchor=tk.W, pady=(0, 6))
+        self._register_translation(tooltip_chk, "Show Tooltip")
+
+        tooltip_btn = ttk.Button(
+            tooltip_frame,
+            text=self._translate("Configure Tooltip"),
+            command=self._open_tooltip_settings,
+            style='Secondary.TButton'
+        )
+        tooltip_btn.pack(anchor=tk.W)
+        self._register_translation(tooltip_btn, "Configure Tooltip")
+
         # Confidence Ellipse Settings
         conf_section = self._create_section(
             frame,

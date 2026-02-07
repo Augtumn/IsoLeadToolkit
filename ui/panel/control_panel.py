@@ -154,10 +154,10 @@ class ControlPanel(
         self.notebook = ttk.Notebook(container)
         self.notebook.pack(fill=tk.BOTH, expand=True)
 
-        # Tab 1: Settings (General)
+        # Tab 1: Projection
         self.tab_settings = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_settings, text=self._translate("Settings"))
-        self._register_translation(self.notebook, "Settings", attr='tab', formatter=lambda: {'tab_id': 0})
+        self.notebook.add(self.tab_settings, text=self._translate("Projection"))
+        self._register_translation(self.notebook, "Projection", attr='tab', formatter=lambda: {'tab_id': 0})
 
         # Tab 2: Algorithm (Parameters)
         self.tab_algo = ttk.Frame(self.notebook, style='ControlPanel.TFrame')

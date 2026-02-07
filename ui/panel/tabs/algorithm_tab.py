@@ -36,18 +36,6 @@ class AlgorithmTabMixin:
 
         self._refresh_group_list()
 
-        # KDE Checkbox
-        self.check_vars['show_kde'] = tk.BooleanVar(value=getattr(app_state, 'show_kde', False))
-        kde_chk = ttk.Checkbutton(
-            self.group_section,
-            text=self._translate("Show Kernel Density"),
-            variable=self.check_vars['show_kde'],
-            command=self._on_change,
-            style='Option.TCheckbutton'
-        )
-        kde_chk.pack(anchor=tk.W, pady=(4, 4))
-        self._register_translation(kde_chk, "Show Kernel Density")
-
         group_config_btn = ttk.Button(
             self.group_section,
             text=self._translate("Configure Group Columns"),
