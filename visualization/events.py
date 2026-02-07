@@ -348,6 +348,12 @@ def on_hover(event):
         
         if event.inaxes != app_state.ax or app_state.annotation is None:
             return
+        if not getattr(app_state, 'show_tooltip', True):
+            try:
+                app_state.annotation.set_visible(False)
+            except Exception:
+                pass
+            return
         
         visible = False
 

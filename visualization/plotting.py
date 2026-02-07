@@ -70,6 +70,82 @@ def _lazy_import_seaborn():
         sns = _sns
 
 
+def _clear_marginal_axes():
+    axes = getattr(app_state, 'marginal_axes', None)
+    if axes:
+        for ax in axes:
+            try:
+                ax.remove()
+            except Exception:
+                pass
+    app_state.marginal_axes = None
+
+
+def _draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats):
+    """Draw marginal KDEs on top/right axes for 2D plots."""
+    try:
+        _lazy_import_seaborn()
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+    except Exception as import_err:
+        print(f"[WARN] Failed to import KDE dependencies: {import_err}", flush=True)
+        return
+
+    divider = make_axes_locatable(ax)
+    ax_top = divider.append_axes("top", size="15%", pad=0.06, sharex=ax)
+    ax_right = divider.append_axes("right", size="15%", pad=0.06, sharey=ax)
+
+    for cat in unique_cats:
+        subset = df_plot[df_plot[group_col] == cat]
+        if subset.empty:
+            continue
+        xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)
+        ys = subset['_emb_y'].to_numpy(dtype=float, copy=False)
+
+        if len(xs) > 1:
+            sns.kdeplot(
+                x=xs,
+                ax=ax_top,
+                color=palette[cat],
+                fill=True,
+                alpha=0.25,
+                linewidth=1,
+                warn_singular=False
+            )
+        if len(ys) > 1:
+            sns.kdeplot(
+                y=ys,
+                ax=ax_right,
+                color=palette[cat],
+                fill=True,
+                alpha=0.25,
+                linewidth=1,
+                warn_singular=False
+            )
+
+    ax_top.tick_params(axis='x', labelbottom=False)
+    ax_top.tick_params(axis='y', left=False, labelleft=False)
+    ax_right.tick_params(axis='y', labelleft=False)
+    ax_right.tick_params(axis='x', bottom=False, labelbottom=False)
+    ax_top.grid(False)
+    ax_right.grid(False)
+    ax_top.set_xlabel("")
+    ax_top.set_ylabel("")
+    ax_right.set_xlabel("")
+    ax_right.set_ylabel("")
+    ax_top.set_facecolor("none")
+    ax_right.set_facecolor("none")
+    for spine in ax_top.spines.values():
+        spine.set_visible(False)
+    for spine in ax_right.spines.values():
+        spine.set_visible(False)
+
+    app_state.marginal_axes = (ax_top, ax_right)
+    try:
+        ax.figure.set_constrained_layout(True)
+    except Exception:
+        pass
+
+
 def _lazy_import_mplot3d():
     global Axes3D
     if Axes3D is None:
@@ -480,11 +556,54 @@ def _draw_model_curves(ax, mode, params_list):
             print(f"[WARN] Failed to draw model curve: {err}", flush=True)
 
 
+def _label_angle_for_slope(ax, x0, y0, slope, dx):
+    """Compute label angle (deg) for a line in display coords."""
+    try:
+        x1 = x0 + dx
+        y1 = y0 + slope * dx
+        p0 = ax.transData.transform((x0, y0))
+        p1 = ax.transData.transform((x1, y1))
+        angle = np.degrees(np.arctan2(p1[1] - p0[1], p1[0] - p0[0]))
+        return angle
+    except Exception:
+        return np.degrees(np.arctan(slope))
+
+
+def _position_paleo_label(ax, text_artist, slope, intercept, age=None):
+    """Position a paleoisochron label inside axes, aligned to line."""
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_span = xlim[1] - xlim[0]
+    y_span = ylim[1] - ylim[0]
+    if x_span == 0 or y_span == 0:
+        return
+
+    pad_x = x_span * 0.02
+    pad_y = y_span * 0.02
+    x_anchor = xlim[1] - pad_x
+    y_anchor = slope * x_anchor + intercept
+    if y_anchor > ylim[1] - pad_y:
+        y_anchor = ylim[1] - pad_y
+    if y_anchor < ylim[0] + pad_y:
+        y_anchor = ylim[0] + pad_y
+
+    angle = _label_angle_for_slope(ax, x_anchor, y_anchor, slope, dx=x_span * 0.02)
+    text_artist.set_position((x_anchor, y_anchor))
+    text_artist.set_rotation(angle)
+    text_artist.set_rotation_mode('anchor')
+    text_artist.set_ha('right')
+    text_artist.set_va('center')
+    text_artist.set_clip_on(True)
+    if age is not None:
+        text_artist.set_text(f" {age:.0f} Ma")
+
+
 def _draw_paleoisochrons(ax, mode, ages_ma, params):
     """Draw paleoisochron reference lines for given ages."""
     if geochemistry is None:
         return
     try:
+        app_state.paleoisochron_label_data = []
         l238 = params['lambda_238']
         l235 = params['lambda_235']
         l232 = params['lambda_232']
@@ -531,10 +650,8 @@ def _draw_paleoisochrons(ax, mode, ages_ma, params):
             )
             # Label paleoisochron (age)
             if len(x_vals) > 0:
-                label_x = x_vals[-1]
-                label_y = y_vals[-1]
-                ax.text(
-                    label_x, label_y,
+                text_artist = ax.text(
+                    x_vals[-1], y_vals[-1],
                     f" {age:.0f} Ma",
                     color='#94a3b8',
                     fontsize=8,
@@ -542,8 +659,35 @@ def _draw_paleoisochrons(ax, mode, ages_ma, params):
                     ha='left',
                     alpha=0.85
                 )
+                app_state.paleoisochron_label_data.append({
+                    'text': text_artist,
+                    'slope': slope,
+                    'intercept': intercept,
+                    'age': age
+                })
+                _position_paleo_label(ax, text_artist, slope, intercept, age=age)
     except Exception as err:
         print(f"[WARN] Failed to draw paleoisochrons: {err}", flush=True)
+
+
+def refresh_paleoisochron_labels():
+    """Reposition paleoisochron labels after zoom/pan."""
+    try:
+        if app_state.ax is None:
+            return
+        label_data = getattr(app_state, 'paleoisochron_label_data', [])
+        if not label_data:
+            return
+        for item in label_data:
+            text_artist = item.get('text')
+            if text_artist is None:
+                continue
+            slope = item.get('slope')
+            intercept = item.get('intercept')
+            age = item.get('age')
+            _position_paleo_label(app_state.ax, text_artist, slope, intercept, age=age)
+    except Exception as err:
+        print(f"[WARN] Failed to refresh paleoisochron labels: {err}", flush=True)
 
 
 def _draw_model_age_lines(ax, pb206, pb207, params):
@@ -1475,6 +1619,18 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         if actual_algorithm == 'TERNARY':
             target_dims = 'ternary'
             
+        prev_ax = app_state.ax
+        prev_embedding_type = getattr(app_state, 'last_embedding_type', None)
+        prev_xlim = None
+        prev_ylim = None
+        if prev_ax is not None and getattr(prev_ax, 'name', '') != '3d':
+            try:
+                prev_xlim = prev_ax.get_xlim()
+                prev_ylim = prev_ax.get_ylim()
+            except Exception:
+                prev_xlim = None
+                prev_ylim = None
+
         _ensure_axes(dimensions=target_dims)
 
         if app_state.ax is None:
@@ -1921,6 +2077,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
 
         scatters = []
         is_kde_mode = getattr(app_state, 'show_kde', False)
+        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
         
         # If KDE is not active, we draw scatters normally.
         # If KDE IS active, we SKIP drawing scatters to achieve the "heatmap only" look requested.
@@ -2055,6 +2212,15 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         if not scatters and not is_kde_mode:
             print("[ERROR] No data points plotted", flush=True)
             return False
+
+        # Marginal KDE (2D only; exclude ternary)
+        _clear_marginal_axes()
+        if show_marginal_kde and actual_algorithm != 'TERNARY':
+            try:
+                if getattr(app_state.ax, 'name', '') != '3d':
+                    _draw_marginal_kde(app_state.ax, df_plot, group_col, app_state.current_palette, unique_cats)
+            except Exception as kde_err:
+                print(f"[WARN] Failed to render marginal KDE: {kde_err}", flush=True)
             
         # Create legend
         try:
@@ -2078,24 +2244,25 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             # Only show matplotlib legend if item count is reasonable
             if len(unique_cats) <= 30:
                 ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
+                legend_x = 1.01 if not show_marginal_kde else 1.22
                 
                 # If explicit handles created (KDE mode), pass them
                 if handles:
                     legend = app_state.ax.legend(
                         handles=handles, labels=labels,
-                        title=group_col, bbox_to_anchor=(1.01, 1), loc='upper left',
+                        title=group_col, bbox_to_anchor=(legend_x, 1), loc='upper left',
                         frameon=True, fancybox=True,
                         ncol=ncol
                     )
                 else:
                     legend = app_state.ax.legend(
-                        title=group_col, bbox_to_anchor=(1.01, 1), loc='upper left',
+                        title=group_col, bbox_to_anchor=(legend_x, 1), loc='upper left',
                         frameon=True, fancybox=True,
                         ncol=ncol
                     )
 
                 try:
-                    legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
+                    legend.set_bbox_to_anchor((legend_x, 1), transform=app_state.ax.transAxes)
                 except Exception:
                     pass
 
@@ -2161,7 +2328,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                 except Exception:
                     pass
 
-        app_state.ax.set_title(title, pad=20, **title_font_dict)
+        if getattr(app_state, 'show_plot_title', True):
+            app_state.ax.set_title(title, pad=20, **title_font_dict)
+        else:
+            app_state.ax.set_title("")
         
         # Set axis labels
         if actual_algorithm == 'V1V2':
@@ -2238,6 +2408,16 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                                 pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
                                 _draw_model_age_lines_86(app_state.ax, pb206, pb207, pb208, params)
         
+        # Restore view limits to keep zoom level after refresh
+        if app_state.ax is prev_ax and prev_xlim and prev_ylim:
+            if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
+                try:
+                    if prev_embedding_type and str(prev_embedding_type).upper() == str(actual_algorithm).upper():
+                        app_state.ax.set_xlim(prev_xlim)
+                        app_state.ax.set_ylim(prev_ylim)
+                except Exception:
+                    pass
+
         app_state.ax.tick_params()
         
         # Adjust layout to prevent overlap
@@ -2304,6 +2484,18 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
         if missing:
             print(f"[ERROR] Missing columns for 2D plot: {missing}", flush=True)
             return False
+
+        prev_ax = app_state.ax
+        prev_2d_cols = getattr(app_state, 'last_2d_cols', None)
+        prev_xlim = None
+        prev_ylim = None
+        if prev_ax is not None and getattr(prev_ax, 'name', '') != '3d':
+            try:
+                prev_xlim = prev_ax.get_xlim()
+                prev_ylim = prev_ax.get_ylim()
+            except Exception:
+                prev_xlim = None
+                prev_ylim = None
 
         _ensure_axes(dimensions=2)
 
@@ -2521,7 +2713,17 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
             f"2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n"
             f"Colored by {group_col}"
         )
+        # Restore view limits to keep zoom level after refresh
+        if app_state.ax is prev_ax and prev_xlim and prev_ylim:
+            try:
+                if prev_2d_cols and list(prev_2d_cols) == list(data_columns):
+                    app_state.ax.set_xlim(prev_xlim)
+                    app_state.ax.set_ylim(prev_ylim)
+            except Exception:
+                pass
+
         app_state.ax.set_title(title, pad=20)
+        app_state.last_2d_cols = list(data_columns)
         app_state.ax.set_xlabel(data_columns[0])
         app_state.ax.set_ylabel(data_columns[1])
         app_state.ax.tick_params()

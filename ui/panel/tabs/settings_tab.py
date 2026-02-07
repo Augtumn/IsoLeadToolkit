@@ -75,19 +75,4 @@ class SettingsTabMixin:
             ("Kappa vs Age", "PB_KAPPA_AGE"),
         ])
 
-        # Data Configuration
-        data_section = self._create_section(
-            frame,
-            "Data Configuration",
-            "Configure data to display when hovering over points."
-        )
-
-        # Tooltip Settings
-        tooltip_btn = ttk.Button(
-            data_section,
-            text=self._translate("Configure Tooltip"),
-            command=self._open_tooltip_settings,
-            style='Accent.TButton'
-        )
-        tooltip_btn.pack(anchor=tk.W, pady=(12, 4))
-        self._register_translation(tooltip_btn, "Configure Tooltip")
+        # Tooltip configuration moved to Tools tab
