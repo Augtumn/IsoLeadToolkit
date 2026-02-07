@@ -120,6 +120,80 @@ class ToolsTabMixin:
         tooltip_btn.pack(anchor=tk.W)
         self._register_translation(tooltip_btn, "Configure Tooltip")
 
+        # Mixing Group Tools
+        mixing_section = self._create_section(
+            frame,
+            "Mixing Groups",
+            "Assign selected samples as endmember or mixture groups."
+        )
+        mixing_frame = ttk.Frame(mixing_section, style='CardBody.TFrame')
+        mixing_frame.pack(fill=tk.X)
+
+        name_row = ttk.Frame(mixing_frame, style='CardBody.TFrame')
+        name_row.pack(fill=tk.X, pady=(0, 6))
+        name_label = ttk.Label(name_row, text=self._translate("Group Name:"), style='Body.TLabel')
+        name_label.pack(side=tk.LEFT)
+        self._register_translation(name_label, "Group Name:")
+
+        self.mixing_group_name_var = tk.StringVar(value="")
+        name_entry = ttk.Entry(name_row, textvariable=self.mixing_group_name_var)
+        name_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(8, 0))
+
+        btn_row = ttk.Frame(mixing_frame, style='CardBody.TFrame')
+        btn_row.pack(fill=tk.X, pady=(0, 6))
+        self.set_endmember_btn = ttk.Button(
+            btn_row,
+            text=self._translate("Set as Endmember"),
+            style='Secondary.TButton',
+            command=lambda: self._set_mixing_group('endmembers')
+        )
+        self.set_endmember_btn.pack(side=tk.LEFT, padx=(0, 8))
+        self._register_translation(self.set_endmember_btn, "Set as Endmember")
+
+        self.set_mixture_btn = ttk.Button(
+            btn_row,
+            text=self._translate("Set as Mixture"),
+            style='Secondary.TButton',
+            command=lambda: self._set_mixing_group('mixtures')
+        )
+        self.set_mixture_btn.pack(side=tk.LEFT)
+        self._register_translation(self.set_mixture_btn, "Set as Mixture")
+
+        info_row = ttk.Frame(mixing_frame, style='CardBody.TFrame')
+        info_row.pack(fill=tk.X, pady=(4, 6))
+        self.mixing_group_status = ttk.Label(
+            info_row,
+            text=self._translate("Endmembers: {count} | Mixtures: {count2}", count=0, count2=0),
+            style='BodyMuted.TLabel'
+        )
+        self.mixing_group_status.pack(anchor=tk.W)
+        self._register_translation(
+            self.mixing_group_status,
+            "Endmembers: {count} | Mixtures: {count2}",
+            formatter=lambda: {
+                'count': len(getattr(app_state, 'mixing_groups', {}).get('endmembers', {})),
+                'count2': len(getattr(app_state, 'mixing_groups', {}).get('mixtures', {}))
+            }
+        )
+
+        clear_btn = ttk.Button(
+            mixing_frame,
+            text=self._translate("Clear Mixing Groups"),
+            style='Secondary.TButton',
+            command=self._clear_mixing_groups
+        )
+        clear_btn.pack(anchor=tk.W)
+        self._register_translation(clear_btn, "Clear Mixing Groups")
+
+        compute_btn = ttk.Button(
+            mixing_frame,
+            text=self._translate("Compute Mixing"),
+            style='Secondary.TButton',
+            command=self._open_mixing_calculator
+        )
+        compute_btn.pack(anchor=tk.W, pady=(6, 0))
+        self._register_translation(compute_btn, "Compute Mixing")
+
         # Confidence Ellipse Settings
         conf_section = self._create_section(
             frame,

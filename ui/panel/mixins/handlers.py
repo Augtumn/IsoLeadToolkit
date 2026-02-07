@@ -375,6 +375,85 @@ class PanelHandlersMixin:
         except Exception:
             pass
 
+        # Update mixing group controls
+        if hasattr(self, 'mixing_group_status'):
+            try:
+                endmembers = getattr(app_state, 'mixing_groups', {}).get('endmembers', {})
+                mixtures = getattr(app_state, 'mixing_groups', {}).get('mixtures', {})
+                self.mixing_group_status.config(
+                    text=self._translate(
+                        "Endmembers: {count} | Mixtures: {count2}",
+                        count=len(endmembers),
+                        count2=len(mixtures)
+                    )
+                )
+            except Exception:
+                pass
+
+        for btn_attr in ('set_endmember_btn', 'set_mixture_btn'):
+            btn = getattr(self, btn_attr, None)
+            if btn is None:
+                continue
+            try:
+                if count == 0 or app_state.render_mode == '3D':
+                    btn.state(['disabled'])
+                else:
+                    btn.state(['!disabled'])
+            except Exception:
+                pass
+
+    def _set_mixing_group(self, kind):
+        """Assign currently selected samples to a mixing group."""
+        if kind not in ('endmembers', 'mixtures'):
+            return
+        selected = list(getattr(app_state, 'selected_indices', []))
+        if not selected:
+            messagebox.showwarning(
+                self._translate("No samples selected"),
+                self._translate("Please select samples first.")
+            )
+            return
+        name = ""
+        if hasattr(self, 'mixing_group_name_var'):
+            name = (self.mixing_group_name_var.get() or "").strip()
+        if not name:
+            messagebox.showwarning(
+                self._translate("Error"),
+                self._translate("Group name cannot be empty.")
+            )
+            return
+
+        groups = getattr(app_state, 'mixing_groups', None)
+        if groups is None:
+            app_state.mixing_groups = {'endmembers': {}, 'mixtures': {}}
+            groups = app_state.mixing_groups
+
+        target = groups.setdefault(kind, {})
+        if name in target:
+            if not messagebox.askyesno(
+                self._translate("Confirm"),
+                self._translate("Overwrite group '{name}'?", name=name)
+            ):
+                return
+        target[name] = sorted(selected)
+        app_state.selected_indices.clear()
+        try:
+            from visualization import refresh_selection_overlay
+            refresh_selection_overlay()
+        except Exception:
+            pass
+        self.update_selection_controls()
+
+    def _clear_mixing_groups(self):
+        """Clear all mixing groups."""
+        if not messagebox.askyesno(
+            self._translate("Confirm"),
+            self._translate("Clear all mixing groups?")
+        ):
+            return
+        app_state.mixing_groups = {'endmembers': {}, 'mixtures': {}}
+        self.update_selection_controls()
+
     def refresh_language(self):
         """Public entry point for reapplying translations."""
         self._refresh_language()

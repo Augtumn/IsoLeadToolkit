@@ -79,6 +79,9 @@ class AppState:
         self.marginal_axes = None  # (top_ax, right_ax) for marginal KDE
         self.paleoisochron_label_data = []  # Track paleoisochron labels for updates
         self.paleo_label_refreshing = False
+        self.mixing_groups = {'endmembers': {}, 'mixtures': {}}
+        self.mixing_results = []
+        self.mixing_calc_cols = []
         self.language = CONFIG.get('default_language', 'zh')
         self.language_labels = CONFIG.get('languages', {'zh': '中文', 'en': 'English'})
         self.language_listeners = []

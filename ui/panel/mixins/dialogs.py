@@ -229,6 +229,167 @@ class PanelDialogsMixin:
             cb = ttk.Checkbutton(scrollable_frame, text=col, variable=var)
             cb.pack(anchor=tk.W, pady=2)
 
+    def _open_mixing_calculator(self):
+        """Open a dialog to compute mixing proportions."""
+        if app_state.df_global is None:
+            messagebox.showwarning(
+                self._translate("No Data"),
+                self._translate("Please load data first.")
+            )
+            return
+
+        groups = getattr(app_state, 'mixing_groups', {}) or {}
+        endmembers = groups.get('endmembers', {})
+        mixtures = groups.get('mixtures', {})
+        if not endmembers:
+            messagebox.showwarning(
+                self._translate("Warning"),
+                self._translate("Please define endmember groups first.")
+            )
+            return
+        if not mixtures:
+            messagebox.showwarning(
+                self._translate("Warning"),
+                self._translate("Please define mixture groups first.")
+            )
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title(self._translate("Mixing Calculator"))
+        dialog.geometry("520x560")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        title_lbl = ttk.Label(
+            dialog,
+            text=self._translate("Columns for Mixing"),
+            style='Body.TLabel'
+        )
+        title_lbl.pack(pady=(10, 6), padx=10, anchor=tk.W)
+        self._register_translation(title_lbl, "Columns for Mixing")
+
+        # Scrollable list of columns
+        canvas = tk.Canvas(dialog)
+        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        window_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        def _on_canvas_configure(event):
+            canvas.itemconfig(window_id, width=event.width)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=False, padx=10)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Column checkboxes
+        self.mixing_col_vars = {}
+        df = app_state.df_global
+        numeric_cols = list(df.select_dtypes(include='number').columns)
+        default_cols = list(getattr(app_state, 'mixing_calc_cols', [])) or list(
+            getattr(app_state, 'data_cols', [])
+        )
+        for col in numeric_cols:
+            var = tk.BooleanVar(value=col in default_cols)
+            self.mixing_col_vars[col] = var
+            cb = ttk.Checkbutton(scrollable_frame, text=col, variable=var)
+            cb.pack(anchor=tk.W, pady=2)
+
+        results_frame = ttk.Frame(dialog)
+        results_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(8, 6))
+
+        results_lbl = ttk.Label(
+            results_frame,
+            text=self._translate("Mixing Results"),
+            style='Body.TLabel'
+        )
+        results_lbl.pack(anchor=tk.W)
+        self._register_translation(results_lbl, "Mixing Results")
+
+        columns = ("mixture", "endmember", "weight", "rmse")
+        tree = ttk.Treeview(results_frame, columns=columns, show="headings", height=10)
+        tree.heading("mixture", text=self._translate("Mixture Group"))
+        tree.heading("endmember", text=self._translate("Endmember Group"))
+        tree.heading("weight", text=self._translate("Weight"))
+        tree.heading("rmse", text=self._translate("RMSE"))
+        tree.column("mixture", width=150, anchor=tk.W)
+        tree.column("endmember", width=150, anchor=tk.W)
+        tree.column("weight", width=80, anchor=tk.E)
+        tree.column("rmse", width=80, anchor=tk.E)
+        tree.pack(fill=tk.BOTH, expand=True, pady=(4, 0))
+
+        def _clear_tree():
+            for item in tree.get_children():
+                tree.delete(item)
+
+        def _run_calc():
+            selected_cols = [col for col, var in self.mixing_col_vars.items() if var.get()]
+            if not selected_cols:
+                messagebox.showwarning(
+                    self._translate("Validation Error"),
+                    self._translate("Please select at least one data column."),
+                    parent=dialog
+                )
+                return
+
+            try:
+                from data.mixing import calculate_mixing
+
+                results = calculate_mixing(
+                    df=df,
+                    endmember_groups=endmembers,
+                    mixture_groups=mixtures,
+                    columns=selected_cols
+                )
+                app_state.mixing_results = results
+                app_state.mixing_calc_cols = list(selected_cols)
+
+                _clear_tree()
+                for row in results:
+                    tree.insert(
+                        "",
+                        "end",
+                        values=(
+                            row.get('mixture', ''),
+                            row.get('endmember', ''),
+                            f"{row.get('weight', 0.0):.4f}",
+                            f"{row.get('rmse', 0.0):.4f}",
+                        )
+                    )
+                if not results:
+                    messagebox.showinfo(
+                        self._translate("Info"),
+                        self._translate("No mixing results were produced."),
+                        parent=dialog
+                    )
+            except Exception as err:
+                messagebox.showerror(
+                    self._translate("Error"),
+                    self._translate("Mixing calculation failed: {error}", error=err),
+                    parent=dialog
+                )
+
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10, padx=10)
+
+        run_btn = ttk.Button(btn_frame, text=self._translate("Calculate"), command=_run_calc)
+        run_btn.pack(side=tk.RIGHT, padx=5)
+        self._register_translation(run_btn, "Calculate")
+
+        close_btn = ttk.Button(btn_frame, text=self._translate("Close"), command=dialog.destroy)
+        close_btn.pack(side=tk.RIGHT)
+        self._register_translation(close_btn, "Close")
+
     def _open_column_selection(self):
         """Open column selection dialog based on current render mode."""
         if app_state.df_global is None:
