@@ -15,7 +15,10 @@ class StyleTabMixin:
     def _build_style_tab(self, parent):
         """Build the Style tab"""
         frame = self._build_scrollable_frame(parent)
-        
+        self._build_style_content(frame)
+
+    def _build_style_content(self, frame):
+        """Build the Style tab content (no scroll wrapper)."""
         # --- Theme Management ---
         theme_section = self._create_section(
             frame,
@@ -39,10 +42,11 @@ class StyleTabMixin:
         ui_theme_combo.bind("<<ComboboxSelected>>", self._on_ui_theme_change)
 
         # --- Saved Plot Settings ---
-        saved_section = self._create_section(
+        saved_section = self._create_collapsible_section(
             frame,
             "Saved Plot Settings",
-            "Save and load custom plot parameter sets (Grid, Fonts, Palette)."
+            "Save and load custom plot parameter sets (Grid, Fonts, Palette).",
+            start_open=False
         )
         
         theme_frame = ttk.Frame(saved_section, style='CardBody.TFrame')
@@ -61,7 +65,7 @@ class StyleTabMixin:
         self._add_form_row(theme_grid, 0, "Theme Name:", name_controls)
         
         # Load/Delete Frame
-        load_frame = ttk.Frame(theme_section, style='CardBody.TFrame')
+        load_frame = ttk.Frame(saved_section, style='CardBody.TFrame')
         load_frame.pack(fill=tk.X)
         load_grid = self._create_form_grid(load_frame)
         load_grid.pack(fill=tk.X)
@@ -81,10 +85,11 @@ class StyleTabMixin:
         self._refresh_theme_list()
 
         # --- General Settings ---
-        general_section = self._create_section(
+        general_section = self._create_collapsible_section(
             frame,
             "General Settings",
-            "Basic plot appearance."
+            "Basic plot appearance.",
+            start_open=True
         )
         
         # Grid Checkbox
@@ -94,7 +99,7 @@ class StyleTabMixin:
             text=self._translate("Show Grid"),
             variable=self.grid_var,
             command=self._on_style_change,
-            style='Option.TRadiobutton'
+            style='Option.TCheckbutton'
         )
         grid_check.pack(anchor=tk.W, pady=(0, 12))
         self._register_translation(grid_check, "Show Grid")
@@ -114,19 +119,15 @@ class StyleTabMixin:
         self._add_form_row(color_form, 0, "Palette", color_combo, label_style='FieldLabel.TLabel')
         color_combo.bind("<<ComboboxSelected>>", self._on_style_change)
 
-        # --- Style Columns (Font + Marker) ---
-        style_columns = ttk.Frame(frame, style='ControlPanel.TFrame')
-        style_columns.pack(fill=tk.X, pady=(4, 0))
-        style_columns.columnconfigure(0, weight=1)
-        style_columns.columnconfigure(1, weight=1)
+        # --- Font Settings ---
+        font_section = self._create_collapsible_section(
+            frame,
+            "Font Settings",
+            "Customize fonts and text sizes.",
+            start_open=True
+        )
 
-        font_section = ttk.LabelFrame(style_columns, text=self._translate("Font Settings"), padding=14, style='Card.TLabelframe')
-        font_section.grid(row=0, column=0, sticky=tk.EW, padx=(6, 6), pady=6)
-        self._register_translation(font_section, "Font Settings")
-
-        font_desc = ttk.Label(font_section, text=self._translate("Customize fonts and text sizes."), style='Body.TLabel', wraplength=240, justify=tk.LEFT)
-        font_desc.pack(fill=tk.X, pady=(0, 10))
-        self._register_translation(font_desc, "Customize fonts and text sizes.")
+        # Description handled by collapsible section
         
         # Get available fonts
         all_system_fonts = sorted(style_manager_instance.get_available_fonts())
@@ -205,7 +206,7 @@ class StyleTabMixin:
         self.font_size_vars['tick'] = add_size_slider(size_grid, "Tick", 'tick', 10, 2)
         self.font_size_vars['legend'] = add_size_slider(size_grid, "Legend", 'legend', 10, 3)
 
-        self.show_title_var = tk.BooleanVar(value=getattr(app_state, 'show_plot_title', True))
+        self.show_title_var = tk.BooleanVar(value=getattr(app_state, 'show_plot_title', False))
         show_title_chk = ttk.Checkbutton(
             font_section,
             text=self._translate("Show Plot Title"),
@@ -216,13 +217,15 @@ class StyleTabMixin:
         show_title_chk.pack(anchor=tk.W, pady=(6, 0))
         self._register_translation(show_title_chk, "Show Plot Title")
 
-        marker_section = ttk.LabelFrame(style_columns, text=self._translate("Marker Settings"), padding=14, style='Card.TLabelframe')
-        marker_section.grid(row=0, column=1, sticky=tk.EW, padx=(6, 6), pady=6)
-        self._register_translation(marker_section, "Marker Settings")
+        # --- Marker Settings ---
+        marker_section = self._create_collapsible_section(
+            frame,
+            "Marker Settings",
+            "Customize data point appearance.",
+            start_open=False
+        )
 
-        marker_desc = ttk.Label(marker_section, text=self._translate("Customize data point appearance."), style='Body.TLabel', wraplength=240, justify=tk.LEFT)
-        marker_desc.pack(fill=tk.X, pady=(0, 10))
-        self._register_translation(marker_desc, "Customize data point appearance.")
+        # Description handled by collapsible section
         
         marker_grid = self._create_form_grid(marker_section)
         marker_grid.pack(fill=tk.X)
@@ -240,10 +243,11 @@ class StyleTabMixin:
         alpha_scale.bind("<ButtonRelease-1>", lambda e: self._on_style_change())
 
         # --- Axes & Lines ---
-        axes_section = self._create_section(
+        axes_section = self._create_collapsible_section(
             frame,
             "Axes & Lines",
-            "Common plot layout and line styles."
+            "Common plot layout and line styles.",
+            start_open=False
         )
 
         axes_grid = ttk.Frame(axes_section, style='CardBody.TFrame')
@@ -269,32 +273,93 @@ class StyleTabMixin:
             self._add_form_row(form, 0, label_key, entry)
             entry.bind('<Return>', lambda e: self._on_style_change())
             entry.bind('<FocusOut>', lambda e: self._on_style_change())
+            return cell
 
-        # Figure size & DPI
-        fig_w, fig_h = getattr(app_state, 'plot_figsize', (13, 9))
-        self.figure_width_var = tk.StringVar(value=str(fig_w))
-        self.figure_height_var = tk.StringVar(value=str(fig_h))
+        def add_slider_with_spin(parent, label_key, var, row, col, min_val, max_val, step, decimals=2):
+            cell = ttk.Frame(parent, style='CardBody.TFrame')
+            cell.grid(row=row, column=col, sticky=tk.EW, padx=(0 if col == 0 else 16, 0), pady=3)
+            form = self._create_form_grid(cell)
+            form.pack(fill=tk.X)
+
+            control = ttk.Frame(form, style='CardBody.TFrame')
+
+            def _format_value(value):
+                return f"{value:.{decimals}f}"
+
+            def _on_scale(val):
+                try:
+                    value = float(val)
+                except (TypeError, ValueError):
+                    return
+                var.set(value)
+                spin_var.set(_format_value(value))
+
+            def _on_spin_change(_event=None):
+                try:
+                    value = float(spin_var.get())
+                except (TypeError, ValueError):
+                    return
+                value = max(min_val, min(max_val, value))
+                var.set(value)
+                scale.set(value)
+                spin_var.set(_format_value(value))
+                self._on_style_change()
+
+            scale = ttk.Scale(control, from_=min_val, to=max_val, variable=var, command=_on_scale)
+            scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+            spin_var = tk.StringVar(value=_format_value(var.get()))
+            spin = ttk.Spinbox(
+                control,
+                from_=min_val,
+                to=max_val,
+                increment=step,
+                width=6,
+                textvariable=spin_var
+            )
+            spin.pack(side=tk.LEFT, padx=(8, 0))
+            spin.bind('<Return>', _on_spin_change)
+            spin.bind('<FocusOut>', _on_spin_change)
+
+            self._add_form_row(form, 0, label_key, control)
+            scale.bind("<ButtonRelease-1>", lambda e: self._on_style_change())
+            return cell
+
+        def add_check_row(parent, label_key, var, row, col):
+            cell = ttk.Frame(parent, style='CardBody.TFrame')
+            cell.grid(row=row, column=col, sticky=tk.EW, padx=(0 if col == 0 else 16, 0), pady=3)
+            form = self._create_form_grid(cell)
+            form.pack(fill=tk.X)
+            chk = ttk.Checkbutton(
+                form,
+                variable=var,
+                command=self._on_style_change,
+                style='Option.TCheckbutton'
+            )
+            self._add_form_row(form, 0, label_key, chk)
+            return cell
+
+        # DPI
         self.figure_dpi_var = tk.StringVar(value=str(getattr(app_state, 'plot_dpi', 130)))
-        add_labeled_entry(axes_grid, "Figure Width (in)", self.figure_width_var, 0, 0)
-        add_labeled_entry(axes_grid, "Figure Height (in)", self.figure_height_var, 0, 1)
-        add_labeled_entry(axes_grid, "Figure DPI", self.figure_dpi_var, 1, 0)
+        axes_cells = []
+        axes_cells.append(add_labeled_entry(axes_grid, "Figure DPI", self.figure_dpi_var, 0, 0))
 
         # Background colors
         self.figure_bg_var = tk.StringVar(value=getattr(app_state, 'plot_facecolor', '#ffffff'))
         self.axes_bg_var = tk.StringVar(value=getattr(app_state, 'axes_facecolor', '#ffffff'))
-        add_labeled_entry(axes_grid, "Figure Background", self.figure_bg_var, 1, 1)
-        add_labeled_entry(axes_grid, "Axes Background", self.axes_bg_var, 2, 0)
+        axes_cells.append(add_labeled_entry(axes_grid, "Figure Background", self.figure_bg_var, 0, 1))
+        axes_cells.append(add_labeled_entry(axes_grid, "Axes Background", self.axes_bg_var, 1, 0))
 
         # Grid style
         self.grid_color_var = tk.StringVar(value=getattr(app_state, 'grid_color', '#e2e8f0'))
-        self.grid_width_var = tk.StringVar(value=str(getattr(app_state, 'grid_linewidth', 0.6)))
-        self.grid_alpha_var = tk.StringVar(value=str(getattr(app_state, 'grid_alpha', 0.7)))
-        add_labeled_entry(axes_grid, "Grid Color", self.grid_color_var, 2, 1)
-        add_labeled_entry(axes_grid, "Grid Linewidth", self.grid_width_var, 3, 0)
-        add_labeled_entry(axes_grid, "Grid Alpha", self.grid_alpha_var, 3, 1)
+        self.grid_width_var = tk.DoubleVar(value=float(getattr(app_state, 'grid_linewidth', 0.6)))
+        self.grid_alpha_var = tk.DoubleVar(value=float(getattr(app_state, 'grid_alpha', 0.7)))
+        axes_cells.append(add_labeled_entry(axes_grid, "Grid Color", self.grid_color_var, 1, 1))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Grid Linewidth", self.grid_width_var, 2, 0, 0.1, 3.0, 0.1, decimals=2))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Grid Alpha", self.grid_alpha_var, 2, 1, 0.0, 1.0, 0.05, decimals=2))
 
         grid_style_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
-        grid_style_cell.grid(row=4, column=0, sticky=tk.EW, pady=3)
+        grid_style_cell.grid(row=3, column=0, sticky=tk.EW, pady=3)
         self.grid_style_var = tk.StringVar(value=getattr(app_state, 'grid_linestyle', '--'))
         grid_style_form = self._create_form_grid(grid_style_cell)
         grid_style_form.pack(fill=tk.X)
@@ -306,11 +371,12 @@ class StyleTabMixin:
         )
         self._add_form_row(grid_style_form, 0, "Grid Style", grid_style_combo)
         grid_style_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        axes_cells.append(grid_style_cell)
 
         # Tick direction & axis linewidth
         self.tick_dir_var = tk.StringVar(value=getattr(app_state, 'tick_direction', 'out'))
         tick_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
-        tick_cell.grid(row=4, column=1, sticky=tk.EW, pady=3)
+        tick_cell.grid(row=3, column=1, sticky=tk.EW, pady=3)
         tick_form = self._create_form_grid(tick_cell)
         tick_form.pack(fill=tk.X)
         tick_combo = ttk.Combobox(
@@ -321,13 +387,35 @@ class StyleTabMixin:
         )
         self._add_form_row(tick_form, 0, "Tick Direction", tick_combo)
         tick_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        axes_cells.append(tick_cell)
 
-        self.axis_linewidth_var = tk.StringVar(value=str(getattr(app_state, 'axis_linewidth', 1.0)))
-        add_labeled_entry(axes_grid, "Axis Line Width", self.axis_linewidth_var, 5, 0)
+        self.tick_color_var = tk.StringVar(value=getattr(app_state, 'tick_color', '#1f2937'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Tick Color", self.tick_color_var, 4, 0))
+
+        self.tick_length_var = tk.DoubleVar(value=float(getattr(app_state, 'tick_length', 4.0)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Tick Length", self.tick_length_var, 4, 1, 0.0, 12.0, 0.5, decimals=1))
+
+        self.tick_width_var = tk.DoubleVar(value=float(getattr(app_state, 'tick_width', 0.8)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Tick Width", self.tick_width_var, 5, 0, 0.2, 3.0, 0.1, decimals=2))
+
+        self.minor_ticks_var = tk.BooleanVar(value=getattr(app_state, 'minor_ticks', False))
+        axes_cells.append(add_check_row(axes_grid, "Minor Ticks", self.minor_ticks_var, 5, 1))
+
+        self.minor_tick_length_var = tk.DoubleVar(value=float(getattr(app_state, 'minor_tick_length', 2.5)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Minor Tick Length", self.minor_tick_length_var, 6, 0, 0.0, 8.0, 0.5, decimals=1))
+
+        self.minor_tick_width_var = tk.DoubleVar(value=float(getattr(app_state, 'minor_tick_width', 0.6)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Minor Tick Width", self.minor_tick_width_var, 6, 1, 0.2, 2.0, 0.1, decimals=2))
+
+        self.axis_linewidth_var = tk.DoubleVar(value=float(getattr(app_state, 'axis_linewidth', 1.0)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Axis Line Width", self.axis_linewidth_var, 7, 0, 0.2, 3.0, 0.1, decimals=2))
+
+        self.axis_line_color_var = tk.StringVar(value=getattr(app_state, 'axis_line_color', '#1f2937'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Axis Line Color", self.axis_line_color_var, 7, 1))
 
         # Spine visibility
         spine_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
-        spine_cell.grid(row=5, column=1, sticky=tk.W, pady=3)
+        spine_cell.grid(row=4, column=1, sticky=tk.W, pady=3)
         self.show_top_spine_var = tk.BooleanVar(value=getattr(app_state, 'show_top_spine', True))
         self.show_right_spine_var = tk.BooleanVar(value=getattr(app_state, 'show_right_spine', True))
         top_chk = ttk.Checkbutton(
@@ -348,22 +436,164 @@ class StyleTabMixin:
         )
         right_chk.pack(anchor=tk.W)
         self._register_translation(right_chk, "Show Right Spine")
+        axes_cells.append(spine_cell)
+
+        self.minor_grid_var = tk.BooleanVar(value=getattr(app_state, 'minor_grid', False))
+        axes_cells.append(add_check_row(axes_grid, "Minor Grid", self.minor_grid_var, 8, 0))
+
+        self.minor_grid_color_var = tk.StringVar(value=getattr(app_state, 'minor_grid_color', '#e2e8f0'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Minor Grid Color", self.minor_grid_color_var, 8, 1))
+
+        self.minor_grid_width_var = tk.DoubleVar(value=float(getattr(app_state, 'minor_grid_linewidth', 0.4)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Minor Grid Linewidth", self.minor_grid_width_var, 9, 0, 0.1, 2.0, 0.1, decimals=2))
+
+        self.minor_grid_alpha_var = tk.DoubleVar(value=float(getattr(app_state, 'minor_grid_alpha', 0.4)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Minor Grid Alpha", self.minor_grid_alpha_var, 9, 1, 0.0, 1.0, 0.05, decimals=2))
+
+        minor_grid_style_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
+        minor_grid_style_cell.grid(row=10, column=0, sticky=tk.EW, pady=3)
+        self.minor_grid_style_var = tk.StringVar(value=getattr(app_state, 'minor_grid_linestyle', ':'))
+        minor_grid_style_form = self._create_form_grid(minor_grid_style_cell)
+        minor_grid_style_form.pack(fill=tk.X)
+        minor_grid_style_combo = ttk.Combobox(
+            minor_grid_style_form,
+            textvariable=self.minor_grid_style_var,
+            values=['-', '--', '-.', ':'],
+            state='readonly'
+        )
+        self._add_form_row(minor_grid_style_form, 0, "Minor Grid Style", minor_grid_style_combo)
+        minor_grid_style_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        axes_cells.append(minor_grid_style_cell)
 
         # Scatter edge style
         self.scatter_edgecolor_var = tk.StringVar(value=getattr(app_state, 'scatter_edgecolor', '#1e293b'))
-        self.scatter_edgewidth_var = tk.StringVar(value=str(getattr(app_state, 'scatter_edgewidth', 0.4)))
-        add_labeled_entry(axes_grid, "Scatter Edge Color", self.scatter_edgecolor_var, 6, 0)
-        add_labeled_entry(axes_grid, "Scatter Edge Width", self.scatter_edgewidth_var, 6, 1)
+        self.scatter_edgewidth_var = tk.DoubleVar(value=float(getattr(app_state, 'scatter_edgewidth', 0.4)))
+        axes_cells.append(add_labeled_entry(axes_grid, "Scatter Edge Color", self.scatter_edgecolor_var, 11, 0))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Scatter Edge Width", self.scatter_edgewidth_var, 11, 1, 0.0, 2.0, 0.05, decimals=2))
+
+        self.label_color_var = tk.StringVar(value=getattr(app_state, 'label_color', '#1f2937'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Label Color", self.label_color_var, 12, 0))
+
+        self.label_weight_var = tk.StringVar(value=getattr(app_state, 'label_weight', 'normal'))
+        label_weight_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
+        label_weight_cell.grid(row=12, column=1, sticky=tk.EW, pady=3)
+        label_weight_form = self._create_form_grid(label_weight_cell)
+        label_weight_form.pack(fill=tk.X)
+        label_weight_combo = ttk.Combobox(
+            label_weight_form,
+            textvariable=self.label_weight_var,
+            values=['normal', 'bold'],
+            state='readonly'
+        )
+        self._add_form_row(label_weight_form, 0, "Label Weight", label_weight_combo)
+        label_weight_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        axes_cells.append(label_weight_cell)
+
+        self.label_pad_var = tk.DoubleVar(value=float(getattr(app_state, 'label_pad', 6.0)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Label Pad", self.label_pad_var, 13, 0, 0.0, 30.0, 1.0, decimals=0))
+
+        self.title_color_var = tk.StringVar(value=getattr(app_state, 'title_color', '#111827'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Title Color", self.title_color_var, 13, 1))
+
+        self.title_weight_var = tk.StringVar(value=getattr(app_state, 'title_weight', 'bold'))
+        title_weight_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
+        title_weight_cell.grid(row=14, column=0, sticky=tk.EW, pady=3)
+        title_weight_form = self._create_form_grid(title_weight_cell)
+        title_weight_form.pack(fill=tk.X)
+        title_weight_combo = ttk.Combobox(
+            title_weight_form,
+            textvariable=self.title_weight_var,
+            values=['normal', 'bold'],
+            state='readonly'
+        )
+        self._add_form_row(title_weight_form, 0, "Title Weight", title_weight_combo)
+        title_weight_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        axes_cells.append(title_weight_cell)
+
+        self.title_pad_var = tk.DoubleVar(value=float(getattr(app_state, 'title_pad', 20.0)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Title Pad", self.title_pad_var, 14, 1, 0.0, 40.0, 1.0, decimals=0))
+
+        self.legend_location_var = tk.StringVar(value=getattr(app_state, 'legend_location', 'outside_right'))
+        legend_loc_cell = ttk.Frame(axes_grid, style='CardBody.TFrame')
+        legend_loc_cell.grid(row=15, column=0, sticky=tk.EW, pady=3)
+        legend_loc_form = self._create_form_grid(legend_loc_cell)
+        legend_loc_form.pack(fill=tk.X)
+        legend_location_options = {
+            "Outside Right": "outside_right",
+            "Upper Left": "upper left",
+            "Upper Right": "upper right",
+            "Lower Left": "lower left",
+            "Lower Right": "lower right",
+            "Best": "best",
+            "Center Left": "center left",
+            "Center Right": "center right",
+            "Upper Center": "upper center",
+            "Lower Center": "lower center",
+            "Center": "center",
+        }
+        self.legend_location_map = {self._translate(k): v for k, v in legend_location_options.items()}
+        legend_loc_combo = ttk.Combobox(
+            legend_loc_form,
+            textvariable=self.legend_location_var,
+            values=list(self.legend_location_map.keys()),
+            state='readonly'
+        )
+        self._add_form_row(legend_loc_form, 0, "Legend Location", legend_loc_combo)
+        legend_loc_combo.bind("<<ComboboxSelected>>", self._on_style_change)
+        current_loc = getattr(app_state, 'legend_location', 'outside_right')
+        for label, value in self.legend_location_map.items():
+            if value == current_loc:
+                self.legend_location_var.set(label)
+                break
+        axes_cells.append(legend_loc_cell)
+
+        self.legend_frame_on_var = tk.BooleanVar(value=getattr(app_state, 'legend_frame_on', True))
+        axes_cells.append(add_check_row(axes_grid, "Legend Frame", self.legend_frame_on_var, 15, 1))
+
+        self.legend_frame_alpha_var = tk.DoubleVar(value=float(getattr(app_state, 'legend_frame_alpha', 0.95)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Legend Frame Alpha", self.legend_frame_alpha_var, 16, 0, 0.0, 1.0, 0.05, decimals=2))
+
+        self.legend_frame_facecolor_var = tk.StringVar(value=getattr(app_state, 'legend_frame_facecolor', '#ffffff'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Legend Frame Face Color", self.legend_frame_facecolor_var, 16, 1))
+
+        self.legend_frame_edgecolor_var = tk.StringVar(value=getattr(app_state, 'legend_frame_edgecolor', '#cbd5f5'))
+        axes_cells.append(add_labeled_entry(axes_grid, "Legend Frame Edge Color", self.legend_frame_edgecolor_var, 17, 0))
 
         # Line widths
-        self.model_curve_width_var = tk.StringVar(value=str(getattr(app_state, 'model_curve_width', 1.2)))
-        self.paleoisochron_width_var = tk.StringVar(value=str(getattr(app_state, 'paleoisochron_width', 0.9)))
-        self.model_age_width_var = tk.StringVar(value=str(getattr(app_state, 'model_age_line_width', 0.7)))
-        self.isochron_width_var = tk.StringVar(value=str(getattr(app_state, 'isochron_line_width', 1.5)))
-        add_labeled_entry(axes_grid, "Model Curve Width", self.model_curve_width_var, 7, 0)
-        add_labeled_entry(axes_grid, "Paleoisochron Width", self.paleoisochron_width_var, 7, 1)
-        add_labeled_entry(axes_grid, "Model Age Line Width", self.model_age_width_var, 8, 0)
-        add_labeled_entry(axes_grid, "Isochron Line Width", self.isochron_width_var, 8, 1)
+        self.model_curve_width_var = tk.DoubleVar(value=float(getattr(app_state, 'model_curve_width', 1.2)))
+        self.paleoisochron_width_var = tk.DoubleVar(value=float(getattr(app_state, 'paleoisochron_width', 0.9)))
+        self.model_age_width_var = tk.DoubleVar(value=float(getattr(app_state, 'model_age_line_width', 0.7)))
+        self.isochron_width_var = tk.DoubleVar(value=float(getattr(app_state, 'isochron_line_width', 1.5)))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Model Curve Width", self.model_curve_width_var, 18, 0, 0.2, 4.0, 0.1, decimals=2))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Paleoisochron Width", self.paleoisochron_width_var, 18, 1, 0.2, 4.0, 0.1, decimals=2))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Model Age Line Width", self.model_age_width_var, 19, 0, 0.2, 4.0, 0.1, decimals=2))
+        axes_cells.append(add_slider_with_spin(axes_grid, "Isochron Line Width", self.isochron_width_var, 19, 1, 0.2, 4.0, 0.1, decimals=2))
+
+        def _relayout_axes_grid(_event=None):
+            width = axes_grid.winfo_width()
+            columns = 2 if width >= 720 else 1
+            current = getattr(axes_grid, '_layout_columns', None)
+            if current == columns:
+                return
+            axes_grid._layout_columns = columns
+            for cell in axes_cells:
+                try:
+                    cell.grid_forget()
+                except Exception:
+                    pass
+            if columns == 1:
+                axes_grid.columnconfigure(0, weight=1)
+                axes_grid.columnconfigure(1, weight=0)
+            else:
+                axes_grid.columnconfigure(0, weight=1)
+                axes_grid.columnconfigure(1, weight=1)
+            for idx, cell in enumerate(axes_cells):
+                row = idx // columns
+                col = idx % columns
+                padx = (0, 16) if (columns == 2 and col == 0) else (0, 0)
+                cell.grid(row=row, column=col, sticky=tk.EW, padx=padx, pady=3)
+
+        axes_grid.bind('<Configure>', _relayout_axes_grid)
 
     def _refresh_theme_list(self):
         """Load themes from disk and update combobox"""
@@ -393,7 +623,6 @@ class StyleTabMixin:
             'font_sizes': {k: v.get() for k, v in self.font_size_vars.items()},
             'marker_size': self.marker_size_var.get(),
             'marker_alpha': self.marker_alpha_var.get(),
-            'figure_size': [self.figure_width_var.get(), self.figure_height_var.get()],
             'figure_dpi': self.figure_dpi_var.get(),
             'figure_bg': self.figure_bg_var.get(),
             'axes_bg': self.axes_bg_var.get(),
@@ -402,15 +631,38 @@ class StyleTabMixin:
             'grid_alpha': self.grid_alpha_var.get(),
             'grid_linestyle': self.grid_style_var.get(),
             'tick_direction': self.tick_dir_var.get(),
+            'tick_color': self.tick_color_var.get(),
+            'tick_length': self.tick_length_var.get(),
+            'tick_width': self.tick_width_var.get(),
+            'minor_ticks': self.minor_ticks_var.get(),
+            'minor_tick_length': self.minor_tick_length_var.get(),
+            'minor_tick_width': self.minor_tick_width_var.get(),
             'axis_linewidth': self.axis_linewidth_var.get(),
+            'axis_line_color': self.axis_line_color_var.get(),
             'show_top_spine': self.show_top_spine_var.get(),
             'show_right_spine': self.show_right_spine_var.get(),
+            'minor_grid': self.minor_grid_var.get(),
+            'minor_grid_color': self.minor_grid_color_var.get(),
+            'minor_grid_linewidth': self.minor_grid_width_var.get(),
+            'minor_grid_alpha': self.minor_grid_alpha_var.get(),
+            'minor_grid_linestyle': self.minor_grid_style_var.get(),
             'scatter_edgecolor': self.scatter_edgecolor_var.get(),
             'scatter_edgewidth': self.scatter_edgewidth_var.get(),
             'model_curve_width': self.model_curve_width_var.get(),
             'paleoisochron_width': self.paleoisochron_width_var.get(),
             'model_age_line_width': self.model_age_width_var.get(),
-            'isochron_line_width': self.isochron_width_var.get()
+            'isochron_line_width': self.isochron_width_var.get(),
+            'label_color': self.label_color_var.get(),
+            'label_weight': self.label_weight_var.get(),
+            'label_pad': self.label_pad_var.get(),
+            'title_color': self.title_color_var.get(),
+            'title_weight': self.title_weight_var.get(),
+            'title_pad': self.title_pad_var.get(),
+            'legend_location': self.legend_location_map.get(self.legend_location_var.get(), 'outside_right'),
+            'legend_frame_on': self.legend_frame_on_var.get(),
+            'legend_frame_alpha': self.legend_frame_alpha_var.get(),
+            'legend_frame_facecolor': self.legend_frame_facecolor_var.get(),
+            'legend_frame_edgecolor': self.legend_frame_edgecolor_var.get(),
         }
         
         app_state.saved_themes[name] = theme_data
@@ -447,27 +699,51 @@ class StyleTabMixin:
         self.marker_size_var.set(data.get('marker_size', 60))
         self.marker_alpha_var.set(data.get('marker_alpha', 0.8))
 
-        fig_size = data.get('figure_size', [13, 9])
-        if isinstance(fig_size, (list, tuple)) and len(fig_size) == 2:
-            self.figure_width_var.set(str(fig_size[0]))
-            self.figure_height_var.set(str(fig_size[1]))
         self.figure_dpi_var.set(str(data.get('figure_dpi', 130)))
         self.figure_bg_var.set(data.get('figure_bg', '#ffffff'))
         self.axes_bg_var.set(data.get('axes_bg', '#ffffff'))
         self.grid_color_var.set(data.get('grid_color', '#e2e8f0'))
-        self.grid_width_var.set(str(data.get('grid_linewidth', 0.6)))
-        self.grid_alpha_var.set(str(data.get('grid_alpha', 0.7)))
+        self.grid_width_var.set(float(data.get('grid_linewidth', 0.6)))
+        self.grid_alpha_var.set(float(data.get('grid_alpha', 0.7)))
         self.grid_style_var.set(data.get('grid_linestyle', '--'))
         self.tick_dir_var.set(data.get('tick_direction', 'out'))
-        self.axis_linewidth_var.set(str(data.get('axis_linewidth', 1.0)))
+        self.tick_color_var.set(data.get('tick_color', '#1f2937'))
+        self.tick_length_var.set(float(data.get('tick_length', 4.0)))
+        self.tick_width_var.set(float(data.get('tick_width', 0.8)))
+        self.minor_ticks_var.set(bool(data.get('minor_ticks', False)))
+        self.minor_tick_length_var.set(float(data.get('minor_tick_length', 2.5)))
+        self.minor_tick_width_var.set(float(data.get('minor_tick_width', 0.6)))
+        self.axis_linewidth_var.set(float(data.get('axis_linewidth', 1.0)))
+        self.axis_line_color_var.set(data.get('axis_line_color', '#1f2937'))
         self.show_top_spine_var.set(bool(data.get('show_top_spine', True)))
         self.show_right_spine_var.set(bool(data.get('show_right_spine', True)))
+        self.minor_grid_var.set(bool(data.get('minor_grid', False)))
+        self.minor_grid_color_var.set(data.get('minor_grid_color', '#e2e8f0'))
+        self.minor_grid_width_var.set(float(data.get('minor_grid_linewidth', 0.4)))
+        self.minor_grid_alpha_var.set(float(data.get('minor_grid_alpha', 0.4)))
+        self.minor_grid_style_var.set(data.get('minor_grid_linestyle', ':'))
         self.scatter_edgecolor_var.set(data.get('scatter_edgecolor', '#1e293b'))
-        self.scatter_edgewidth_var.set(str(data.get('scatter_edgewidth', 0.4)))
-        self.model_curve_width_var.set(str(data.get('model_curve_width', 1.2)))
-        self.paleoisochron_width_var.set(str(data.get('paleoisochron_width', 0.9)))
-        self.model_age_width_var.set(str(data.get('model_age_line_width', 0.7)))
-        self.isochron_width_var.set(str(data.get('isochron_line_width', 1.5)))
+        self.scatter_edgewidth_var.set(float(data.get('scatter_edgewidth', 0.4)))
+        self.model_curve_width_var.set(float(data.get('model_curve_width', 1.2)))
+        self.paleoisochron_width_var.set(float(data.get('paleoisochron_width', 0.9)))
+        self.model_age_width_var.set(float(data.get('model_age_line_width', 0.7)))
+        self.isochron_width_var.set(float(data.get('isochron_line_width', 1.5)))
+        self.label_color_var.set(data.get('label_color', '#1f2937'))
+        self.label_weight_var.set(data.get('label_weight', 'normal'))
+        self.label_pad_var.set(float(data.get('label_pad', 6.0)))
+        self.title_color_var.set(data.get('title_color', '#111827'))
+        self.title_weight_var.set(data.get('title_weight', 'bold'))
+        self.title_pad_var.set(float(data.get('title_pad', 20.0)))
+        self.legend_frame_on_var.set(bool(data.get('legend_frame_on', True)))
+        self.legend_frame_alpha_var.set(float(data.get('legend_frame_alpha', 0.95)))
+        self.legend_frame_facecolor_var.set(data.get('legend_frame_facecolor', '#ffffff'))
+        self.legend_frame_edgecolor_var.set(data.get('legend_frame_edgecolor', '#cbd5f5'))
+        # Legend location (display label)
+        legend_loc = data.get('legend_location', 'outside_right')
+        for label, value in self.legend_location_map.items():
+            if value == legend_loc:
+                self.legend_location_var.set(label)
+                break
         
         # Trigger update
         self._on_style_change()
@@ -498,9 +774,22 @@ class StyleTabMixin:
                 return float(var.get())
             except Exception:
                 return default
+        previous_scheme = getattr(app_state, 'color_scheme', None)
+        previous_fonts = (
+            getattr(app_state, 'custom_primary_font', ''),
+            getattr(app_state, 'custom_cjk_font', '')
+        )
+        previous_font_sizes = dict(getattr(app_state, 'plot_font_sizes', {}))
+        previous_show_title = bool(getattr(app_state, 'show_plot_title', False))
+        previous_title_pad = float(getattr(app_state, 'title_pad', 20.0))
+        previous_line_widths = (
+            getattr(app_state, 'model_curve_width', 1.2),
+            getattr(app_state, 'paleoisochron_width', 0.9),
+            getattr(app_state, 'model_age_line_width', 0.7),
+            getattr(app_state, 'isochron_line_width', 1.5),
+        )
 
         app_state.plot_style_grid = self.grid_var.get()
-        previous_scheme = getattr(app_state, 'color_scheme', None)
         new_scheme = self.color_scheme_var.get()
         app_state.color_scheme = new_scheme
         
@@ -521,9 +810,6 @@ class StyleTabMixin:
         app_state.plot_marker_alpha = self.marker_alpha_var.get()
         app_state.show_plot_title = bool(self.show_title_var.get())
 
-        fig_w = _safe_float(self.figure_width_var, 13)
-        fig_h = _safe_float(self.figure_height_var, 9)
-        app_state.plot_figsize = (fig_w, fig_h)
         app_state.plot_dpi = int(_safe_float(self.figure_dpi_var, 130))
         app_state.plot_facecolor = self.figure_bg_var.get() or '#ffffff'
         app_state.axes_facecolor = self.axes_bg_var.get() or '#ffffff'
@@ -532,19 +818,41 @@ class StyleTabMixin:
         app_state.grid_alpha = _safe_float(self.grid_alpha_var, 0.7)
         app_state.grid_linestyle = self.grid_style_var.get() or '--'
         app_state.tick_direction = self.tick_dir_var.get() or 'out'
+        app_state.tick_color = self.tick_color_var.get() or '#1f2937'
+        app_state.tick_length = _safe_float(self.tick_length_var, 4.0)
+        app_state.tick_width = _safe_float(self.tick_width_var, 0.8)
+        app_state.minor_ticks = bool(self.minor_ticks_var.get())
+        app_state.minor_tick_length = _safe_float(self.minor_tick_length_var, 2.5)
+        app_state.minor_tick_width = _safe_float(self.minor_tick_width_var, 0.6)
         app_state.axis_linewidth = _safe_float(self.axis_linewidth_var, 1.0)
+        app_state.axis_line_color = self.axis_line_color_var.get() or '#1f2937'
         app_state.show_top_spine = bool(self.show_top_spine_var.get())
         app_state.show_right_spine = bool(self.show_right_spine_var.get())
+        app_state.minor_grid = bool(self.minor_grid_var.get())
+        app_state.minor_grid_color = self.minor_grid_color_var.get() or '#e2e8f0'
+        app_state.minor_grid_linewidth = _safe_float(self.minor_grid_width_var, 0.4)
+        app_state.minor_grid_alpha = _safe_float(self.minor_grid_alpha_var, 0.4)
+        app_state.minor_grid_linestyle = self.minor_grid_style_var.get() or ':'
         app_state.scatter_edgecolor = self.scatter_edgecolor_var.get() or '#1e293b'
         app_state.scatter_edgewidth = _safe_float(self.scatter_edgewidth_var, 0.4)
         app_state.model_curve_width = _safe_float(self.model_curve_width_var, 1.2)
         app_state.paleoisochron_width = _safe_float(self.paleoisochron_width_var, 0.9)
         app_state.model_age_line_width = _safe_float(self.model_age_width_var, 0.7)
         app_state.isochron_line_width = _safe_float(self.isochron_width_var, 1.5)
+        app_state.label_color = self.label_color_var.get() or '#1f2937'
+        app_state.label_weight = self.label_weight_var.get() or 'normal'
+        app_state.label_pad = _safe_float(self.label_pad_var, 6.0)
+        app_state.title_color = self.title_color_var.get() or '#111827'
+        app_state.title_weight = self.title_weight_var.get() or 'bold'
+        app_state.title_pad = _safe_float(self.title_pad_var, 20.0)
+        app_state.legend_location = self.legend_location_map.get(self.legend_location_var.get(), 'outside_right')
+        app_state.legend_frame_on = bool(self.legend_frame_on_var.get())
+        app_state.legend_frame_alpha = _safe_float(self.legend_frame_alpha_var, 0.95)
+        app_state.legend_frame_facecolor = self.legend_frame_facecolor_var.get() or '#ffffff'
+        app_state.legend_frame_edgecolor = self.legend_frame_edgecolor_var.get() or '#cbd5f5'
 
         if app_state.fig is not None:
             try:
-                app_state.fig.set_size_inches(fig_w, fig_h, forward=True)
                 app_state.fig.set_dpi(app_state.plot_dpi)
                 app_state.fig.patch.set_facecolor(app_state.plot_facecolor)
             except Exception:
@@ -558,10 +866,37 @@ class StyleTabMixin:
         # Clear palette cache only when scheme actually changes
         if new_scheme != previous_scheme and hasattr(app_state, 'current_palette'):
             app_state.current_palette = {}
-        
-        # Trigger update
-        if self.callback:
-            self.callback()
+
+        # Decide whether to replot or just refresh style
+        requires_replot = False
+        if new_scheme != previous_scheme:
+            requires_replot = True
+        if (p_font, c_font) != previous_fonts:
+            requires_replot = True
+        if app_state.plot_font_sizes != previous_font_sizes:
+            requires_replot = True
+        if app_state.show_plot_title != previous_show_title:
+            requires_replot = True
+        if app_state.title_pad != previous_title_pad:
+            requires_replot = True
+        if (
+            app_state.model_curve_width,
+            app_state.paleoisochron_width,
+            app_state.model_age_line_width,
+            app_state.isochron_line_width,
+        ) != previous_line_widths:
+            requires_replot = True
+
+        if requires_replot:
+            if self.callback:
+                self.callback()
+        else:
+            try:
+                from visualization import refresh_plot_style
+                refresh_plot_style()
+            except Exception:
+                if self.callback:
+                    self.callback()
 
     def _apply_auto_layout(self):
         """Apply automatic layout adjustment to the figure."""
@@ -570,7 +905,6 @@ class StyleTabMixin:
         try:
             app_state.fig.set_constrained_layout(True)
             app_state.fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
-            app_state.fig.tight_layout()
             if app_state.fig.canvas:
                 app_state.fig.canvas.draw_idle()
         except Exception:

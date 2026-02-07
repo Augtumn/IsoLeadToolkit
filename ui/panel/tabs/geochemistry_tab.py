@@ -134,7 +134,12 @@ class GeochemistryTabMixin:
         self._register_translation(reset_btn, "Reset Defaults")
 
         # 1. Time Constants
-        sect_time = self._create_section(frame, "Time Parameters (Ma)", "Ages and time constants.")
+        sect_time = self._create_collapsible_section(
+            frame,
+            "Time Parameters (Ma)",
+            "Ages and time constants.",
+            start_open=True
+        )
         
         grid_time = ttk.Frame(sect_time, style='CardBody.TFrame')
         grid_time.pack(fill=tk.X, expand=True)
@@ -146,7 +151,12 @@ class GeochemistryTabMixin:
         add_entry_grid(grid_time, "Tsec (2nd Stage)", current_params.get('Tsec', '')/1e6, 'Tsec', 1, 0)
 
         # 2. Decay Constants
-        sect_decay = self._create_section(frame, "Decay Constants (a^-1)", "Radioactive decay constants.")
+        sect_decay = self._create_collapsible_section(
+            frame,
+            "Decay Constants (a^-1)",
+            "Radioactive decay constants.",
+            start_open=False
+        )
         
         grid_decay = ttk.Frame(sect_decay, style='CardBody.TFrame')
         grid_decay.pack(fill=tk.X, expand=True)
@@ -158,7 +168,12 @@ class GeochemistryTabMixin:
         add_entry_grid(grid_decay, "λ (232Th)", current_params.get('lambda_232', ''), 'lambda_232', 1, 0)
 
         # 3. Initial Lead
-        sect_init = self._create_section(frame, "Initial Lead Compositions", "Primordial and Two-Stage initial ratios.")
+        sect_init = self._create_collapsible_section(
+            frame,
+            "Initial Lead Compositions",
+            "Primordial and Two-Stage initial ratios.",
+            start_open=False
+        )
         
         grid_init = ttk.Frame(sect_init, style='CardBody.TFrame')
         grid_init.pack(fill=tk.X, expand=True)
@@ -183,7 +198,12 @@ class GeochemistryTabMixin:
         add_entry_grid(grid_init, "c1 (208/204)", current_params.get('c1', ''), 'c1', 5, 0)
 
         # 4. Mantle & Ratios
-        sect_mantle = self._create_section(frame, "Mantle & Production", "Mantle reservoir parameters.")
+        sect_mantle = self._create_collapsible_section(
+            frame,
+            "Mantle & Production",
+            "Mantle reservoir parameters.",
+            start_open=False
+        )
         
         grid_mantle = ttk.Frame(sect_mantle, style='CardBody.TFrame')
         grid_mantle.pack(fill=tk.X, expand=True)

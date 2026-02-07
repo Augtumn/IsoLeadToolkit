@@ -40,7 +40,9 @@ class PanelUtilsMixin:
             if attr == 'title' and hasattr(widget, 'title'):
                 widget.title(value)
             elif attr == 'tab':
-                # Special handling for notebook tabs
+                # Special handling for notebook tabs (if notebook exists)
+                if not hasattr(self, 'notebook'):
+                    return
                 tab_id = value.get('tab_id')
                 text = self._translate(self._translations[tab_id + 3]['key'])
                 self.notebook.tab(tab_id, text=text)
@@ -63,9 +65,10 @@ class PanelUtilsMixin:
             
             # Special handling for tabs
             if entry.get('attr') == 'tab':
-                tab_id = kwargs.get('tab_id')
-                text = self._translate(entry['key'])
-                self.notebook.tab(tab_id, text=text)
+                if hasattr(self, 'notebook'):
+                    tab_id = kwargs.get('tab_id')
+                    text = self._translate(entry['key'])
+                    self.notebook.tab(tab_id, text=text)
                 continue
 
             translated = self._translate(entry['key'], **kwargs)
@@ -103,6 +106,8 @@ class PanelUtilsMixin:
 
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Attach canvas reference for scroll helpers
+        scrollable_frame._scroll_canvas = canvas
         
         # Bind canvas configure to update frame width
         def _on_canvas_configure(event):
@@ -118,6 +123,37 @@ class PanelUtilsMixin:
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
         return scrollable_frame
+
+    def _find_scroll_canvas(self, widget):
+        """Find the nearest scroll canvas for a widget."""
+        current = widget
+        while current is not None:
+            canvas = getattr(current, '_scroll_canvas', None)
+            if canvas is not None:
+                return canvas, current
+            current = getattr(current, 'master', None)
+        return None, None
+
+    def _scroll_widget_into_view(self, widget):
+        """Scroll the nearest canvas to center the widget."""
+        canvas, scroll_root = self._find_scroll_canvas(widget)
+        if canvas is None or scroll_root is None:
+            return
+        try:
+            canvas.update_idletasks()
+            scroll_root.update_idletasks()
+            widget.update_idletasks()
+            # Compute widget position within scroll_root
+            y = widget.winfo_rooty() - scroll_root.winfo_rooty()
+            h = widget.winfo_height()
+            canvas_h = canvas.winfo_height()
+            if canvas_h <= 1:
+                return
+            target = y + (h / 2) - (canvas_h / 2)
+            total_h = max(1, scroll_root.winfo_height())
+            canvas.yview_moveto(max(0, min(1, target / total_h)))
+        except Exception:
+            pass
 
     def _create_section(self, parent, title, description=None):
         """Create a styled section container"""
@@ -328,3 +364,51 @@ class PanelUtilsMixin:
         widget.grid(row=row, column=1, sticky=widget_sticky, pady=2)
         value_widget.grid(row=row, column=2, sticky=value_sticky, padx=(8, 0), pady=2)
         return label
+
+    def _create_collapsible_section(self, parent, title, description=None, start_open=True):
+        """Create a collapsible section with a header toggle."""
+        container = ttk.Frame(parent, style='ControlPanel.TFrame')
+        container.pack(fill=tk.X, padx=6, pady=6)
+
+        header = ttk.Frame(container, style='ControlPanel.TFrame')
+        header.pack(fill=tk.X)
+
+        toggle_text = tk.StringVar(value="v" if start_open else ">")
+
+        def _toggle():
+            if content.winfo_ismapped():
+                content.pack_forget()
+                toggle_text.set(">")
+            else:
+                content.pack(fill=tk.X, pady=(6, 0))
+                toggle_text.set("v")
+                # Center the expanded section after layout refresh
+                try:
+                    self.root.after(0, lambda: self._scroll_widget_into_view(container))
+                except Exception:
+                    pass
+
+        toggle_btn = ttk.Button(header, textvariable=toggle_text, width=2, style='Secondary.TButton', command=_toggle)
+        toggle_btn.pack(side=tk.LEFT)
+
+        title_lbl = ttk.Label(header, text=self._translate(title), style='FieldLabel.TLabel')
+        title_lbl.pack(side=tk.LEFT, padx=(6, 0))
+        self._register_translation(title_lbl, title)
+
+        content = ttk.LabelFrame(container, padding=14, style='Card.TLabelframe')
+
+        if description:
+            desc = ttk.Label(content, text=self._translate(description), style='Body.TLabel', wraplength=340, justify=tk.LEFT)
+            desc.pack(fill=tk.X, pady=(0, 10))
+
+            def _update_wraplength(event):
+                if event.width > 20:
+                    desc.configure(wraplength=event.width - 20)
+
+            desc.bind('<Configure>', _update_wraplength)
+            self._register_translation(desc, description)
+
+        if start_open:
+            content.pack(fill=tk.X, pady=(6, 0))
+
+        return content

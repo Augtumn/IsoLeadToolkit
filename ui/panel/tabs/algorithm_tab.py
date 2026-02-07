@@ -17,9 +17,12 @@ class AlgorithmTabMixin:
 
     def _build_algorithm_tab(self, parent):
         """Build the Algorithm tab content"""
-        from visualization import show_scree_plot, show_pca_loadings
-        
         frame = self._build_scrollable_frame(parent)
+        self._build_algorithm_content(frame)
+
+    def _build_algorithm_content(self, frame):
+        """Build the Algorithm tab content (no scroll wrapper)."""
+        from visualization import show_scree_plot, show_pca_loadings
 
         # --- Grouping Controls ---
         self.group_section = self._create_section(

@@ -134,6 +134,13 @@ def _draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats):
     ax_right.set_ylabel("")
     ax_top.set_facecolor("none")
     ax_right.set_facecolor("none")
+    ax_top.set_frame_on(False)
+    ax_right.set_frame_on(False)
+    try:
+        ax_top.patch.set_visible(False)
+        ax_right.patch.set_visible(False)
+    except Exception:
+        pass
     for spine in ax_top.spines.values():
         spine.set_visible(False)
     for spine in ax_right.spines.values():
@@ -247,6 +254,7 @@ def _draw_isochron_overlays(ax, mode):
         
 
 
+        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
         try:
             from data.geochemistry import calculate_isochron_age_from_slope, calculate_source_mu_from_isochron, calculate_source_kappa_from_slope
         except ImportError:
@@ -810,18 +818,34 @@ def _apply_current_style():
     
     # Apply common rcParams for sizing and grid
     try:
-        fig_w, fig_h = getattr(app_state, 'plot_figsize', (13, 9))
-        plt.rcParams['figure.figsize'] = (float(fig_w), float(fig_h))
+        # Figure size is managed by the canvas; do not override here
         plt.rcParams['figure.dpi'] = float(getattr(app_state, 'plot_dpi', 130))
         plt.rcParams['figure.facecolor'] = getattr(app_state, 'plot_facecolor', '#ffffff')
         plt.rcParams['axes.facecolor'] = getattr(app_state, 'axes_facecolor', '#ffffff')
+        plt.rcParams['axes.grid'] = bool(show_grid)
         plt.rcParams['grid.color'] = getattr(app_state, 'grid_color', '#e2e8f0')
         plt.rcParams['grid.linewidth'] = float(getattr(app_state, 'grid_linewidth', 0.6))
         plt.rcParams['grid.alpha'] = float(getattr(app_state, 'grid_alpha', 0.7))
         plt.rcParams['grid.linestyle'] = getattr(app_state, 'grid_linestyle', '--')
-        plt.rcParams['xtick.direction'] = getattr(app_state, 'tick_direction', 'out')
-        plt.rcParams['ytick.direction'] = getattr(app_state, 'tick_direction', 'out')
+        tick_dir = getattr(app_state, 'tick_direction', 'out')
+        tick_color = getattr(app_state, 'tick_color', '#1f2937')
+        plt.rcParams['xtick.direction'] = tick_dir
+        plt.rcParams['ytick.direction'] = tick_dir
+        plt.rcParams['xtick.color'] = tick_color
+        plt.rcParams['ytick.color'] = tick_color
+        plt.rcParams['xtick.major.size'] = float(getattr(app_state, 'tick_length', 4.0))
+        plt.rcParams['ytick.major.size'] = float(getattr(app_state, 'tick_length', 4.0))
+        plt.rcParams['xtick.major.width'] = float(getattr(app_state, 'tick_width', 0.8))
+        plt.rcParams['ytick.major.width'] = float(getattr(app_state, 'tick_width', 0.8))
+        plt.rcParams['xtick.minor.size'] = float(getattr(app_state, 'minor_tick_length', 2.5))
+        plt.rcParams['ytick.minor.size'] = float(getattr(app_state, 'minor_tick_length', 2.5))
+        plt.rcParams['xtick.minor.width'] = float(getattr(app_state, 'minor_tick_width', 0.6))
+        plt.rcParams['ytick.minor.width'] = float(getattr(app_state, 'minor_tick_width', 0.6))
         plt.rcParams['axes.linewidth'] = float(getattr(app_state, 'axis_linewidth', 1.0))
+        plt.rcParams['axes.labelcolor'] = getattr(app_state, 'label_color', '#1f2937')
+        plt.rcParams['axes.labelweight'] = getattr(app_state, 'label_weight', 'normal')
+        plt.rcParams['axes.titlecolor'] = getattr(app_state, 'title_color', '#111827')
+        plt.rcParams['axes.titleweight'] = getattr(app_state, 'title_weight', 'bold')
     except Exception as err:
         print(f"[WARN] Failed to apply rcParams style: {err}", flush=True)
 
@@ -832,24 +856,232 @@ def _enforce_plot_style(ax):
 
     # Enforce grid
     show_grid = getattr(app_state, 'plot_style_grid', False)
-    ax.grid(
-        show_grid,
-        color=getattr(app_state, 'grid_color', '#e2e8f0'),
-        linewidth=getattr(app_state, 'grid_linewidth', 0.6),
-        alpha=getattr(app_state, 'grid_alpha', 0.7),
-        linestyle=getattr(app_state, 'grid_linestyle', '--')
-    )
+    if show_grid:
+        ax.grid(
+            True,
+            which='major',
+            color=getattr(app_state, 'grid_color', '#e2e8f0'),
+            linewidth=getattr(app_state, 'grid_linewidth', 0.6),
+            alpha=getattr(app_state, 'grid_alpha', 0.7),
+            linestyle=getattr(app_state, 'grid_linestyle', '--')
+        )
+    else:
+        ax.grid(False, which='major')
+
+    # Minor grid & ticks
+    minor_ticks = getattr(app_state, 'minor_ticks', False)
+    minor_grid = getattr(app_state, 'minor_grid', False)
+    if minor_ticks or minor_grid:
+        try:
+            ax.minorticks_on()
+        except Exception:
+            pass
+    else:
+        try:
+            ax.minorticks_off()
+        except Exception:
+            pass
+
+    if minor_grid:
+        ax.grid(
+            True,
+            which='minor',
+            color=getattr(app_state, 'minor_grid_color', '#e2e8f0'),
+            linewidth=getattr(app_state, 'minor_grid_linewidth', 0.4),
+            alpha=getattr(app_state, 'minor_grid_alpha', 0.4),
+            linestyle=getattr(app_state, 'minor_grid_linestyle', ':')
+        )
+    else:
+        ax.grid(False, which='minor')
+    try:
+        ax.set_axisbelow(True)
+    except Exception:
+        pass
     
     # Enforce facecolors from current rcParams
     if app_state.fig is not None:
         app_state.fig.patch.set_facecolor(plt.rcParams.get('figure.facecolor', 'white'))
     
     ax.set_facecolor(plt.rcParams.get('axes.facecolor', 'white'))
-    ax.tick_params(direction=getattr(app_state, 'tick_direction', 'out'))
+    tick_color = getattr(app_state, 'tick_color', '#1f2937')
+    ax.tick_params(
+        direction=getattr(app_state, 'tick_direction', 'out'),
+        length=getattr(app_state, 'tick_length', 4.0),
+        width=getattr(app_state, 'tick_width', 0.8),
+        colors=tick_color,
+        labelcolor=tick_color,
+        which='major'
+    )
+    if minor_ticks:
+        ax.tick_params(
+            length=getattr(app_state, 'minor_tick_length', 2.5),
+            width=getattr(app_state, 'minor_tick_width', 0.6),
+            colors=tick_color,
+            which='minor'
+        )
     for spine in ax.spines.values():
         spine.set_linewidth(getattr(app_state, 'axis_linewidth', 1.0))
+        spine.set_color(getattr(app_state, 'axis_line_color', '#1f2937'))
     ax.spines['top'].set_visible(getattr(app_state, 'show_top_spine', True))
     ax.spines['right'].set_visible(getattr(app_state, 'show_right_spine', True))
+
+
+def _apply_axis_text_style(ax):
+    """Apply axis label/title styling without changing text."""
+    if ax is None:
+        return
+    label_color = getattr(app_state, 'label_color', '#1f2937')
+    label_weight = getattr(app_state, 'label_weight', 'normal')
+    label_pad = getattr(app_state, 'label_pad', 6.0)
+    title_color = getattr(app_state, 'title_color', '#111827')
+    title_weight = getattr(app_state, 'title_weight', 'bold')
+
+    try:
+        ax.xaxis.label.set_color(label_color)
+        ax.xaxis.label.set_fontweight(label_weight)
+        ax.xaxis.labelpad = label_pad
+    except Exception:
+        pass
+    try:
+        ax.yaxis.label.set_color(label_color)
+        ax.yaxis.label.set_fontweight(label_weight)
+        ax.yaxis.labelpad = label_pad
+    except Exception:
+        pass
+    if hasattr(ax, 'zaxis'):
+        try:
+            ax.zaxis.label.set_color(label_color)
+            ax.zaxis.label.set_fontweight(label_weight)
+            ax.zaxis.labelpad = label_pad
+        except Exception:
+            pass
+    try:
+        title = ax.title
+        title.set_color(title_color)
+        title.set_fontweight(title_weight)
+    except Exception:
+        pass
+
+
+def _legend_location_config(show_marginal_kde=False):
+    """Resolve legend location and optional bbox anchor."""
+    loc = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
+    if loc == 'outside_right':
+        bbox_x = 1.22 if show_marginal_kde else 1.01
+        return 'upper left', (bbox_x, 1)
+    return loc, None
+
+
+def _style_legend(legend, show_marginal_kde=False):
+    """Apply legend styling from app_state."""
+    if legend is None:
+        return
+    loc, bbox = _legend_location_config(show_marginal_kde=show_marginal_kde)
+    try:
+        legend.set_loc(loc)
+    except Exception:
+        pass
+    if bbox:
+        try:
+            legend.set_bbox_to_anchor(bbox, transform=legend.axes.transAxes)
+        except Exception:
+            pass
+
+    frame_on = bool(getattr(app_state, 'legend_frame_on', True))
+    legend.set_frame_on(frame_on)
+    frame = legend.get_frame()
+    if frame_on:
+        try:
+            frame.set_facecolor(getattr(app_state, 'legend_frame_facecolor', '#ffffff'))
+            frame.set_edgecolor(getattr(app_state, 'legend_frame_edgecolor', '#cbd5f5'))
+            frame.set_alpha(float(getattr(app_state, 'legend_frame_alpha', 0.95)))
+        except Exception:
+            pass
+
+    legend_size = getattr(app_state, 'plot_font_sizes', {}).get('legend', 10)
+    text_color = getattr(app_state, 'label_color', '#1f2937')
+    for text in legend.get_texts():
+        try:
+            text.set_fontsize(legend_size)
+            text.set_color(text_color)
+        except Exception:
+            pass
+    try:
+        title = legend.get_title()
+        title.set_fontsize(getattr(app_state, 'plot_font_sizes', {}).get('label', 12))
+        title.set_color(text_color)
+        title.set_fontweight(getattr(app_state, 'label_weight', 'normal'))
+    except Exception:
+        pass
+
+
+def refresh_plot_style():
+    """Refresh plot styling without recomputing embeddings."""
+    try:
+        _apply_current_style()
+    except Exception:
+        pass
+
+    ax = getattr(app_state, 'ax', None)
+    fig = getattr(app_state, 'fig', None)
+
+    axes = []
+    if fig is not None:
+        axes.extend(list(getattr(fig, 'axes', [])))
+    if ax is not None and ax not in axes:
+        axes.append(ax)
+
+    for target_ax in axes:
+        try:
+            _enforce_plot_style(target_ax)
+        except Exception:
+            pass
+        try:
+            _apply_axis_text_style(target_ax)
+        except Exception:
+            pass
+        try:
+            _style_legend(target_ax.get_legend(), show_marginal_kde=getattr(app_state, 'show_marginal_kde', False))
+        except Exception:
+            pass
+
+    # Update scatter collections in-place
+    try:
+        base_size = getattr(app_state, 'plot_marker_size', 60)
+        base_alpha = getattr(app_state, 'plot_marker_alpha', 0.8)
+        edgecolor = getattr(app_state, 'scatter_edgecolor', '#1e293b')
+        edgewidth = getattr(app_state, 'scatter_edgewidth', 0.4)
+
+        for sc in list(getattr(app_state, 'scatter_collections', [])):
+            if sc is None:
+                continue
+            try:
+                sizes = sc.get_sizes()
+                if sizes is None or len(sizes) == 0:
+                    sc.set_sizes([base_size])
+                else:
+                    sc.set_sizes([base_size] * len(sizes))
+                sc.set_alpha(base_alpha)
+                sc.set_edgecolor(edgecolor)
+                sc.set_linewidths(edgewidth)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Refresh selection overlay to match new sizes
+    try:
+        if getattr(app_state, 'selected_indices', None):
+            from .events import refresh_selection_overlay
+            refresh_selection_overlay()
+    except Exception:
+        pass
+
+    if fig is not None and fig.canvas:
+        try:
+            fig.canvas.draw_idle()
+        except Exception:
+            pass
 
 def show_scree_plot(parent_window=None):
     """Display a scree plot of the explained variance for the last PCA run."""
@@ -1993,21 +2225,22 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
 
             # Draw Ternary Grid (standard geochemical style)
             # Grid for levels 0.1..0.9 (Top, Left, Right)
-            grid_color = '#e2e8f0'
-            for i in range(1, 10):
-                val = i * 0.1
-                # Constant Top (t=val)
-                app_state.ax.plot([val*0.5, 1 - val*0.5], [val*h, val*h], '-', color=grid_color, lw=0.6, zorder=0)
+            if getattr(app_state, 'plot_style_grid', False):
+                grid_color = '#e2e8f0'
+                for i in range(1, 10):
+                    val = i * 0.1
+                    # Constant Top (t=val)
+                    app_state.ax.plot([val*0.5, 1 - val*0.5], [val*h, val*h], '-', color=grid_color, lw=0.6, zorder=0)
 
-                # Constant Left (l=val)
-                x1, y1 = (1 - val), 0
-                x2, y2 = (0.5 * (1 - val)), h * (1 - val)
-                app_state.ax.plot([x1, x2], [y1, y2], '-', color=grid_color, lw=0.6, zorder=0)
+                    # Constant Left (l=val)
+                    x1, y1 = (1 - val), 0
+                    x2, y2 = (0.5 * (1 - val)), h * (1 - val)
+                    app_state.ax.plot([x1, x2], [y1, y2], '-', color=grid_color, lw=0.6, zorder=0)
 
-                # Constant Right (r=val)
-                x3, y3 = val, 0
-                x4, y4 = (0.5 + 0.5 * val), h * (1 - val)
-                app_state.ax.plot([x3, x4], [y3, y4], '-', color=grid_color, lw=0.6, zorder=0)
+                    # Constant Right (r=val)
+                    x3, y3 = val, 0
+                    x4, y4 = (0.5 + 0.5 * val), h * (1 - val)
+                    app_state.ax.plot([x3, x4], [y3, y4], '-', color=grid_color, lw=0.6, zorder=0)
             
             # Labels
             app_state.ax.text(0.5, h + 0.05, t_cols[0], ha='center', va='bottom', fontsize=10, fontweight='bold')
@@ -2245,32 +2478,33 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             # Only show matplotlib legend if item count is reasonable
             if len(unique_cats) <= 30:
                 ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
-                legend_x = 1.01 if not show_marginal_kde else 1.22
+                loc, bbox = _legend_location_config(show_marginal_kde=show_marginal_kde)
                 
                 # If explicit handles created (KDE mode), pass them
                 if handles:
                     legend = app_state.ax.legend(
                         handles=handles, labels=labels,
-                        title=group_col, bbox_to_anchor=(legend_x, 1), loc='upper left',
+                        title=group_col,
+                        bbox_to_anchor=bbox if bbox else None,
+                        loc=loc,
                         frameon=True, fancybox=True,
                         ncol=ncol
                     )
                 else:
                     legend = app_state.ax.legend(
-                        title=group_col, bbox_to_anchor=(legend_x, 1), loc='upper left',
+                        title=group_col,
+                        bbox_to_anchor=bbox if bbox else None,
+                        loc=loc,
                         frameon=True, fancybox=True,
                         ncol=ncol
                     )
 
                 try:
-                    legend.set_bbox_to_anchor((legend_x, 1), transform=app_state.ax.transAxes)
+                    if bbox:
+                        legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
                 except Exception:
                     pass
-
-                frame = legend.get_frame()
-                frame.set_facecolor("#ffffff")
-                frame.set_edgecolor("#cbd5f5")
-                frame.set_alpha(0.95)
+                _style_legend(legend, show_marginal_kde=show_marginal_kde)
                 
                 if not is_kde_mode:
                     for leg_patch, sc in zip(legend.get_patches(), scatters):
@@ -2330,7 +2564,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     pass
 
         if getattr(app_state, 'show_plot_title', True):
-            app_state.ax.set_title(title, pad=20, **title_font_dict)
+            app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0), **title_font_dict)
         else:
             app_state.ax.set_title("")
         
@@ -2369,8 +2603,6 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             # python-ternary displays the full simplex by default.
             pass
 
-
-
         elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
             idx_x = app_state.pca_component_indices[0] + 1
             idx_y = app_state.pca_component_indices[1] + 1
@@ -2379,6 +2611,8 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         else:
             app_state.ax.set_xlabel(f"{actual_algorithm} Dimension 1")
             app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2")
+
+        _apply_axis_text_style(app_state.ax)
 
         # Geochemistry overlays
         if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
@@ -2616,13 +2850,15 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
                 
                 color = app_state.current_palette[cat]
 
+                marker_size = getattr(app_state, 'plot_marker_size', size)
+                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
                 sc = app_state.ax.scatter(
                     xs,
                     ys,
                     label=cat,
                     color=color,
-                    s=size,
-                    alpha=0.88,
+                    s=marker_size,
+                    alpha=marker_alpha,
                     edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
                     linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
                     zorder=2
@@ -2664,14 +2900,15 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
             
             if len(unique_cats) <= 30:
                 ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
+                loc, bbox = _legend_location_config(show_marginal_kde=show_marginal_kde)
                 
                 # Use handles if available, otherwise just call legend which picks up scatters automatically
                 if handles:
                     legend = app_state.ax.legend(
                         handles=handles, labels=labels,
                         title=group_col,
-                        bbox_to_anchor=(1.01, 1),
-                        loc='upper left',
+                        bbox_to_anchor=bbox if bbox else None,
+                        loc=loc,
                         frameon=True,
                         fancybox=True,
                         ncol=ncol
@@ -2680,8 +2917,8 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
                     # For scatter plots, calling legend without handles picks up artists with labels automatically
                     legend = app_state.ax.legend(
                         title=group_col,
-                        bbox_to_anchor=(1.01, 1),
-                        loc='upper left',
+                        bbox_to_anchor=bbox if bbox else None,
+                        loc=loc,
                         frameon=True,
                         fancybox=True,
                         ncol=ncol
@@ -2690,11 +2927,9 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
                 # Check if legend was actually created (migth fail if no labeled artists)
                 if legend:
                     try:
-                        legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
-                        frame = legend.get_frame()
-                        frame.set_facecolor("#ffffff")
-                        frame.set_edgecolor("#cbd5f5")
-                        frame.set_alpha(0.95)
+                        if bbox:
+                            legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
+                        _style_legend(legend, show_marginal_kde=show_marginal_kde)
                         
                         if not show_kde:
                             # Map legend items to scatter collections for interactivity
@@ -2723,11 +2958,11 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
             except Exception:
                 pass
 
-        app_state.ax.set_title(title, pad=20)
+        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
         app_state.last_2d_cols = list(data_columns)
         app_state.ax.set_xlabel(data_columns[0])
         app_state.ax.set_ylabel(data_columns[1])
-        app_state.ax.tick_params()
+        _apply_axis_text_style(app_state.ax)
         
         # Adjust layout to prevent overlap
         try:
@@ -2830,14 +3065,16 @@ def plot_3d_data(group_col, data_columns, size=60):
             ys = subset[data_columns[1]].astype(float).values
             zs = subset[data_columns[2]].astype(float).values
 
+            marker_size = getattr(app_state, 'plot_marker_size', size)
+            marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.85)
             sc = app_state.ax.scatter(
                 xs,
                 ys,
                 zs,
                 label=cat,
                 color=app_state.current_palette[cat],
-                s=size,
-                alpha=0.85,
+                s=marker_size,
+                alpha=marker_alpha,
                 edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
                 linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
                 zorder=2
@@ -2851,19 +3088,18 @@ def plot_3d_data(group_col, data_columns, size=60):
         try:
             if len(unique_cats) <= 30:
                 ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
+                loc, bbox = _legend_location_config(show_marginal_kde=False)
                 legend = app_state.ax.legend(
                     title=group_col,
-                    bbox_to_anchor=(1.01, 1),
-                    loc='upper left',
+                    bbox_to_anchor=bbox if bbox else None,
+                    loc=loc,
                     frameon=True,
                     fancybox=True,
                     ncol=ncol
                 )
-                legend.set_bbox_to_anchor((1.01, 1), transform=app_state.ax.transAxes)
-                frame = legend.get_frame()
-                frame.set_facecolor("#ffffff")
-                frame.set_edgecolor("#cbd5f5")
-                frame.set_alpha(0.95)
+                if bbox:
+                    legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
+                _style_legend(legend, show_marginal_kde=False)
             else:
                 print("[INFO] Too many categories for standard legend. Use Control Panel legend.", flush=True)
         except Exception as legend_err:
@@ -2874,10 +3110,11 @@ def plot_3d_data(group_col, data_columns, size=60):
             f"3D Scatter Plot{subset_info} ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n"
             f"Colored by {group_col}"
         )
-        app_state.ax.set_title(title, pad=20)
+        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
         app_state.ax.set_xlabel(data_columns[0])
         app_state.ax.set_ylabel(data_columns[1])
         app_state.ax.set_zlabel(data_columns[2])
+        _apply_axis_text_style(app_state.ax)
         
         # Adjust layout to prevent overlap
         try:

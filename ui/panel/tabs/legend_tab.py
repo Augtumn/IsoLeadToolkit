@@ -13,8 +13,12 @@ class LegendTabMixin:
     def _build_legend_tab(self, parent):
         """Build the interactive legend tab"""
         frame = self._build_scrollable_frame(parent)
+        self._build_legend_content(frame)
+
+    def _build_legend_content(self, frame):
+        """Build the legend tab content (no scroll wrapper)."""
         self.legend_container = frame
-        
+
         # Legend Settings Section
         settings_frame = ttk.Frame(frame, style='ControlPanel.TFrame')
         settings_frame.pack(fill=tk.X, pady=(0, 10))

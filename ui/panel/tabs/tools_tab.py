@@ -121,10 +121,11 @@ class ToolsTabMixin:
         self._register_translation(tooltip_btn, "Configure Tooltip")
 
         # Mixing Group Tools
-        mixing_section = self._create_section(
+        mixing_section = self._create_collapsible_section(
             frame,
             "Mixing Groups",
-            "Assign selected samples as endmember or mixture groups."
+            "Assign selected samples as endmember or mixture groups.",
+            start_open=False
         )
         mixing_frame = ttk.Frame(mixing_section, style='CardBody.TFrame')
         mixing_frame.pack(fill=tk.X)
@@ -192,10 +193,11 @@ class ToolsTabMixin:
         self._register_translation(compute_btn, "Compute Mixing")
 
         # Confidence Ellipse Settings
-        conf_section = self._create_section(
+        conf_section = self._create_collapsible_section(
             frame,
             "Confidence Ellipse",
-            "Set the confidence level for selection ellipses."
+            "Set the confidence level for selection ellipses.",
+            start_open=False
         )
         
         conf_frame = ttk.Frame(conf_section, style='CardBody.TFrame')
@@ -312,10 +314,11 @@ class ToolsTabMixin:
         self._register_translation(self.reset_data_button, "Reset Data")
 
         # Data Management
-        data_mgmt_section = self._create_section(
+        data_mgmt_section = self._create_collapsible_section(
             frame,
             "Data Management",
-            "Import new data files into the application."
+            "Import new data files into the application.",
+            start_open=False
         )
 
         data_mgmt_row = ttk.Frame(data_mgmt_section, style='CardBody.TFrame')

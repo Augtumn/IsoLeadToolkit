@@ -13,7 +13,10 @@ class SettingsTabMixin:
     def _build_settings_tab(self, parent):
         """Build the Settings tab content"""
         frame = self._build_scrollable_frame(parent)
-        
+        self._build_settings_content(frame)
+
+    def _build_settings_content(self, frame):
+        """Build the Settings tab content (no scroll wrapper)."""
         # Projection Mode
         if not getattr(app_state, 'render_mode', None):
             app_state.render_mode = getattr(app_state, 'algorithm', 'UMAP')

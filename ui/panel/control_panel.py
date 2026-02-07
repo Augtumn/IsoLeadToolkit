@@ -150,57 +150,60 @@ class ControlPanel(
         self.data_count_label = ttk.Label(header_frame, text="", style='Subheader.TLabel')
         self.data_count_label.pack(side=tk.RIGHT, padx=10)
 
-        # Notebook (Tabs)
-        self.notebook = ttk.Notebook(container)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
+        # Main content area with side navigation
+        content_wrap = ttk.Frame(container, style='ControlPanel.TFrame')
+        content_wrap.pack(fill=tk.BOTH, expand=True)
 
-        # Tab 1: Projection
-        self.tab_settings = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_settings, text=self._translate("Projection"))
-        self._register_translation(self.notebook, "Projection", attr='tab', formatter=lambda: {'tab_id': 0})
+        nav_frame = ttk.Frame(content_wrap, style='ControlPanel.TFrame')
+        nav_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
 
-        # Tab 2: Algorithm (Parameters)
-        self.tab_algo = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_algo, text=self._translate("Algorithm"))
-        self._register_translation(self.notebook, "Algorithm", attr='tab', formatter=lambda: {'tab_id': 1})
+        content_frame = ttk.Frame(content_wrap, style='ControlPanel.TFrame')
+        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Tab 3: Tools (Selection & Export)
-        self.tab_tools = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_tools, text=self._translate("Tools"))
-        self._register_translation(self.notebook, "Tools", attr='tab', formatter=lambda: {'tab_id': 2})
-        
-        # Tab 4: Style (New!)
-        self.tab_style = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_style, text=self._translate("Style"))
-        self._register_translation(self.notebook, "Style", attr='tab', formatter=lambda: {'tab_id': 3})
+        nav_header = ttk.Label(nav_frame, text=self._translate("Sections"), style='Subheader.TLabel')
+        nav_header.pack(anchor=tk.W, pady=(0, 6))
+        self._register_translation(nav_header, "Sections")
 
-        # Tab 5: Legend
-        self.tab_legend = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_legend, text=self._translate("Legend"))
-        self._register_translation(self.notebook, "Legend", attr='tab', formatter=lambda: {'tab_id': 4})
-        
-        # Tab 6: Geochemistry
-        self.tab_geo = ttk.Frame(self.notebook, style='ControlPanel.TFrame')
-        self.notebook.add(self.tab_geo, text=self._translate("Geochemistry"))
-        self._register_translation(self.notebook, "Geochemistry", attr='tab', formatter=lambda: {'tab_id': 5})
+        self.section_frames = {}
+        self._section_buttons = {}
 
-        # --- Populate Tab 1: Settings ---
-        self._build_settings_tab(self.tab_settings)
+        def _build_modeling_section(parent):
+            scroll_frame = self._build_scrollable_frame(parent)
+            self._build_settings_content(scroll_frame)
+            self._build_algorithm_content(scroll_frame)
 
-        # --- Populate Tab 2: Algorithm ---
-        self._build_algorithm_tab(self.tab_algo)
+        def _build_display_section(parent):
+            scroll_frame = self._build_scrollable_frame(parent)
+            self._build_style_content(scroll_frame)
 
-        # --- Populate Tab 3: Tools ---
-        self._build_tools_tab(self.tab_tools)
-        
-        # --- Populate Tab 4: Style ---
-        self._build_style_tab(self.tab_style)
-        
-        # --- Populate Tab 5: Legend ---
-        self._build_legend_tab(self.tab_legend)
-        
-        # --- Populate Tab 6: Geochemistry ---
-        self._build_geo_tab(self.tab_geo)
+        sections = [
+            ("Modeling", _build_modeling_section),
+            ("Display", _build_display_section),
+            ("Legend", self._build_legend_tab),
+            ("Tools", self._build_tools_tab),
+            ("Geochemistry", self._build_geo_tab),
+        ]
+
+        def show_section(key):
+            for name, frame in self.section_frames.items():
+                frame.pack_forget()
+            target = self.section_frames.get(key)
+            if target is not None:
+                target.pack(fill=tk.BOTH, expand=True)
+            for name, btn in self._section_buttons.items():
+                btn.configure(style='Secondary.TButton' if name == key else 'TButton')
+
+        for key, builder in sections:
+            btn = ttk.Button(nav_frame, text=self._translate(key), command=lambda k=key: show_section(k))
+            btn.pack(fill=tk.X, pady=2)
+            self._register_translation(btn, key)
+            self._section_buttons[key] = btn
+
+            frame = ttk.Frame(content_frame, style='ControlPanel.TFrame')
+            builder(frame)
+            self.section_frames[key] = frame
+
+        show_section(sections[0][0])
 
         # Footer
         action_frame = ttk.Frame(container, style='ControlPanel.TFrame')

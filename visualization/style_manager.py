@@ -95,12 +95,14 @@ class StyleManager:
             cjk_font (str): Preferred Chinese/CJK font family.
             font_sizes (dict): Dictionary of font sizes used for 'title', 'label', 'tick', 'legend'.
         """
-        # 1. Reset to defaults to clear previous state
-        plt.style.use('default')
-        
-        # 2. Apply Grid if requested
+        # 1. Apply Grid settings (explicit on/off to avoid stale rcParams)
+        rcParams['axes.grid'] = bool(show_grid)
         if show_grid:
             rcParams.update(self.GRID_STYLE)
+        else:
+            rcParams['grid.linestyle'] = self.GRID_STYLE['grid.linestyle']
+            rcParams['grid.linewidth'] = self.GRID_STYLE['grid.linewidth']
+            rcParams['grid.alpha'] = self.GRID_STYLE['grid.alpha']
         
         # 3. Apply Color Scheme
         if color_scheme and color_scheme in self.palettes:
