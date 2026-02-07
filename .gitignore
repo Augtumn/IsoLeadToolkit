@@ -17,3 +17,5 @@ uv.lock
 isotopes_analyse.log
 PbIso-master/
 shereea/
+.cursor/
+.vscode/
