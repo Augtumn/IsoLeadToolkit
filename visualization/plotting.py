@@ -2817,6 +2817,9 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
         # Build palette while preserving user overrides
         new_palette = _build_group_palette(unique_cats)
 
+        # Get marginal KDE setting for legend positioning
+        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
+
         if show_kde:
             try:
                 _lazy_import_seaborn()
