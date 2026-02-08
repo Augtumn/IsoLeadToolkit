@@ -355,6 +355,161 @@ def calculate_modelcurve(t_Ma, params=None, T1=None, X1=None, Y1=None, Z1=None,
         'Pb208_204': z
     }
 
+
+def calculate_paleoisochron_line(age_ma, params=None, algorithm='PB_EVOL_76'):
+    """
+    计算古等时线的斜率与截距。
+
+    Args:
+        age_ma (float): 年龄 (Ma)
+        params (dict): 模型参数
+        algorithm (str): 'PB_EVOL_76' 或 'PB_EVOL_86'
+
+    Returns:
+        tuple or None: (slope, intercept)
+    """
+    if params is None:
+        params = engine.params
+
+    t_years = float(age_ma) * 1e6
+    lam238 = float(params.get('lambda_238', LAMBDA_238))
+    lam235 = float(params.get('lambda_235', LAMBDA_235))
+    lam232 = float(params.get('lambda_232', LAMBDA_232))
+
+    T1 = float(params.get('Tsec', 0.0))
+    if T1 <= 0:
+        T1 = float(params.get('T2', params.get('T1', 0.0)))
+
+    X1 = float(params.get('a1', A1_SK))
+    Y1 = float(params.get('b1', B1_SK))
+    Z1 = float(params.get('c1', C1_SK))
+
+    e8T = np.exp(lam238 * T1)
+    e8t = np.exp(lam238 * t_years)
+    if e8T == e8t:
+        return None
+
+    if algorithm == 'PB_EVOL_76':
+        U8U5 = 1.0 / float(params.get('U_ratio', U_RATIO_NATURAL))
+        e5T = np.exp(lam235 * T1)
+        e5t = np.exp(lam235 * t_years)
+        slope = (e5T - e5t) / (U8U5 * (e8T - e8t))
+        intercept = Y1 - slope * X1
+        return slope, intercept
+    if algorithm == 'PB_EVOL_86':
+        mu_m = float(params.get('mu_M', MU_M_DEFAULT))
+        omega_m = float(params.get('omega_M', OMEGA_M_DEFAULT))
+        kappa = omega_m / mu_m if mu_m else 0.0
+        e2T = np.exp(lam232 * T1)
+        e2t = np.exp(lam232 * t_years)
+        slope = kappa * (e2T - e2t) / (e8T - e8t) if kappa else 0.0
+        intercept = Z1 - slope * X1
+        return slope, intercept
+
+    return None
+
+
+def calculate_isochron1_growth_curve(slope, intercept, age_ma, params=None, steps=100):
+    """
+    计算 207Pb/204Pb-206Pb/204Pb 等时线对应的生长曲线。
+
+    Args:
+        slope (float): 等时线斜率 (207/206)
+        intercept (float): 等时线截距
+        age_ma (float): 等时线年龄 (Ma)
+        params (dict): 模型参数
+        steps (int): 曲线采样点数
+
+    Returns:
+        dict or None: {'x', 'y', 'mu_source', 't_steps'}
+    """
+    if params is None:
+        params = engine.params
+
+    l238 = params['lambda_238']
+    l235 = params['lambda_235']
+    u_ratio = params['U_ratio']
+
+    is_two_stage = 'a1' in params
+    if is_two_stage:
+        T_start_curve = params.get('Tsec', T_SK_STAGE2)
+        a_start = params.get('a1', A1_SK)
+        b_start = params.get('b1', B1_SK)
+    else:
+        T_start_curve = params.get('T2', T_EARTH_CANON)
+        a_start = params.get('a0', A0)
+        b_start = params.get('b0', B0)
+
+    t_years = float(age_ma) * 1e6
+    t_steps = np.linspace(0, T_start_curve, int(steps))
+
+    E1_val = params.get('E1', E1_DEFAULT)
+
+    C_alpha = _exp_evolution_term(l238, T_start_curve, E1_val) - _exp_evolution_term(l238, t_years, E1_val)
+    C_beta = u_ratio * (_exp_evolution_term(l235, T_start_curve, E1_val) - _exp_evolution_term(l235, t_years, E1_val))
+
+    denom = C_beta - slope * C_alpha
+    if abs(denom) <= 1e-15:
+        return None
+
+    mu_source = (slope * a_start + intercept - b_start) / denom
+    x_growth = a_start + mu_source * (_exp_evolution_term(l238, T_start_curve, E1_val) - _exp_evolution_term(l238, t_steps, E1_val))
+    y_growth = b_start + mu_source * u_ratio * (_exp_evolution_term(l235, T_start_curve, E1_val) - _exp_evolution_term(l235, t_steps, E1_val))
+
+    return {
+        'x': x_growth,
+        'y': y_growth,
+        'mu_source': mu_source,
+        't_steps': t_steps
+    }
+
+
+def calculate_isochron2_growth_curve(slope_208, slope_207, intercept_207, age_ma, params=None, steps=100):
+    """
+    计算 208Pb/204Pb-206Pb/204Pb 等时线对应的生长曲线 (需 207/206 约束)。
+
+    Args:
+        slope_208 (float): 208/206 等时线斜率
+        slope_207 (float): 207/206 等时线斜率
+        intercept_207 (float): 207/206 等时线截距
+        age_ma (float): 年龄 (Ma)
+        params (dict): 模型参数
+        steps (int): 曲线采样点数
+
+    Returns:
+        dict or None: {'x', 'y', 'mu_source', 'kappa_source', 't_steps'}
+    """
+    if params is None:
+        params = engine.params
+
+    kappa_source = calculate_source_kappa_from_slope(slope_208, age_ma)
+    mu_source = calculate_source_mu_from_isochron(slope_207, intercept_207, age_ma)
+
+    if not kappa_source or not mu_source or kappa_source <= 0 or mu_source <= 0:
+        return None
+
+    l238 = params['lambda_238']
+    l232 = params['lambda_232']
+    T_start = params.get('T2', params.get('T1', T_EARTH_CANON))
+    a0 = params.get('a0', A0)
+    c0 = params.get('c0', C0)
+    E1_val = params.get('E1', E1_DEFAULT)
+    E2_val = params.get('E2', E2_DEFAULT)
+
+    omega_source = mu_source * kappa_source
+    t_steps = np.linspace(0, T_start, int(steps))
+
+    x_growth = a0 + mu_source * (_exp_evolution_term(l238, T_start, E1_val) - _exp_evolution_term(l238, t_steps, E1_val))
+    y_growth = c0 + omega_source * (_exp_evolution_term(l232, T_start, E2_val) - _exp_evolution_term(l232, t_steps, E2_val))
+
+    return {
+        'x': x_growth,
+        'y': y_growth,
+        'mu_source': mu_source,
+        'kappa_source': kappa_source,
+        't_steps': t_steps
+    }
+
 # =============================================================================
 # 5. 模式年龄计算
 # =============================================================================
