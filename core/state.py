@@ -109,6 +109,17 @@ class AppState:
         self.show_ellipses = CONFIG.get('show_ellipses', False)
         self.show_kde = False  # Global KDE toggle for 2D plots
         self.show_marginal_kde = True  # Marginal KDE for 2D plots
+        self.kde_style = {
+            'alpha': 0.6,
+            'levels': 10,
+            'linewidth': 1.0,
+            'fill': True
+        }
+        self.marginal_kde_style = {
+            'alpha': 0.25,
+            'linewidth': 1.0,
+            'fill': True
+        }
         self.ellipse_confidence = CONFIG.get('ellipse_confidence', 0.95)
         self.point_size = CONFIG['point_size']
         self.last_group_col = None  # Will be set from data after loading

@@ -95,6 +95,11 @@ def _draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb
     ax_top = divider.append_axes("top", size="15%", pad=0.06, sharex=ax)
     ax_right = divider.append_axes("right", size="15%", pad=0.06, sharey=ax)
 
+    style = getattr(app_state, 'marginal_kde_style', {})
+    kde_alpha = float(style.get('alpha', 0.25))
+    kde_linewidth = float(style.get('linewidth', 1.0))
+    kde_fill = bool(style.get('fill', True))
+
     for cat in unique_cats:
         subset = df_plot[df_plot[group_col] == cat]
         if subset.empty:
@@ -109,9 +114,9 @@ def _draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb
                 x=xs,
                 ax=ax_top,
                 color=palette[cat],
-                fill=True,
-                alpha=0.25,
-                linewidth=1,
+                fill=kde_fill,
+                alpha=kde_alpha,
+                linewidth=kde_linewidth,
                 warn_singular=False
             )
         if len(ys) > 1:
@@ -119,9 +124,9 @@ def _draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb
                 y=ys,
                 ax=ax_right,
                 color=palette[cat],
-                fill=True,
-                alpha=0.25,
-                linewidth=1,
+                fill=kde_fill,
+                alpha=kde_alpha,
+                linewidth=kde_linewidth,
                 warn_singular=False
             )
 
@@ -2494,17 +2499,22 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                         x_cart = 0.5 * t_norm + 1.0 * r_norm
                         y_cart = h * t_norm
                         
+                        kde_style = getattr(app_state, 'kde_style', {})
                         sns.kdeplot(
                             x=x_cart, y=y_cart,
                             color=new_palette[cat],
                             ax=app_state.ax,
-                            levels=10, fill=True, alpha=0.6,
+                            levels=int(kde_style.get('levels', 10)),
+                            fill=bool(kde_style.get('fill', True)),
+                            alpha=float(kde_style.get('alpha', 0.6)),
+                            linewidth=float(kde_style.get('linewidth', 1.0)),
                             warn_singular=False,
                             legend=False, zorder=1
                         )
                 else:
                     # Standard 2D KDE
                     print(f"[INFO] Generating KDE for {actual_algorithm}...", flush=True)
+                    kde_style = getattr(app_state, 'kde_style', {})
                     sns.kdeplot(
                         data=df_plot,
                         x='_emb_x',
@@ -2512,7 +2522,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                         hue=group_col,
                         palette=new_palette,
                         ax=app_state.ax,
-                        levels=10, fill=True, alpha=0.6,
+                        levels=int(kde_style.get('levels', 10)),
+                        fill=bool(kde_style.get('fill', True)),
+                        alpha=float(kde_style.get('alpha', 0.6)),
+                        linewidth=float(kde_style.get('linewidth', 1.0)),
                         warn_singular=False,
                         legend=False,
                         zorder=1
@@ -3043,6 +3056,7 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
         if show_kde:
             try:
                 _lazy_import_seaborn()
+                kde_style = getattr(app_state, 'kde_style', {})
                 sns.kdeplot(
                     data=df_plot,
                     x=data_columns[0],
@@ -3050,7 +3064,10 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
                     hue=group_col,
                     palette=new_palette,
                     ax=app_state.ax,
-                    levels=10, fill=True, alpha=0.6,
+                    levels=int(kde_style.get('levels', 10)),
+                    fill=bool(kde_style.get('fill', True)),
+                    alpha=float(kde_style.get('alpha', 0.6)),
+                    linewidth=float(kde_style.get('linewidth', 1.0)),
                     warn_singular=False,
                     legend=False,
                     zorder=1

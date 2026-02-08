@@ -8,6 +8,7 @@ import re
 import numpy as np
 
 from core import app_state
+from visualization.kde_styles import open_kde_style_dialog
 
 
 class ToolsTabMixin:
@@ -260,28 +261,44 @@ class ToolsTabMixin:
         plot_frame.pack(fill=tk.X)
         
         self.check_vars['show_kde'] = tk.BooleanVar(value=getattr(app_state, 'show_kde', False))
+        kde_row = ttk.Frame(plot_frame, style='CardBody.TFrame')
+        kde_row.pack(fill=tk.X, pady=(0, 4))
         kde_chk = ttk.Checkbutton(
-            plot_frame,
+            kde_row,
             text=self._translate("Show Kernel Density"),
             variable=self.check_vars['show_kde'],
             command=self._on_change,
             style='Option.TCheckbutton'
         )
-        kde_chk.pack(anchor=tk.W, pady=(0, 4))
+        kde_chk.pack(side=tk.LEFT, anchor=tk.W)
         self._register_translation(kde_chk, "Show Kernel Density")
+        kde_swatch = tk.Label(kde_row, width=2, height=1, bg='#e2e8f0', relief='solid', bd=1)
+        kde_swatch.pack(side=tk.LEFT, padx=(8, 0))
+        kde_swatch.bind(
+            "<Button-1>",
+            lambda e: open_kde_style_dialog(self.root, self._translate, app_state, target='kde', swatch=kde_swatch, on_apply=self._on_change)
+        )
 
         self.check_vars['show_marginal_kde'] = tk.BooleanVar(
             value=getattr(app_state, 'show_marginal_kde', False)
         )
+        mkde_row = ttk.Frame(plot_frame, style='CardBody.TFrame')
+        mkde_row.pack(fill=tk.X)
         marginal_kde_chk = ttk.Checkbutton(
-            plot_frame,
+            mkde_row,
             text=self._translate("Show Marginal KDE"),
             variable=self.check_vars['show_marginal_kde'],
             command=self._on_change,
             style='Option.TCheckbutton'
         )
-        marginal_kde_chk.pack(anchor=tk.W)
+        marginal_kde_chk.pack(side=tk.LEFT, anchor=tk.W)
         self._register_translation(marginal_kde_chk, "Show Marginal KDE")
+        mkde_swatch = tk.Label(mkde_row, width=2, height=1, bg='#e2e8f0', relief='solid', bd=1)
+        mkde_swatch.pack(side=tk.LEFT, padx=(8, 0))
+        mkde_swatch.bind(
+            "<Button-1>",
+            lambda e: open_kde_style_dialog(self.root, self._translate, app_state, target='marginal', swatch=mkde_swatch, on_apply=self._on_change)
+        )
 
         self.check_vars['show_equation_overlays'] = tk.BooleanVar(
             value=getattr(app_state, 'show_equation_overlays', False)
