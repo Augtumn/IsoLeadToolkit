@@ -210,6 +210,10 @@ class AppState:
         }
         self.show_plot_title = False
         self.legend_columns = 0  # 0 means auto
+        self.legend_position = 'best'  # Legend position
+        self.hidden_groups = set()  # Hidden groups in legend
+        self.v1_value = 0.0  # V1 parameter for geochemistry
+        self.v2_value = 0.0  # V2 parameter for geochemistry
         self.plot_marker_size = 60
         self.plot_marker_alpha = 0.8
         self.plot_marker_shape = 'o'

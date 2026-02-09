@@ -171,6 +171,9 @@ class Qt5MainWindow(QMainWindow):
         app_state.fig = fig
         app_state.canvas = canvas
 
+        # 连接事件处理器
+        self._connect_event_handlers(canvas)
+
     def _reload_data(self):
         """重新加载数据"""
         from data.qt5_loader import load_data
@@ -188,3 +191,18 @@ class Qt5MainWindow(QMainWindow):
             self.control_panel.show()
             self.control_panel.raise_()
             self.control_panel.activateWindow()
+
+    def _connect_event_handlers(self, canvas):
+        """连接事件处理器"""
+        from visualization.events import on_hover, on_click, on_legend_click
+
+        # 连接 hover 事件
+        canvas.mpl_connect('motion_notify_event', on_hover)
+
+        # 连接 click 事件
+        canvas.mpl_connect('button_press_event', on_click)
+
+        # 连接 legend click 事件
+        canvas.mpl_connect('button_press_event', on_legend_click)
+
+        print("[INFO] Event handlers connected successfully", flush=True)

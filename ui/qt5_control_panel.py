@@ -462,8 +462,61 @@ class Qt5ControlPanel(QWidget):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
 
-        label = QLabel(translate("Legend controls will be implemented here"))
-        layout.addWidget(label)
+        # 分组可见性
+        group_visibility_group = QGroupBox(translate("Group Visibility"))
+        group_layout = QVBoxLayout()
+
+        # 分组列表
+        self.group_list = QListWidget()
+        self.group_list.setMaximumHeight(200)
+        self.group_list.itemChanged.connect(self._on_group_visibility_change)
+        group_layout.addWidget(self.group_list)
+
+        # 全选/全不选按钮
+        btn_layout = QHBoxLayout()
+        show_all_btn = QPushButton(translate("Show All"))
+        show_all_btn.clicked.connect(self._show_all_groups)
+        btn_layout.addWidget(show_all_btn)
+
+        hide_all_btn = QPushButton(translate("Hide All"))
+        hide_all_btn.clicked.connect(self._hide_all_groups)
+        btn_layout.addWidget(hide_all_btn)
+
+        group_layout.addLayout(btn_layout)
+        group_visibility_group.setLayout(group_layout)
+        layout.addWidget(group_visibility_group)
+
+        # 图例位置
+        position_group = QGroupBox(translate("Legend Position"))
+        position_layout = QVBoxLayout()
+
+        self.legend_position_combo = QComboBox()
+        self.legend_position_combo.addItems([
+            'best', 'upper right', 'upper left', 'lower left', 'lower right',
+            'right', 'center left', 'center right', 'lower center', 'upper center', 'center'
+        ])
+        self.legend_position_combo.setCurrentText(app_state.legend_position)
+        self.legend_position_combo.currentTextChanged.connect(self._on_legend_position_change)
+        position_layout.addWidget(self.legend_position_combo)
+
+        position_group.setLayout(position_layout)
+        layout.addWidget(position_group)
+
+        # 图例列数
+        columns_group = QGroupBox(translate("Legend Columns"))
+        columns_layout = QVBoxLayout()
+
+        self.legend_columns_spin = QSpinBox()
+        self.legend_columns_spin.setRange(1, 5)
+        self.legend_columns_spin.setValue(app_state.legend_columns)
+        self.legend_columns_spin.valueChanged.connect(self._on_legend_columns_change)
+        columns_layout.addWidget(self.legend_columns_spin)
+
+        columns_group.setLayout(columns_layout)
+        layout.addWidget(columns_group)
+
+        # 更新分组列表
+        self._update_group_list()
 
         layout.addStretch()
         return widget
@@ -488,8 +541,63 @@ class Qt5ControlPanel(QWidget):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
 
-        label = QLabel(translate("Geochemistry controls will be implemented here"))
-        layout.addWidget(label)
+        # 模型曲线
+        model_group = QGroupBox(translate("Model Curves"))
+        model_layout = QVBoxLayout()
+
+        self.show_model_check = QCheckBox(translate("Show model curves"))
+        self.show_model_check.setChecked(app_state.show_model_curves)
+        self.show_model_check.stateChanged.connect(self._on_model_curves_change)
+        model_layout.addWidget(self.show_model_check)
+
+        model_group.setLayout(model_layout)
+        layout.addWidget(model_group)
+
+        # 等时线
+        isochron_group = QGroupBox(translate("Isochron"))
+        isochron_layout = QVBoxLayout()
+
+        self.show_isochron_check = QCheckBox(translate("Show isochron"))
+        self.show_isochron_check.setChecked(app_state.show_isochrons)
+        self.show_isochron_check.stateChanged.connect(self._on_isochron_change)
+        isochron_layout.addWidget(self.show_isochron_check)
+
+        # 计算等时线年龄按钮
+        calc_isochron_btn = QPushButton(translate("Calculate Isochron Age"))
+        calc_isochron_btn.clicked.connect(self._on_calculate_isochron)
+        isochron_layout.addWidget(calc_isochron_btn)
+
+        isochron_group.setLayout(isochron_layout)
+        layout.addWidget(isochron_group)
+
+        # V1V2 参数
+        v1v2_group = QGroupBox(translate("V1V2 Parameters"))
+        v1v2_layout = QVBoxLayout()
+
+        # V1 输入
+        v1_label = QLabel(translate("V1:"))
+        v1v2_layout.addWidget(v1_label)
+
+        self.v1_spin = QDoubleSpinBox()
+        self.v1_spin.setRange(-1000.0, 1000.0)
+        self.v1_spin.setSingleStep(0.1)
+        self.v1_spin.setValue(app_state.v1_value)
+        self.v1_spin.valueChanged.connect(self._on_v1_change)
+        v1v2_layout.addWidget(self.v1_spin)
+
+        # V2 输入
+        v2_label = QLabel(translate("V2:"))
+        v1v2_layout.addWidget(v2_label)
+
+        self.v2_spin = QDoubleSpinBox()
+        self.v2_spin.setRange(-1000.0, 1000.0)
+        self.v2_spin.setSingleStep(0.1)
+        self.v2_spin.setValue(app_state.v2_value)
+        self.v2_spin.valueChanged.connect(self._on_v2_change)
+        v1v2_layout.addWidget(self.v2_spin)
+
+        v1v2_group.setLayout(v1v2_layout)
+        layout.addWidget(v1v2_group)
 
         layout.addStretch()
         return widget
@@ -672,6 +780,93 @@ class Qt5ControlPanel(QWidget):
             print(f"[INFO] Selected ternary columns: {result['columns']}", flush=True)
             print(f"[INFO] Ternary stretch: {result['stretch']}, factors: {result['factors']}", flush=True)
             self._on_change()
+
+    def _update_group_list(self):
+        """更新分组列表"""
+        self.group_list.clear()
+
+        if not app_state.group_col or app_state.df_global is None:
+            return
+
+        # 获取所有分组
+        groups = app_state.df_global[app_state.group_col].unique()
+
+        for group in groups:
+            item = QListWidgetItem(str(group))
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            # 检查分组是否可见
+            is_visible = group not in app_state.hidden_groups
+            item.setCheckState(Qt.Checked if is_visible else Qt.Unchecked)
+            self.group_list.addItem(item)
+
+    def _on_group_visibility_change(self, item):
+        """分组可见性变化"""
+        group_name = item.text()
+        is_checked = item.checkState() == Qt.Checked
+
+        if is_checked:
+            # 显示分组
+            if group_name in app_state.hidden_groups:
+                app_state.hidden_groups.remove(group_name)
+        else:
+            # 隐藏分组
+            if group_name not in app_state.hidden_groups:
+                app_state.hidden_groups.add(group_name)
+
+        self._on_change()
+
+    def _show_all_groups(self):
+        """显示所有分组"""
+        app_state.hidden_groups.clear()
+        self._update_group_list()
+        self._on_change()
+
+    def _hide_all_groups(self):
+        """隐藏所有分组"""
+        if app_state.group_col and app_state.df_global is not None:
+            groups = app_state.df_global[app_state.group_col].unique()
+            app_state.hidden_groups = set(groups)
+            self._update_group_list()
+            self._on_change()
+
+    def _on_legend_position_change(self, position):
+        """图例位置变化"""
+        app_state.legend_position = position
+        self._on_change()
+
+    def _on_legend_columns_change(self, columns):
+        """图例列数变化"""
+        app_state.legend_columns = columns
+        self._on_change()
+
+    def _on_model_curves_change(self, state):
+        """模型曲线显示变化"""
+        app_state.show_model_curves = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_isochron_change(self, state):
+        """等时线显示变化"""
+        app_state.show_isochrons = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_calculate_isochron(self):
+        """计算等时线年龄"""
+        # TODO: 实现等时线年龄计算
+        QMessageBox.information(
+            self,
+            translate("Info"),
+            translate("Isochron age calculation will be implemented.")
+        )
+
+    def _on_v1_change(self, value):
+        """V1 参数变化"""
+        app_state.v1_value = value
+        self._on_change()
+
+    def _on_v2_change(self, value):
+        """V2 参数变化"""
+        app_state.v2_value = value
+        self._on_change()
 
 
 def create_control_panel(callback):
