@@ -305,27 +305,87 @@ class Application:
                     ttk.Separator(toolbar, orient='vertical').pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=2)
                 except Exception:
                     pass  # ttk might not be initialized on this root
-                
-                # Create Tkinter button
-                cp_btn = tk.Button(
-                    toolbar,
-                    text=translate("Control Panel"),
-                    command=_show_control_panel,
-                    bg='#2563eb',
-                    fg='white',
-                    font=('Segoe UI', 9),
+
+                # Zoom Out button - magnifying glass with minus
+                def _zoom_out():
+                    try:
+                        ax = app_state.ax
+                        if ax is not None:
+                            xlim = ax.get_xlim()
+                            ylim = ax.get_ylim()
+                            x_range = xlim[1] - xlim[0]
+                            y_range = ylim[1] - ylim[0]
+                            ax.set_xlim([xlim[0] - x_range * 0.25, xlim[1] + x_range * 0.25])
+                            ax.set_ylim([ylim[0] - y_range * 0.25, ylim[1] + y_range * 0.25])
+                            app_state.fig.canvas.draw_idle()
+                    except Exception as zoom_err:
+                        print(f"[WARN] Zoom out failed: {zoom_err}", flush=True)
+
+                zoom_out_frame = tk.Frame(toolbar, bd=0, relief='flat')
+                zoom_out_frame.pack(side=tk.LEFT, padx=1, pady=1)
+
+                # Draw magnifying glass icon with minus
+                canvas_width, canvas_height = 24, 24
+                zoom_canvas = tk.Canvas(
+                    zoom_out_frame,
+                    width=canvas_width,
+                    height=canvas_height,
+                    bg=zoom_out_frame.master['bg'],
+                    highlightthickness=0,
                     relief='flat',
-                    padx=8
+                    cursor='hand2'
                 )
-                cp_btn.pack(side=tk.LEFT, padx=2, pady=2)
-                
-                # Hover effect
-                def on_enter(e): cp_btn['background'] = '#1d4ed8'
-                def on_leave(e): cp_btn['background'] = '#2563eb'
-                cp_btn.bind("<Enter>", on_enter)
-                cp_btn.bind("<Leave>", on_leave)
-                
-                app_state.control_panel_button = cp_btn
+                zoom_canvas.pack()
+
+                # Magnifying glass circle
+                zoom_canvas.create_oval(3, 3, 16, 16, outline='black', width=1.5)
+                # Magnifying glass handle
+                zoom_canvas.create_line(13, 13, 21, 21, fill='black', width=1.5)
+                # Minus sign inside
+                zoom_canvas.create_line(6, 9, 13, 9, fill='black', width=2)
+
+                # Bind click directly on canvas
+                zoom_canvas.bind("<Button-1>", lambda _e: _zoom_out())
+                zoom_canvas.bind("<Enter>", lambda _e: zoom_canvas.configure(bg='#e0e0e0'))
+                zoom_canvas.bind("<Leave>", lambda _e: zoom_canvas.configure(bg=zoom_out_frame.master['bg']))
+
+                # Control Panel button - gear icon
+                cp_frame = tk.Frame(toolbar, bd=0, relief='flat')
+                cp_frame.pack(side=tk.LEFT, padx=1, pady=1)
+
+                cp_canvas = tk.Canvas(
+                    cp_frame,
+                    width=24,
+                    height=24,
+                    bg=cp_frame.master['bg'],
+                    highlightthickness=0,
+                    relief='flat',
+                    cursor='hand2'
+                )
+                cp_canvas.pack()
+
+                # Draw gear icon using SVG path coordinates (hardcoded, no math)
+                # 24x24 canvas, gear centered with hole
+                cp_canvas.create_polygon([
+                    9, 2, 12, 2, 15, 2,  # top flat
+                    16, 3, 17, 5, 17, 7,  # tooth 1 to 2
+                    19, 7, 21, 7, 21, 9,  # tooth 2
+                    22, 10, 22, 14, 21, 17,  # tooth 2 to 3
+                    21, 17, 17, 17, 17, 19,  # tooth 3
+                    17, 19, 15, 22, 12, 22, 9, 22,  # bottom
+                    7, 22, 7, 19, 3, 19,  # tooth 4
+                    3, 17, 2, 14, 2, 10,  # tooth 4 to 5
+                    2, 9, 2, 7, 3, 7, 7, 5,  # tooth 5
+                    7, 3, 9, 2,  # back to top
+                ], fill='black', outline='', smooth=False)
+                cp_canvas.create_oval(8, 8, 16, 16, fill='white', outline='')
+
+                # Bind click on gear
+                cp_canvas.bind("<Button-1>", lambda _e: _show_control_panel())
+                cp_canvas.bind("<Enter>", lambda _e: cp_canvas.configure(bg='#e0e0e0'))
+                cp_canvas.bind("<Leave>", lambda _e: cp_canvas.configure(bg=cp_frame.master['bg']))
+
+                app_state.control_panel_button = cp_canvas
                 
         except Exception as tb_err:
             print(f"[WARN] Failed to add button to toolbar: {tb_err}", flush=True)
