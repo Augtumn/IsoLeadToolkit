@@ -131,10 +131,16 @@
 - [x] PCA 参数
   - [x] n_components 选择
   - [x] 标准化选项
+  - [x] Scree Plot 按钮
+  - [x] PCA Loadings 按钮
+  - [x] X/Y 维度选择
 - [x] RobustPCA 参数
   - [x] n_components 选择
   - [x] support_fraction 输入框
   - [x] random_state 输入框
+  - [x] Scree Plot 按钮
+  - [x] PCA Loadings 按钮
+  - [x] X/Y 维度选择
 
 #### 4.3 Display 部分
 - [x] 点大小滑块
@@ -162,6 +168,8 @@
 - [x] 应用更改按钮
 - [x] 重置默认值按钮
 - [x] 模型曲线显示开关
+- [x] 古等时线显示开关
+- [x] 模型年龄线显示开关
 - [x] 等时线显示开关
 - [x] 等时线年龄计算按钮
 
@@ -321,6 +329,14 @@
 ---
 
 ## 📝 变更日志
+
+### 2026-02-09 (第九次提交) - 添加 PCA 工具和地球化学控制 🎉
+- ✅ 添加 PCA/RobustPCA 维度选择（X/Y 轴主成分选择）
+- ✅ 添加 Scree Plot 按钮
+- ✅ 添加 PCA Loadings 按钮
+- ✅ 添加古等时线显示开关
+- ✅ 添加模型年龄线显示开关
+- ✅ 完善地球化学绘图控制功能
 
 ### 2026-02-09 (第八次提交) - 地球化学功能完善 🎉
 - ✅ 扩展 Geochemistry 部分，添加完整的参数编辑功能

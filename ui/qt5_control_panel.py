@@ -374,6 +374,45 @@ class Qt5ControlPanel(QWidget):
         standardize_check.stateChanged.connect(self._on_standardize_change)
         pca_layout.addWidget(standardize_check)
 
+        # PCA 工具按钮
+        pca_tools_layout = QHBoxLayout()
+
+        scree_btn = QPushButton(translate("Scree Plot"))
+        scree_btn.clicked.connect(self._on_show_scree_plot)
+        pca_tools_layout.addWidget(scree_btn)
+
+        loadings_btn = QPushButton(translate("Loadings"))
+        loadings_btn.clicked.connect(self._on_show_pca_loadings)
+        pca_tools_layout.addWidget(loadings_btn)
+
+        pca_layout.addLayout(pca_tools_layout)
+
+        # PCA 维度选择
+        dim_layout = QHBoxLayout()
+
+        x_label = QLabel(translate("X:"))
+        dim_layout.addWidget(x_label)
+
+        self.pca_x_spin = QSpinBox()
+        self.pca_x_spin.setRange(1, 10)
+        self.pca_x_spin.setValue(app_state.pca_component_indices[0] + 1)
+        self.pca_x_spin.setMaximumWidth(60)
+        self.pca_x_spin.valueChanged.connect(self._on_pca_dim_change)
+        dim_layout.addWidget(self.pca_x_spin)
+
+        y_label = QLabel(translate("Y:"))
+        dim_layout.addWidget(y_label)
+
+        self.pca_y_spin = QSpinBox()
+        self.pca_y_spin.setRange(1, 10)
+        self.pca_y_spin.setValue(app_state.pca_component_indices[1] + 1)
+        self.pca_y_spin.setMaximumWidth(60)
+        self.pca_y_spin.valueChanged.connect(self._on_pca_dim_change)
+        dim_layout.addWidget(self.pca_y_spin)
+
+        dim_layout.addStretch()
+        pca_layout.addLayout(dim_layout)
+
         self.pca_group.setLayout(pca_layout)
         layout.addWidget(self.pca_group)
 
@@ -414,6 +453,45 @@ class Qt5ControlPanel(QWidget):
         robust_rs_spin.setValue(app_state.robust_pca_params.get('random_state', 42))
         robust_rs_spin.valueChanged.connect(lambda v: self._on_robust_pca_param_change('random_state', v))
         robust_pca_layout.addWidget(robust_rs_spin)
+
+        # RobustPCA 工具按钮
+        rpca_tools_layout = QHBoxLayout()
+
+        rpca_scree_btn = QPushButton(translate("Scree Plot"))
+        rpca_scree_btn.clicked.connect(self._on_show_scree_plot)
+        rpca_tools_layout.addWidget(rpca_scree_btn)
+
+        rpca_loadings_btn = QPushButton(translate("Loadings"))
+        rpca_loadings_btn.clicked.connect(self._on_show_pca_loadings)
+        rpca_tools_layout.addWidget(rpca_loadings_btn)
+
+        robust_pca_layout.addLayout(rpca_tools_layout)
+
+        # RobustPCA 维度选择（共享 PCA 的维度选择）
+        rpca_dim_layout = QHBoxLayout()
+
+        rpca_x_label = QLabel(translate("X:"))
+        rpca_dim_layout.addWidget(rpca_x_label)
+
+        self.rpca_x_spin = QSpinBox()
+        self.rpca_x_spin.setRange(1, 10)
+        self.rpca_x_spin.setValue(app_state.pca_component_indices[0] + 1)
+        self.rpca_x_spin.setMaximumWidth(60)
+        self.rpca_x_spin.valueChanged.connect(self._on_pca_dim_change)
+        rpca_dim_layout.addWidget(self.rpca_x_spin)
+
+        rpca_y_label = QLabel(translate("Y:"))
+        rpca_dim_layout.addWidget(rpca_y_label)
+
+        self.rpca_y_spin = QSpinBox()
+        self.rpca_y_spin.setRange(1, 10)
+        self.rpca_y_spin.setValue(app_state.pca_component_indices[1] + 1)
+        self.rpca_y_spin.setMaximumWidth(60)
+        self.rpca_y_spin.valueChanged.connect(self._on_pca_dim_change)
+        rpca_dim_layout.addWidget(self.rpca_y_spin)
+
+        rpca_dim_layout.addStretch()
+        robust_pca_layout.addLayout(rpca_dim_layout)
 
         self.robust_pca_group.setLayout(robust_pca_layout)
         layout.addWidget(self.robust_pca_group)
@@ -696,6 +774,16 @@ class Qt5ControlPanel(QWidget):
         self.show_model_check.stateChanged.connect(self._on_model_curves_change)
         display_layout.addWidget(self.show_model_check)
 
+        self.show_paleoisochron_check = QCheckBox(translate("Show paleoisochrons"))
+        self.show_paleoisochron_check.setChecked(app_state.show_paleoisochrons)
+        self.show_paleoisochron_check.stateChanged.connect(self._on_paleoisochron_change)
+        display_layout.addWidget(self.show_paleoisochron_check)
+
+        self.show_model_age_check = QCheckBox(translate("Show model age lines"))
+        self.show_model_age_check.setChecked(app_state.show_model_age_lines)
+        self.show_model_age_check.stateChanged.connect(self._on_model_age_change)
+        display_layout.addWidget(self.show_model_age_check)
+
         self.show_isochron_check = QCheckBox(translate("Show isochron"))
         self.show_isochron_check.setChecked(app_state.show_isochrons)
         self.show_isochron_check.stateChanged.connect(self._on_isochron_change)
@@ -806,6 +894,60 @@ class Qt5ControlPanel(QWidget):
         """标准化选项变化"""
         app_state.standardize_data = (state == Qt.Checked)
         self._on_change()
+
+    def _on_pca_dim_change(self):
+        """PCA 维度选择变化"""
+        try:
+            x_idx = self.pca_x_spin.value() - 1
+            y_idx = self.pca_y_spin.value() - 1
+
+            # 同步 RobustPCA 的维度选择
+            if hasattr(self, 'rpca_x_spin'):
+                self.rpca_x_spin.blockSignals(True)
+                self.rpca_x_spin.setValue(x_idx + 1)
+                self.rpca_x_spin.blockSignals(False)
+
+            if hasattr(self, 'rpca_y_spin'):
+                self.rpca_y_spin.blockSignals(True)
+                self.rpca_y_spin.setValue(y_idx + 1)
+                self.rpca_y_spin.blockSignals(False)
+
+            # 更新状态
+            app_state.pca_component_indices = [x_idx, y_idx]
+            print(f"[INFO] PCA dimensions changed to: PC{x_idx+1} vs PC{y_idx+1}")
+
+            # 如果当前是 PCA 或 RobustPCA 模式，刷新绘图
+            if app_state.render_mode in ['PCA', 'RobustPCA']:
+                self._on_change()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to change PCA dimensions: {e}")
+
+    def _on_show_scree_plot(self):
+        """显示 Scree Plot"""
+        try:
+            from visualization import show_scree_plot
+            show_scree_plot(None)  # 传入 None，函数内部会创建新窗口
+        except Exception as e:
+            print(f"[ERROR] Failed to show scree plot: {e}")
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Failed to show scree plot: {error}").format(error=str(e))
+            )
+
+    def _on_show_pca_loadings(self):
+        """显示 PCA Loadings"""
+        try:
+            from visualization import show_pca_loadings
+            show_pca_loadings(None)  # 传入 None，函数内部会创建新窗口
+        except Exception as e:
+            print(f"[ERROR] Failed to show PCA loadings: {e}")
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Failed to show PCA loadings: {error}").format(error=str(e))
+            )
 
     def _on_point_size_change(self, value, label):
         """点大小变化"""
@@ -978,6 +1120,16 @@ class Qt5ControlPanel(QWidget):
     def _on_model_curves_change(self, state):
         """模型曲线显示变化"""
         app_state.show_model_curves = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_paleoisochron_change(self, state):
+        """古等时线显示变化"""
+        app_state.show_paleoisochrons = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_model_age_change(self, state):
+        """模型年龄线显示变化"""
+        app_state.show_model_age_lines = (state == Qt.Checked)
         self._on_change()
 
     def _on_isochron_change(self, state):
