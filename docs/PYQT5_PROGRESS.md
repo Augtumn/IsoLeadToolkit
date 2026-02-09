@@ -2,7 +2,7 @@
 
 > 最后更新：2026-02-09
 > 分支：pyqt6
-> 状态：接近完成
+> 状态：✅ 完成
 
 ---
 
@@ -17,7 +17,7 @@
 | 事件处理 | 100% | ✅ 完成 |
 | 可视化集成 | 100% | ✅ 完成 |
 
-**总体完成度：95%**
+**总体完成度：100%** 🎉
 
 ---
 
@@ -119,7 +119,7 @@
   - [x] 数据计数显示
 
 #### 4.2 Modeling 部分
-- [x] 渲染模式选择（UMAP/t-SNE/PCA/2D/3D/Ternary）
+- [x] 渲染模式选择（UMAP/t-SNE/PCA/RobustPCA/2D/3D/Ternary/PB_EVOL_76/PB_EVOL_86）
 - [x] 算法选择下拉框
 - [x] UMAP 参数
   - [x] n_neighbors 滑块
@@ -131,6 +131,10 @@
 - [x] PCA 参数
   - [x] n_components 选择
   - [x] 标准化选项
+- [x] RobustPCA 参数
+  - [x] n_components 选择
+  - [x] support_fraction 输入框
+  - [x] random_state 输入框
 
 #### 4.3 Display 部分
 - [x] 点大小滑块
@@ -312,6 +316,22 @@
 
 ## 📝 变更日志
 
+### 2026-02-09 (第七次提交) - 功能对等完成 🎉
+- ✅ 添加缺失的渲染模式（RobustPCA, PB_EVOL_76, PB_EVOL_86）
+- ✅ 实现 RobustPCA 参数控制（n_components, support_fraction, random_state）
+- ✅ 更新算法可见性逻辑
+- ✅ 达到与 Tkinter 版本 100% 功能对等
+
+### 2026-02-09 (第六次提交)
+- ✅ 添加 PyQt5 版本使用指南和 README
+- ✅ 创建详细的文档体系
+
+### 2026-02-09 (第五次提交)
+- ✅ 修复控制面板中的属性名错误
+
+### 2026-02-09 (第四次提交)
+- ✅ 更新 PyQt5 迁移进度文档
+
 ### 2026-02-09 (第三次提交)
 - ✅ 完善 Legend 部分（分组可见性管理）
 - ✅ 完善 Geochemistry 部分（模型曲线、等时线、V1V2 参数）
@@ -351,7 +371,8 @@
 
 3. **控制面板** - 功能完整的参数控制
    - 5 个主要部分（Modeling/Display/Legend/Tools/Geochemistry）
-   - 完整的算法参数（UMAP/t-SNE/PCA）
+   - 完整的算法参数（UMAP/t-SNE/PCA/RobustPCA）
+   - 9 种渲染模式（UMAP/t-SNE/PCA/RobustPCA/2D/3D/Ternary/PB_EVOL_76/PB_EVOL_86）
    - 样式和显示选项
    - 图例管理
    - 地球化学参数
@@ -396,8 +417,9 @@
 | 选择工具 | ✅ | ✅ | 完成 |
 | 事件处理 | ✅ | ✅ | 完成 |
 | 地球化学 | ✅ | ✅ | 完成 |
+| 渲染模式 | 9 种 | 9 种 | 完成 |
 
-**功能对等度：95%**
+**功能对等度：100%** 🎉
 
 ---
 
