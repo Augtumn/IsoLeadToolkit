@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QSlider, QProgressBar, QGroupBox,
                               QLineEdit, QSpinBox, QDoubleSpinBox,
                               QTabWidget, QGridLayout, QListWidget,
-                              QListWidgetItem, QSizePolicy)
+                              QListWidgetItem, QSizePolicy, QMessageBox)
 from PyQt5.QtCore import Qt, QSize, pyqtSignal, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QPalette, QColor
 
@@ -409,6 +409,50 @@ class Qt5ControlPanel(QWidget):
         size_group.setLayout(size_layout)
         layout.addWidget(size_group)
 
+        # 样式选项
+        style_group = QGroupBox(translate("Plot Style"))
+        style_layout = QVBoxLayout()
+
+        # 网格显示
+        self.grid_check = QCheckBox(translate("Show grid"))
+        self.grid_check.setChecked(app_state.plot_style_grid)
+        self.grid_check.stateChanged.connect(self._on_grid_change)
+        style_layout.addWidget(self.grid_check)
+
+        # KDE 显示
+        self.kde_check = QCheckBox(translate("Show KDE"))
+        self.kde_check.setChecked(app_state.show_kde)
+        self.kde_check.stateChanged.connect(self._on_kde_change)
+        style_layout.addWidget(self.kde_check)
+
+        # 边际 KDE
+        self.marginal_kde_check = QCheckBox(translate("Show marginal KDE"))
+        self.marginal_kde_check.setChecked(app_state.show_marginal_kde)
+        self.marginal_kde_check.stateChanged.connect(self._on_marginal_kde_change)
+        style_layout.addWidget(self.marginal_kde_check)
+
+        # 椭圆显示
+        self.ellipse_check = QCheckBox(translate("Show ellipses"))
+        self.ellipse_check.setChecked(app_state.show_ellipses)
+        self.ellipse_check.stateChanged.connect(self._on_ellipse_change)
+        style_layout.addWidget(self.ellipse_check)
+
+        style_group.setLayout(style_layout)
+        layout.addWidget(style_group)
+
+        # 颜色方案
+        color_group = QGroupBox(translate("Color Scheme"))
+        color_layout = QVBoxLayout()
+
+        self.color_combo = QComboBox()
+        self.color_combo.addItems(['vibrant', 'pastel', 'deep', 'muted', 'bright', 'dark'])
+        self.color_combo.setCurrentText(app_state.color_scheme)
+        self.color_combo.currentTextChanged.connect(self._on_color_scheme_change)
+        color_layout.addWidget(self.color_combo)
+
+        color_group.setLayout(color_layout)
+        layout.addWidget(color_group)
+
         layout.addStretch()
         return widget
 
@@ -525,25 +569,109 @@ class Qt5ControlPanel(QWidget):
         label.setText(translate("Size: {value}").format(value=value))
         self._schedule_slider_callback('point_size')
 
+    def _on_grid_change(self, state):
+        """网格显示变化"""
+        app_state.plot_style_grid = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_kde_change(self, state):
+        """KDE 显示变化"""
+        app_state.show_kde = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_marginal_kde_change(self, state):
+        """边际 KDE 显示变化"""
+        app_state.show_marginal_kde = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_ellipse_change(self, state):
+        """椭圆显示变化"""
+        app_state.show_ellipses = (state == Qt.Checked)
+        self._on_change()
+
+    def _on_color_scheme_change(self, scheme):
+        """颜色方案变化"""
+        app_state.color_scheme = scheme
+        self._on_change()
+
     def _on_export_clicked(self):
         """导出按钮点击"""
-        print("[INFO] Export clicked", flush=True)
-        # TODO: 实现导出功能
+        from PyQt5.QtWidgets import QFileDialog
+
+        if not app_state.selected_indices:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("No data selected. Please select data points first.")
+            )
+            return
+
+        # 选择保存文件
+        file_path, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            translate("Export Selected Data"),
+            "",
+            "CSV Files (*.csv);;Excel Files (*.xlsx);;All Files (*.*)"
+        )
+
+        if file_path:
+            try:
+                # 获取选中的数据
+                selected_df = app_state.df_global.iloc[list(app_state.selected_indices)]
+
+                # 根据文件扩展名保存
+                if file_path.endswith('.xlsx'):
+                    selected_df.to_excel(file_path, index=False)
+                else:
+                    selected_df.to_csv(file_path, index=False)
+
+                QMessageBox.information(
+                    self,
+                    translate("Success"),
+                    translate("Data exported successfully to {file}").format(file=file_path)
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    translate("Error"),
+                    translate("Failed to export data: {error}").format(error=str(e))
+                )
 
     def _show_2d_column_dialog(self):
         """显示 2D 列选择对话框"""
-        print("[INFO] 2D column dialog - TODO", flush=True)
-        # TODO: 实现 2D 列选择对话框
+        from ui.qt5_dialogs.two_d_dialog import get_2d_column_selection
+
+        result = get_2d_column_selection()
+        if result:
+            app_state.selected_2d_cols = result
+            app_state.selected_2d_confirmed = True
+            print(f"[INFO] Selected 2D columns: {result}", flush=True)
+            self._on_change()
 
     def _show_3d_column_dialog(self):
         """显示 3D 列选择对话框"""
-        print("[INFO] 3D column dialog - TODO", flush=True)
-        # TODO: 实现 3D 列选择对话框
+        from ui.qt5_dialogs.three_d_dialog import get_3d_column_selection
+
+        result = get_3d_column_selection()
+        if result:
+            app_state.selected_3d_cols = result
+            app_state.selected_3d_confirmed = True
+            print(f"[INFO] Selected 3D columns: {result}", flush=True)
+            self._on_change()
 
     def _show_ternary_column_dialog(self):
         """显示三元图列选择对话框"""
-        print("[INFO] Ternary column dialog - TODO", flush=True)
-        # TODO: 实现三元图列选择对话框
+        from ui.qt5_dialogs.ternary_dialog import get_ternary_column_selection
+
+        result = get_ternary_column_selection()
+        if result:
+            app_state.selected_ternary_cols = result['columns']
+            app_state.ternary_stretch = result['stretch']
+            app_state.ternary_factors = result['factors']
+            app_state.selected_ternary_confirmed = True
+            print(f"[INFO] Selected ternary columns: {result['columns']}", flush=True)
+            print(f"[INFO] Ternary stretch: {result['stretch']}, factors: {result['factors']}", flush=True)
+            self._on_change()
 
 
 def create_control_panel(callback):
