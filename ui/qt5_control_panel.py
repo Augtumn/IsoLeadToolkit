@@ -253,7 +253,7 @@ class Qt5ControlPanel(QWidget):
         render_layout = QVBoxLayout()
 
         self.render_combo = QComboBox()
-        self.render_combo.addItems(["UMAP", "t-SNE", "PCA", "2D", "3D", "Ternary"])
+        self.render_combo.addItems(["UMAP", "t-SNE", "PCA", "RobustPCA", "2D", "3D", "Ternary", "PB_EVOL_76", "PB_EVOL_86"])
         self.render_combo.setCurrentText(app_state.render_mode)
         self.render_combo.currentTextChanged.connect(self._on_render_mode_change)
         render_layout.addWidget(self.render_combo)
@@ -266,7 +266,7 @@ class Qt5ControlPanel(QWidget):
         algo_layout = QVBoxLayout()
 
         self.algo_combo = QComboBox()
-        self.algo_combo.addItems(["UMAP", "t-SNE", "PCA"])
+        self.algo_combo.addItems(["UMAP", "t-SNE", "PCA", "RobustPCA"])
         self.algo_combo.setCurrentText(app_state.algorithm)
         self.algo_combo.currentTextChanged.connect(self._on_algorithm_change)
         algo_layout.addWidget(self.algo_combo)
@@ -376,6 +376,47 @@ class Qt5ControlPanel(QWidget):
 
         self.pca_group.setLayout(pca_layout)
         layout.addWidget(self.pca_group)
+
+        # RobustPCA 参数
+        self.robust_pca_group = QGroupBox(translate("RobustPCA Parameters"))
+        robust_pca_layout = QVBoxLayout()
+
+        # n_components
+        robust_n_comp_label = QLabel(translate("n_components:"))
+        robust_pca_layout.addWidget(robust_n_comp_label)
+
+        robust_n_comp_spin = QSpinBox()
+        robust_n_comp_spin.setRange(2, 10)
+        robust_n_comp_spin.setValue(app_state.robust_pca_params.get('n_components', 2))
+        robust_n_comp_spin.valueChanged.connect(lambda v: self._on_robust_pca_param_change('n_components', v))
+        robust_pca_layout.addWidget(robust_n_comp_spin)
+
+        # support_fraction
+        support_label = QLabel(translate("support_fraction: {value:.2f}").format(value=app_state.robust_pca_params.get('support_fraction', 0.75)))
+        robust_pca_layout.addWidget(support_label)
+
+        support_spin = QDoubleSpinBox()
+        support_spin.setRange(0.1, 1.0)
+        support_spin.setSingleStep(0.05)
+        support_spin.setDecimals(2)
+        support_spin.setValue(app_state.robust_pca_params.get('support_fraction', 0.75))
+        support_spin.valueChanged.connect(lambda v: self._on_robust_pca_param_change('support_fraction', v, support_label))
+        robust_pca_layout.addWidget(support_spin)
+
+        self.labels['robust_pca_support'] = support_label
+
+        # random_state
+        robust_rs_label = QLabel(translate("random_state:"))
+        robust_pca_layout.addWidget(robust_rs_label)
+
+        robust_rs_spin = QSpinBox()
+        robust_rs_spin.setRange(0, 9999)
+        robust_rs_spin.setValue(app_state.robust_pca_params.get('random_state', 42))
+        robust_rs_spin.valueChanged.connect(lambda v: self._on_robust_pca_param_change('random_state', v))
+        robust_pca_layout.addWidget(robust_rs_spin)
+
+        self.robust_pca_group.setLayout(robust_pca_layout)
+        layout.addWidget(self.robust_pca_group)
 
         # 根据当前算法显示/隐藏参数组
         self._update_algorithm_visibility()
@@ -609,7 +650,7 @@ class Qt5ControlPanel(QWidget):
         app_state.render_mode = mode
 
         # 如果是算法模式，同步算法选择
-        if mode in ['UMAP', 't-SNE', 'PCA']:
+        if mode in ['UMAP', 't-SNE', 'PCA', 'RobustPCA']:
             app_state.algorithm = mode
             self.algo_combo.setCurrentText(mode)
             self._update_algorithm_visibility()
@@ -637,12 +678,13 @@ class Qt5ControlPanel(QWidget):
         algorithm = app_state.algorithm
 
         # 显示/隐藏算法组
-        self.algo_group.setVisible(app_state.render_mode in ['UMAP', 't-SNE', 'PCA'])
+        self.algo_group.setVisible(app_state.render_mode in ['UMAP', 't-SNE', 'PCA', 'RobustPCA'])
 
         # 显示/隐藏参数组
         self.umap_group.setVisible(algorithm == 'UMAP')
         self.tsne_group.setVisible(algorithm == 't-SNE')
         self.pca_group.setVisible(algorithm == 'PCA')
+        self.robust_pca_group.setVisible(algorithm == 'RobustPCA')
 
     def _on_umap_param_change(self, param, value, label):
         """UMAP 参数变化"""
@@ -665,6 +707,13 @@ class Qt5ControlPanel(QWidget):
         """PCA 参数变化"""
         app_state.pca_params[param] = value
         self._schedule_slider_callback(f'pca_{param}')
+
+    def _on_robust_pca_param_change(self, param, value, label=None):
+        """RobustPCA 参数变化"""
+        app_state.robust_pca_params[param] = value
+        if label and param == 'support_fraction':
+            label.setText(translate("support_fraction: {value:.2f}").format(value=value))
+        self._schedule_slider_callback(f'robust_pca_{param}')
 
     def _on_standardize_change(self, state):
         """标准化选项变化"""
