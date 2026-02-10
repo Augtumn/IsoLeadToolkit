@@ -339,6 +339,16 @@ class Qt5Application:
             self._configure_fonts()
             self._configure_native_style()
 
+            try:
+                from pathlib import Path
+                icon_path = Path(__file__).resolve().parent.parent / "assets" / "icons" / "logo.png"
+                if icon_path.exists():
+                    app_icon = QIcon(str(icon_path))
+                    if not app_icon.isNull():
+                        self.app.setWindowIcon(app_icon)
+            except Exception:
+                pass
+
             # 加载会话
             session_data = self._load_session()
             if session_data:
@@ -375,6 +385,11 @@ class Qt5Application:
 
             # 创建主窗口
             self.main_window = Qt5MainWindow()
+            try:
+                if self.app is not None:
+                    self.main_window.setWindowIcon(self.app.windowIcon())
+            except Exception:
+                pass
             self.main_window.set_matplotlib_figure(app_state.fig)
 
             # 设置控制面板

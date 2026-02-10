@@ -6,7 +6,8 @@ from pathlib import Path
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                               QHBoxLayout, QDockWidget, QToolBar,
-                              QStatusBar, QMenuBar, QAction, QStyle)
+                              QStatusBar, QMenuBar, QAction, QStyle,
+                              QSplitter)
 from PyQt5.QtCore import Qt, QSize, QSettings
 from PyQt5.QtGui import QIcon, QFont, QKeySequence
 
@@ -53,7 +54,17 @@ class Qt5MainWindow(QMainWindow):
         self.canvas_layout.setContentsMargins(0, 0, 0, 0)
         self.canvas_layout.setSpacing(0)
 
-        self.main_layout.addWidget(self.canvas_widget)
+        self.panel_container = QWidget()
+        self.panel_layout = QVBoxLayout(self.panel_container)
+        self.panel_layout.setContentsMargins(0, 0, 0, 0)
+        self.panel_layout.setSpacing(0)
+        self.panel_container.setVisible(False)
+
+        self.main_splitter = QSplitter(Qt.Vertical)
+        self.main_splitter.setChildrenCollapsible(False)
+        self.main_splitter.addWidget(self.panel_container)
+        self.main_splitter.addWidget(self.canvas_widget)
+        self.main_layout.addWidget(self.main_splitter)
 
         # 浮动dock区域
         self.dock_widgets = []
@@ -78,34 +89,29 @@ class Qt5MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         self.file_menu.addAction(exit_action)
 
-        # 视图菜单
-        self.view_menu = menubar.addMenu(translate("View"))
-
-        self.panels_menu = menubar.addMenu(translate("Panels"))
-
         data_action = QAction(translate("Data"), self)
         data_action.triggered.connect(lambda: self._show_section_dialog('data'))
-        self.panels_menu.addAction(data_action)
+        menubar.addAction(data_action)
 
         display_action = QAction(translate("Display"), self)
         display_action.triggered.connect(lambda: self._show_section_dialog('display'))
-        self.panels_menu.addAction(display_action)
+        menubar.addAction(display_action)
 
         analysis_action = QAction(translate("Analysis"), self)
         analysis_action.triggered.connect(lambda: self._show_section_dialog('analysis'))
-        self.panels_menu.addAction(analysis_action)
+        menubar.addAction(analysis_action)
 
         export_action = QAction(translate("Export"), self)
         export_action.triggered.connect(lambda: self._show_section_dialog('export'))
-        self.panels_menu.addAction(export_action)
+        menubar.addAction(export_action)
 
         legend_action = QAction(translate("Legend"), self)
         legend_action.triggered.connect(lambda: self._show_section_dialog('legend'))
-        self.panels_menu.addAction(legend_action)
+        menubar.addAction(legend_action)
 
         geo_action = QAction(translate("Geochemistry"), self)
         geo_action.triggered.connect(lambda: self._show_section_dialog('geochemistry'))
-        self.panels_menu.addAction(geo_action)
+        menubar.addAction(geo_action)
 
         self._menu_actions = {
             'reload': reload_action,
@@ -141,11 +147,6 @@ class Qt5MainWindow(QMainWindow):
         """刷新菜单与状态栏语言"""
         if hasattr(self, 'file_menu'):
             self.file_menu.setTitle(translate("File"))
-        if hasattr(self, 'view_menu'):
-            self.view_menu.setTitle(translate("View"))
-        if hasattr(self, 'panels_menu'):
-            self.panels_menu.setTitle(translate("Panels"))
-
         actions = getattr(self, '_menu_actions', {})
         if 'reload' in actions:
             actions['reload'].setText(translate("Reload Data"))
@@ -163,7 +164,6 @@ class Qt5MainWindow(QMainWindow):
             actions['legend'].setText(translate("Legend"))
         if 'geochemistry' in actions:
             actions['geochemistry'].setText(translate("Geochemistry"))
-
         if self.statusBar() is not None:
             self.statusBar().showMessage(translate("Ready"))
 
@@ -283,15 +283,47 @@ class Qt5MainWindow(QMainWindow):
         # 连接事件处理器
         self._connect_event_handlers(canvas)
 
+    def set_control_panel(self, panel_widget):
+        """Attach the control panel widget above the canvas."""
+        for i in reversed(range(self.panel_layout.count())):
+            widget = self.panel_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        if panel_widget is None:
+            self.panel_container.setVisible(False)
+            return
+
+        self.panel_layout.addWidget(panel_widget)
+        self.panel_container.setVisible(True)
+        try:
+            self.main_splitter.setSizes([320, 560])
+        except Exception:
+            pass
+
     def _attach_matplotlib_toolbar_actions(self, toolbar):
         self._clear_matplotlib_toolbar_actions()
         self._mpl_toolbar = toolbar
         actions = list(toolbar.actions())
         if not actions:
             return
+        filtered = []
         for action in actions:
+            if action is None:
+                continue
+            if action.isSeparator():
+                filtered.append(action)
+                continue
+            text = (action.text() or '').strip()
+            tooltip = (action.toolTip() or '').strip()
+            has_icon = action.icon() is not None and not action.icon().isNull()
+            if not text and not tooltip and not has_icon:
+                continue
+            filtered.append(action)
+
+        for action in filtered:
             self.toolbar.addAction(action)
-        self._mpl_toolbar_actions = actions
+        self._mpl_toolbar_actions = filtered
 
     def _clear_matplotlib_toolbar_actions(self):
         actions = getattr(self, '_mpl_toolbar_actions', [])
@@ -374,9 +406,17 @@ class Qt5MainWindow(QMainWindow):
         from data.loader import load_data
         if load_data(show_file_dialog=True, show_config_dialog=True):
             self.statusBar().showMessage(translate("Data reloaded successfully"), 3000)
+            if not app_state.last_group_col and app_state.group_cols:
+                app_state.last_group_col = app_state.group_cols[0]
             # 触发重绘
             if hasattr(self, 'on_data_reload'):
                 self.on_data_reload()
+            else:
+                try:
+                    from visualization.events import on_slider_change
+                    on_slider_change()
+                except Exception as exc:
+                    print(f"[WARN] Failed to refresh plot after reload: {exc}", flush=True)
         else:
             self.statusBar().showMessage(translate("Failed to reload data"), 3000)
 
