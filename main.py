@@ -4,7 +4,7 @@ Isotopes Analysis - PyQt5 entry point
 import sys
 import traceback
 
-from ui.qt5_app import Qt5Application
+from ui.app import Qt5Application
 from utils.logger import setup_logging
 
 

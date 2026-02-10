@@ -1,7 +1,7 @@
 """
 Data module - Data loading and geochemistry calculations
 """
-from .qt5_loader import load_data
+from .loader import load_data
 from . import geochemistry
 from .geochemistry import (
     calculate_model_age,

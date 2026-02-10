@@ -28,28 +28,28 @@ except ImportError as e:
     sys.exit(1)
 
 try:
-    from ui.qt5_app import Qt5Application
+    from ui.app import Qt5Application
     print("✓ Qt5Application imported successfully")
 except ImportError as e:
     print(f"✗ Failed to import Qt5Application: {e}")
     sys.exit(1)
 
 try:
-    from ui.qt5_main_window import Qt5MainWindow
+    from ui.main_window import Qt5MainWindow
     print("✓ Qt5MainWindow imported successfully")
 except ImportError as e:
     print(f"✗ Failed to import Qt5MainWindow: {e}")
     sys.exit(1)
 
 try:
-    from ui.qt5_control_panel import Qt5ControlPanel
+    from ui.control_panel import Qt5ControlPanel
     print("✓ Qt5ControlPanel imported successfully")
 except ImportError as e:
     print(f"✗ Failed to import Qt5ControlPanel: {e}")
     sys.exit(1)
 
 try:
-    from ui.qt5_dialogs.file_dialog import Qt5FileDialog
+    from ui.dialogs.file_dialog import Qt5FileDialog
     print("✓ Qt5FileDialog imported successfully")
 except ImportError as e:
     print(f"✗ Failed to import Qt5FileDialog: {e}")

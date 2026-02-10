@@ -11,7 +11,7 @@ from PyQt5.QtGui import QFont, QIcon
 
 from core import (CONFIG, app_state, load_session_params, save_session_params,
                   translate, set_language, validate_language)
-from ui.qt5_main_window import Qt5MainWindow
+from ui.main_window import Qt5MainWindow
 
 
 def _clear_widget_styles(widget):
@@ -349,7 +349,7 @@ class Qt5Application:
 
             # 加载数据
             print("[INFO] Loading data...", flush=True)
-            from data.qt5_loader import load_data
+            from data.loader import load_data
             if not load_data(show_file_dialog=True, show_config_dialog=True):
                 print("[ERROR] Failed to load data. Exiting.", flush=True)
                 return False

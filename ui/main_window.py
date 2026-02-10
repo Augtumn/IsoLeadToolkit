@@ -371,7 +371,7 @@ class Qt5MainWindow(QMainWindow):
 
     def _reload_data(self):
         """重新加载数据"""
-        from data.qt5_loader import load_data
+        from data.loader import load_data
         if load_data(show_file_dialog=True, show_config_dialog=True):
             self.statusBar().showMessage(translate("Data reloaded successfully"), 3000)
             # 触发重绘
@@ -387,7 +387,7 @@ class Qt5MainWindow(QMainWindow):
 
         dialog = self._section_dialogs.get(section_key)
         if dialog is None:
-            from ui.qt5_control_panel import create_section_dialog
+            from ui.control_panel import create_section_dialog
             from visualization.events import on_slider_change
             dialog = create_section_dialog(section_key, on_slider_change, parent=self)
             if dialog is None:

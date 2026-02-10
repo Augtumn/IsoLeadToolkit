@@ -62,7 +62,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         # Show unified import dialog when both steps are requested
         if show_file_dialog and show_config_dialog:
             print("[INFO] Showing unified data import dialog...", flush=True)
-            from ui.qt5_dialogs.data_import_dialog import get_data_import_configuration
+            from ui.dialogs.data_import_dialog import get_data_import_configuration
 
             dialog_result = get_data_import_configuration(
                 default_file=app_state.file_path,
@@ -85,7 +85,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         # Show file selection dialog if requested
         elif show_file_dialog:
             print("[INFO] Showing file selection dialog...", flush=True)
-            from ui.qt5_dialogs.file_dialog import get_file_sheet_selection
+            from ui.dialogs.file_dialog import get_file_sheet_selection
             
             file_result = get_file_sheet_selection(default_file=app_state.file_path)
             
@@ -101,7 +101,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             
             if is_excel:
                 print("[INFO] Excel file detected, showing sheet selection...", flush=True)
-                from ui.qt5_dialogs.sheet_dialog import get_sheet_selection
+                from ui.dialogs.sheet_dialog import get_sheet_selection
                 
                 selected_sheet = get_sheet_selection(excel_file, default_sheet=app_state.sheet_name)
                 
@@ -121,7 +121,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             
         print(f"[INFO] Loading file: {excel_file}", flush=True)
         try:
-            from ui.qt5_dialogs.progress_dialog import ProgressDialog
+            from ui.dialogs.progress_dialog import ProgressDialog
             progress = ProgressDialog("Loading Data", "Reading file...")
         except Exception:
             progress = None
@@ -143,7 +143,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
                 progress.close()
                 progress = None
             print("[INFO] Showing data configuration dialog...", flush=True)
-            from ui.qt5_dialogs.data_config import get_data_configuration
+            from ui.dialogs.data_config import get_data_configuration
             
             config_result = get_data_configuration(
                 df,

@@ -3611,7 +3611,7 @@ class Qt5ControlPanel(QWidget):
     def _on_configure_tooltip(self):
         """打开工具提示配置对话框"""
         try:
-            from ui.qt5_dialogs.tooltip_dialog import get_tooltip_configuration
+            from ui.dialogs.tooltip_dialog import get_tooltip_configuration
             result = get_tooltip_configuration(self)
             if result:
                 app_state.tooltip_columns = result
@@ -3738,7 +3738,7 @@ class Qt5ControlPanel(QWidget):
             return
 
         try:
-            from ui.qt5_dialogs.mixing_dialog import show_mixing_calculator
+            from ui.dialogs.mixing_dialog import show_mixing_calculator
             show_mixing_calculator(self)
         except Exception as e:
             print(f"[ERROR] Failed to compute mixing: {e}")
@@ -3890,7 +3890,7 @@ class Qt5ControlPanel(QWidget):
 
     def _show_2d_column_dialog(self):
         """显示 2D 列选择对话框"""
-        from ui.qt5_dialogs.two_d_dialog import get_2d_column_selection
+        from ui.dialogs.two_d_dialog import get_2d_column_selection
 
         result = get_2d_column_selection()
         if result:
@@ -3901,7 +3901,7 @@ class Qt5ControlPanel(QWidget):
 
     def _show_3d_column_dialog(self):
         """显示 3D 列选择对话框"""
-        from ui.qt5_dialogs.three_d_dialog import get_3d_column_selection
+        from ui.dialogs.three_d_dialog import get_3d_column_selection
 
         result = get_3d_column_selection()
         if result:
@@ -3912,7 +3912,7 @@ class Qt5ControlPanel(QWidget):
 
     def _show_ternary_column_dialog(self):
         """显示三元图列选择对话框"""
-        from ui.qt5_dialogs.ternary_dialog import get_ternary_column_selection
+        from ui.dialogs.ternary_dialog import get_ternary_column_selection
 
         result = get_ternary_column_selection()
         if result:
@@ -4772,7 +4772,7 @@ class Qt5ControlPanel(QWidget):
     def _on_isochron_settings(self):
         """Open isochron regression settings dialog."""
         try:
-            from ui.qt5_dialogs.isochron_dialog import get_isochron_error_settings
+            from ui.dialogs.isochron_dialog import get_isochron_error_settings
         except Exception as exc:
             QMessageBox.warning(
                 self,

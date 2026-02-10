@@ -1,11 +1,11 @@
 """
 UI module - User interface components
 """
-from .qt5_dialogs.file_dialog import Qt5FileDialog, get_file_sheet_selection
-from .qt5_dialogs.sheet_dialog import Qt5SheetDialog, get_sheet_selection
-from .qt5_dialogs.data_config import Qt5DataConfigDialog, get_data_configuration
-from .qt5_dialogs.isochron_dialog import get_isochron_error_settings
-from .qt5_dialogs.data_import_dialog import Qt5DataImportDialog, get_data_import_configuration
+from .dialogs.file_dialog import Qt5FileDialog, get_file_sheet_selection
+from .dialogs.sheet_dialog import Qt5SheetDialog, get_sheet_selection
+from .dialogs.data_config import Qt5DataConfigDialog, get_data_configuration
+from .dialogs.isochron_dialog import get_isochron_error_settings
+from .dialogs.data_import_dialog import Qt5DataImportDialog, get_data_import_configuration
 
 __all__ = [
     'Qt5FileDialog',

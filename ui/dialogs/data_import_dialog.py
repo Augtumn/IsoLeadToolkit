@@ -27,7 +27,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
 from core.localization import translate
-from data.qt5_loader import read_data_frame
+from data.loader import read_data_frame
 
 
 class Qt5DataImportDialog(QDialog):
