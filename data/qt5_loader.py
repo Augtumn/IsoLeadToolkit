@@ -10,6 +10,40 @@ from core.config import CONFIG
 from core.state import app_state
 
 
+def read_data_frame(excel_file, sheet_name=None):
+    """Read data file into a cleaned DataFrame."""
+    if sheet_name:
+        try:
+            df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str, engine='calamine')
+        except Exception:
+            df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str)
+    else:
+        df = pd.read_csv(excel_file, dtype=str)
+
+    df.columns = df.columns.astype(str).str.strip()
+
+    column_mapping = {
+        '省': 'Province', '省份': 'Province',
+        '市/县': 'City/County',
+        '遗址': 'Discovery site', '出土地': 'Discovery site',
+        '年代': 'Period'
+    }
+    df = df.rename(columns=column_mapping)
+
+    for col in df.columns:
+        numeric_col = pd.to_numeric(df[col], errors='coerce')
+        non_null_count = numeric_col.notna().sum()
+        total_count = len(numeric_col)
+
+        if non_null_count > 0 and (non_null_count / total_count) > 0.5:
+            df[col] = numeric_col
+        else:
+            df[col] = df[col].fillna("empty").astype(str)
+            df[col] = df[col].replace(['nan', 'NaN', 'None'], 'empty')
+
+    return df
+
+
 def load_data(show_file_dialog=True, show_config_dialog=True):
     """
     Load and validate Excel/CSV data
@@ -22,9 +56,34 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
         bool, success status
     """
     progress = None
+    df_loaded = None
+    config_from_dialog = False
     try:
+        # Show unified import dialog when both steps are requested
+        if show_file_dialog and show_config_dialog:
+            print("[INFO] Showing unified data import dialog...", flush=True)
+            from ui.qt5_dialogs.data_import_dialog import get_data_import_configuration
+
+            dialog_result = get_data_import_configuration(
+                default_file=app_state.file_path,
+                default_sheet=app_state.sheet_name,
+                default_group_cols=app_state.group_cols,
+                default_data_cols=app_state.data_cols
+            )
+
+            if dialog_result is None:
+                print("[ERROR] Data import cancelled by user", flush=True)
+                return False
+
+            excel_file = dialog_result['file']
+            sheet_name = dialog_result.get('sheet')
+            df_loaded = dialog_result.get('df')
+            app_state.group_cols = dialog_result.get('group_cols', [])
+            app_state.data_cols = dialog_result.get('data_cols', [])
+            config_from_dialog = True
+
         # Show file selection dialog if requested
-        if show_file_dialog:
+        elif show_file_dialog:
             print("[INFO] Showing file selection dialog...", flush=True)
             from ui.qt5_dialogs.file_dialog import get_file_sheet_selection
             
@@ -66,60 +125,20 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
             progress = ProgressDialog("Loading Data", "Reading file...")
         except Exception:
             progress = None
-        if sheet_name:
-            print(f"[INFO] Using sheet: {sheet_name}", flush=True)
-            # Try to use calamine engine for faster Excel reading if available
-            # Requires: pip install python-calamine pandas>=2.2.0
-            try:
-                print("[INFO] Attempting to read with calamine engine...", flush=True)
-                df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str, engine='calamine')
-            except Exception:
-                # Fallback to default (openpyxl)
-                print("[INFO] Calamine engine not available or failed, falling back to default (openpyxl).", flush=True)
-                print("[TIP] For faster Excel loading, install python-calamine: pip install python-calamine", flush=True)
-                df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str)
+        if df_loaded is None:
+            if sheet_name:
+                print(f"[INFO] Using sheet: {sheet_name}", flush=True)
+            df = read_data_frame(excel_file, sheet_name)
         else:
-            # For CSV files
-            print("[INFO] Loading CSV file", flush=True)
-            df = pd.read_csv(excel_file, dtype=str)
-        
+            df = df_loaded
+
         if progress:
             progress.update_message("Parsing columns...")
-        df.columns = df.columns.astype(str).str.strip()
-        
-        # Column name mapping (for known datasets)
-        column_mapping = {
-            '省': 'Province', '省份': 'Province',
-            '市/县': 'City/County',
-            '遗址': 'Discovery site', '出土地': 'Discovery site',
-            '年代': 'Period'
-        }
-        df = df.rename(columns=column_mapping)
-        
+
         print(f"[OK] Columns: {df.columns.tolist()}", flush=True)
         
-        # Convert data types: try to convert each column to numeric
-        # Columns that can be converted will be treated as numeric
-        for col in df.columns:
-            # Try converting to numeric
-            numeric_col = pd.to_numeric(df[col], errors='coerce')
-            # If more than 50% of values are numeric, convert the column
-            non_null_count = numeric_col.notna().sum()
-            total_count = len(numeric_col)
-            
-            if non_null_count > 0 and (non_null_count / total_count) > 0.5:
-                print(f"[DEBUG] Column '{col}': {non_null_count}/{total_count} values are numeric, converting", flush=True)
-                df[col] = numeric_col
-            else:
-                # Keep as string (for grouping columns)
-                print(f"[DEBUG] Column '{col}': keeping as string/object type", flush=True)
-                # Fill missing values with "empty"
-                df[col] = df[col].fillna("empty").astype(str)
-                # Also replace string "nan" or "NaN" if they exist
-                df[col] = df[col].replace(['nan', 'NaN', 'None'], 'empty')
-        
         # Show configuration dialog if requested
-        if show_config_dialog:
+        if show_config_dialog and not config_from_dialog:
             if progress:
                 progress.close()
                 progress = None
@@ -143,22 +162,23 @@ def load_data(show_file_dialog=True, show_config_dialog=True):
                 print(f"[WARN] Dropping missing group columns: {missing_groups}", flush=True)
             app_state.group_cols = [col for col in selected_groups if col in df.columns]
             app_state.data_cols = config_result['data_cols']
-            if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
-                app_state.last_group_col = app_state.group_cols[0] if app_state.group_cols else None
-            app_state.selected_2d_cols = []
-            app_state.selected_3d_cols = []
-            app_state.selected_2d_confirmed = False
-            app_state.selected_3d_confirmed = False
-            app_state.available_groups = []
-            app_state.visible_groups = None
             
             print(f"[OK] Selected group columns: {app_state.group_cols}", flush=True)
             print(f"[OK] Selected data columns: {app_state.data_cols}", flush=True)
-        else:
+        elif not config_from_dialog:
             # If no dialog, use first columns as groups, rest as data
             print("[WARN] No configuration dialog shown, using empty defaults", flush=True)
             app_state.group_cols = []
             app_state.data_cols = []
+
+        if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
+            app_state.last_group_col = app_state.group_cols[0] if app_state.group_cols else None
+        app_state.selected_2d_cols = []
+        app_state.selected_3d_cols = []
+        app_state.selected_2d_confirmed = False
+        app_state.selected_3d_confirmed = False
+        app_state.available_groups = []
+        app_state.visible_groups = None
         
         # Validate data columns are numeric
         for col in app_state.data_cols:
