@@ -3,9 +3,10 @@ Qt5 工作表选择对话框
 """
 import pandas as pd
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
-                              QLabel, QPushButton, QFrame,
+                              QLabel, QPushButton,
                               QListWidget, QListWidgetItem,
-                              QWidget, QSizePolicy, QMessageBox)
+                              QWidget, QSizePolicy, QMessageBox,
+                              QGroupBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
@@ -40,35 +41,30 @@ class Qt5SheetDialog(QDialog):
         self.setMinimumSize(560, 420)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-
-        # 标题
-        header = QFrame()
-        header.setFixedHeight(48)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
         title = QLabel(translate("Choose a Sheet"))
-        header_layout.addWidget(title)
-
-        layout.addWidget(header)
-
-        # 内容
-        content = QFrame()
-        content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(8)
+        title_font = QFont(title.font())
+        title_font.setPointSize(title_font.pointSize() + 2)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
 
         subtitle = QLabel(translate(
             "Select the worksheet that contains the measurements you want to analyze."
         ))
         subtitle.setWordWrap(True)
-        content_layout.addWidget(subtitle)
+        layout.addWidget(subtitle)
 
-        # 工作表列表
+        list_group = QGroupBox(translate("Available Sheets"))
+        list_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        list_layout = QVBoxLayout(list_group)
+        list_layout.setContentsMargins(12, 10, 12, 12)
+        list_layout.setSpacing(8)
+
         self.sheet_list = QListWidget()
+        self.sheet_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         for sheet in self.sheets:
             item = QListWidgetItem(sheet)
@@ -81,19 +77,12 @@ class Qt5SheetDialog(QDialog):
 
         self.sheet_list.itemDoubleClicked.connect(self._ok_clicked)
 
-        content_layout.addWidget(self.sheet_list, 1)
+        list_layout.addWidget(self.sheet_list, 1)
+        layout.addWidget(list_group, 1)
 
-        layout.addWidget(content, 1)
-
-        # 底部按钮
-        footer = QFrame()
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout = QHBoxLayout()
         footer_layout.setSpacing(8)
-
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        footer_layout.addWidget(spacer)
+        footer_layout.addStretch()
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
@@ -103,7 +92,7 @@ class Qt5SheetDialog(QDialog):
         continue_btn.clicked.connect(self._ok_clicked)
         footer_layout.addWidget(continue_btn)
 
-        layout.addWidget(footer)
+        layout.addLayout(footer_layout)
 
     def _ok_clicked(self):
         """确定按钮点击"""

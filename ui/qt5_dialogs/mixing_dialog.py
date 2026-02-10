@@ -3,8 +3,9 @@
 """
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                               QLabel, QTableWidget, QTableWidgetItem, QMessageBox,
-                              QHeaderView)
+                              QHeaderView, QSizePolicy, QGroupBox)
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 import numpy as np
 
 from core import app_state, translate
@@ -27,8 +28,8 @@ class MixingCalculatorDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(translate("Mixing Calculator"))
-        self.setMinimumWidth(800)
-        self.setMinimumHeight(600)
+        self.setMinimumWidth(760)
+        self.setMinimumHeight(520)
 
         self._setup_ui()
         self._calculate_mixing()
@@ -36,15 +37,28 @@ class MixingCalculatorDialog(QDialog):
     def _setup_ui(self):
         """设置 UI"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
-        # 说明文本
+        title = QLabel(translate("Mixing Calculator"))
+        title_font = QFont(title.font())
+        title_font.setPointSize(title_font.pointSize() + 2)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
+
         info_label = QLabel(translate("Mixing proportions calculated using least squares:"))
+        info_label.setWordWrap(True)
         layout.addWidget(info_label)
 
-        # 结果表格
+        results_group = QGroupBox(translate("Results"))
+        results_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        results_layout = QVBoxLayout(results_group)
+        results_layout.setContentsMargins(12, 10, 12, 12)
+        results_layout.setSpacing(6)
+
         self.result_table = QTableWidget()
+        self.result_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.result_table.setColumnCount(4)
         self.result_table.setHorizontalHeaderLabels([
             translate("Mixture"),
@@ -53,7 +67,9 @@ class MixingCalculatorDialog(QDialog):
             translate("Residual")
         ])
         self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.result_table, 1)
+        results_layout.addWidget(self.result_table, 1)
+
+        layout.addWidget(results_group, 1)
 
         # 按钮
         button_layout = QHBoxLayout()

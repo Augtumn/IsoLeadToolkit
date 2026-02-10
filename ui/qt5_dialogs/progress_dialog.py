@@ -16,7 +16,7 @@ class Qt5ProgressDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setModal(True)
-        self.setFixedSize(360, 130)
+        self.setMinimumSize(320, 120)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
 
         layout = QVBoxLayout(self)

@@ -3,10 +3,10 @@ Qt5 数据配置对话框
 """
 import pandas as pd
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
-                              QLabel, QPushButton, QFrame,
+                              QLabel, QPushButton,
                               QListWidget, QListWidgetItem,
                               QWidget, QSizePolicy, QMessageBox,
-                              QGroupBox, QLineEdit)
+                              QGroupBox, QLineEdit, QBoxLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
@@ -34,54 +34,41 @@ class Qt5DataConfigDialog(QDialog):
         self.setMinimumSize(900, 620)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-
-        # 标题
-        header = QFrame()
-        header.setFixedHeight(48)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
         title = QLabel(translate("Select Columns"))
-        header_layout.addWidget(title)
+        title_font = QFont(title.font())
+        title_font.setPointSize(title_font.pointSize() + 2)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
 
-        layout.addWidget(header)
+        self.columns_container = QWidget()
+        self.columns_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.columns_layout = QBoxLayout(QBoxLayout.LeftToRight, self.columns_container)
+        self.columns_layout.setContentsMargins(0, 0, 0, 0)
+        self.columns_layout.setSpacing(12)
 
-        # 内容
-        content = QFrame()
-        content_layout = QHBoxLayout(content)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(12)
-
-        # 分组列选择
-        self._build_column_section(
-            content_layout,
+        self.group_card = self._build_column_section(
             translate("Grouping Columns"),
             translate("Pick one or more categorical columns to color and organize the scatter plot."),
             'group'
         )
-
-        # 数据列选择
-        self._build_column_section(
-            content_layout,
+        self.data_card = self._build_column_section(
             translate("Data Columns"),
             translate("Choose numeric measurements that feed into UMAP or t-SNE embeddings."),
             'data'
         )
 
-        layout.addWidget(content, 1)
+        self.columns_layout.addWidget(self.group_card)
+        self.columns_layout.addWidget(self.data_card)
+        layout.addWidget(self.columns_container, 1)
 
         # 底部
-        footer = QFrame()
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout = QHBoxLayout()
         footer_layout.setSpacing(8)
-
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        footer_layout.addWidget(spacer)
+        footer_layout.addStretch()
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
@@ -91,17 +78,16 @@ class Qt5DataConfigDialog(QDialog):
         apply_btn.clicked.connect(self._ok_clicked)
         footer_layout.addWidget(apply_btn)
 
-        layout.addWidget(footer)
+        layout.addLayout(footer_layout)
+        self._update_columns_layout()
 
-    def _build_column_section(self, parent, title, description, selection_type):
+    def _build_column_section(self, title, description, selection_type):
         """构建列选择区域"""
-        card = QFrame()
+        card = QGroupBox(title)
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(12, 12, 12, 12)
+        card_layout.setContentsMargins(12, 10, 12, 12)
         card_layout.setSpacing(8)
-
-        header = QLabel(title)
-        card_layout.addWidget(header)
 
         desc = QLabel(description)
         desc.setWordWrap(True)
@@ -125,6 +111,7 @@ class Qt5DataConfigDialog(QDialog):
         # 列列表
         list_widget = QListWidget()
         list_widget.setSelectionMode(QListWidget.MultiSelection)
+        list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # 填充列
         for col in self.all_columns:
@@ -142,12 +129,12 @@ class Qt5DataConfigDialog(QDialog):
             item = QListWidgetItem(display_text)
             item.setData(Qt.UserRole, col)
 
+            list_widget.addItem(item)
+
             if selection_type == 'group':
                 item.setSelected(col in self.selected_group_cols)
             else:
                 item.setSelected(col in self.selected_data_cols)
-
-            list_widget.addItem(item)
 
         # 连接选择变化事件
         list_widget.itemSelectionChanged.connect(
@@ -162,7 +149,19 @@ class Qt5DataConfigDialog(QDialog):
         else:
             self.data_list = list_widget
 
-        parent.addWidget(card, 1)
+        return card
+
+    def _update_columns_layout(self):
+        if not hasattr(self, 'columns_layout'):
+            return
+        direction = QBoxLayout.LeftToRight if self.width() >= 900 else QBoxLayout.TopToBottom
+        if self.columns_layout.direction() == direction:
+            return
+        self.columns_layout.setDirection(direction)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_columns_layout()
 
     def _on_selection_changed(self, list_widget, selection_type):
         """选择变化处理"""

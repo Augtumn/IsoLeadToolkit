@@ -2,8 +2,10 @@
 工具提示配置对话框
 """
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-                              QLabel, QListWidget, QListWidgetItem, QMessageBox)
+                              QLabel, QListWidget, QListWidgetItem, QMessageBox,
+                              QSizePolicy, QGroupBox)
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 
 from core import app_state, translate
 
@@ -31,7 +33,7 @@ class TooltipConfigDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(translate("Configure Tooltip"))
         self.setMinimumWidth(400)
-        self.setMinimumHeight(500)
+        self.setMinimumHeight(450)
 
         self._setup_ui()
         self._load_current_selection()
@@ -39,17 +41,32 @@ class TooltipConfigDialog(QDialog):
     def _setup_ui(self):
         """设置 UI"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
-        # 说明文本
+        title = QLabel(translate("Configure Tooltip"))
+        title_font = QFont(title.font())
+        title_font.setPointSize(title_font.pointSize() + 2)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
+
         info_label = QLabel(translate("Select columns to display:"))
+        info_label.setWordWrap(True)
         layout.addWidget(info_label)
 
-        # 列列表
+        list_group = QGroupBox(translate("Available Columns"))
+        list_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        list_layout = QVBoxLayout(list_group)
+        list_layout.setContentsMargins(12, 10, 12, 12)
+        list_layout.setSpacing(6)
+
         self.column_list = QListWidget()
         self.column_list.setSelectionMode(QListWidget.MultiSelection)
-        layout.addWidget(self.column_list, 1)
+        self.column_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        list_layout.addWidget(self.column_list, 1)
+
+        layout.addWidget(list_group, 1)
 
         # 填充列列表
         if app_state.df_global is not None:

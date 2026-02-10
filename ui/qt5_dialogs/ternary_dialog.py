@@ -2,7 +2,7 @@
 Qt5 三元图列选择对话框
 """
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
-                              QLabel, QPushButton, QFrame,
+                              QLabel, QPushButton,
                               QListWidget, QListWidgetItem,
                               QWidget, QSizePolicy, QMessageBox,
                               QGroupBox, QDoubleSpinBox, QCheckBox)
@@ -47,41 +47,27 @@ class Qt5TernaryDialog(QDialog):
         self.setMinimumSize(550, 600)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-
-        # 标题
-        header = QFrame()
-        header.setFixedHeight(48)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
         title = QLabel(translate("Select Ternary Axes"))
-        header_layout.addWidget(title)
-
-        layout.addWidget(header)
-
-        # 内容
-        content = QFrame()
-        content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(8)
+        title_font = QFont(title.font())
+        title_font.setPointSize(title_font.pointSize() + 2)
+        title_font.setBold(True)
+        title.setFont(title_font)
+        layout.addWidget(title)
 
         subtitle = QLabel(translate(
             "Select three columns to map to the vertices of the ternary plot (Top, Left, Right)."
         ))
         subtitle.setWordWrap(True)
-        content_layout.addWidget(subtitle)
+        layout.addWidget(subtitle)
 
-        # 当前选择显示
-        selection_card = QFrame()
-        selection_layout = QVBoxLayout(selection_card)
-        selection_layout.setContentsMargins(12, 12, 12, 12)
+        selection_group = QGroupBox(translate("Current selection"))
+        selection_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        selection_layout = QVBoxLayout(selection_group)
+        selection_layout.setContentsMargins(12, 10, 12, 12)
         selection_layout.setSpacing(6)
-
-        selection_header = QLabel(translate("Current selection"))
-        selection_layout.addWidget(selection_header)
 
         self.top_label = QLabel(translate("Top: Not selected"))
         selection_layout.addWidget(self.top_label)
@@ -92,13 +78,16 @@ class Qt5TernaryDialog(QDialog):
         self.right_label = QLabel(translate("Right: Not selected"))
         selection_layout.addWidget(self.right_label)
 
-        content_layout.addWidget(selection_card)
+        layout.addWidget(selection_group)
 
-        # 可用列列表
-        list_label = QLabel(translate("Available Columns (click to select)"))
-        content_layout.addWidget(list_label)
+        list_group = QGroupBox(translate("Available Columns"))
+        list_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        list_layout = QVBoxLayout(list_group)
+        list_layout.setContentsMargins(12, 10, 12, 12)
+        list_layout.setSpacing(6)
 
         self.column_list = QListWidget()
+        self.column_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         for col in self.available_cols:
             item = QListWidgetItem(col)
@@ -107,10 +96,16 @@ class Qt5TernaryDialog(QDialog):
 
         self.column_list.itemClicked.connect(self._on_column_clicked)
 
-        content_layout.addWidget(self.column_list, 1)
+        list_layout.addWidget(self.column_list, 1)
 
-        # 三元图参数
+        hint_label = QLabel(translate("Tip: Click columns in order (Top, Left, Right)"))
+        hint_label.setWordWrap(True)
+        list_layout.addWidget(hint_label)
+
+        layout.addWidget(list_group, 1)
+
         params_group = QGroupBox(translate("Ternary Parameters"))
+        params_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         params_layout = QVBoxLayout()
         params_layout.setSpacing(6)
 
@@ -150,27 +145,16 @@ class Qt5TernaryDialog(QDialog):
         params_layout.addLayout(factors_row)
 
         params_group.setLayout(params_layout)
-        content_layout.addWidget(params_group)
+        layout.addWidget(params_group)
 
-        # 提示
-        hint_label = QLabel(translate("Tip: Click columns in order (Top, Left, Right)"))
-        content_layout.addWidget(hint_label)
-
-        layout.addWidget(content, 1)
-
-        # 底部按钮
-        footer = QFrame()
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout = QHBoxLayout()
         footer_layout.setSpacing(8)
 
         clear_btn = QPushButton(translate("Clear"))
         clear_btn.clicked.connect(self._clear_selection)
         footer_layout.addWidget(clear_btn)
 
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        footer_layout.addWidget(spacer)
+        footer_layout.addStretch()
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
@@ -180,7 +164,7 @@ class Qt5TernaryDialog(QDialog):
         ok_btn.clicked.connect(self._ok_clicked)
         footer_layout.addWidget(ok_btn)
 
-        layout.addWidget(footer)
+        layout.addLayout(footer_layout)
 
     def _on_column_clicked(self, item):
         """列点击处理"""
