@@ -2079,22 +2079,92 @@ class Qt5ControlPanel(QWidget):
         position_group = QGroupBox(translate("Legend Position"))
         position_layout = QVBoxLayout()
 
-        self.legend_position_combo = QComboBox()
-        self.legend_position_combo.addItems([
-            'best', 'outside right', 'upper right', 'upper left', 'lower left', 'lower right',
-            'right', 'center left', 'center right', 'lower center', 'upper center', 'center'
-        ])
-        initial_location = getattr(app_state, 'legend_location', '') or getattr(app_state, 'legend_position', 'best')
-        if initial_location == 'outside_right':
-            initial_location = 'outside right'
-        if initial_location not in [
-            'best', 'outside right', 'upper right', 'upper left', 'lower left', 'lower right',
-            'right', 'center left', 'center right', 'lower center', 'upper center', 'center'
-        ]:
-            initial_location = 'best'
-        self.legend_position_combo.setCurrentText(initial_location)
-        self.legend_position_combo.currentTextChanged.connect(self._on_legend_position_change)
-        position_layout.addWidget(self.legend_position_combo)
+        position_grid = QGridLayout()
+        position_grid.setHorizontalSpacing(6)
+        position_grid.setVerticalSpacing(6)
+
+        outer_grid = QGridLayout()
+        outer_grid.setHorizontalSpacing(6)
+        outer_grid.setVerticalSpacing(6)
+
+        self.legend_position_buttons = {}
+        self.legend_position_group = QButtonGroup(self)
+        self.legend_position_group.setExclusive(True)
+
+        grid_positions = [
+            (0, 0, 'upper left', 'NW'),
+            (0, 1, 'upper center', 'N'),
+            (0, 2, 'upper right', 'NE'),
+            (1, 0, 'center left', 'W'),
+            (1, 1, 'center', 'C'),
+            (1, 2, 'center right', 'E'),
+            (2, 0, 'lower left', 'SW'),
+            (2, 1, 'lower center', 'S'),
+            (2, 2, 'lower right', 'SE'),
+        ]
+
+        for row, col, value, label in grid_positions:
+            btn = QToolButton()
+            btn.setText(label)
+            btn.setCheckable(True)
+            btn.setFixedSize(40, 32)
+            btn.clicked.connect(lambda checked=False, loc=value: self._on_legend_position_change(loc))
+            self.legend_position_group.addButton(btn)
+            self.legend_position_buttons[value] = btn
+            position_grid.addWidget(btn, row, col)
+
+        outside_top_btn = QToolButton()
+        outside_top_btn.setText('OUT T')
+        outside_top_btn.setCheckable(True)
+        outside_top_btn.setFixedSize(56, 32)
+        outside_top_btn.clicked.connect(lambda checked=False: self._on_legend_position_change('outside_top'))
+        self.legend_position_group.addButton(outside_top_btn)
+        self.legend_position_buttons['outside_top'] = outside_top_btn
+
+        outside_left_btn = QToolButton()
+        outside_left_btn.setText('OUT L')
+        outside_left_btn.setCheckable(True)
+        outside_left_btn.setFixedSize(56, 32)
+        outside_left_btn.clicked.connect(lambda checked=False: self._on_legend_position_change('outside_left'))
+        self.legend_position_group.addButton(outside_left_btn)
+        self.legend_position_buttons['outside_left'] = outside_left_btn
+
+        outside_right_btn = QToolButton()
+        outside_right_btn.setText('OUT R')
+        outside_right_btn.setCheckable(True)
+        outside_right_btn.setFixedSize(56, 32)
+        outside_right_btn.clicked.connect(lambda checked=False: self._on_legend_position_change('outside_right'))
+        self.legend_position_group.addButton(outside_right_btn)
+        self.legend_position_buttons['outside_right'] = outside_right_btn
+
+        outside_bottom_btn = QToolButton()
+        outside_bottom_btn.setText('OUT B')
+        outside_bottom_btn.setCheckable(True)
+        outside_bottom_btn.setFixedSize(56, 32)
+        outside_bottom_btn.clicked.connect(lambda checked=False: self._on_legend_position_change('outside_bottom'))
+        self.legend_position_group.addButton(outside_bottom_btn)
+        self.legend_position_buttons['outside_bottom'] = outside_bottom_btn
+
+        outer_grid.addWidget(outside_top_btn, 0, 1, Qt.AlignHCenter)
+        outer_grid.addWidget(outside_left_btn, 1, 0, Qt.AlignHCenter)
+        outer_grid.addLayout(position_grid, 1, 1)
+        outer_grid.addWidget(outside_right_btn, 1, 2, Qt.AlignHCenter)
+        outer_grid.addWidget(outside_bottom_btn, 2, 1, Qt.AlignHCenter)
+
+        position_layout.addLayout(outer_grid)
+
+        initial_location = getattr(app_state, 'legend_location', '') or getattr(app_state, 'legend_position', 'outside_left')
+        if initial_location == 'outside right':
+            initial_location = 'outside_right'
+        if initial_location == 'outside left':
+            initial_location = 'outside_left'
+        if initial_location == 'outside top':
+            initial_location = 'outside_top'
+        if initial_location == 'outside bottom':
+            initial_location = 'outside_bottom'
+        if initial_location not in self.legend_position_buttons:
+            initial_location = 'outside_left'
+        self._set_legend_position_button(initial_location)
 
         position_group.setLayout(position_layout)
         layout.addWidget(position_group)
@@ -2141,6 +2211,19 @@ class Qt5ControlPanel(QWidget):
             if value == marker_value:
                 return label
         return next(iter(self._marker_shape_map.keys()))
+
+    def _set_legend_position_button(self, location):
+        """Sync legend position button state."""
+        buttons = getattr(self, 'legend_position_buttons', {})
+        if not buttons:
+            return
+        if location == 'outside right':
+            location = 'outside_right'
+        target = buttons.get(location)
+        for value, btn in buttons.items():
+            btn.blockSignals(True)
+            btn.setChecked(btn is target)
+            btn.blockSignals(False)
 
     def _pick_color(self, group, swatch):
         """打开颜色选择器"""
@@ -3206,10 +3289,7 @@ class Qt5ControlPanel(QWidget):
             'title_color': self.title_color_edit.text() if self.title_color_edit else '#111827',
             'title_weight': self.title_weight_combo.currentText() if self.title_weight_combo else 'bold',
             'title_pad': self.title_pad_spin.value() if self.title_pad_spin else 20.0,
-            'legend_location': self.legend_location_map.get(
-                self.legend_location_combo.currentText(),
-                'outside_right'
-            ) if self.legend_location_combo else 'outside_right',
+            'legend_location': getattr(app_state, 'legend_location', 'outside_right'),
             'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check else True,
             'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin else 0.95,
             'legend_frame_facecolor': self.legend_frame_face_edit.text() if self.legend_frame_face_edit else '#ffffff',
@@ -3350,11 +3430,9 @@ class Qt5ControlPanel(QWidget):
             self.legend_frame_edge_edit.setText(data.get('legend_frame_edgecolor', '#cbd5f5'))
 
         legend_loc = data.get('legend_location', 'outside_right')
-        if self.legend_location_combo:
-            for label, value in self.legend_location_map.items():
-                if value == legend_loc:
-                    self.legend_location_combo.setCurrentText(label)
-                    break
+        app_state.legend_location = legend_loc
+        app_state.legend_position = legend_loc
+        self._set_legend_position_button(legend_loc)
 
         self._on_style_change()
 
@@ -3516,11 +3594,6 @@ class Qt5ControlPanel(QWidget):
         if self.title_pad_spin:
             app_state.title_pad = float(self.title_pad_spin.value())
 
-        if self.legend_location_combo:
-            app_state.legend_location = self.legend_location_map.get(
-                self.legend_location_combo.currentText(),
-                'outside_right'
-            )
         if self.legend_frame_on_check:
             app_state.legend_frame_on = bool(self.legend_frame_on_check.isChecked())
         if self.legend_frame_alpha_spin:
@@ -4095,8 +4168,11 @@ class Qt5ControlPanel(QWidget):
 
     def _on_legend_position_change(self, position):
         """图例位置变化"""
+        if position == 'outside right':
+            position = 'outside_right'
         app_state.legend_position = position
-        app_state.legend_location = 'outside_right' if position == 'outside right' else position
+        app_state.legend_location = position
+        self._set_legend_position_button(position)
         self._on_change()
 
     def _on_legend_columns_change(self, columns):
@@ -4477,6 +4553,29 @@ class Qt5ControlPanel(QWidget):
             levels_row.addStretch()
             layout.addLayout(levels_row)
 
+        top_size_spin = None
+        right_size_spin = None
+        if target == 'marginal_kde':
+            top_row = QHBoxLayout()
+            top_row.addWidget(QLabel(translate("Top KDE Height (%)")))
+            top_size_spin = QDoubleSpinBox()
+            top_size_spin.setRange(5.0, 40.0)
+            top_size_spin.setSingleStep(1.0)
+            top_size_spin.setValue(float(getattr(app_state, 'marginal_kde_top_size', 15.0)))
+            top_row.addWidget(top_size_spin)
+            top_row.addStretch()
+            layout.addLayout(top_row)
+
+            right_row = QHBoxLayout()
+            right_row.addWidget(QLabel(translate("Right KDE Width (%)")))
+            right_size_spin = QDoubleSpinBox()
+            right_size_spin.setRange(5.0, 40.0)
+            right_size_spin.setSingleStep(1.0)
+            right_size_spin.setValue(float(getattr(app_state, 'marginal_kde_right_size', 15.0)))
+            right_row.addWidget(right_size_spin)
+            right_row.addStretch()
+            layout.addLayout(right_row)
+
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         cancel_btn = QPushButton(translate("Cancel"))
@@ -4491,6 +4590,11 @@ class Qt5ControlPanel(QWidget):
             style_ref['fill'] = bool(fill_check.isChecked())
             if target == 'kde' and levels_spin is not None:
                 style_ref['levels'] = int(levels_spin.value())
+            if target == 'marginal_kde':
+                if top_size_spin is not None:
+                    app_state.marginal_kde_top_size = float(top_size_spin.value())
+                if right_size_spin is not None:
+                    app_state.marginal_kde_right_size = float(right_size_spin.value())
             setattr(app_state, style_key, style_ref)
 
             if swatch is not None:

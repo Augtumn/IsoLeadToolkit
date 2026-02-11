@@ -39,8 +39,13 @@ def draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb_
     rng = np.random.default_rng(42)
 
     divider = make_axes_locatable(ax)
-    ax_top = divider.append_axes("top", size="15%", pad=0.06, sharex=ax)
-    ax_right = divider.append_axes("right", size="15%", pad=0.06, sharey=ax)
+    top_size = float(getattr(app_state, 'marginal_kde_top_size', 15.0))
+    right_size = float(getattr(app_state, 'marginal_kde_right_size', 15.0))
+    top_size = max(5.0, min(top_size, 40.0))
+    right_size = max(5.0, min(right_size, 40.0))
+
+    ax_top = divider.append_axes("top", size=f"{top_size:.0f}%", pad=0.06, sharex=ax)
+    ax_right = divider.append_axes("right", size=f"{right_size:.0f}%", pad=0.06, sharey=ax)
 
     style = getattr(app_state, 'marginal_kde_style', {})
     kde_alpha = float(style.get('alpha', 0.25))

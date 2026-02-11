@@ -3,6 +3,8 @@ import traceback
 import numpy as np
 import pandas as pd
 from matplotlib import font_manager
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 from core.config import CONFIG
 from core.state import app_state
@@ -13,7 +15,8 @@ from visualization.plotting import (
     _apply_current_style,
     _enforce_plot_style,
     _apply_axis_text_style,
-    _legend_location_config,
+    _legend_layout_config,
+    _legend_columns_for_layout,
     _style_legend,
     _apply_ternary_stretch,
     _build_group_palette,
@@ -36,6 +39,33 @@ from visualization.plotting import (
     get_pca_embedding,
     get_robust_pca_embedding,
 )
+
+
+def _build_legend_proxies(handles, labels):
+    """Build proxy legend handles for a separate legend axis."""
+    palette = getattr(app_state, 'current_palette', {})
+    marker_map = getattr(app_state, 'group_marker_map', {})
+    use_patch = any(isinstance(h, Patch) for h in handles)
+    proxies = []
+    for label in labels:
+        color = palette.get(label, '#94a3b8')
+        if use_patch:
+            proxies.append(Patch(facecolor=color, edgecolor='none'))
+        else:
+            marker = marker_map.get(label, getattr(app_state, 'plot_marker_shape', 'o'))
+            proxies.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker=marker,
+                    linestyle='None',
+                    markerfacecolor=color,
+                    markeredgecolor=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                    markeredgewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                    markersize=8,
+                )
+            )
+    return proxies
 
 # from data import geochemistry calculation logic
 try:
@@ -618,35 +648,56 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             app_state.legend_last_labels = legend_labels
 
             if len(unique_cats) <= 30:
-                ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
-                loc, bbox = _legend_location_config(show_marginal_kde=show_marginal_kde)
-
-                if handles:
-                    legend = app_state.ax.legend(
-                        handles=handles,
-                        labels=labels,
-                        title=group_col,
-                        bbox_to_anchor=bbox if bbox else None,
-                        loc=loc,
-                        frameon=True,
-                        fancybox=True,
-                        ncol=ncol,
-                    )
+                location_key = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
+                legend_ax = getattr(app_state, 'legend_ax', None)
+                auto_ncol = _legend_columns_for_layout(legend_labels, app_state.ax, location_key)
+                if auto_ncol is None:
+                    ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
                 else:
-                    legend = app_state.ax.legend(
-                        title=group_col,
-                        bbox_to_anchor=bbox if bbox else None,
-                        loc=loc,
-                        frameon=True,
-                        fancybox=True,
-                        ncol=ncol,
-                    )
+                    ncol = auto_ncol
 
-                try:
-                    if bbox:
-                        legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
-                except Exception:
-                    pass
+                legend_kwargs = {
+                    'title': group_col,
+                    'frameon': True,
+                    'fancybox': True,
+                    'ncol': ncol,
+                }
+
+                if legend_ax is not None and location_key.startswith('outside_'):
+                    legend_ax.clear()
+                    legend_ax.set_xticks([])
+                    legend_ax.set_yticks([])
+                    legend_kwargs['loc'] = 'center'
+                    legend_kwargs['mode'] = 'expand'
+                    legend_kwargs['bbox_to_anchor'] = (0.0, 0.0, 1.0, 1.0)
+                    legend_kwargs['borderaxespad'] = 0.0
+                    legend_kwargs['labelspacing'] = 0.3
+                    legend_kwargs['handlelength'] = 1.2
+                    legend_kwargs['handletextpad'] = 0.4
+                    legend_kwargs['borderpad'] = 0.3
+                    legend_kwargs['columnspacing'] = 0.8
+                    proxy_labels = labels if handles else legend_labels
+                    proxy_handles = _build_legend_proxies(handles if handles else legend_handles, proxy_labels)
+                    legend = legend_ax.legend(handles=proxy_handles, labels=proxy_labels, **legend_kwargs)
+                else:
+                    loc, bbox, mode, borderaxespad = _legend_layout_config(app_state.ax, show_marginal_kde=show_marginal_kde)
+                    legend_kwargs['loc'] = loc
+                    legend_kwargs['bbox_to_anchor'] = bbox if bbox else None
+                    if mode:
+                        legend_kwargs['mode'] = mode
+                    if borderaxespad is not None:
+                        legend_kwargs['borderaxespad'] = borderaxespad
+                    if handles:
+                        legend = app_state.ax.legend(handles=handles, labels=labels, **legend_kwargs)
+                    else:
+                        legend = app_state.ax.legend(**legend_kwargs)
+
+                if legend_ax is None:
+                    try:
+                        if legend_kwargs.get('bbox_to_anchor'):
+                            legend.set_bbox_to_anchor(legend_kwargs['bbox_to_anchor'], transform=app_state.ax.transAxes)
+                    except Exception:
+                        pass
                 _style_legend(legend, show_marginal_kde=show_marginal_kde)
 
                 if not is_kde_mode:
@@ -1032,34 +1083,54 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
             app_state.legend_last_labels = legend_labels
 
             if len(unique_cats) <= 30:
-                ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
-                loc, bbox = _legend_location_config(show_marginal_kde=show_marginal_kde)
-
-                if handles:
-                    legend = app_state.ax.legend(
-                        handles=handles,
-                        labels=labels,
-                        title=group_col,
-                        bbox_to_anchor=bbox if bbox else None,
-                        loc=loc,
-                        frameon=True,
-                        fancybox=True,
-                        ncol=ncol,
-                    )
+                location_key = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
+                legend_ax = getattr(app_state, 'legend_ax', None)
+                auto_ncol = _legend_columns_for_layout(legend_labels, app_state.ax, location_key)
+                if auto_ncol is None:
+                    ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
                 else:
-                    legend = app_state.ax.legend(
-                        title=group_col,
-                        bbox_to_anchor=bbox if bbox else None,
-                        loc=loc,
-                        frameon=True,
-                        fancybox=True,
-                        ncol=ncol,
-                    )
+                    ncol = auto_ncol
+
+                legend_kwargs = {
+                    'title': group_col,
+                    'frameon': True,
+                    'fancybox': True,
+                    'ncol': ncol,
+                }
+
+                if legend_ax is not None and location_key.startswith('outside_'):
+                    legend_ax.clear()
+                    legend_ax.set_xticks([])
+                    legend_ax.set_yticks([])
+                    legend_kwargs['loc'] = 'center'
+                    legend_kwargs['mode'] = 'expand'
+                    legend_kwargs['bbox_to_anchor'] = (0.0, 0.0, 1.0, 1.0)
+                    legend_kwargs['borderaxespad'] = 0.0
+                    legend_kwargs['labelspacing'] = 0.3
+                    legend_kwargs['handlelength'] = 1.2
+                    legend_kwargs['handletextpad'] = 0.4
+                    legend_kwargs['borderpad'] = 0.3
+                    legend_kwargs['columnspacing'] = 0.8
+                    proxy_labels = labels if handles else legend_labels
+                    proxy_handles = _build_legend_proxies(handles if handles else legend_handles, proxy_labels)
+                    legend = legend_ax.legend(handles=proxy_handles, labels=proxy_labels, **legend_kwargs)
+                else:
+                    loc, bbox, mode, borderaxespad = _legend_layout_config(app_state.ax, show_marginal_kde=show_marginal_kde)
+                    legend_kwargs['loc'] = loc
+                    legend_kwargs['bbox_to_anchor'] = bbox if bbox else None
+                    if mode:
+                        legend_kwargs['mode'] = mode
+                    if borderaxespad is not None:
+                        legend_kwargs['borderaxespad'] = borderaxespad
+                    if handles:
+                        legend = app_state.ax.legend(handles=handles, labels=labels, **legend_kwargs)
+                    else:
+                        legend = app_state.ax.legend(**legend_kwargs)
 
                 if legend:
                     try:
-                        if bbox:
-                            legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
+                        if legend_ax is None and legend_kwargs.get('bbox_to_anchor'):
+                            legend.set_bbox_to_anchor(legend_kwargs['bbox_to_anchor'], transform=app_state.ax.transAxes)
                         _style_legend(legend, show_marginal_kde=show_marginal_kde)
 
                         if not show_kde:
@@ -1218,18 +1289,48 @@ def plot_3d_data(group_col, data_columns, size=60):
 
         try:
             if len(unique_cats) <= 30:
-                ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
-                loc, bbox = _legend_location_config(show_marginal_kde=False)
-                legend = app_state.ax.legend(
-                    title=group_col,
-                    bbox_to_anchor=bbox if bbox else None,
-                    loc=loc,
-                    frameon=True,
-                    fancybox=True,
-                    ncol=ncol,
-                )
-                if bbox:
-                    legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
+                location_key = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
+                legend_ax = getattr(app_state, 'legend_ax', None)
+                auto_ncol = _legend_columns_for_layout(legend_labels, app_state.ax, location_key)
+                if auto_ncol is None:
+                    ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
+                else:
+                    ncol = auto_ncol
+
+                legend_kwargs = {
+                    'title': group_col,
+                    'frameon': True,
+                    'fancybox': True,
+                    'ncol': ncol,
+                }
+
+                if legend_ax is not None and location_key.startswith('outside_'):
+                    legend_ax.clear()
+                    legend_ax.set_xticks([])
+                    legend_ax.set_yticks([])
+                    legend_kwargs['loc'] = 'center'
+                    legend_kwargs['mode'] = 'expand'
+                    legend_kwargs['bbox_to_anchor'] = (0.0, 0.0, 1.0, 1.0)
+                    legend_kwargs['borderaxespad'] = 0.0
+                    legend_kwargs['labelspacing'] = 0.3
+                    legend_kwargs['handlelength'] = 1.2
+                    legend_kwargs['handletextpad'] = 0.4
+                    legend_kwargs['borderpad'] = 0.3
+                    legend_kwargs['columnspacing'] = 0.8
+                    proxy_handles = _build_legend_proxies(legend_handles, legend_labels)
+                    legend = legend_ax.legend(handles=proxy_handles, labels=legend_labels, **legend_kwargs)
+                else:
+                    loc, bbox, mode, borderaxespad = _legend_layout_config(app_state.ax, show_marginal_kde=False)
+                    legend_kwargs['loc'] = loc
+                    legend_kwargs['bbox_to_anchor'] = bbox if bbox else None
+                    if mode:
+                        legend_kwargs['mode'] = mode
+                    if borderaxespad is not None:
+                        legend_kwargs['borderaxespad'] = borderaxespad
+                    legend = app_state.ax.legend(**legend_kwargs)
+                    if bbox:
+                        legend.set_bbox_to_anchor(bbox, transform=app_state.ax.transAxes)
+
                 _style_legend(legend, show_marginal_kde=False)
             else:
                 print("[INFO] Too many categories for standard legend. Use Control Panel legend.", flush=True)

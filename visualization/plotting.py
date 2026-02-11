@@ -23,6 +23,8 @@ from visualization.plotting_style import (
     _enforce_plot_style,
     _apply_axis_text_style,
     _legend_location_config,
+    _legend_layout_config,
+    _legend_columns_for_layout,
     _style_legend,
     refresh_plot_style,
 )
@@ -111,21 +113,115 @@ def _ensure_axes(dimensions=2):
     if app_state.fig is None:
         return None
 
-    if dimensions == 3:
-        _lazy_import_mplot3d()
-        if app_state.ax is None or getattr(app_state.ax, 'name', '') != '3d':
+    legend_location = getattr(app_state, 'legend_location', '') or ''
+    use_legend_grid = legend_location in {
+        'outside_right', 'outside_left', 'outside_top', 'outside_bottom'
+    }
+
+    if use_legend_grid:
+        try:
+            app_state.fig.clf()
+        except Exception:
+            pass
+
+        labels = getattr(app_state, 'legend_last_labels', []) or []
+        label_count = len(labels)
+
+        def _clamp(value, lo, hi):
+            return max(lo, min(value, hi))
+
+        fig = app_state.fig
+        dpi = getattr(fig, 'dpi', 100)
+        fig_w = fig.get_figwidth() * dpi
+        fig_h = fig.get_figheight() * dpi
+        legend_font = getattr(app_state, 'plot_font_sizes', {}).get('legend', 10)
+        font_px = legend_font * dpi / 72.0
+
+        max_len = max((len(str(label)) for label in labels), default=6)
+        avg_len = sum((len(str(label)) for label in labels)) / max(label_count, 1)
+
+        if legend_location in {'outside_left', 'outside_right'}:
+            est_label_px = (max_len * 0.6 + 2.0) * font_px + 30.0
+            legend_px = est_label_px + 18.0
+            legend_fraction = _clamp(legend_px / max(fig_w, 1.0), 0.10, 0.30)
+        else:
+            est_label_px = (avg_len * 0.6 + 2.0) * font_px + 26.0
+            usable = fig_w * 0.9
+            ncol = max(1, int(usable / max(est_label_px, 1.0)))
+            ncol = min(max(label_count, 1), ncol)
+            rows = int(np.ceil(label_count / max(ncol, 1))) if label_count else 1
+            row_h = font_px + 6.0
+            legend_px = rows * row_h + 18.0
+            legend_fraction = _clamp(legend_px / max(fig_h, 1.0), 0.10, 0.30)
+
+        total = 10.0
+        legend_ratio = total * legend_fraction
+        main_ratio = total - legend_ratio
+
+        if legend_location in {'outside_left', 'outside_right'}:
+            if legend_location == 'outside_left':
+                gs = app_state.fig.add_gridspec(1, 2, width_ratios=[legend_ratio, main_ratio], wspace=0.01)
+                legend_slot = gs[0, 0]
+                main_slot = gs[0, 1]
+            else:
+                gs = app_state.fig.add_gridspec(1, 2, width_ratios=[main_ratio, legend_ratio], wspace=0.01)
+                main_slot = gs[0, 0]
+                legend_slot = gs[0, 1]
+        else:
+            if legend_location == 'outside_top':
+                gs = app_state.fig.add_gridspec(
+                    2,
+                    1,
+                    height_ratios=[legend_ratio, main_ratio],
+                    hspace=0.01,
+                    left=0.0,
+                    right=1.0,
+                )
+                legend_slot = gs[0, 0]
+                main_slot = gs[1, 0]
+            else:
+                gs = app_state.fig.add_gridspec(
+                    2,
+                    1,
+                    height_ratios=[main_ratio, legend_ratio],
+                    hspace=0.01,
+                    left=0.0,
+                    right=1.0,
+                )
+                main_slot = gs[0, 0]
+                legend_slot = gs[1, 0]
             try:
-                app_state.fig.clf()
+                app_state.fig.subplots_adjust(left=0.0, right=1.0)
             except Exception:
                 pass
-            app_state.ax = app_state.fig.add_subplot(111, projection='3d')
+
+        if dimensions == 3:
+            _lazy_import_mplot3d()
+            app_state.ax = app_state.fig.add_subplot(main_slot, projection='3d')
+        else:
+            app_state.ax = app_state.fig.add_subplot(main_slot)
+
+        app_state.legend_ax = app_state.fig.add_subplot(legend_slot)
+        app_state.legend_ax.set_xticks([])
+        app_state.legend_ax.set_yticks([])
+
     else:
-        if app_state.ax is None or getattr(app_state.ax, 'name', '') == '3d':
-            try:
-                app_state.fig.clf()
-            except Exception:
-                pass
-            app_state.ax = app_state.fig.add_subplot(111)
+        if dimensions == 3:
+            _lazy_import_mplot3d()
+            if app_state.ax is None or getattr(app_state.ax, 'name', '') != '3d':
+                try:
+                    app_state.fig.clf()
+                except Exception:
+                    pass
+                app_state.ax = app_state.fig.add_subplot(111, projection='3d')
+        else:
+            if app_state.ax is None or getattr(app_state.ax, 'name', '') == '3d':
+                try:
+                    app_state.fig.clf()
+                except Exception:
+                    pass
+                app_state.ax = app_state.fig.add_subplot(111)
+        app_state.legend_ax = None
 
     return app_state.ax
 

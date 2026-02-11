@@ -128,6 +128,8 @@ class AppState:
             'linewidth': 1.0,
             'fill': True
         }
+        self.marginal_kde_top_size = 15.0
+        self.marginal_kde_right_size = 15.0
         self.marginal_kde_max_points = 5000
         self.ellipse_confidence = CONFIG.get('ellipse_confidence', 0.95)
         self.point_size = CONFIG['point_size']
@@ -220,7 +222,7 @@ class AppState:
         }
         self.show_plot_title = False
         self.legend_columns = 0  # 0 means auto
-        self.legend_position = 'best'  # Legend position
+        self.legend_position = 'outside_left'  # Legend position
         self.hidden_groups = set()  # Hidden groups in legend
         self.legend_display_mode = 'inline'  # inline | window
         self.legend_update_callback = None
@@ -270,7 +272,7 @@ class AppState:
         self.title_color = '#111827'
         self.title_weight = 'bold'
         self.title_pad = 20.0
-        self.legend_location = 'outside_right'
+        self.legend_location = 'outside_left'
         self.legend_frame_on = True
         self.legend_frame_alpha = 0.95
         self.legend_frame_facecolor = '#ffffff'
