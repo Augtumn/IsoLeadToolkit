@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QTabWidget, QGridLayout, QListWidget,
                               QListWidgetItem, QSizePolicy, QMessageBox,
                               QButtonGroup, QDialog)
-from PyQt5.QtCore import Qt, QSize, QPointF, pyqtSignal, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QSize, QPointF, QRectF, pyqtSignal, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QPalette, QColor, QCursor, QPainter, QPen, QBrush, QPixmap, QPolygonF
 
 import ast
@@ -2294,7 +2294,7 @@ class Qt5ControlPanel(QWidget):
         if marker == 'o':
             painter.drawEllipse(QPointF(cx, cy), r, r)
         elif marker == 's':
-            painter.drawRect(cx - r, cy - r, r * 2, r * 2)
+            painter.drawRect(QRectF(cx - r, cy - r, r * 2, r * 2))
         elif marker == '^':
             points = [QPointF(cx, cy - r), QPointF(cx - r, cy + r), QPointF(cx + r, cy + r)]
             painter.drawPolygon(QPolygonF(points))

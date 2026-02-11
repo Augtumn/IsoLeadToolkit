@@ -41,6 +41,15 @@ from visualization.plotting import (
 )
 
 
+def _notify_legend_panel(title, handles, labels):
+    callback = getattr(app_state, 'legend_update_callback', None)
+    if callable(callback):
+        try:
+            callback(title, handles, labels)
+        except Exception:
+            pass
+
+
 def _build_legend_proxies(handles, labels):
     """Build proxy legend handles for a separate legend axis."""
     palette = getattr(app_state, 'current_palette', {})
@@ -647,9 +656,14 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             app_state.legend_last_handles = legend_handles
             app_state.legend_last_labels = legend_labels
 
+            _notify_legend_panel(group_col, legend_handles, legend_labels)
+
             if len(unique_cats) <= 30:
                 location_key = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
-                legend_ax = getattr(app_state, 'legend_ax', None)
+                if location_key.startswith('outside_'):
+                    legend = None
+                else:
+                    legend = None
                 auto_ncol = _legend_columns_for_layout(legend_labels, app_state.ax, location_key)
                 if auto_ncol is None:
                     ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
@@ -663,23 +677,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     'ncol': ncol,
                 }
 
-                if legend_ax is not None and location_key.startswith('outside_'):
-                    legend_ax.clear()
-                    legend_ax.set_xticks([])
-                    legend_ax.set_yticks([])
-                    legend_kwargs['loc'] = 'center'
-                    legend_kwargs['mode'] = 'expand'
-                    legend_kwargs['bbox_to_anchor'] = (0.0, 0.0, 1.0, 1.0)
-                    legend_kwargs['borderaxespad'] = 0.0
-                    legend_kwargs['labelspacing'] = 0.3
-                    legend_kwargs['handlelength'] = 1.2
-                    legend_kwargs['handletextpad'] = 0.4
-                    legend_kwargs['borderpad'] = 0.3
-                    legend_kwargs['columnspacing'] = 0.8
-                    proxy_labels = labels if handles else legend_labels
-                    proxy_handles = _build_legend_proxies(handles if handles else legend_handles, proxy_labels)
-                    legend = legend_ax.legend(handles=proxy_handles, labels=proxy_labels, **legend_kwargs)
-                else:
+                if not location_key.startswith('outside_'):
                     loc, bbox, mode, borderaxespad = _legend_layout_config(app_state.ax, show_marginal_kde=show_marginal_kde)
                     legend_kwargs['loc'] = loc
                     legend_kwargs['bbox_to_anchor'] = bbox if bbox else None
@@ -692,7 +690,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                     else:
                         legend = app_state.ax.legend(**legend_kwargs)
 
-                if legend_ax is None:
+                if legend is not None:
                     try:
                         if legend_kwargs.get('bbox_to_anchor'):
                             legend.set_bbox_to_anchor(legend_kwargs['bbox_to_anchor'], transform=app_state.ax.transAxes)
@@ -700,7 +698,7 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
                         pass
                 _style_legend(legend, show_marginal_kde=show_marginal_kde)
 
-                if not is_kde_mode:
+                if legend is not None and not is_kde_mode:
                     for leg_patch, sc in zip(legend.get_patches(), scatters):
                         app_state.legend_to_scatter[leg_patch] = sc
             else:
@@ -1082,9 +1080,14 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
             app_state.legend_last_handles = legend_handles
             app_state.legend_last_labels = legend_labels
 
+            _notify_legend_panel(group_col, legend_handles, legend_labels)
+
             if len(unique_cats) <= 30:
                 location_key = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
-                legend_ax = getattr(app_state, 'legend_ax', None)
+                if location_key.startswith('outside_'):
+                    legend = None
+                else:
+                    legend = None
                 auto_ncol = _legend_columns_for_layout(legend_labels, app_state.ax, location_key)
                 if auto_ncol is None:
                     ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
@@ -1098,23 +1101,7 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
                     'ncol': ncol,
                 }
 
-                if legend_ax is not None and location_key.startswith('outside_'):
-                    legend_ax.clear()
-                    legend_ax.set_xticks([])
-                    legend_ax.set_yticks([])
-                    legend_kwargs['loc'] = 'center'
-                    legend_kwargs['mode'] = 'expand'
-                    legend_kwargs['bbox_to_anchor'] = (0.0, 0.0, 1.0, 1.0)
-                    legend_kwargs['borderaxespad'] = 0.0
-                    legend_kwargs['labelspacing'] = 0.3
-                    legend_kwargs['handlelength'] = 1.2
-                    legend_kwargs['handletextpad'] = 0.4
-                    legend_kwargs['borderpad'] = 0.3
-                    legend_kwargs['columnspacing'] = 0.8
-                    proxy_labels = labels if handles else legend_labels
-                    proxy_handles = _build_legend_proxies(handles if handles else legend_handles, proxy_labels)
-                    legend = legend_ax.legend(handles=proxy_handles, labels=proxy_labels, **legend_kwargs)
-                else:
+                if not location_key.startswith('outside_'):
                     loc, bbox, mode, borderaxespad = _legend_layout_config(app_state.ax, show_marginal_kde=show_marginal_kde)
                     legend_kwargs['loc'] = loc
                     legend_kwargs['bbox_to_anchor'] = bbox if bbox else None
@@ -1129,7 +1116,7 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
 
                 if legend:
                     try:
-                        if legend_ax is None and legend_kwargs.get('bbox_to_anchor'):
+                        if legend_kwargs.get('bbox_to_anchor'):
                             legend.set_bbox_to_anchor(legend_kwargs['bbox_to_anchor'], transform=app_state.ax.transAxes)
                         _style_legend(legend, show_marginal_kde=show_marginal_kde)
 
@@ -1283,6 +1270,8 @@ def plot_3d_data(group_col, data_columns, size=60):
         app_state.legend_last_handles = legend_handles
         app_state.legend_last_labels = legend_labels
 
+        _notify_legend_panel(group_col, legend_handles, legend_labels)
+
         if not app_state.scatter_collections:
             print("[ERROR] No points were plotted in 3D", flush=True)
             return False
@@ -1290,7 +1279,10 @@ def plot_3d_data(group_col, data_columns, size=60):
         try:
             if len(unique_cats) <= 30:
                 location_key = getattr(app_state, 'legend_location', 'outside_right') or 'outside_right'
-                legend_ax = getattr(app_state, 'legend_ax', None)
+                if location_key.startswith('outside_'):
+                    legend = None
+                else:
+                    legend = None
                 auto_ncol = _legend_columns_for_layout(legend_labels, app_state.ax, location_key)
                 if auto_ncol is None:
                     ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if len(unique_cats) > 15 else 1)
@@ -1304,22 +1296,7 @@ def plot_3d_data(group_col, data_columns, size=60):
                     'ncol': ncol,
                 }
 
-                if legend_ax is not None and location_key.startswith('outside_'):
-                    legend_ax.clear()
-                    legend_ax.set_xticks([])
-                    legend_ax.set_yticks([])
-                    legend_kwargs['loc'] = 'center'
-                    legend_kwargs['mode'] = 'expand'
-                    legend_kwargs['bbox_to_anchor'] = (0.0, 0.0, 1.0, 1.0)
-                    legend_kwargs['borderaxespad'] = 0.0
-                    legend_kwargs['labelspacing'] = 0.3
-                    legend_kwargs['handlelength'] = 1.2
-                    legend_kwargs['handletextpad'] = 0.4
-                    legend_kwargs['borderpad'] = 0.3
-                    legend_kwargs['columnspacing'] = 0.8
-                    proxy_handles = _build_legend_proxies(legend_handles, legend_labels)
-                    legend = legend_ax.legend(handles=proxy_handles, labels=legend_labels, **legend_kwargs)
-                else:
+                if not location_key.startswith('outside_'):
                     loc, bbox, mode, borderaxespad = _legend_layout_config(app_state.ax, show_marginal_kde=False)
                     legend_kwargs['loc'] = loc
                     legend_kwargs['bbox_to_anchor'] = bbox if bbox else None

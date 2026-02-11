@@ -113,6 +113,39 @@ class Qt5Application:
         self.app.setStyleSheet("")
         self.app.installEventFilter(_NativeStyleFilter())
 
+    def _install_debug_handlers(self):
+        """Capture Qt and Python errors to log files for crash diagnostics."""
+        try:
+            from PyQt5.QtCore import qInstallMessageHandler
+        except Exception:
+            return
+
+        try:
+            qt_log = open("isotopes_qt.log", "a", encoding="utf-8", buffering=1)
+        except Exception:
+            qt_log = None
+
+        def _qt_handler(msg_type, context, message):
+            if qt_log is None:
+                return
+            try:
+                qt_log.write(f"[QT] {message}\n")
+            except Exception:
+                pass
+
+        qInstallMessageHandler(_qt_handler)
+
+        def _excepthook(exc_type, exc, tb):
+            try:
+                with open("isotopes_py.log", "a", encoding="utf-8") as handle:
+                    handle.write("[PY] Unhandled exception\n")
+                    traceback.print_exception(exc_type, exc, tb, file=handle)
+            except Exception:
+                pass
+            sys.__excepthook__(exc_type, exc, tb)
+
+        sys.excepthook = _excepthook
+
     def _setup_translator(self, language):
         """设置翻译"""
         if self.translator:
@@ -336,6 +369,7 @@ class Qt5Application:
 
             # 创建应用
             self.app = QApplication(sys.argv)
+            self._install_debug_handlers()
             self._configure_fonts()
             self._configure_native_style()
 

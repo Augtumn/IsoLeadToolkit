@@ -3,13 +3,15 @@ Qt5 主窗口基类
 提供标准的应用程序窗口框架
 """
 from pathlib import Path
+import math
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                               QHBoxLayout, QDockWidget, QToolBar,
                               QStatusBar, QMenuBar, QAction, QStyle,
-                              QSplitter, QSizePolicy)
-from PyQt5.QtCore import Qt, QSize, QSettings
-from PyQt5.QtGui import QIcon, QFont, QKeySequence
+                              QSplitter, QSizePolicy, QListWidget,
+                              QListWidgetItem, QAbstractItemView, QLabel)
+from PyQt5.QtCore import Qt, QSize, QSettings, QPointF, QRectF
+from PyQt5.QtGui import QIcon, QFont, QKeySequence, QPixmap, QColor, QPainter, QPen, QBrush, QPolygonF
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -31,6 +33,7 @@ class Qt5MainWindow(QMainWindow):
         self._setup_toolbar()
         self._setup_statusbar()
         self._restore_state()
+        app_state.legend_update_callback = self._update_legend_panel
 
     def _setup_ui(self):
         """设置 UI 基本属性"""
@@ -49,9 +52,38 @@ class Qt5MainWindow(QMainWindow):
 
         # Matplotlib 画布区域
         self.canvas_widget = QWidget()
-        self.canvas_layout = QVBoxLayout(self.canvas_widget)
+        self.canvas_root_layout = QVBoxLayout(self.canvas_widget)
+        self.canvas_root_layout.setContentsMargins(0, 0, 0, 0)
+        self.canvas_root_layout.setSpacing(0)
+
+        self.plot_container = QWidget()
+        self.canvas_layout = QVBoxLayout(self.plot_container)
         self.canvas_layout.setContentsMargins(0, 0, 0, 0)
         self.canvas_layout.setSpacing(0)
+
+        self.legend_panel = QWidget()
+        legend_layout = QVBoxLayout(self.legend_panel)
+        legend_layout.setContentsMargins(8, 8, 8, 8)
+        legend_layout.setSpacing(6)
+        legend_title = QLabel(translate("Legend"))
+        legend_title.setStyleSheet("font-weight: bold;")
+        legend_layout.addWidget(legend_title)
+        legend_list = QListWidget()
+        legend_list.setSelectionMode(QAbstractItemView.NoSelection)
+        legend_list.setUniformItemSizes(True)
+        legend_list.setIconSize(QSize(14, 14))
+        legend_layout.addWidget(legend_list, 1)
+        self.legend_panel.setMinimumWidth(160)
+        self._legend_title_label = legend_title
+        self._legend_list = legend_list
+
+        self.legend_splitter = QSplitter(Qt.Horizontal)
+        self.legend_splitter.setChildrenCollapsible(False)
+        self.legend_splitter.setOpaqueResize(False)
+        self.legend_splitter.addWidget(self.legend_panel)
+        self.legend_splitter.addWidget(self.plot_container)
+        self.canvas_root_layout.addWidget(self.legend_splitter)
+        self._apply_legend_panel_layout()
 
         self.panel_container = QWidget()
         self.panel_layout = QVBoxLayout(self.panel_container)
@@ -142,7 +174,149 @@ class Qt5MainWindow(QMainWindow):
         """设置状态栏"""
         self.statusBar().showMessage(translate("Ready"))
 
+    def _apply_legend_panel_layout(self):
+        try:
+            location_key = getattr(app_state, 'legend_location', 'outside_left') or 'outside_left'
+            is_outside = location_key.startswith('outside_')
+            if not hasattr(self, 'legend_splitter'):
+                return
+
+            layout_state = (location_key, is_outside)
+            if getattr(self, '_legend_layout_state', None) == layout_state:
+                return
+
+            self.legend_panel.setVisible(is_outside)
+            if not is_outside:
+                if hasattr(self, '_legend_list') and self._legend_list is not None:
+                    self._legend_list.clear()
+                self.legend_splitter.setSizes([0, 1])
+                return
+
+            if location_key in {'outside_left', 'outside_right'}:
+                if self.legend_splitter.orientation() != Qt.Horizontal:
+                    self.legend_splitter.setOrientation(Qt.Horizontal)
+                first = self.legend_panel if location_key == 'outside_left' else self.plot_container
+                second = self.plot_container if location_key == 'outside_left' else self.legend_panel
+            else:
+                if self.legend_splitter.orientation() != Qt.Vertical:
+                    self.legend_splitter.setOrientation(Qt.Vertical)
+                first = self.legend_panel if location_key == 'outside_top' else self.plot_container
+                second = self.plot_container if location_key == 'outside_top' else self.legend_panel
+
+            if self.legend_splitter.indexOf(first) != 0:
+                self.legend_splitter.insertWidget(0, first)
+            if self.legend_splitter.indexOf(second) != 1:
+                self.legend_splitter.insertWidget(1, second)
+
+            self.legend_splitter.setStretchFactor(0, 0)
+            self.legend_splitter.setStretchFactor(1, 1)
+
+            sizes = self.legend_splitter.sizes()
+            if len(sizes) >= 2 and min(sizes) == 0:
+                if location_key in {'outside_left', 'outside_right'}:
+                    self.legend_splitter.setSizes([200, 800])
+                else:
+                    self.legend_splitter.setSizes([180, 800])
+
+            self._legend_layout_state = layout_state
+        except Exception as exc:
+            import traceback
+            print(f"[ERROR] Legend splitter layout failed: {exc}", flush=True)
+            traceback.print_exc()
+
+    def _build_marker_icon(self, color, marker, size=14):
+        try:
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.transparent)
+
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.Antialiasing, True)
+            pen = QPen(QColor('#111827'))
+            pen.setWidthF(1.0)
+            painter.setPen(pen)
+
+            brush = QBrush(QColor(color))
+            filled_markers = {'o', 's', '^', 'v', 'D', 'P', '*'}
+            painter.setBrush(brush if marker in filled_markers else Qt.NoBrush)
+
+            cx = size / 2.0
+            cy = size / 2.0
+            r = size * 0.35
+
+            if marker == 'o':
+                painter.drawEllipse(QPointF(cx, cy), r, r)
+            elif marker == 's':
+                painter.drawRect(QRectF(cx - r, cy - r, r * 2, r * 2))
+            elif marker == '^':
+                points = [QPointF(cx, cy - r), QPointF(cx - r, cy + r), QPointF(cx + r, cy + r)]
+                painter.drawPolygon(QPolygonF(points))
+            elif marker == 'v':
+                points = [QPointF(cx - r, cy - r), QPointF(cx + r, cy - r), QPointF(cx, cy + r)]
+                painter.drawPolygon(QPolygonF(points))
+            elif marker == 'D':
+                points = [QPointF(cx, cy - r), QPointF(cx + r, cy), QPointF(cx, cy + r), QPointF(cx - r, cy)]
+                painter.drawPolygon(QPolygonF(points))
+            elif marker == 'P':
+                points = []
+                for i in range(5):
+                    angle = (math.pi / 2.0) + (i * 2.0 * math.pi / 5.0)
+                    points.append(QPointF(cx + r * math.cos(angle), cy - r * math.sin(angle)))
+                painter.drawPolygon(QPolygonF(points))
+            elif marker == '*':
+                points = []
+                outer = r
+                inner = r * 0.5
+                for i in range(10):
+                    angle = (math.pi / 2.0) + (i * math.pi / 5.0)
+                    radius = outer if i % 2 == 0 else inner
+                    points.append(QPointF(cx + radius * math.cos(angle), cy - radius * math.sin(angle)))
+                painter.drawPolygon(QPolygonF(points))
+            elif marker in {'+', 'x', 'X'}:
+                if marker == '+':
+                    painter.drawLine(QPointF(cx - r, cy), QPointF(cx + r, cy))
+                    painter.drawLine(QPointF(cx, cy - r), QPointF(cx, cy + r))
+                else:
+                    painter.drawLine(QPointF(cx - r, cy - r), QPointF(cx + r, cy + r))
+                    painter.drawLine(QPointF(cx - r, cy + r), QPointF(cx + r, cy - r))
+            else:
+                painter.drawEllipse(QPointF(cx, cy), r, r)
+
+            painter.end()
+            return QIcon(pixmap)
+        except Exception:
+            fallback = QPixmap(size, size)
+            fallback.fill(QColor(color))
+            return QIcon(fallback)
+
+    def _update_legend_panel(self, title, handles, labels):
+        try:
+            if not hasattr(self, '_legend_list') or self._legend_list is None:
+                return
+            location_key = getattr(app_state, 'legend_location', 'outside_left') or 'outside_left'
+            if not location_key.startswith('outside_'):
+                return
+            self._apply_legend_panel_layout()
+
+            if self._legend_title_label is not None:
+                self._legend_title_label.setText(str(title))
+
+            self._legend_list.clear()
+            palette = getattr(app_state, 'current_palette', {})
+            marker_map = getattr(app_state, 'group_marker_map', {})
+
+            for label in labels:
+                color = palette.get(label, '#94a3b8')
+                marker = marker_map.get(label, getattr(app_state, 'plot_marker_shape', 'o'))
+                icon = self._build_marker_icon(color, marker)
+                item = QListWidgetItem(icon, str(label))
+                self._legend_list.addItem(item)
+        except Exception as exc:
+            import traceback
+            print(f"[ERROR] Legend panel update failed: {exc}", flush=True)
+            traceback.print_exc()
+
     def _refresh_plot(self):
+        self._apply_legend_panel_layout()
         try:
             from visualization.events import on_slider_change
             on_slider_change()
@@ -172,6 +346,9 @@ class Qt5MainWindow(QMainWindow):
             actions['geochemistry'].setText(translate("Geochemistry"))
         if self.statusBar() is not None:
             self.statusBar().showMessage(translate("Ready"))
+
+        if hasattr(self, '_legend_title_label') and self._legend_title_label is not None:
+            self._legend_title_label.setText(translate("Legend"))
 
     def _restore_state(self):
         """恢复窗口状态"""
