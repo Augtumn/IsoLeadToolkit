@@ -26,3 +26,4 @@ ISOCHRON_FIX.md
 locales/reports/untranslated.txt
 *.log
 .cursor/
+.codex/
