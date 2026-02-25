@@ -86,7 +86,7 @@ def get_umap_embedding(params):
         return embedding
 
     except Exception as e:
-        logger.exception(f"UMAP computation failed: {e}")
+        logger.exception("UMAP computation failed: %s", e)
         return None
 
 def get_tsne_embedding(params):
@@ -134,7 +134,7 @@ def get_tsne_embedding(params):
         return embedding
 
     except Exception as e:
-        logger.exception(f"t-SNE computation failed: {e}")
+        logger.exception("t-SNE computation failed: %s", e)
         return None
 
 def get_pca_embedding(params):
@@ -179,7 +179,7 @@ def get_pca_embedding(params):
         return embedding
 
     except Exception as e:
-        logger.exception(f"PCA computation failed: {e}")
+        logger.exception("PCA computation failed: %s", e)
         return None
 
 def get_robust_pca_embedding(params):
@@ -241,7 +241,7 @@ def get_robust_pca_embedding(params):
         return embedding
 
     except Exception as e:
-        logger.exception(f"Robust PCA computation failed: {e}")
+        logger.exception("Robust PCA computation failed: %s", e)
         return None
 
 def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None, robust_pca_params=None):
@@ -255,7 +255,7 @@ def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None
     elif algorithm == 'RobustPCA':
         return get_robust_pca_embedding(robust_pca_params or CONFIG.get('robust_pca_params', {'n_components': 2, 'random_state': 42}))
     else:
-        logger.error(f"Unknown algorithm: {algorithm}")
+        logger.error("Unknown algorithm: %s", algorithm)
         return None
 
 def _build_group_palette(unique_cats):

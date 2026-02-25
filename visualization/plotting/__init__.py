@@ -1,3 +1,40 @@
 """Plotting subpackage facade exports."""
-from .api import *  # noqa: F403
-from .api import __all__  # noqa: F401
+from .api import (
+    get_umap_embedding,
+    get_tsne_embedding,
+    get_pca_embedding,
+    get_robust_pca_embedding,
+    get_embedding,
+    plot_embedding,
+    plot_umap,
+    plot_2d_data,
+    plot_3d_data,
+    refresh_plot_style,
+    show_scree_plot,
+    show_pca_loadings,
+    show_embedding_correlation,
+    show_shepard_diagram,
+    show_correlation_heatmap,
+    calculate_auto_ternary_factors,
+    refresh_paleoisochron_labels,
+)
+
+__all__ = [
+    'get_umap_embedding',
+    'get_tsne_embedding',
+    'get_pca_embedding',
+    'get_robust_pca_embedding',
+    'get_embedding',
+    'plot_embedding',
+    'plot_umap',
+    'plot_2d_data',
+    'plot_3d_data',
+    'refresh_plot_style',
+    'show_scree_plot',
+    'show_pca_loadings',
+    'show_embedding_correlation',
+    'show_shepard_diagram',
+    'show_correlation_heatmap',
+    'calculate_auto_ternary_factors',
+    'refresh_paleoisochron_labels',
+]

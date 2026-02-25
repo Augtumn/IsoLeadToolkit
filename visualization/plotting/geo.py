@@ -1,39 +1,21 @@
 """Geochemistry overlays and isochron helpers."""
+import ast
 import logging
+import operator
+
 import numpy as np
+import pandas as pd
 
 from core import app_state
 from visualization.line_styles import resolve_line_style
-from .data import _get_analysis_data
+from .data import _get_analysis_data, _lazy_import_geochemistry
 from .core import _get_subset_dataframe, _get_pb_columns
 from .isochron import resolve_isochron_errors as _resolve_isochron_errors
 
 logger = logging.getLogger(__name__)
 
-_geochemistry = None
-_calculate_all_parameters = None
-_geochem_checked = False
-
-
-def _lazy_import_geochemistry():
-    global _geochemistry, _calculate_all_parameters, _geochem_checked
-    if _geochem_checked:
-        return _geochemistry, _calculate_all_parameters
-    _geochem_checked = True
-    try:
-        from data import geochemistry as _geochemistry_mod
-        from data.geochemistry import calculate_all_parameters as _calc
-    except ImportError as err:
-        logger.warning(
-            "Geochemistry module not found. V1V2 algorithm will not be available: %s",
-            err,
-        )
-        _geochemistry = None
-        _calculate_all_parameters = None
-    else:
-        _geochemistry = _geochemistry_mod
-        _calculate_all_parameters = _calc
-    return _geochemistry, _calculate_all_parameters
+# Minimum absolute slope to avoid division by zero in label positioning
+_SLOPE_EPSILON = 1e-10
 
 
 def _draw_model_curves(ax, actual_algorithm, params_list):
@@ -87,7 +69,7 @@ def _draw_model_curves(ax, actual_algorithm, params_list):
                 label='_nolegend_'
             )
         except Exception as err:
-            logger.warning(f"Failed to draw model curve: {err}")
+            logger.warning("Failed to draw model curve: %s", err)
 
 def _build_isochron_label(result_dict):
     """根据 isochron_label_options 动态构建等时线标注文本。"""
@@ -175,14 +157,14 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                 continue
 
             if grp == 'All Data':
-                x_grp = df_subset[x_col].values.astype(float)
-                y_grp = df_subset[y_col].values.astype(float)
+                x_grp = pd.to_numeric(df_subset[x_col], errors='coerce').values
+                y_grp = pd.to_numeric(df_subset[y_col], errors='coerce').values
                 sx_grp = sx_all
                 sy_grp = sy_all
                 rxy_grp = rxy_all
             else:
-                x_grp = df_subset.loc[df_subset.index[mask], x_col].values.astype(float)
-                y_grp = df_subset.loc[df_subset.index[mask], y_col].values.astype(float)
+                x_grp = pd.to_numeric(df_subset.loc[df_subset.index[mask], x_col], errors='coerce').values
+                y_grp = pd.to_numeric(df_subset.loc[df_subset.index[mask], y_col], errors='coerce').values
                 sx_grp = sx_all[mask]
                 sy_grp = sy_all[mask]
                 rxy_grp = rxy_all[mask]
@@ -260,7 +242,7 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                         # 保存年龄到结果
                         app_state.isochron_results[grp]['age_ma'] = age_ma
                 except Exception as age_err:
-                    logger.warning(f"Failed to calculate isochron age for slope {slope:.6f}: {age_err}")
+                    logger.warning("Failed to calculate isochron age for slope %.6f: %s", slope, age_err)
 
                 # 动态构建标注
                 label_text = _build_isochron_label(app_state.isochron_results[grp])
@@ -274,10 +256,10 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                     if txt_y < ylim[0] or txt_y > ylim[1]:
                         if txt_y > ylim[1]:
                             txt_y = ylim[1] * 0.95
-                            txt_x = (txt_y - intercept) / slope if abs(slope) > 1e-10 else txt_x
+                            txt_x = (txt_y - intercept) / slope if abs(slope) > _SLOPE_EPSILON else txt_x
                         else:
                             txt_y = ylim[0] + (ylim[1] - ylim[0]) * 0.05
-                            txt_x = (txt_y - intercept) / slope if abs(slope) > 1e-10 else txt_x
+                            txt_x = (txt_y - intercept) / slope if abs(slope) > _SLOPE_EPSILON else txt_x
 
                     ax.text(txt_x, txt_y, f" {label_text}", color=color, fontsize=9, va='center', ha='left', fontweight='bold')
 
@@ -319,7 +301,7 @@ def _draw_isochron_overlays(ax, actual_algorithm):
             
 
     except Exception as err:
-        logger.warning(f"Failed to draw isochron overlays: {err}")
+        logger.warning("Failed to draw isochron overlays: %s", err)
 
 def _draw_selected_isochron(ax):
     """Draw isochron line for box-selected data points."""
@@ -384,7 +366,7 @@ def _draw_selected_isochron(ax):
             )
 
     except Exception as err:
-        logger.warning(f"Failed to draw selected isochron: {err}")
+        logger.warning("Failed to draw selected isochron: %s", err)
 
 def _label_angle_for_slope(ax, x0, y0, slope, dx):
     """Compute label angle (deg) for a line in display coords."""
@@ -420,7 +402,7 @@ def _position_paleo_label(ax, text_artist, slope, intercept, age=None):
     if _in_bounds(x_right, y_right):
         candidates.append((x_right, y_right, 'right'))
 
-    if abs(slope) > 1e-12:
+    if abs(slope) > _SLOPE_EPSILON:
         y_top = ylim[1] - pad_y
         x_top = (y_top - intercept) / slope
         if _in_bounds(x_top, y_top):
@@ -431,7 +413,7 @@ def _position_paleo_label(ax, text_artist, slope, intercept, age=None):
     if _in_bounds(x_left, y_left):
         candidates.append((x_left, y_left, 'left'))
 
-    if abs(slope) > 1e-12:
+    if abs(slope) > _SLOPE_EPSILON:
         y_bottom = ylim[0] + pad_y
         x_bottom = (y_bottom - intercept) / slope
         if _in_bounds(x_bottom, y_bottom):
@@ -538,7 +520,7 @@ def _draw_paleoisochrons(ax, actual_algorithm, ages, params):
                 })
                 _position_paleo_label(ax, text_artist, slope, intercept, age=age)
     except Exception as err:
-        logger.warning(f"Failed to draw paleoisochrons: {err}")
+        logger.warning("Failed to draw paleoisochrons: %s", err)
 
 def refresh_paleoisochron_labels():
     """Refresh paleoisochron label positions after zoom/pan."""
@@ -604,7 +586,7 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
             )
             ax.scatter(x_curve[i], y_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
     except Exception as err:
-        logger.warning(f"Failed to draw model age lines: {err}")
+        logger.warning("Failed to draw model age lines: %s", err)
 
 def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params):
     """Draw model age construction lines for 206/204 vs 208/204."""
@@ -654,7 +636,100 @@ def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params):
             )
             ax.scatter(x_curve[i], z_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
     except Exception as err:
-        logger.warning(f"Failed to draw model age lines (206-208): {err}")
+        logger.warning("Failed to draw model age lines (206-208): %s", err)
+
+def _safe_eval_expression(expression, x_vals):
+    """Safely evaluate a mathematical expression over *x_vals*.
+
+    Uses AST parsing to restrict allowed operations to arithmetic,
+    comparisons, and a whitelist of numpy functions. No arbitrary
+    code execution is possible.
+    """
+    _ALLOWED_NUMPY = {
+        'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 'arctan2',
+        'exp', 'log', 'log2', 'log10', 'sqrt', 'abs', 'power', 'pi', 'e',
+        'maximum', 'minimum', 'clip', 'where', 'sign', 'floor', 'ceil',
+    }
+
+    _BINOP_MAP = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+    }
+
+    _UNARYOP_MAP = {
+        ast.UAdd: operator.pos,
+        ast.USub: operator.neg,
+    }
+
+    def _eval_node(node):
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        if isinstance(node, ast.Constant):
+            if not isinstance(node.value, (int, float)):
+                raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+            return node.value
+        if isinstance(node, ast.Name):
+            if node.id == 'x':
+                return x_vals
+            if node.id == 'pi':
+                return np.pi
+            if node.id == 'e':
+                return np.e
+            raise ValueError(f"Unknown variable: {node.id}")
+        if isinstance(node, ast.BinOp):
+            op_fn = _BINOP_MAP.get(type(node.op))
+            if op_fn is None:
+                raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+            return op_fn(_eval_node(node.left), _eval_node(node.right))
+        if isinstance(node, ast.UnaryOp):
+            op_fn = _UNARYOP_MAP.get(type(node.op))
+            if op_fn is None:
+                raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
+            return op_fn(_eval_node(node.operand))
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, (ast.Name, ast.Attribute)):
+                raise ValueError("Only direct function calls are allowed")
+            if isinstance(node.func, ast.Attribute):
+                if not (isinstance(node.func.value, ast.Name) and node.func.value.id == 'np'):
+                    raise ValueError(f"Only np.* calls are allowed")
+                func_name = node.func.attr
+            else:
+                func_name = node.func.id
+            if func_name not in _ALLOWED_NUMPY:
+                raise ValueError(f"Function not allowed: {func_name}")
+            np_func = getattr(np, func_name)
+            args = [_eval_node(a) for a in node.args]
+            return np_func(*args)
+        if isinstance(node, ast.IfExp):
+            test = _eval_node(node.test)
+            body = _eval_node(node.body)
+            orelse = _eval_node(node.orelse)
+            return np.where(test, body, orelse)
+        if isinstance(node, ast.Compare):
+            left = _eval_node(node.left)
+            for op, comparator in zip(node.ops, node.comparators):
+                right = _eval_node(comparator)
+                if isinstance(op, ast.Lt):
+                    left = left < right
+                elif isinstance(op, ast.LtE):
+                    left = left <= right
+                elif isinstance(op, ast.Gt):
+                    left = left > right
+                elif isinstance(op, ast.GtE):
+                    left = left >= right
+                else:
+                    raise ValueError(f"Unsupported comparison: {type(op).__name__}")
+            return left
+        raise ValueError(f"Unsupported expression node: {type(node).__name__}")
+
+    tree = ast.parse(expression, mode='eval')
+    return _eval_node(tree)
+
 
 def _draw_equation_overlays(ax):
     """Draw configured equation overlays on the current axes."""
@@ -679,9 +754,9 @@ def _draw_equation_overlays(ax):
 
         if expression:
             try:
-                y_vals = eval(expression, {'x': x_vals, 'np': np, 'math': np})
+                y_vals = _safe_eval_expression(expression, x_vals)
             except Exception as err:
-                logger.warning(f"Failed to evaluate equation '{expression}': {err}")
+                logger.warning("Failed to evaluate equation '%s': %s", expression, err)
                 continue
         elif slope is not None:
             y_vals = slope * x_vals + intercept

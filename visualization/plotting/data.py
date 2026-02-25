@@ -1,7 +1,8 @@
-"""Shared data helpers for plotting."""
+"""Shared data helpers and lazy imports for plotting."""
 import logging
 
 import numpy as np
+import pandas as pd
 
 from core import CONFIG, app_state
 
@@ -12,6 +13,10 @@ PCA = None
 MinCovDet = None
 StandardScaler = None
 SimpleImputer = None
+
+_geochemistry = None
+_calculate_all_parameters = None
+_geochem_checked = False
 
 
 def _lazy_import_ml():
@@ -33,6 +38,28 @@ def _lazy_import_ml():
         SimpleImputer = _SimpleImputer
 
 
+def _lazy_import_geochemistry():
+    """Lazy-load the geochemistry module. Returns (module, calculate_all_parameters)."""
+    global _geochemistry, _calculate_all_parameters, _geochem_checked
+    if _geochem_checked:
+        return _geochemistry, _calculate_all_parameters
+    _geochem_checked = True
+    try:
+        from data import geochemistry as _geochemistry_mod
+        from data.geochemistry import calculate_all_parameters as _calc
+    except ImportError as err:
+        logger.warning(
+            "Geochemistry module not found. V1V2 algorithm will not be available: %s",
+            err,
+        )
+        _geochemistry = None
+        _calculate_all_parameters = None
+    else:
+        _geochemistry = _geochemistry_mod
+        _calculate_all_parameters = _calc
+    return _geochemistry, _calculate_all_parameters
+
+
 def _get_analysis_data():
     """Helper to get the data subset for analysis (all or selected)."""
     if app_state.active_subset_indices is not None:
@@ -45,9 +72,9 @@ def _get_analysis_data():
         indices = list(range(len(app_state.df_global)))
 
     try:
-        X = X.astype(float)
-    except ValueError as e:
-        logger.error(f"Data contains non-numeric values: {e}")
+        X = pd.to_numeric(pd.DataFrame(X).stack(), errors='coerce').unstack().values
+    except Exception as e:
+        logger.error("Data contains non-numeric values: %s", e)
         return None, None
 
     if np.isnan(X).any():
@@ -57,7 +84,7 @@ def _get_analysis_data():
             imputer = SimpleImputer(strategy='constant', fill_value=0)
             X = imputer.fit_transform(X)
         except Exception as e:
-            logger.error(f"Imputation failed: {e}. Dropping incomplete rows as fallback.")
+            logger.error("Imputation failed: %s. Dropping incomplete rows as fallback.", e)
             mask = ~np.isnan(X).any(axis=1)
             X = X[mask]
             indices = [indices[i] for i in range(len(indices)) if mask[i]]

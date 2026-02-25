@@ -1,6 +1,6 @@
 # 开发规范 (统一)
 
-本规范为 Isotopes Analyse 全项目统一标准，适用于 `ui/` 与 `visualization/` 等所有模块。原则参考并融合以下知名规范体系：
+本规范为 Isotopes Analyse 全项目统一标准，适用于 `core/`、`ui/`、`visualization/`、`data/`、`utils/` 等所有模块。原则参考并融合以下知名规范体系：
 - PEP 8 (Python 代码风格)
 - PEP 257 (Docstring 规范)
 - Google Python Style Guide
@@ -13,69 +13,802 @@
 
 ---
 
-**1. 命名与结构**
-1. 模块文件使用 `snake_case.py`，类名使用 `PascalCase`，函数/方法使用 `snake_case`，私有方法使用 `_leading_underscore`。
-2. 包对外 API 仅通过 `__init__.py` 导出，默认不暴露私有符号（以 `_` 开头）。
-3. 单文件超过 800 行或职责超过 2 个必须拆分，按“数据准备 / 计算 / 渲染 / UI / 事件”分层。
-4. 模块顶层禁止副作用（如绘图、读写文件、耗时计算），仅允许定义常量、函数、类。
+## 1. 命名与结构
 
-**2. 文件头与导入顺序**
-1. 文件第一行必须是模块 docstring，说明职责与关键依赖。
-2. 导入顺序固定：标准库 → 第三方库 → 本项目模块。
-3. `logger = logging.getLogger(__name__)` 必须在导入之后声明。
-4. 统一入口：`from core import translate, app_state`，禁止混用 `core.state`/`core.localization` 直入。
+### 1.1 命名约定
 
-**3. 格式化与静态检查**
-1. 代码风格以 Black 兼容格式为目标，行宽建议 88-100。
+| 类型 | 风格 | 示例 |
+|------|------|------|
+| 模块文件 | `snake_case.py` | `data_panel.py`, `style_manager.py` |
+| 类名 | `PascalCase` | `AppState`, `StyleManager`, `Qt5MainWindow` |
+| 函数/方法 | `snake_case` | `plot_embedding()`, `load_data()` |
+| 私有方法 | `_leading_underscore` | `_lazy_import_ml()`, `_on_style_change()` |
+| 常量 | `UPPER_SNAKE_CASE` | `LAMBDA_238`, `CONFIG`, `PRESET_MODELS` |
+| 信号 | `snake_case` | `parameter_changed = pyqtSignal(str, object)` |
+| Qt 类前缀 | `Qt5` | `Qt5Application`, `Qt5MainWindow`, `Qt5ControlPanel` |
+
+### 1.2 文件与包结构
+
+1. 包对外 API 仅通过 `__init__.py` 导出，必须声明 `__all__` 列表，默认不暴露私有符号（以 `_` 开头）。
+2. 单文件超过 **800 行**或职责超过 **2 个**必须拆分，按"数据准备 / 计算 / 渲染 / UI / 事件"分层。
+3. 模块顶层禁止副作用（如绘图、读写文件、耗时计算），仅允许定义常量、函数、类。
+
+### 1.3 `__init__.py` 导出规范
+
+按类别分组导出，附注释说明：
+
+```python
+# core/__init__.py
+from .config import CONFIG
+from .state import app_state
+from .session import load_session_params, save_session_params
+from .localization import translate, set_language, available_languages
+
+__all__ = [
+    # 配置
+    'CONFIG',
+    # 状态
+    'app_state',
+    # 会话
+    'load_session_params',
+    'save_session_params',
+    # 国际化
+    'translate',
+    'set_language',
+    'available_languages',
+]
+```
+
+---
+
+## 2. 文件头与导入顺序
+
+### 2.1 文件头
+
+文件第一行必须是模块 docstring，说明职责与关键依赖：
+
+```python
+"""嵌入计算与缓存管理。
+
+提供 UMAP / t-SNE / PCA / RobustPCA 嵌入计算，
+使用 EmbeddingCache 缓存结果以避免重复计算。
+"""
+```
+
+### 2.2 导入顺序
+
+导入顺序固定为三段式，段间空一行：
+
+```python
+# 1. 标准库
+import logging
+import json
+from pathlib import Path
+
+# 2. 第三方库
+import numpy as np
+import pandas as pd
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+
+# 3. 本项目模块
+from core import translate, app_state, CONFIG
+```
+
+### 2.3 logger 声明
+
+`logger` 必须在导入之后、函数/类定义之前声明：
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+```
+
+### 2.4 统一导入入口
+
+统一使用 `from core import ...`，禁止混用子模块直入：
+
+```python
+# ✅ 正确
+from core import translate, app_state, CONFIG
+
+# ❌ 禁止
+from core.state import app_state
+from core.localization import translate
+from core.config import CONFIG
+```
+
+---
+
+## 3. 格式化与静态检查
+
+1. 代码风格以 Black 兼容格式为目标，行宽建议 **88–100**。
 2. 统一使用 Ruff 的规则集合进行静态检查，禁止手工绕过规则。
-3. 任何禁用规则必须在注释中解释原因并限定范围。
+3. 任何禁用规则必须在注释中解释原因并限定范围：
 
-**4. 日志规范**
-1. 禁止手工拼接 `[INFO]` 前缀，使用 `logger.info/warning/error`。
-2. 可恢复异常用 `logger.warning`，不可恢复用 `logger.error`。
-3. 需要堆栈时使用 `logger.exception`。
-4. 日志必须包含可检索上下文（算法名、列名、样本数、关键参数）。
+```python
+x = 1e-50  # noqa: E501 — 物理常数，保持单行可读性
+```
 
-**5. 国际化与用户可见文本**
+4. Python 版本要求 **≥ 3.12**，可使用 `match/case`、`type` 语句等新语法。
+
+---
+
+## 4. 日志规范
+
+### 4.1 级别选择
+
+| 场景 | 级别 | 方法 |
+|------|------|------|
+| 流程节点、状态变更 | INFO | `logger.info(...)` |
+| 可恢复异常、降级 | WARNING | `logger.warning(...)` |
+| 不可恢复错误 | ERROR | `logger.error(...)` |
+| 需要堆栈的异常 | ERROR + 堆栈 | `logger.exception(...)` |
+| 开发调试信息 | DEBUG | `logger.debug(...)` |
+
+### 4.2 消息格式
+
+禁止手工拼接 `[INFO]`/`[WARN]`/`[ERROR]` 前缀，直接使用 logging 级别：
+
+```python
+# ✅ 正确
+logger.info("Session parameters saved to %s", path)
+logger.warning("Dropping missing group columns: %s", missing_groups)
+logger.error("Data loading failed: %s", e)
+
+# ❌ 禁止
+logger.info("[INFO] Session parameters saved to %s", path)
+logger.info("[WARN] Dropping missing group columns: %s", missing_groups)
+```
+
+### 4.3 上下文要求
+
+日志必须包含可检索上下文（算法名、列名、样本数、关键参数）：
+
+```python
+logger.info(
+    "UMAP embedding computed: n_samples=%d, n_neighbors=%d, min_dist=%.2f",
+    n_samples, params['n_neighbors'], params['min_dist']
+)
+```
+
+### 4.4 第三方库静默
+
+在 `utils/logger.py` 中统一设置噪声库的日志级别：
+
+```python
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
+logging.getLogger('numba').setLevel(logging.WARNING)
+```
+
+---
+
+## 5. 国际化与用户可见文本
+
+### 5.1 基本规则
+
 1. 所有用户可见字符串必须使用 `translate("English text")`。
-2. 翻译键统一使用英文原文，不允许中文 key。
+2. 翻译键统一使用**英文原文**，不允许中文 key。
 3. 新增 UI 文本必须同时更新 `locales/zh.json` 与 `locales/en.json`。
 4. visualization 中的提示/错误同样必须翻译。
 
-**6. UI 与线程模型**
+### 5.2 使用示例
+
+```python
+from core import translate
+
+# 简单翻译
+title = QLabel(translate("Visualization Controls"))
+self.setWindowTitle(translate("Control Panel"))
+
+# 带参数的翻译
+message = translate("Loaded {n} samples", n=len(df))
+```
+
+### 5.3 翻译文件格式
+
+`locales/zh.json` / `locales/en.json` 使用扁平 key-value 结构：
+
+```json
+{
+  "Visualization Controls": "可视化控制",
+  "Control Panel": "控制面板",
+  "Loaded {n} samples": "已加载 {n} 个样本"
+}
+```
+
+### 5.4 语言切换监听
+
+使用 `app_state.register_language_listener()` 注册回调：
+
+```python
+app_state.register_language_listener(self._refresh_language)
+```
+
+---
+
+## 6. UI 与线程模型
+
+### 6.1 线程规则
+
 1. 所有 UI 更新必须在主线程执行。
-2. >200ms 的计算必须移入 `QThread` 或后台线程，并提供进度提示。
+2. **>200ms** 的计算必须移入 `QThread` 或后台线程，并提供进度提示。
 3. UI 事件回调只负责采集参数与触发，不执行长计算。
 4. 线程回调必须保证 UI 状态一致性，禁止部分更新。
 
-**7. 可视化层规范**
-1. 绘图入口统一通过 `visualization/plotting/api.py`。
-2. 渲染函数不得直接修改 UI 控件，仅操作 `app_state` 与绘图对象。
-3. 所有 Matplotlib 样式设置集中在 `plotting/style.py`。
-4. 渲染流程必须可重入，异常时要回滚或保持一致状态。
+### 6.2 初始化守卫模式
 
-**8. 数据处理与数值稳定性**
-1. 数值列解析必须使用 `pd.to_numeric(..., errors='coerce')`。
-2. 缺失值必须有明确策略并记录日志。
-3. 列名推断规则集中管理，禁止多处复制。
-4. 对外输入必须验证并给出清晰错误提示。
+所有面板/控件必须使用 `_is_initialized` 守卫，防止初始化期间信号触发回调：
 
-**9. API 边界与依赖管理**
+```python
+class SomePanel(BasePanel):
+    def __init__(self, callback=None, parent=None):
+        super().__init__(callback, parent)
+        self._is_initialized = False
+        # ... 构建 UI ...
+        self._is_initialized = True  # 所有 UI 构建完成后才设为 True
+
+    def _on_style_change(self, *_args):
+        if not getattr(self, "_is_initialized", False):
+            return  # 初始化期间跳过
+        # ... 处理样式变更 ...
+```
+
+### 6.3 滑块防抖
+
+使用 `QTimer` 单次触发实现防抖，避免高频回调：
+
+```python
+def _schedule_slider_callback(self, key):
+    if key in self._slider_timers:
+        self._slider_timers[key].stop()
+
+    timer = QTimer()
+    timer.setSingleShot(True)
+    timer.timeout.connect(lambda: self._apply_slider_change(key))
+    timer.start(self._slider_delay_ms)  # 默认 350ms
+    self._slider_timers[key] = timer
+```
+
+### 6.4 样式变更流程
+
+```
+用户修改控件
+  → _on_style_change()
+  → 更新 app_state 属性
+  → 判断是否需要完整重绘:
+      - 调色板/字体/标题变更 → callback() (完整重绘)
+      - 其他样式变更 → refresh_plot_style() (仅刷新样式)
+```
+
+### 6.5 对话框模式
+
+对话框统一使用以下结构：
+
+```python
+class SomeDialog(QDialog):
+    def __init__(self, ..., parent=None):
+        super().__init__(parent)
+        self.result = None
+        self._setup_ui()
+
+    def _setup_ui(self):
+        # 标题 + 副标题
+        # 内容区 (可滚动)
+        # 底部按钮 (取消/确定)
+
+    def _ok_clicked(self):
+        # 验证输入
+        # self.result = {...}
+        # self.accept()
+```
+
+---
+
+## 7. 可视化层规范
+
+### 7.1 渲染入口
+
+绘图入口统一通过 `visualization/plotting/api.py`，内部实现分散在子模块：
+
+| 子模块 | 职责 |
+|--------|------|
+| `api.py` | 公共入口，汇总导出 |
+| `core.py` | 嵌入计算 + 核心工具 |
+| `render.py` | 散点渲染 + 2D/3D 绘制 |
+| `geo.py` | 地球化学叠加/等时线 |
+| `ternary.py` | 三元图工具 |
+| `style.py` | 绘图样式 + 图例布局 |
+| `kde.py` | KDE 渲染 |
+| `data.py` | 数据准备 (懒加载 ML 依赖) |
+| `isochron.py` | 等时线误差配置 |
+| `analysis_qt.py` | 诊断图 |
+
+### 7.2 渲染函数约束
+
+1. 渲染函数不得直接修改 UI 控件，仅操作 `app_state` 与 matplotlib 绑定对象。
+2. 所有 Matplotlib 样式设置集中在 `plotting/style.py`。
+3. 渲染流程必须可重入，异常时要回滚或保持一致状态。
+
+### 7.3 返回约定
+
+| 函数类型 | 成功 | 失败 |
+|----------|------|------|
+| `plot_embedding` / `plot_2d_data` / `plot_3d_data` | `True` | `False` |
+| `get_*_embedding` | `np.ndarray` | `None` |
+
+### 7.4 渲染管线
+
+```
+用户操作 → on_slider_change() → 判断 render_mode
+  → 计算/获取嵌入 (带 LRU 缓存)
+  → 构建调色板 + 准备数据
+  → 渲染散点 + 索引映射
+  → 可选: KDE / 地球化学叠加
+  → 渲染图例 + 同步 UI 面板
+  → 恢复选择叠加
+  → 应用样式
+  → fig.canvas.draw_idle()
+```
+
+---
+
+## 8. 数据处理与数值稳定性
+
+### 8.1 数值解析
+
+数值列解析必须使用安全转换，禁止裸 `float()` 或 `int()`：
+
+```python
+# ✅ 正确
+df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# ❌ 禁止
+df[col] = df[col].astype(float)  # 非数值字符串会抛异常
+```
+
+### 8.2 缺失值策略
+
+缺失值必须有明确策略并记录日志：
+
+```python
+# 策略 1: SimpleImputer 常量填充
+from sklearn.impute import SimpleImputer
+imputer = SimpleImputer(strategy='constant', fill_value=0)
+X = imputer.fit_transform(X)
+
+# 策略 2: 删除含 NaN 行 (回退方案)
+mask = ~np.isnan(X).any(axis=1)
+X = X[mask]
+logger.warning("Dropped %d rows with NaN values", (~mask).sum())
+```
+
+### 8.3 除零保护
+
+统一使用常量，禁止散落的魔法数字：
+
+```python
+# ✅ 正确 — 在模块顶部定义
+EPSILON = 1e-50
+
+result = numerator / (denominator + EPSILON)
+
+# ❌ 禁止
+result = numerator / (denominator + 1e-50)
+```
+
+### 8.4 列名管理
+
+列名推断规则集中管理，禁止多处复制。对外输入必须验证并给出清晰错误提示。
+
+---
+
+## 9. API 边界与依赖管理
+
+### 9.1 模块边界
+
 1. 模块内 helper 使用 `_` 前缀且不导出。
-2. 跨模块调用优先走公开 API，不直接访问内部状态。
-3. 大型依赖（sklearn/umap/seaborn）必须懒加载。
+2. 跨模块调用优先走公开 API（`__init__.py` 导出），不直接访问内部状态。
 
-**10. 类型注解与文档**
+### 9.2 懒加载模式
+
+大型依赖（sklearn / umap / seaborn / xgboost）必须懒加载。使用模块级全局变量 + 守卫函数：
+
+```python
+# 模块级全局变量
+PCA = None
+TSNE = None
+
+def _lazy_import_ml():
+    """懒加载 sklearn 模块"""
+    global PCA, TSNE
+    if PCA is None:
+        from sklearn.decomposition import PCA as _PCA
+        PCA = _PCA
+    if TSNE is None:
+        from sklearn.manifold import TSNE as _TSNE
+        TSNE = _TSNE
+```
+
+对于可选依赖，使用 try/except + `_checked` 标志避免重复尝试：
+
+```python
+_geochemistry = None
+_geochem_checked = False
+
+def _lazy_import_geochemistry():
+    global _geochemistry, _geochem_checked
+    if _geochem_checked:
+        return _geochemistry
+    _geochem_checked = True
+    try:
+        from data import geochemistry as _mod
+        _geochemistry = _mod
+    except ImportError as err:
+        logger.warning("Geochemistry module not available: %s", err)
+        _geochemistry = None
+    return _geochemistry
+```
+
+### 9.3 循环导入规避
+
+在 `translate()` 等基础函数中，使用函数内延迟导入避免循环：
+
+```python
+def translate(text, language=None, **kwargs):
+    if language is None:
+        try:
+            from .state import app_state  # 延迟导入避免循环
+        except Exception:
+            app_state = None
+        # ...
+```
+
+---
+
+## 10. 类型注解与文档
+
+### 10.1 类型注解
+
 1. 新增或重构的核心函数必须补充类型注解。
-2. 对外 API 必须有 docstring，描述输入/输出/异常。
-3. 重要 UI 行为需同步更新 docs。
+2. 使用 `from __future__ import annotations` 启用延迟求值。
+3. 优先级：`core/` > `data/` > `visualization/` > `ui/`。
 
-**11. 测试与回归**
+```python
+from __future__ import annotations
+from typing import Any, Hashable
+
+def build_embedding_cache_key(
+    app_state,
+    algorithm: str,
+    params: Any,
+    subset_key: Hashable,
+) -> tuple[Any, ...]:
+    ...
+```
+
+### 10.2 Docstring 规范
+
+使用 Google 风格 docstring：
+
+```python
+def calculate_single_stage_age(
+    Pb206_204_S: np.ndarray,
+    Pb207_204_S: np.ndarray,
+    params: dict | None = None,
+    initial_age: float | None = None,
+) -> np.ndarray:
+    """Holmes-Houtermans 单阶段模式年龄计算。
+
+    Args:
+        Pb206_204_S: 206Pb/204Pb 测量值数组。
+        Pb207_204_S: 207Pb/204Pb 测量值数组。
+        params: 模型参数字典，缺省使用当前引擎参数。
+        initial_age: 初始年龄估计 (Ma)。
+
+    Returns:
+        模式年龄数组 (Ma)。
+
+    Raises:
+        ValueError: 输入数组长度不一致时抛出。
+    """
+```
+
+对外 API 必须有完整 docstring（Args / Returns / Raises）。内部 helper 可使用单行 docstring。
+
+### 10.3 文档同步
+
+重要 UI 行为或架构变更需同步更新 `docs/` 下对应文档。
+
+---
+
+## 11. 错误处理与防御编程
+
+### 11.1 异常处理层级
+
+| 层级 | 策略 |
+|------|------|
+| 数据加载 (`data/`) | try/except → 日志 + 返回 `False`/`None` |
+| 渲染层 (`visualization/`) | try/except → 日志 + 保持画布一致状态 |
+| UI 层 (`ui/`) | try/except → 日志 + 用户提示 |
+| 事件回调 | try/except → 日志 + 静默失败 |
+
+### 11.2 安全属性访问
+
+使用 `getattr()` 带默认值，避免 `AttributeError`：
+
+```python
+# ✅ 正确
+panel = getattr(app_state, 'control_panel_ref', None)
+if panel is None:
+    return
+
+# ❌ 禁止
+panel = app_state.control_panel_ref  # 可能抛 AttributeError
+```
+
+### 11.3 安全回调执行
+
+调用外部回调前检查可调用性：
+
+```python
+update_fn = getattr(panel, 'update_selection_controls', None)
+if not callable(update_fn):
+    return
+try:
+    update_fn()
+except Exception as err:
+    logger.warning("Unable to update selection controls: %s", err)
+```
+
+### 11.4 资源清理
+
+确保异常路径上的资源释放：
+
+```python
+progress = None
+try:
+    progress = ProgressDialog(parent)
+    # ... 主逻辑 ...
+except Exception as e:
+    logger.error("Operation failed: %s", e)
+finally:
+    if progress:
+        try:
+            progress.close()
+        except Exception:
+            pass
+```
+
+---
+
+## 12. 状态管理
+
+### 12.1 AppState 单例
+
+全局状态通过 `app_state` 单例访问，直接属性读写：
+
+```python
+from core import app_state
+
+# 读取
+current_algo = app_state.algorithm
+df = app_state.df_global
+
+# 写入
+app_state.algorithm = 'tSNE'
+app_state.umap_params['n_neighbors'] = 15
+```
+
+### 12.2 CONFIG 访问
+
+使用 `.get()` 带默认值安全访问配置：
+
+```python
+from core import CONFIG
+
+cache_size = CONFIG.get('embedding_cache_size', 8)
+options = CONFIG['algorithm_options']  # 仅确定存在的键可直接访问
+```
+
+存储 CONFIG 值到 app_state 时使用 `.copy()` 避免意外修改：
+
+```python
+self.umap_params = CONFIG['umap_params'].copy()
+```
+
+### 12.3 嵌入缓存
+
+缓存键包含算法、参数、数据签名与子集标识：
+
+```python
+from core.cache import build_embedding_cache_key
+
+key = build_embedding_cache_key(app_state, algorithm, params, subset_key)
+cached = app_state.embedding_cache.get(key)
+if cached is not None:
+    return cached
+```
+
+### 12.4 会话持久化
+
+会话数据存储在 `~/.isotopes_analysis/params.json`，包含版本号用于迁移：
+
+```python
+session_data = {
+    'session_version': CONFIG.get('session_version', 1),
+    'algorithm': algorithm,
+    'umap_params': umap_params,
+    # ...
+}
+```
+
+新增会话字段必须在 `core/session.py` 的 `_migrate_session_data()` 中处理向后兼容。
+
+### 12.5 观察者模式
+
+语言切换等全局事件使用监听器模式：
+
+```python
+# 注册
+app_state.register_language_listener(self._refresh_language)
+
+# 通知 (内部安全迭代，异常不中断)
+app_state.notify_language_change()
+```
+
+---
+
+## 13. 测试与回归
+
+### 13.1 测试策略
+
+| 类型 | 适用范围 | 工具 |
+|------|----------|------|
+| 单元测试 | 算法逻辑、数据处理、缓存 | pytest |
+| 集成测试 | UI 交互、渲染管线 | pytest + PyQt5 |
+| 验收清单 | 复杂 UI 流程 | 手动检查 |
+
+### 13.2 测试目录结构
+
+```
+tests/
+├── test_geochemistry.py    # 年龄计算、Delta、V1V2
+├── test_cache.py           # 嵌入缓存
+├── test_session.py         # 会话持久化
+├── test_localization.py    # 翻译系统
+├── test_endmember.py       # 端元识别
+├── test_mixing.py          # 混合模型
+└── test_provenance_ml.py   # ML 管线
+```
+
+### 13.3 测试规则
+
 1. 修复 bug 必须提供回归测试或最小复现步骤。
 2. 算法逻辑优先单元测试，UI 逻辑优先集成测试或验收清单。
 3. 关键重构需提供性能与行为一致性说明。
 
-**12. 配置与演进**
-1. 可配置项集中于 `core/config.py` 或用户配置文件。
-2. 新配置必须提供默认值与文档说明。
-3. 兼容性 shim 必须显式标注，并在 2 个版本内移除。
+---
+
+## 14. 配置与演进
+
+### 14.1 配置集中管理
+
+可配置项集中于 `core/config.py`：
+
+```python
+CONFIG = {
+    'algorithm_options': ['UMAP', 'tSNE', 'PCA', 'RobustPCA', 'V1V2'],
+    'umap_params': {'n_neighbors': 10, 'min_dist': 0.1, ...},
+    'embedding_cache_size': 8,
+    'session_version': 2,
+    # ...
+}
+```
+
+### 14.2 新增配置要求
+
+1. 必须提供默认值。
+2. 必须在 `docs/` 中说明用途与取值范围。
+3. 用户可覆盖的配置通过 `~/.isotopes_analysis/config.json` 管理。
+
+### 14.3 兼容性管理
+
+1. 兼容性 shim 必须显式标注，并在 **2 个版本内**移除。
+2. 废弃函数使用注释标记：
+
+```python
+# DEPRECATED: 使用 calculate_two_stage_age() 替代，将在 v0.4 移除
+def calculate_model_age(Pb206_204_S, Pb207_204_S, two_stage=False):
+    ...
+```
+
+---
+
+## 15. Git 与版本控制
+
+### 15.1 分支模型
+
+| 分支 | 用途 |
+|------|------|
+| `master` | 稳定发布分支 |
+| `dev` | 日常开发分支 |
+| `feature/*` | 功能开发分支 |
+| `fix/*` | Bug 修复分支 |
+
+### 15.2 提交信息格式
+
+使用语义化前缀：
+
+```
+feat: 添加三元图拉伸模式支持
+fix: 修复等时线误差列类型转换异常
+refactor: 拆分 plotting 子包并规范命名
+docs: 更新 visualization 模块文档
+style: 统一日志前缀格式
+perf: 优化嵌入缓存键计算
+test: 添加地球化学年龄计算单元测试
+chore: 更新依赖版本
+```
+
+### 15.3 敏感文件
+
+以下文件禁止提交：
+- `.env`、`credentials.json` 等凭证文件
+- `*.log` 日志文件
+- `dist/`、`build/` 构建产物
+- `__pycache__/`、`*.pyc` 缓存文件
+
+---
+
+## 16. 变更流程
+
+### 16.1 变更前准备
+
+修改任何模块代码之前，必须先完成以下步骤：
+
+1. 阅读 `docs/` 下与目标模块对应的文档（`architecture.md`、`visualization.md`、`ui.md`、`data.md`、`utils.md`），理解现有架构与约定。
+2. 阅读 `docs/dev_conventions.md`（本文件），确认变更符合开发规范。
+3. 阅读 `docs/development_plan.md`，了解当前改进计划与已知问题，避免重复工作或与规划冲突。
+
+### 16.2 变更计划记录
+
+非 trivial 的变更（新功能、重构、Bug 修复）在动手编码前，必须将开发计划写入 `docs/development_plan.md` 对应模块章节，包括：
+
+- 问题描述与现状
+- 预期方案或目标结构
+- 涉及的文件与影响范围
+
+完成后将状态标记为 ✅ 已完成。
+
+### 16.3 文档同步
+
+变更完成后，同步更新 `docs/` 下受影响的文档，确保文档与代码一致。
+
+---
+
+## 17. 构建与发布
+
+### 17.1 开发环境
+
+```bash
+# 安装依赖 (推荐 uv)
+uv pip install -e .
+
+# 或使用 pip
+pip install -e .
+```
+
+### 17.2 构建可执行文件
+
+```bash
+pyinstaller build.spec
+# 输出: dist/IsotopesAnalyse/
+```
+
+### 17.3 构建注意事项
+
+1. `build.spec` 中必须声明所有隐式依赖 (`hiddenimports`)。
+2. `locales/` 目录必须包含在数据文件中。
+3. 新增大型依赖需同步更新 `build.spec`。

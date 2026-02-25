@@ -18,7 +18,7 @@ from .style import (
     _legend_columns_for_layout,
     _style_legend,
 )
-from .data import _get_analysis_data
+from .data import _get_analysis_data, _lazy_import_geochemistry
 from .core import (
     _ensure_axes,
     _build_group_palette,
@@ -47,31 +47,6 @@ try:
     from .events import refresh_selection_overlay
 except ImportError:
     refresh_selection_overlay = None
-
-_geochemistry = None
-_calculate_all_parameters = None
-_geochem_checked = False
-
-
-def _lazy_import_geochemistry():
-    global _geochemistry, _calculate_all_parameters, _geochem_checked
-    if _geochem_checked:
-        return _geochemistry, _calculate_all_parameters
-    _geochem_checked = True
-    try:
-        from data import geochemistry as _geochemistry_mod
-        from data.geochemistry import calculate_all_parameters as _calc
-    except ImportError as err:
-        logger.warning(
-            "Geochemistry module not found. V1V2 algorithm will not be available: %s",
-            err,
-        )
-        _geochemistry = None
-        _calculate_all_parameters = None
-    else:
-        _geochemistry = _geochemistry_mod
-        _calculate_all_parameters = _calc
-    return _geochemistry, _calculate_all_parameters
 
 
 def _notify_legend_panel(title, handles, labels):
@@ -171,9 +146,9 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         if robust_pca_params is None:
             robust_pca_params = CONFIG.get('robust_pca_params', {'n_components': 2, 'random_state': 42})
 
-        print(
-            f"Using params - UMAP: {umap_params}, tSNE: {tsne_params}, PCA: {pca_params}, RobustPCA: {robust_pca_params}",
-            flush=True,
+        logger.debug(
+            "Using params - UMAP: %s, tSNE: %s, PCA: %s, RobustPCA: %s",
+            umap_params, tsne_params, pca_params, robust_pca_params,
         )
 
         # Get embedding based on algorithm
@@ -209,9 +184,10 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
             col_208 = "208Pb/204Pb" if "208Pb/204Pb" in cols else None
 
             if not (col_206 and col_207 and col_208):
-                print(
-                    f"Could not identify isotope columns in {cols}. Please ensure columns '206Pb/204Pb', '207Pb/204Pb', '208Pb/204Pb' are selected.",
-                    flush=True,
+                logger.error(
+                    "Could not identify isotope columns in %s. "
+                    "Please ensure columns '206Pb/204Pb', '207Pb/204Pb', '208Pb/204Pb' are selected.",
+                    cols,
                 )
                 return False
 

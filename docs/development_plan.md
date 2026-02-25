@@ -235,7 +235,59 @@ tests/
 5. **API 暴露过多** — `plotting/api.py` 导出私有 helper，需收敛 `__all__`。✅ 已完成
 6. **顶层副作用** — `plotting/geo.py` 与 `plotting/render.py` 顶层导入并记录日志，需改为惰性加载。✅ 已完成
 
-#### 高优先级
+#### 规范审查发现
+
+**高优先级:**
+
+1. **`eval()` 安全风险** — 使用 AST 安全解析器替代 `eval()`，仅允许算术运算和白名单 numpy 函数。✅ 已完成
+   - 变更: `visualization/plotting/geo.py` — 新增 `_safe_eval_expression()` 函数
+
+2. **`_lazy_import_geochemistry()` 重复** — 提取到 `plotting/data.py` 统一管理，`render.py` 和 `geo.py` 改为从 `data.py` 导入。✅ 已完成
+   - 变更: `visualization/plotting/data.py`, `render.py`, `geo.py`
+
+3. **`api.py` 导入私有符号** — facade 层仅导入公共符号，私有函数由内部模块直接互相引用。✅ 已完成
+   - 变更: `visualization/plotting/api.py`
+
+4. **`print()` 代替 `logger`** — 替换为 `logger.debug()` / `logger.error()`。✅ 已完成
+   - 变更: `visualization/plotting/render.py`
+
+**中优先级:**
+
+5. **裸 `except:` (无异常类型)** — 全部改为 `except Exception:`。✅ 已完成
+   - 变更: `visualization/events.py` (4 处)
+
+6. **`astype(float)` 代替 `pd.to_numeric`** — 改为 `pd.to_numeric(..., errors='coerce')`。✅ 已完成
+   - 变更: `visualization/plotting/data.py`, `plotting/geo.py`, `events.py`
+
+7. **日志 f-string 替代 `%s` 占位符** — `events.py` 全文件已修复。`core.py` 和 `geo.py` 待修复。
+   - 变更: `visualization/events.py` ✅ 已完成
+   - 待修复: `visualization/plotting/core.py`, `visualization/plotting/geo.py`
+
+8. **日志前缀残留** — `[OK]` 前缀已移除。✅ 已完成
+   - 变更: `visualization/events.py`
+
+9. **`on_slider_change()` 过长 (227 行)** — 应拆分为 `_validate_render_columns()`、`_dispatch_render()`、`_handle_render_fallback()` 等子函数。
+   - 位置: `visualization/events.py:810-1037`
+
+10. **`style_manager.py` 缺少 logger 且导入顺序不规范** — 添加 logger，导入顺序按标准库 → 第三方 → 本项目分段。✅ 已完成
+    - 变更: `visualization/style_manager.py`
+
+**低优先级:**
+
+11. **魔法数字散落** — 图例 bbox 偏移、除零保护、选择阈值、悬停距离已提取为命名常量。KDE 采样上限 (`5000`) 待处理。
+    - 变更: `plotting/style.py`, `plotting/geo.py`, `events.py` ✅ 已完成
+    - 待修复: `plotting/kde.py:43` (`max_points=5000`)
+
+12. **`ternary.py` 函数内重复导入** — 移除函数内重复的 `import numpy` 和 `from scipy.stats import gmean`。✅ 已完成
+    - 变更: `visualization/plotting/ternary.py`
+
+13. **`plotting/__init__.py` 星号导入** — 改为显式导入并声明 `__all__`。✅ 已完成
+    - 变更: `visualization/plotting/__init__.py`
+
+14. **类型注解缺失** — 所有公共函数缺少类型注解 (`get_*_embedding`, `plot_embedding`, `on_hover`, `draw_confidence_ellipse`, `resolve_line_style` 等)。
+    - 位置: 全模块
+
+#### 既有问题
 
 1. **plot_embedding() 过长 (~757 行)** — 应拆分为子函数:
    - `_render_scatter_groups()` — 散点渲染
@@ -244,20 +296,11 @@ tests/
    - `_render_legend()` — 图例
    - `_render_title_labels()` — 标题和标签
 
-#### 中优先级
-
-2. **等时线误差列类型不稳** — `astype(float)` 会在非数值字符串上抛异常，应使用 `pd.to_numeric(..., errors='coerce')` 并过滤 NaN。
-3. **无进度指示** — UMAP/t-SNE 在大数据集 (10k+) 上可能耗时数分钟，UI 冻结。应添加进度条或后台线程。
-4. **图例 bbox 偏移硬编码** — `1.08`, `1.32`, `-0.28` 等魔法数字应移到 CONFIG 或 app_state。
-5. **诊断图无导出功能** — scree plot, loadings 等无法保存为图片。应添加 "另存为" 按钮。
-6. **scatter_collections 全量迭代** — `refresh_plot_style()` 遍历所有散点集合，即使只有一个变更。
-
-#### 低优先级
-
-7. **类型注解缺失** — 大部分函数无类型注解。
-8. **单元测试缺失** — 复杂的渲染逻辑无测试覆盖，重构风险高。
-9. **KDE 采样硬编码** — `max_points=5000` 应可配置。
-10. **等时线工具仅支持 206-207** — 应扩展 `calculate_selected_isochron()` 支持 206-208 模式。
+2. **无进度指示** — UMAP/t-SNE 在大数据集 (10k+) 上可能耗时数分钟，UI 冻结。应添加进度条或后台线程。
+3. **诊断图无导出功能** — scree plot, loadings 等无法保存为图片。应添加 "另存为" 按钮。
+4. **scatter_collections 全量迭代** — `refresh_plot_style()` 遍历所有散点集合，即使只有一个变更。
+5. **单元测试缺失** — 复杂的渲染逻辑无测试覆盖，重构风险高。
+6. **等时线工具仅支持 206-207** — 应扩展 `calculate_selected_isochron()` 支持 206-208 模式。
 
 ---
 

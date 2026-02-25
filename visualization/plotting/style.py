@@ -9,6 +9,14 @@ from ..style_manager import apply_custom_style
 
 logger = logging.getLogger(__name__)
 
+# Legend bbox offsets for outside layouts
+_LEGEND_BBOX_RIGHT = 1.08
+_LEGEND_BBOX_RIGHT_KDE = 1.32
+_LEGEND_BBOX_LEFT = -0.28
+_LEGEND_BBOX_LEFT_KDE = -0.32
+_LEGEND_BBOX_TOP_Y = 1.10
+_LEGEND_BBOX_BOTTOM_Y = -0.30
+
 
 def _apply_current_style():
     """Apply the current plot style and color scheme from app_state."""
@@ -173,15 +181,15 @@ def _legend_layout_config(ax=None, show_marginal_kde=False):
     mode = None
     borderaxespad = None
     if loc == 'outside_right':
-        bbox_x = 1.32 if show_marginal_kde else 1.08
+        bbox_x = _LEGEND_BBOX_RIGHT_KDE if show_marginal_kde else _LEGEND_BBOX_RIGHT
         return 'upper left', (bbox_x, 0.0, 0.2, 1.0), 'expand', 0.0
     if loc == 'outside_left':
-        bbox_x = -0.32 if show_marginal_kde else -0.28
+        bbox_x = _LEGEND_BBOX_LEFT_KDE if show_marginal_kde else _LEGEND_BBOX_LEFT
         return 'upper right', (bbox_x, 0.0, 0.2, 1.0), 'expand', 0.0
     if loc == 'outside_top':
-        return 'lower left', (0.0, 1.10, 1.0, 0.2), 'expand', 0.0
+        return 'lower left', (0.0, _LEGEND_BBOX_TOP_Y, 1.0, 0.2), 'expand', 0.0
     if loc == 'outside_bottom':
-        return 'upper left', (0.0, -0.30, 1.0, 0.2), 'expand', 0.0
+        return 'upper left', (0.0, _LEGEND_BBOX_BOTTOM_Y, 1.0, 0.2), 'expand', 0.0
     return loc, None, mode, borderaxespad
 
 
@@ -310,7 +318,7 @@ def refresh_plot_style():
 
     try:
         if getattr(app_state, 'selected_indices', None):
-            from .events import refresh_selection_overlay
+            from ..events import refresh_selection_overlay
             refresh_selection_overlay()
     except Exception:
         pass
