@@ -66,6 +66,7 @@ class AnalysisPanel(BasePanel):
         layout.setContentsMargins(10, 10, 10, 10)
 
         kde_group = QGroupBox(translate("Kernel Density"))
+        kde_group.setProperty('translate_key', 'Kernel Density')
         kde_layout = QVBoxLayout()
 
         kde_row = QHBoxLayout()
@@ -102,6 +103,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(kde_group)
 
         equation_group = QGroupBox(translate("Equation Overlays"))
+        equation_group.setProperty('translate_key', 'Equation Overlays')
         equation_layout = QVBoxLayout()
 
         equation_hint = QLabel(translate("Manage equations and visibility."))
@@ -116,6 +118,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(equation_group)
 
         selection_group = QGroupBox(translate("Selection Tools"))
+        selection_group.setProperty('translate_key', 'Selection Tools')
         selection_layout = QVBoxLayout()
 
         self.selection_button = QPushButton(translate("Enable Selection"))
@@ -137,6 +140,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(selection_group)
 
         analysis_group = QGroupBox(translate("Data Analysis"))
+        analysis_group.setProperty('translate_key', 'Data Analysis')
         analysis_layout = QVBoxLayout()
 
         corr_btn = QPushButton(translate("Correlation Heatmap"))
@@ -158,6 +162,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(analysis_group)
 
         subset_group = QGroupBox(translate("Subset Analysis"))
+        subset_group.setProperty('translate_key', 'Subset Analysis')
         subset_layout = QVBoxLayout()
 
         analyze_btn = QPushButton(translate("Analyze Subset"))
@@ -174,6 +179,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(subset_group)
 
         mixing_group = QGroupBox(translate("Mixing Groups"))
+        mixing_group.setProperty('translate_key', 'Mixing Groups')
         mixing_layout = QVBoxLayout()
 
         group_name_layout = QHBoxLayout()
@@ -220,6 +226,7 @@ class AnalysisPanel(BasePanel):
 
         # ---- 端元识别 ----
         endmember_group = QGroupBox(translate("Endmember Identification"))
+        endmember_group.setProperty('translate_key', 'Endmember Identification')
         endmember_layout = QVBoxLayout()
 
         endmember_hint = QLabel(translate("Identify lead isotope endmembers using PCA."))
@@ -236,6 +243,7 @@ class AnalysisPanel(BasePanel):
 
         # ---- ML Provenance ----
         provenance_group = QGroupBox(translate("Provenance ML"))
+        provenance_group.setProperty('translate_key', 'Provenance ML')
         provenance_layout = QVBoxLayout()
 
         provenance_hint = QLabel(translate("Run ML provenance classification using DBSCAN, SMOTE and XGBoost."))
@@ -251,6 +259,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(provenance_group)
 
         confidence_group = QGroupBox(translate("Confidence Ellipse"))
+        confidence_group.setProperty('translate_key', 'Confidence Ellipse')
         confidence_layout = QVBoxLayout()
 
         self.ellipse_selection_button = QPushButton(translate("Draw Ellipse"))
@@ -716,6 +725,7 @@ class AnalysisPanel(BasePanel):
         working_overlays = list(getattr(app_state, 'equation_overlays', []) or [])
 
         list_group = QGroupBox(translate("Equation Library"))
+        list_group.setProperty('translate_key', 'Equation Library')
         list_layout = QVBoxLayout()
 
         list_container = QWidget()
@@ -808,6 +818,7 @@ class AnalysisPanel(BasePanel):
         layout.addWidget(list_group)
 
         custom_group = QGroupBox(translate("Custom Equation"))
+        custom_group.setProperty('translate_key', 'Custom Equation')
         custom_layout = QVBoxLayout()
 
         name_row = QHBoxLayout()

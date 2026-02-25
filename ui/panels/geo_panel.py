@@ -29,9 +29,11 @@ class GeoPanel(BasePanel):
 
         # 模型选择
         model_select_group = QGroupBox(translate("Geochemistry Model"))
+        model_select_group.setProperty('translate_key', 'Geochemistry Model')
         model_select_layout = QVBoxLayout()
 
         model_label = QLabel(translate("Select Model:"))
+        model_label.setProperty('translate_key', 'Select Model:')
         model_select_layout.addWidget(model_label)
 
         self.geo_model_combo = QComboBox()
@@ -54,6 +56,7 @@ class GeoPanel(BasePanel):
 
         # 时间参数
         time_group = QGroupBox(translate("Time Parameters (Ma)"))
+        time_group.setProperty('translate_key', 'Time Parameters (Ma)')
         time_layout = QGridLayout()
 
         self._add_geo_param(time_layout, "T1", translate("T1 (1st Stage):"), 0, 0, 0.0, 10000.0, 4430.0)
@@ -65,6 +68,7 @@ class GeoPanel(BasePanel):
 
         # 衰变常数
         decay_group = QGroupBox(translate("Decay Constants (a^-1)"))
+        decay_group.setProperty('translate_key', 'Decay Constants (a^-1)')
         decay_layout = QGridLayout()
 
         self._add_geo_param(decay_layout, "lambda_238", translate("λ (238U):"), 0, 0, 0.0, 1.0, 1.55125e-10, scientific=True)
@@ -76,6 +80,7 @@ class GeoPanel(BasePanel):
 
         # 初始铅组成
         init_group = QGroupBox(translate("Initial Lead Compositions"))
+        init_group.setProperty('translate_key', 'Initial Lead Compositions')
         init_layout = QVBoxLayout()
 
         prim_label = QLabel(translate("Primordial (T1/T2):"))
@@ -103,6 +108,7 @@ class GeoPanel(BasePanel):
 
         # 地幔参数
         mantle_group = QGroupBox(translate("Mantle & Production"))
+        mantle_group.setProperty('translate_key', 'Mantle & Production')
         mantle_layout = QGridLayout()
 
         self._add_geo_param(mantle_layout, "mu_M", translate("μ (Mantle):"), 0, 0, 0.0, 100.0, 9.74)
@@ -117,11 +123,13 @@ class GeoPanel(BasePanel):
         button_layout.addStretch()
 
         apply_btn = QPushButton(translate("Apply Changes"))
+        apply_btn.setProperty('translate_key', 'Apply Changes')
         apply_btn.setFixedWidth(180)
         apply_btn.clicked.connect(self._on_apply_geo_params)
         button_layout.addWidget(apply_btn)
 
         reset_btn = QPushButton(translate("Reset Defaults"))
+        reset_btn.setProperty('translate_key', 'Reset Defaults')
         reset_btn.setFixedWidth(180)
         reset_btn.clicked.connect(self._on_reset_geo_params)
         button_layout.addWidget(reset_btn)

@@ -94,6 +94,7 @@ class DisplayPanel(BasePanel):
 
         # Interface Theme
         theme_group = QGroupBox(translate("Interface Theme"))
+        theme_group.setProperty('translate_key', 'Interface Theme')
         theme_layout = QVBoxLayout()
         theme_row = QHBoxLayout()
         theme_row.addWidget(QLabel(translate("UI Theme:")))
@@ -115,6 +116,7 @@ class DisplayPanel(BasePanel):
 
         # Saved Plot Settings
         saved_group = QGroupBox(translate("Saved Plot Settings"))
+        saved_group.setProperty('translate_key', 'Saved Plot Settings')
         saved_layout = QVBoxLayout()
         name_row = QHBoxLayout()
         name_row.addWidget(QLabel(translate("Theme Name:")))
@@ -140,6 +142,7 @@ class DisplayPanel(BasePanel):
 
         # General Settings
         general_group = QGroupBox(translate("General Settings"))
+        general_group.setProperty('translate_key', 'General Settings')
         general_layout = QVBoxLayout()
 
         palette_row = QHBoxLayout()
@@ -160,6 +163,7 @@ class DisplayPanel(BasePanel):
 
         # Font Settings
         font_group = QGroupBox(translate("Font Settings"))
+        font_group.setProperty('translate_key', 'Font Settings')
         font_layout = QVBoxLayout()
         try:
             from visualization.style_manager import style_manager_instance
@@ -215,6 +219,7 @@ class DisplayPanel(BasePanel):
 
         # Marker Settings
         marker_group = QGroupBox(translate("Marker Settings"))
+        marker_group.setProperty('translate_key', 'Marker Settings')
         marker_layout = QVBoxLayout()
         marker_size_row = QHBoxLayout()
         marker_size_row.addWidget(QLabel(translate("Size")))
@@ -239,6 +244,7 @@ class DisplayPanel(BasePanel):
 
         # Axes & Lines
         axes_group = QGroupBox(translate("Axes & Lines"))
+        axes_group.setProperty('translate_key', 'Axes & Lines')
         axes_layout = QVBoxLayout()
         auto_layout_btn = QPushButton(translate("Auto Layout"))
         auto_layout_btn.clicked.connect(self._apply_auto_layout)
@@ -251,6 +257,7 @@ class DisplayPanel(BasePanel):
 
         def make_group(title_key):
             group = QGroupBox(translate(title_key))
+            group.setProperty('translate_key', title_key)
             grid = QGridLayout()
             grid.setColumnStretch(0, 1)
             grid.setColumnStretch(1, 2)

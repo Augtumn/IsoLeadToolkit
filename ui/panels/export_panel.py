@@ -29,24 +29,29 @@ class ExportPanel(BasePanel):
         layout.setContentsMargins(10, 10, 10, 10)
 
         export_group = QGroupBox(translate("Export"))
+        export_group.setProperty('translate_key', 'Export')
         export_layout = QVBoxLayout()
 
         self.export_csv_button = QPushButton(translate("Export CSV"))
+        self.export_csv_button.setProperty('translate_key', 'Export CSV')
         self.export_csv_button.setFixedWidth(200)
         self.export_csv_button.clicked.connect(self._on_export_csv)
         export_layout.addWidget(self.export_csv_button, 0, Qt.AlignHCenter)
 
         self.export_excel_button = QPushButton(translate("Export Excel"))
+        self.export_excel_button.setProperty('translate_key', 'Export Excel')
         self.export_excel_button.setFixedWidth(200)
         self.export_excel_button.clicked.connect(self._on_export_excel)
         export_layout.addWidget(self.export_excel_button, 0, Qt.AlignHCenter)
 
         self.export_append_button = QPushButton(translate("Append to Excel"))
+        self.export_append_button.setProperty('translate_key', 'Append to Excel')
         self.export_append_button.setFixedWidth(200)
         self.export_append_button.clicked.connect(self._on_export_append_excel)
         export_layout.addWidget(self.export_append_button, 0, Qt.AlignHCenter)
 
         self.export_selected_button = QPushButton(translate("Export Selected"))
+        self.export_selected_button.setProperty('translate_key', 'Export Selected')
         self.export_selected_button.setFixedWidth(200)
         self.export_selected_button.clicked.connect(self._on_export_clicked)
         export_layout.addWidget(self.export_selected_button, 0, Qt.AlignHCenter)

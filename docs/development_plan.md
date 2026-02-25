@@ -312,9 +312,9 @@ tests/
 
 #### 高优先级
 
-1. **语言切换重建整个 UI** — `BasePanel` 新增 `_update_translations()` 方法，通过 `translate_key` 属性就地刷新控件文本；`create_section_dialog()` 语言切换时优先使用轻量级更新，失败时回退到完整重建。LegendPanel 已标记 `translate_key`，其余面板可逐步迁移。⚡ 部分完成
+1. **语言切换重建整个 UI** — `BasePanel` 新增 `_update_translations()` 方法，通过 `translate_key` 属性就地刷新控件文本；`create_section_dialog()` 语言切换时优先使用轻量级更新，失败时回退到完整重建。全部 6 个面板已标记 `translate_key`。✅ 已完成
    - 变更: `panels/base_panel.py` — 新增 `_update_translations()`
-   - 变更: `panels/legend_panel.py` — 静态控件添加 `translate_key` 属性
+   - 变更: `panels/data_panel.py`, `display_panel.py`, `analysis_panel.py`, `export_panel.py`, `legend_panel.py`, `geo_panel.py` — 所有静态 QGroupBox/QPushButton/QCheckBox 添加 `translate_key` 属性
    - 变更: `control_panel.py` — `_try_lightweight_update()` 优先于 `_rebuild_section()`
 2. **标记图标渲染重复** — `main_window.py` 和 `legend_panel.py` 各有一份 `_build_marker_icon()`，已提取到 `utils/icons.py`。✅ 已完成
    - 变更: 新增 `utils/icons.py`，`main_window.py` 和 `legend_panel.py` 改为调用 `build_marker_icon()`

@@ -114,6 +114,7 @@ class DataPanel(BasePanel):
         layout.setContentsMargins(10, 10, 10, 10)
 
         group_group = QGroupBox(translate("Coloring / Grouping"))
+        group_group.setProperty('translate_key', 'Coloring / Grouping')
         group_layout = QVBoxLayout()
 
         self.group_radio_group = QButtonGroup(self)
@@ -126,6 +127,7 @@ class DataPanel(BasePanel):
         group_layout.addWidget(group_container)
 
         group_config_btn = QPushButton(translate("Configure Group Columns"))
+        group_config_btn.setProperty('translate_key', 'Configure Group Columns')
         group_config_btn.clicked.connect(self._on_configure_group_columns)
         group_layout.addWidget(group_config_btn)
 
@@ -135,15 +137,18 @@ class DataPanel(BasePanel):
         self._refresh_group_column_radios()
 
         tooltip_group = QGroupBox(translate("Tooltip Settings"))
+        tooltip_group.setProperty('translate_key', 'Tooltip Settings')
         tooltip_layout = QVBoxLayout()
 
         tooltip_check_layout = QHBoxLayout()
         self.tooltip_check = QCheckBox(translate("Show Tooltip"))
+        self.tooltip_check.setProperty('translate_key', 'Show Tooltip')
         self.tooltip_check.setChecked(getattr(app_state, 'show_tooltip', True))
         self.tooltip_check.stateChanged.connect(self._on_tooltip_change)
         tooltip_check_layout.addWidget(self.tooltip_check)
 
         tooltip_config_btn = QPushButton(translate("Configure"))
+        tooltip_config_btn.setProperty('translate_key', 'Configure')
         tooltip_config_btn.setFixedWidth(100)
         tooltip_config_btn.clicked.connect(self._on_configure_tooltip)
         tooltip_check_layout.addWidget(tooltip_config_btn)
@@ -165,6 +170,7 @@ class DataPanel(BasePanel):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
         render_group = QGroupBox(translate("Render Mode"))
+        render_group.setProperty('translate_key', 'Render Mode')
         render_layout = QVBoxLayout()
 
         self.render_combo = QComboBox()
@@ -192,6 +198,7 @@ class DataPanel(BasePanel):
         layout.addWidget(render_group)
 
         algo_group = QGroupBox(translate("Algorithm"))
+        algo_group.setProperty('translate_key', 'Algorithm')
         algo_layout = QVBoxLayout()
 
         self.algo_combo = QComboBox()
@@ -212,6 +219,7 @@ class DataPanel(BasePanel):
         self.algo_group = algo_group
 
         self.umap_group = QGroupBox(translate("UMAP Parameters"))
+        self.umap_group.setProperty('translate_key', 'UMAP Parameters')
         umap_layout = QVBoxLayout()
 
         n_label = QLabel(translate("n_neighbors: {value}").format(value=app_state.umap_params['n_neighbors']))
@@ -261,6 +269,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.umap_group)
 
         self.tsne_group = QGroupBox(translate("t-SNE Parameters"))
+        self.tsne_group.setProperty('translate_key', 't-SNE Parameters')
         tsne_layout = QVBoxLayout()
 
         perp_label = QLabel(translate("perplexity: {value}").format(value=app_state.tsne_params['perplexity']))
@@ -309,6 +318,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.tsne_group)
 
         self.pca_group = QGroupBox(translate("PCA Parameters"))
+        self.pca_group.setProperty('translate_key', 'PCA Parameters')
         pca_layout = QVBoxLayout()
 
         n_comp_label = QLabel(translate("n_components:"))
@@ -377,6 +387,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.pca_group)
 
         self.robust_pca_group = QGroupBox(translate("RobustPCA Parameters"))
+        self.robust_pca_group.setProperty('translate_key', 'RobustPCA Parameters')
         robust_pca_layout = QVBoxLayout()
 
         robust_n_comp_label = QLabel(translate("n_components:"))
@@ -451,6 +462,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.robust_pca_group)
 
         self.ternary_group = QGroupBox(translate("Ternary Plot"))
+        self.ternary_group.setProperty('translate_key', 'Ternary Plot')
         ternary_layout = QVBoxLayout()
 
         info_label = QLabel(translate("Using Standard Ternary Plot.\nData is plotted as relative proportions."))
@@ -494,6 +506,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.ternary_group)
 
         self.v1v2_group = QGroupBox(translate("V1V2 Time Settings"))
+        self.v1v2_group.setProperty('translate_key', 'V1V2 Time Settings')
         v1v2_layout = QVBoxLayout()
 
         try:
@@ -529,6 +542,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.v1v2_group)
 
         self.geochem_plot_group = QGroupBox(translate("Geochemistry Plot Controls"))
+        self.geochem_plot_group.setProperty('translate_key', 'Geochemistry Plot Controls')
         geochem_layout = QVBoxLayout()
 
         def _add_geochem_toggle(label_text, checked, handler, style_key=None):
@@ -609,6 +623,7 @@ class DataPanel(BasePanel):
         layout.addWidget(self.geochem_plot_group)
 
         self.twod_group = QGroupBox(translate("2D Scatter Parameters"))
+        self.twod_group.setProperty('translate_key', '2D Scatter Parameters')
         twod_layout = QVBoxLayout()
 
         twod_grid = QGridLayout()
@@ -1070,6 +1085,7 @@ class DataPanel(BasePanel):
         label_checks = {}
         if style_key == 'isochron':
             label_group = QGroupBox(translate("Label Display"))
+            label_group.setProperty('translate_key', 'Label Display')
             label_layout = QVBoxLayout(label_group)
             label_layout.setContentsMargins(8, 6, 8, 6)
             label_layout.setSpacing(4)
