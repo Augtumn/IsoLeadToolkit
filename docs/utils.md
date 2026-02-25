@@ -2,15 +2,15 @@
 
 ## 模块概述
 
-`utils/` 提供日志和通用工具函数。当前较轻量。
+`utils/` 提供日志和通用工具函数。
 
-**文件清单 (108 行)**
+**文件清单**
 
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| `__init__.py` | 9 | 模块入口 |
-| `logger.py` | 95 | 旋转文件日志 + stdout/stderr 重定向 |
-| `line_styles.py` | 4 | 线型常量 (已迁移到 visualization/) |
+| 文件 | 职责 |
+|------|------|
+| `__init__.py` | 模块入口，导出 `setup_logging`, `LoggerWriter`, `build_marker_icon` |
+| `logger.py` | 旋转文件日志 + stdout/stderr 重定向 |
+| `icons.py` | matplotlib 标记形状渲染为 Qt5 QIcon |
 
 ---
 
@@ -27,12 +27,14 @@ class LoggerWriter:
 
     def __init__(self, logger, level, original_stream)
     def write(self, buf)   # 写入控制台 + 缓冲写入日志
+    def fileno(self)       # 返回原始流的 fileno，支持 faulthandler
     def flush(self)
 ```
 
 - 按行缓冲: 遇到 `\n` 时将完整行写入 logger
 - 保留原始控制台输出 (通过 `original_stream`)
 - stdout → INFO 级别, stderr → ERROR 级别
+- `fileno()` 委托给 `original_stream`，使 `faulthandler` 可正常工作
 
 ### setup_logging 函数
 
@@ -44,30 +46,29 @@ def setup_logging(log_filename='isotopes_analyse.log',
 
 **配置内容:**
 1. `RotatingFileHandler` — 50MB 旋转，保留 1 个备份
-2. 格式: `%(asctime)s - %(message)s`
-3. 静默 matplotlib 日志 (`WARNING` 级别)
-4. 静默 numba 日志 (`WARNING` 级别)
-5. 重定向 `sys.stdout` → LoggerWriter(INFO)
-6. 重定向 `sys.stderr` → LoggerWriter(ERROR)
+2. 格式: `%(asctime)s [%(name)s:%(lineno)d] %(message)s`
+3. 日志级别可通过环境变量 `ISOTOPES_LOG_LEVEL` 配置 (默认 DEBUG)
+4. 静默 matplotlib 日志 (`WARNING` 级别)
+5. 静默 numba 日志 (`WARNING` 级别)
+6. 重定向 `sys.stdout` → LoggerWriter(INFO)
+7. 重定向 `sys.stderr` → LoggerWriter(ERROR)
 
 ### 日志文件位置
 - 开发环境: `项目根目录/isotopes_analyse.log`
 - 打包环境: 可执行文件同目录
 
-### 已知限制
-- `LoggerWriter` 无 `fileno()` 方法，导致 `faulthandler` 无法启用 (main.py 中有 warning)
-- 日志格式不含模块名/行号，调试时定位困难
-
 ---
 
-## 2. line_styles.py — 线型常量
+## 2. icons.py — 标记图标渲染
 
 ```python
-# 仅 4 行，定义基础线型常量
-# 实际线型逻辑已迁移到 visualization/line_styles.py
+def build_marker_icon(color: str, marker: str, size: int = 16) -> QIcon
 ```
 
-此文件可考虑移除。
+- 将 matplotlib 标记形状渲染为 Qt5 QIcon
+- 支持标记: `'o'`, `'s'`, `'^'`, `'v'`, `'D'`, `'P'`, `'*'`, `'+'`, `'x'`, `'X'`
+- 填充标记集: `{'o', 's', '^', 'v', 'D', 'P', '*'}`
+- 渲染失败时回退为纯色 pixmap
 
 ---
 
@@ -77,6 +78,10 @@ def setup_logging(log_filename='isotopes_analyse.log',
 logger.py (无内部依赖)
   ↑
 main.py (启动时调用 setup_logging())
+
+icons.py (依赖 PyQt5)
+  ↑
+ui/main_window.py, ui/panels/legend_panel.py
 ```
 
 ---

@@ -37,6 +37,10 @@ class LoggerWriter:
             # Keep the last partial line
             self.linebuf = lines[-1]
 
+    def fileno(self):
+        """Return the file descriptor of the original stream for faulthandler compatibility."""
+        return self.original_stream.fileno()
+
     def flush(self):
         try:
             self.original_stream.flush()
@@ -61,12 +65,16 @@ def setup_logging(log_filename='isotopes_analyse.log', max_bytes=50*1024*1024, b
             encoding='utf-8'
         )
         
-        # Format: Time - Message
-        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        # Format: Time [Module:Line] Message
+        formatter = logging.Formatter('%(asctime)s [%(name)s:%(lineno)d] %(message)s')
         handler.setFormatter(formatter)
         
+        # Support configurable log level via environment variable
+        log_level_name = os.environ.get('ISOTOPES_LOG_LEVEL', 'DEBUG').upper()
+        log_level = getattr(logging, log_level_name, logging.DEBUG)
+
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)
+        root_logger.setLevel(log_level)
         if not root_logger.handlers:
             root_logger.addHandler(handler)
 

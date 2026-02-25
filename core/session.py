@@ -1,11 +1,13 @@
-import logging
-logger = logging.getLogger(__name__)
 """
 Session Management - Save and Load Algorithm Parameters
 Handles persistence of last used parameters across program sessions
 """
 import json
+import logging
+
 from .config import CONFIG
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_list(value):
@@ -164,15 +166,15 @@ def save_session_params(algorithm, umap_params, tsne_params, point_size, group_c
             'ui_theme': ui_theme
         }
         
-        logger.debug(f"[DEBUG] Saving session params. Tooltip columns: {tooltip_columns}")
+        logger.debug("Saving session params. Tooltip columns: %s", tooltip_columns)
 
         with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as f:
             json.dump(session_data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"[INFO] Session parameters saved to {CONFIG['params_temp_file']}")
+        logger.info("Session parameters saved to %s", CONFIG['params_temp_file'])
         return True
     except Exception as e:
-        logger.exception(f"[WARN] Failed to save session parameters: {e}")
+        logger.exception("Failed to save session parameters: %s", e)
         return False
 
 
@@ -192,7 +194,7 @@ def load_session_params():
             if legacy_params_file is not None and legacy_params_file.exists():
                 params_file = legacy_params_file
             else:
-                logger.info("[INFO] No previous session found")
+                logger.info("No previous session found")
                 return None
 
         with open(params_file, 'r', encoding='utf-8') as f:
@@ -201,7 +203,7 @@ def load_session_params():
         current_version = int(CONFIG.get('session_version', 1))
         version = int(session_data.get('session_version', 1))
         if version < current_version:
-            logger.info(f"[INFO] Session data version {version} -> {current_version}")
+            logger.info("Session data version %s -> %s", version, current_version)
 
         session_data, migrated = _migrate_session_data(session_data, current_version)
 
@@ -210,23 +212,23 @@ def load_session_params():
             try:
                 with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as out:
                     json.dump(session_data, out, indent=2, ensure_ascii=False)
-                logger.info(f"[INFO] Migrated session parameters to {CONFIG['params_temp_file']}")
+                logger.info("Migrated session parameters to %s", CONFIG['params_temp_file'])
             except Exception:
                 pass
         elif migrated:
             try:
                 with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as out:
                     json.dump(session_data, out, indent=2, ensure_ascii=False)
-                logger.info(f"[INFO] Updated session parameters to version {current_version}")
+                logger.info("Updated session parameters to version %s", current_version)
             except Exception:
-                logger.exception("[WARN] Failed to persist migrated session parameters")
+                logger.exception("Failed to persist migrated session parameters")
         
-        logger.info(f"[INFO] Session parameters loaded from {params_file}")
-        logger.info(f"[INFO] Previous algorithm: {session_data.get('algorithm', 'UMAP')}")
-        logger.info(f"[INFO] Previous group: {session_data.get('group_col', 'Province')}")
+        logger.info("Session parameters loaded from %s", params_file)
+        logger.info("Previous algorithm: %s", session_data.get('algorithm', 'UMAP'))
+        logger.info("Previous group: %s", session_data.get('group_col', 'Province'))
         return session_data
     except Exception as e:
-        logger.exception(f"[WARN] Failed to load session parameters: {e}")
+        logger.exception("Failed to load session parameters: %s", e)
         return None
 
 
@@ -236,10 +238,10 @@ def clear_session_params():
         params_file = CONFIG['params_temp_file']
         if params_file.exists():
             params_file.unlink()
-            logger.info("[INFO] Session parameters cleared")
+            logger.info("Session parameters cleared")
             return True
     except Exception as e:
-        logger.exception(f"[WARN] Failed to clear session parameters: {e}")
+        logger.exception("Failed to clear session parameters: %s", e)
     return False
 
 

@@ -194,9 +194,10 @@ tests/
 
 #### 4.3 日志改进
 
-- 添加模块名和行号到日志格式
-- LoggerWriter 添加 `fileno()` 支持 faulthandler
-- 统一日志级别使用 (移除字符串前缀 `[INFO]`) ✅ 已完成 (ui/ + visualization/ 全模块)
+- 添加模块名和行号到日志格式 ✅ 已完成
+- LoggerWriter 添加 `fileno()` 支持 faulthandler ✅ 已完成
+- 统一日志级别使用 (移除字符串前缀 `[INFO]`) ✅ 已完成 (ui/ + visualization/ + main.py + data/loader.py + core/session.py 全模块)
+- 日志级别可通过环境变量 `ISOTOPES_LOG_LEVEL` 配置 ✅ 已完成
 
 ---
 
@@ -342,22 +343,22 @@ tests/
 
 #### 中优先级
 
-1. **日志格式增强** — 添加模块名和行号:
+1. **日志格式增强** — 添加模块名和行号: ✅ 已完成
    ```python
    formatter = logging.Formatter('%(asctime)s [%(name)s:%(lineno)d] %(message)s')
    ```
-2. **LoggerWriter 添加 fileno()** — 返回原始流的 fileno，使 faulthandler 可用:
+2. **LoggerWriter 添加 fileno()** — 返回原始流的 fileno，使 faulthandler 可用: ✅ 已完成
    ```python
    def fileno(self):
        return self.original_stream.fileno()
    ```
-3. **移除 utils/line_styles.py** — 功能已迁移到 visualization/line_styles.py，此文件仅 4 行且无引用。
+3. **移除 utils/line_styles.py** — 功能已迁移到 visualization/line_styles.py，此文件仅 4 行且无引用。✅ 已完成
 
 #### 低优先级
 
-4. **结构化日志** — 当前使用字符串前缀 `[INFO]`, `[WARN]`, `[ERROR]`。应直接使用 logging 级别:
+4. **结构化日志** — 当前使用字符串前缀 `[INFO]`, `[WARN]`, `[ERROR]`。应直接使用 logging 级别: ✅ 已完成 (main.py, data/loader.py, core/session.py)
    ```python
    logger.info("Message")      # 而非 logger.info("[INFO] Message")
    logger.warning("Message")   # 而非 logger.info("[WARN] Message")
    ```
-5. **日志级别可配置** — 当前硬编码 DEBUG 级别，应支持通过环境变量或配置文件调整。
+5. **日志级别可配置** — 支持通过环境变量 `ISOTOPES_LOG_LEVEL` 调整日志级别 (默认 DEBUG)。✅ 已完成
