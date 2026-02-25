@@ -1,4 +1,6 @@
 """Core embedding helpers and shared utilities."""
+from __future__ import annotations
+
 import logging
 import itertools
 
@@ -59,7 +61,7 @@ def _ensure_axes(dimensions=2):
 
     return app_state.ax
 
-def get_umap_embedding(params):
+def get_umap_embedding(params: dict) -> np.ndarray | None:
     """Get or compute UMAP embedding with caching."""
     try:
         _lazy_import_umap()
@@ -89,7 +91,7 @@ def get_umap_embedding(params):
         logger.exception("UMAP computation failed: %s", e)
         return None
 
-def get_tsne_embedding(params):
+def get_tsne_embedding(params: dict) -> np.ndarray | None:
     """Get or compute t-SNE embedding with caching."""
     try:
         _lazy_import_ml()
@@ -137,7 +139,7 @@ def get_tsne_embedding(params):
         logger.exception("t-SNE computation failed: %s", e)
         return None
 
-def get_pca_embedding(params):
+def get_pca_embedding(params: dict) -> np.ndarray | None:
     """Get or compute PCA embedding with caching."""
     try:
         _lazy_import_ml()
@@ -182,7 +184,7 @@ def get_pca_embedding(params):
         logger.exception("PCA computation failed: %s", e)
         return None
 
-def get_robust_pca_embedding(params):
+def get_robust_pca_embedding(params: dict) -> np.ndarray | None:
     """Get or compute Robust PCA (via MinCovDet) embedding with caching."""
     try:
         _lazy_import_ml()
@@ -244,7 +246,13 @@ def get_robust_pca_embedding(params):
         logger.exception("Robust PCA computation failed: %s", e)
         return None
 
-def get_embedding(algorithm, umap_params=None, tsne_params=None, pca_params=None, robust_pca_params=None):
+def get_embedding(
+    algorithm: str,
+    umap_params: dict | None = None,
+    tsne_params: dict | None = None,
+    pca_params: dict | None = None,
+    robust_pca_params: dict | None = None,
+) -> np.ndarray | None:
     """Get embedding based on selected algorithm"""
     if algorithm == 'UMAP':
         return get_umap_embedding(umap_params or CONFIG['umap_params'])

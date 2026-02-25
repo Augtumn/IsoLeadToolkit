@@ -1,7 +1,8 @@
 """Line style utilities for geochemical overlays."""
+from __future__ import annotations
 
 
-def resolve_line_style(app_state, style_key, fallback):
+def resolve_line_style(app_state, style_key: str, fallback: dict) -> dict:
     """Resolve line style with app_state overrides."""
     style = {}
     try:

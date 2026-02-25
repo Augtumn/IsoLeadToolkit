@@ -1,4 +1,6 @@
 """Ternary plot helpers."""
+from __future__ import annotations
+
 import logging
 
 import numpy as np
@@ -45,7 +47,7 @@ def _apply_ternary_stretch(t_vals, l_vals, r_vals):
 
     return t_vals, l_vals, r_vals
 
-def calculate_auto_ternary_factors():
+def calculate_auto_ternary_factors() -> bool:
     """Calculate optimal scaling factors for the ternary plot using geometric means.
 
     This effectively centers the data in the ternary diagram (compositional centering).

@@ -8,6 +8,9 @@ from core import app_state
 
 logger = logging.getLogger(__name__)
 
+# Default maximum number of points per group for KDE sampling
+_KDE_MAX_POINTS_DEFAULT = 5000
+
 sns = None
 
 
@@ -37,10 +40,10 @@ def draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb_
         lazy_import_seaborn()
         from mpl_toolkits.axes_grid1 import make_axes_locatable
     except Exception as import_err:
-        logger.warning(f"Failed to import KDE dependencies: {import_err}")
+        logger.warning("Failed to import KDE dependencies: %s", import_err)
         return
 
-    max_points = int(getattr(app_state, 'marginal_kde_max_points', 5000))
+    max_points = int(getattr(app_state, 'marginal_kde_max_points', _KDE_MAX_POINTS_DEFAULT))
     rng = np.random.default_rng(42)
 
     divider = make_axes_locatable(ax)
@@ -83,7 +86,7 @@ def draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb_
                     warn_singular=False
                 )
             except Exception as kde_err:
-                logger.warning(f"Marginal KDE X failed for {cat}: {kde_err}")
+                logger.warning("Marginal KDE X failed for %s: %s", cat, kde_err)
         if len(ys) > 1:
             try:
                 sns.kdeplot(
@@ -96,7 +99,7 @@ def draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb_
                     warn_singular=False
                 )
             except Exception as kde_err:
-                logger.warning(f"Marginal KDE Y failed for {cat}: {kde_err}")
+                logger.warning("Marginal KDE Y failed for %s: %s", cat, kde_err)
 
     ax_top.tick_params(axis='x', labelbottom=False)
     ax_top.tick_params(axis='y', left=False, labelleft=False)

@@ -1,4 +1,6 @@
 """Style helpers for plotting."""
+from __future__ import annotations
+
 import logging
 
 import matplotlib.pyplot as plt
@@ -263,7 +265,7 @@ def _style_legend(legend, show_marginal_kde=False):
         pass
 
 
-def refresh_plot_style():
+def refresh_plot_style() -> None:
     """Refresh plot styling without recomputing embeddings."""
     try:
         _apply_current_style()

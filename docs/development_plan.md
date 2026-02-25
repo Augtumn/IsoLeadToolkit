@@ -259,24 +259,22 @@ tests/
 6. **`astype(float)` 代替 `pd.to_numeric`** — 改为 `pd.to_numeric(..., errors='coerce')`。✅ 已完成
    - 变更: `visualization/plotting/data.py`, `plotting/geo.py`, `events.py`
 
-7. **日志 f-string 替代 `%s` 占位符** — `events.py` 全文件已修复。`core.py` 和 `geo.py` 待修复。
-   - 变更: `visualization/events.py` ✅ 已完成
-   - 待修复: `visualization/plotting/core.py`, `visualization/plotting/geo.py`
+7. **日志 f-string 替代 `%s` 占位符** — 全模块已修复 (`events.py`, `core.py`, `geo.py`, `kde.py`, `ternary.py`, `data.py`)。✅ 已完成
+   - 变更: `visualization/events.py`, `plotting/core.py`, `plotting/geo.py`, `plotting/kde.py`, `plotting/ternary.py`, `plotting/data.py`
 
 8. **日志前缀残留** — `[OK]` 前缀已移除。✅ 已完成
    - 变更: `visualization/events.py`
 
-9. **`on_slider_change()` 过长 (227 行)** — 应拆分为 `_validate_render_columns()`、`_dispatch_render()`、`_handle_render_fallback()` 等子函数。
-   - 位置: `visualization/events.py:810-1037`
+9. **`on_slider_change()` 过长 (227 行)** — 拆分为 `_resolve_group_col()`、`_sync_visible_groups()`、`_validate_render_columns()`、`_sync_render_mode()`、`_dispatch_render()`、`_handle_render_fallback()` 等子函数。✅ 已完成
+   - 变更: `visualization/events.py`
 
 10. **`style_manager.py` 缺少 logger 且导入顺序不规范** — 添加 logger，导入顺序按标准库 → 第三方 → 本项目分段。✅ 已完成
     - 变更: `visualization/style_manager.py`
 
 **低优先级:**
 
-11. **魔法数字散落** — 图例 bbox 偏移、除零保护、选择阈值、悬停距离已提取为命名常量。KDE 采样上限 (`5000`) 待处理。
-    - 变更: `plotting/style.py`, `plotting/geo.py`, `events.py` ✅ 已完成
-    - 待修复: `plotting/kde.py:43` (`max_points=5000`)
+11. **魔法数字散落** — 图例 bbox 偏移、除零保护、选择阈值、悬停距离、KDE 采样上限均已提取为命名常量。✅ 已完成
+    - 变更: `plotting/style.py`, `plotting/geo.py`, `events.py`, `plotting/kde.py`
 
 12. **`ternary.py` 函数内重复导入** — 移除函数内重复的 `import numpy` 和 `from scipy.stats import gmean`。✅ 已完成
     - 变更: `visualization/plotting/ternary.py`
@@ -284,8 +282,8 @@ tests/
 13. **`plotting/__init__.py` 星号导入** — 改为显式导入并声明 `__all__`。✅ 已完成
     - 变更: `visualization/plotting/__init__.py`
 
-14. **类型注解缺失** — 所有公共函数缺少类型注解 (`get_*_embedding`, `plot_embedding`, `on_hover`, `draw_confidence_ellipse`, `resolve_line_style` 等)。
-    - 位置: 全模块
+14. **类型注解缺失** — 为所有公共函数添加类型注解 (`get_*_embedding`, `get_embedding`, `plot_embedding`, `plot_umap`, `plot_2d_data`, `plot_3d_data`, `on_hover`, `on_click`, `on_legend_click`, `on_slider_change`, `draw_confidence_ellipse`, `refresh_selection_overlay`, `calculate_selected_isochron`, `toggle_selection_mode`, `sync_selection_tools`, `resolve_line_style`, `refresh_plot_style`, `calculate_auto_ternary_factors`)。添加 `from __future__ import annotations`。✅ 已完成
+    - 变更: `plotting/core.py`, `plotting/render.py`, `plotting/style.py`, `plotting/ternary.py`, `events.py`, `line_styles.py`
 
 #### 既有问题
 

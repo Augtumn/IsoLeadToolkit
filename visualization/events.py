@@ -1,4 +1,6 @@
 """Event handlers for user interactions (hover, click, legend)."""
+from __future__ import annotations
+
 import logging
 
 import matplotlib
@@ -19,7 +21,7 @@ _SELECTION_MIN_SPAN = 1e-9
 # Maximum distance (data units) for hover nearest-neighbor lookup
 _HOVER_DISTANCE_THRESHOLD = 0.15
 
-def draw_confidence_ellipse(x, y, ax, confidence=0.95, facecolor='none', **kwargs):
+def draw_confidence_ellipse(x, y, ax, confidence: float = 0.95, facecolor: str = 'none', **kwargs) -> Ellipse | None:
     """
     Create a plot of the covariance confidence ellipse of *x* and *y*.
     confidence: float, e.g. 0.95 for 95% confidence interval
@@ -271,7 +273,7 @@ def _handle_lasso_select(vertices):
         logger.warning("Custom shape selection failed: %s", err)
 
 
-def refresh_selection_overlay():
+def refresh_selection_overlay() -> None:
     """Update selection overlay scatter to highlight chosen points."""
     try:
         if app_state.fig is None or app_state.ax is None or app_state.render_mode == '3D':
@@ -359,7 +361,7 @@ def refresh_selection_overlay():
         logger.warning("Unable to refresh selection overlay: %s", err)
 
 
-def calculate_selected_isochron():
+def calculate_selected_isochron() -> None:
     """Calculate isochron age for selected data points."""
     try:
         # Check if we have selected points
@@ -505,7 +507,7 @@ def _resolve_sample_index(event):
     return None
 
 
-def toggle_selection_mode(tool_type='export'):
+def toggle_selection_mode(tool_type: str = 'export') -> None:
     """
     Toggle interactive selection mode.
     tool_type: 'export', 'lasso', or 'isochron'
@@ -570,7 +572,7 @@ def toggle_selection_mode(tool_type='export'):
         logger.warning("Failed to toggle selection mode: %s", err)
 
 
-def sync_selection_tools():
+def sync_selection_tools() -> None:
     """Ensure selection helpers stay in sync with current axes."""
     if app_state.selection_tool == 'lasso':
         _ensure_lasso_selector()
@@ -583,7 +585,7 @@ def sync_selection_tools():
         _disable_lasso_selector()
 
 
-def on_hover(event):
+def on_hover(event) -> None:
     """Handle mouse hover events"""
     try:
         if app_state.render_mode == '3D':
@@ -678,7 +680,7 @@ def on_hover(event):
         pass
 
 
-def on_click(event):
+def on_click(event) -> None:
     """Handle mouse click events for interactive selection."""
     try:
         if app_state.render_mode == '3D':
@@ -727,7 +729,7 @@ def on_click(event):
         logger.warning("Click handler error: %s", e)
 
 
-def on_legend_click(event):
+def on_legend_click(event) -> None:
     """Handle legend click events - bring group to front"""
     try:
         if event is None or not hasattr(event, 'inaxes'):
@@ -812,183 +814,203 @@ def on_legend_click(event):
         pass
 
 
-def on_slider_change(val=None):
+def _resolve_group_col():
+    """Resolve the current group column, falling back to the first available."""
+    group_col = app_state.last_group_col
+    if not group_col or group_col not in app_state.group_cols:
+        if app_state.group_cols:
+            group_col = app_state.group_cols[0]
+            logger.debug("Using default group_col: %s", group_col)
+        else:
+            return None
+    return group_col
+
+
+def _sync_visible_groups(group_col):
+    """Refresh available_groups and prune visible_groups."""
+    try:
+        df_groups_source = app_state.df_global[group_col].fillna('Unknown').astype(str)
+        all_groups = sorted(df_groups_source.unique())
+    except Exception:
+        all_groups = []
+
+    app_state.available_groups = all_groups
+    if app_state.visible_groups:
+        filtered = [g for g in app_state.visible_groups if g in all_groups]
+        app_state.visible_groups = filtered if filtered else None
+
+
+def _validate_render_columns(render_mode, selected_columns_2d, selected_columns_3d):
+    """Validate and adjust render mode / column selections.
+
+    Returns (render_mode, selected_columns_2d, selected_columns_3d).
+    """
+    if render_mode == '3D':
+        available_cols = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+        logger.debug("Available numeric columns for 3D: %s", available_cols)
+        if len(available_cols) < 3:
+            logger.warning("Not enough numeric columns for 3D view; reverting to 2D")
+            render_mode = '2D'
+        else:
+            preselected = [c for c in selected_columns_3d if c in available_cols]
+            if len(preselected) == 3:
+                selected_columns_3d = preselected
+            elif len(available_cols) >= 3:
+                selected_columns_3d = available_cols[:3]
+                app_state.selected_3d_cols = selected_columns_3d
+                app_state.selected_3d_confirmed = False
+                logger.info("Using default 3D columns: %s", selected_columns_3d)
+
+    if render_mode == '2D':
+        available_cols_2d = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+        logger.debug("Available numeric columns for 2D: %s", available_cols_2d)
+        if len(available_cols_2d) < 2:
+            logger.warning("Not enough numeric columns for 2D view; falling back to UMAP")
+            render_mode = 'UMAP'
+        else:
+            preselected_2d = [c for c in selected_columns_2d if c in available_cols_2d][:2]
+            if len(preselected_2d) == 2:
+                selected_columns_2d = preselected_2d
+            elif len(available_cols_2d) >= 2:
+                selected_columns_2d = available_cols_2d[:2]
+                app_state.selected_2d_cols = selected_columns_2d
+                app_state.selected_2d_confirmed = False
+                logger.info("Using default 2D columns: %s", selected_columns_2d)
+
+    if render_mode == 'Ternary':
+        available_cols_ternary = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+        if len(available_cols_ternary) < 3:
+            logger.warning("Not enough numeric columns for Ternary view; falling back to UMAP")
+            render_mode = 'UMAP'
+        else:
+            preselected = getattr(app_state, 'selected_ternary_cols', [])
+            valid_preselected = [c for c in preselected if c in available_cols_ternary]
+            if len(valid_preselected) == 3:
+                if not app_state.selected_ternary_confirmed:
+                    app_state.selected_ternary_cols = valid_preselected
+            elif len(available_cols_ternary) >= 3:
+                app_state.selected_ternary_cols = available_cols_ternary[:3]
+                app_state.selected_ternary_confirmed = False
+
+    return render_mode, selected_columns_2d, selected_columns_3d
+
+
+def _sync_render_mode(render_mode):
+    """Update app_state and control panel if render_mode changed."""
+    if render_mode == app_state.render_mode:
+        return
+    logger.debug("Adjusted render mode: %s -> %s", app_state.render_mode, render_mode)
+    app_state.render_mode = render_mode
+    if app_state.render_mode in ('UMAP', 'tSNE', 'PCA', 'RobustPCA'):
+        app_state.algorithm = app_state.render_mode
+    try:
+        panel = getattr(app_state, 'control_panel_ref', None)
+        if panel is not None and 'render_mode' in panel.radio_vars:
+            panel.radio_vars['render_mode'].set(render_mode)
+    except Exception as sync_err:
+        logger.warning("Unable to sync control panel render mode: %s", sync_err)
+
+
+def _dispatch_render(group_col, selected_columns_2d, selected_columns_3d):
+    """Dispatch to the appropriate plot function. Returns True on success."""
+    from .plotting import plot_embedding, plot_3d_data, plot_2d_data
+
+    if app_state.render_mode == '3D':
+        if app_state.selection_mode:
+            app_state.selection_mode = False
+            _disable_rectangle_selector()
+            refresh_selection_overlay()
+            _notify_selection_ui()
+            logger.info("Selection mode automatically disabled for 3D view.")
+        if len(selected_columns_3d) != 3:
+            logger.warning("Invalid 3D column selection; skipping plot")
+            return False
+        logger.debug("Rendering 3D plot with columns=%s", selected_columns_3d)
+        return plot_3d_data(group_col, selected_columns_3d, size=app_state.point_size)
+
+    if app_state.render_mode == '2D':
+        if len(selected_columns_2d) != 2:
+            logger.warning("Invalid 2D column selection; skipping plot")
+            return False
+        logger.debug("Rendering 2D plot with columns=%s", selected_columns_2d)
+        is_kde = getattr(app_state, 'show_kde', False) or getattr(app_state, 'show_2d_kde', False)
+        return plot_2d_data(group_col, selected_columns_2d, size=app_state.point_size, show_kde=is_kde)
+
+    algorithm = app_state.render_mode
+    logger.debug("Calling plot_embedding with algorithm=%s, group_col=%s", algorithm, group_col)
+    return plot_embedding(
+        group_col,
+        algorithm,
+        umap_params=app_state.umap_params,
+        tsne_params=app_state.tsne_params,
+        pca_params=app_state.pca_params,
+        robust_pca_params=app_state.robust_pca_params,
+        size=app_state.point_size,
+    )
+
+
+def _handle_render_fallback(group_col):
+    """Fall back to UMAP when 2D/3D rendering fails."""
+    from .plotting import plot_embedding
+
+    if app_state.render_mode not in ('2D', '3D'):
+        return
+    logger.info("Falling back to UMAP embedding for display")
+    app_state.render_mode = 'UMAP'
+    app_state.algorithm = 'UMAP'
+    try:
+        panel = getattr(app_state, 'control_panel_ref', None)
+        if panel is not None and 'render_mode' in panel.radio_vars:
+            panel.radio_vars['render_mode'].set('UMAP')
+    except Exception:
+        pass
+
+    fallback_ok = plot_embedding(
+        group_col,
+        'UMAP',
+        umap_params=app_state.umap_params,
+        tsne_params=app_state.tsne_params,
+        size=app_state.point_size,
+    )
+    if fallback_ok:
+        refresh_selection_overlay()
+        sync_selection_tools()
+        _notify_selection_ui()
+        try:
+            app_state.fig.canvas.draw_idle()
+        except Exception:
+            pass
+    else:
+        logger.warning("Fallback UMAP plot also failed")
+
+
+def on_slider_change(val=None) -> None:
     """Handle slider and radio button changes from the control panel."""
     try:
         logger.debug("on_slider_change called, val=%s", val)
-        from .plotting import plot_embedding, plot_3d_data, plot_2d_data
-        
-        # At this point, app_state has been updated by control_panel callbacks
-        # We just need to re-render the plot with the current parameters
-        
+
         if app_state.df_global is None or len(app_state.df_global) == 0:
             logger.warning("No data available")
             return
-        
+
         try:
-            # Get current group column
-            group_col = app_state.last_group_col
-            logger.debug("Current group_col: %s, available: %s", group_col, app_state.group_cols)
-            
-            if not group_col or group_col not in app_state.group_cols:
-                if app_state.group_cols:
-                    group_col = app_state.group_cols[0]
-                    logger.debug("Using default group_col: %s", group_col)
-                else:
-                    logger.warning("No group columns available")
-                    return
-            
-            # Get algorithm
+            group_col = _resolve_group_col()
+            if group_col is None:
+                logger.warning("No group columns available")
+                return
+
             render_mode = app_state.render_mode
-            logger.debug("Current render_mode: %s", render_mode)
             selected_columns_3d = list(app_state.selected_3d_cols)
             selected_columns_2d = list(getattr(app_state, 'selected_2d_cols', []))
 
-            prompt_allowed = app_state.initial_render_done
+            _sync_visible_groups(group_col)
 
-            try:
-                df_groups_source = app_state.df_global[group_col].fillna('Unknown').astype(str)
-                all_groups = sorted(df_groups_source.unique())
-            except Exception:
-                all_groups = []
+            render_mode, selected_columns_2d, selected_columns_3d = _validate_render_columns(
+                render_mode, selected_columns_2d, selected_columns_3d,
+            )
+            _sync_render_mode(render_mode)
 
-            app_state.available_groups = all_groups
-            if app_state.visible_groups:
-                filtered_visible = [g for g in app_state.visible_groups if g in all_groups]
-                if filtered_visible:
-                    app_state.visible_groups = filtered_visible
-                else:
-                    app_state.visible_groups = None
-
-            if render_mode == '3D':
-                available_cols = [c for c in app_state.data_cols if c in app_state.df_global.columns]
-                logger.debug("Available numeric columns for 3D: %s", available_cols)
-
-                if len(available_cols) < 3:
-                    logger.warning("Not enough numeric columns for 3D view; reverting to 2D")
-                    render_mode = '2D'
-                else:
-                    preselected = [c for c in selected_columns_3d if c in available_cols]
-                    if len(preselected) == 3:
-                        selected_columns_3d = preselected
-                        if app_state.selected_3d_confirmed:
-                            logger.debug("Reusing confirmed 3D columns: %s", selected_columns_3d)
-                        else:
-                            logger.debug("Using existing 3D columns (unconfirmed): %s", selected_columns_3d)
-                    elif len(available_cols) >= 3:
-                        selected_columns_3d = available_cols[:3]
-                        app_state.selected_3d_cols = selected_columns_3d
-                        app_state.selected_3d_confirmed = False
-                        logger.info("Using default 3D columns: %s", selected_columns_3d)
-                    
-                    # Removed auto-prompt logic. User must use the button in Control Panel.
-
-            if render_mode == '2D':
-                available_cols_2d = [c for c in app_state.data_cols if c in app_state.df_global.columns]
-                logger.debug("Available numeric columns for 2D: %s", available_cols_2d)
-
-                if len(available_cols_2d) < 2:
-                    logger.warning("Not enough numeric columns for 2D view; falling back to UMAP")
-                    render_mode = 'UMAP'
-                else:
-                    preselected_2d = [c for c in selected_columns_2d if c in available_cols_2d][:2]
-                    need_prompt_2d = len(available_cols_2d) > 2 and (not app_state.selected_2d_confirmed)
-
-                    if len(preselected_2d) == 2:
-                        selected_columns_2d = preselected_2d
-                        # If confirmed, great. If not, we just use them without prompting.
-                        # The user can change them via the "Select Axis Columns" button.
-                        if app_state.selected_2d_confirmed:
-                            logger.debug("Reusing confirmed 2D columns: %s", selected_columns_2d)
-                        else:
-                            logger.debug("Using existing 2D columns (unconfirmed): %s", selected_columns_2d)
-                    elif len(available_cols_2d) >= 2:
-                        # Default to first two
-                        selected_columns_2d = available_cols_2d[:2]
-                        app_state.selected_2d_cols = selected_columns_2d
-                        # We don't set confirmed=True here so we know they are defaults
-                        app_state.selected_2d_confirmed = False 
-                        logger.info("Using default 2D columns: %s", selected_columns_2d)
-                    
-                    # Removed auto-prompt logic. User must use the button in Control Panel.
-
-            if render_mode == 'Ternary':
-                available_cols_ternary = [c for c in app_state.data_cols if c in app_state.df_global.columns]
-                if len(available_cols_ternary) < 3:
-                     logger.warning("Not enough numeric columns for Ternary view; falling back to UMAP")
-                     render_mode = 'UMAP'
-                else:
-                    preselected = getattr(app_state, 'selected_ternary_cols', [])
-                    
-                    # Validate existing selection
-                    valid_preselected = [c for c in preselected if c in available_cols_ternary]
-                    
-                    if len(valid_preselected) == 3:
-                         if app_state.selected_ternary_confirmed:
-                             pass
-                         else:
-                             app_state.selected_ternary_cols = valid_preselected
-                    elif len(available_cols_ternary) >= 3:
-                         # Default
-                         app_state.selected_ternary_cols = available_cols_ternary[:3]
-                         app_state.selected_ternary_confirmed = False
-
-            if render_mode != app_state.render_mode:
-                logger.debug("Adjusted render mode: %s -> %s", app_state.render_mode, render_mode)
-                app_state.render_mode = render_mode
-                if app_state.render_mode in ('UMAP', 'tSNE', 'PCA', 'RobustPCA'):
-                    app_state.algorithm = app_state.render_mode
-                try:
-                    panel = getattr(app_state, 'control_panel_ref', None)
-                    if panel is not None and 'render_mode' in panel.radio_vars:
-                        panel.radio_vars['render_mode'].set(render_mode)
-                except Exception as sync_err:
-                    logger.warning("Unable to sync control panel render mode: %s", sync_err)
-
-            rendered_ok = False
-            if app_state.render_mode == '3D':
-                if app_state.selection_mode:
-                    app_state.selection_mode = False
-                    _disable_rectangle_selector()
-                    refresh_selection_overlay()
-                    _notify_selection_ui()
-                    logger.info("Selection mode automatically disabled for 3D view.")
-                if len(selected_columns_3d) != 3:
-                    logger.warning("Invalid 3D column selection; skipping plot")
-                else:
-                    logger.debug("Rendering 3D plot with columns=%s", selected_columns_3d)
-                    rendered_ok = plot_3d_data(
-                        group_col,
-                        selected_columns_3d,
-                        size=app_state.point_size
-                    )
-            elif app_state.render_mode == '2D':
-                if len(selected_columns_2d) != 2:
-                    logger.warning("Invalid 2D column selection; skipping plot")
-                else:
-                    logger.debug("Rendering 2D plot with columns=%s", selected_columns_2d)
-                    # Check both global KDE setting and specific 2D KDE setting
-                    is_kde = getattr(app_state, 'show_kde', False) or getattr(app_state, 'show_2d_kde', False)
-                    rendered_ok = plot_2d_data(
-                        group_col,
-                        selected_columns_2d,
-                        size=app_state.point_size,
-                        show_kde=is_kde
-                    )
-            else:
-                # Use the current render mode as the algorithm name
-                # This supports UMAP, tSNE, PCA, RobustPCA
-                algorithm = app_state.render_mode
-                logger.debug("Calling plot_embedding with algorithm=%s, group_col=%s", algorithm, group_col)
-                rendered_ok = plot_embedding(
-                    group_col,
-                    algorithm,
-                    umap_params=app_state.umap_params,
-                    tsne_params=app_state.tsne_params,
-                    pca_params=app_state.pca_params,
-                    robust_pca_params=app_state.robust_pca_params,
-                    size=app_state.point_size
-                )
+            rendered_ok = _dispatch_render(group_col, selected_columns_2d, selected_columns_3d)
 
             if rendered_ok:
                 logger.debug("Plot rendered successfully, calling draw_idle")
@@ -1001,34 +1023,7 @@ def on_slider_change(val=None):
                     logger.warning("Draw error: %s", draw_err)
             else:
                 logger.warning("Plot rendering failed")
-                if app_state.render_mode in ('2D', '3D'):
-                    logger.info("Falling back to UMAP embedding for display")
-                    app_state.render_mode = 'UMAP'
-                    app_state.algorithm = 'UMAP'
-                    try:
-                        panel = getattr(app_state, 'control_panel_ref', None)
-                        if panel is not None and 'render_mode' in panel.radio_vars:
-                            panel.radio_vars['render_mode'].set('UMAP')
-                    except Exception:
-                        pass
-
-                    fallback_ok = plot_embedding(
-                        group_col,
-                        'UMAP',
-                        umap_params=app_state.umap_params,
-                        tsne_params=app_state.tsne_params,
-                        size=app_state.point_size
-                    )
-                    if fallback_ok:
-                        refresh_selection_overlay()
-                        sync_selection_tools()
-                        _notify_selection_ui()
-                        try:
-                            app_state.fig.canvas.draw_idle()
-                        except Exception:
-                            pass
-                    else:
-                        logger.warning("Fallback UMAP plot also failed")
+                _handle_render_fallback(group_col)
 
             app_state.initial_render_done = True
         except Exception as plot_err:

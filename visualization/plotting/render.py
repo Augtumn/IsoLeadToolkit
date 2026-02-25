@@ -1,4 +1,6 @@
 """Primary rendering routines for embeddings and scatter plots."""
+from __future__ import annotations
+
 import logging
 import traceback
 
@@ -83,7 +85,15 @@ def _build_legend_proxies(handles, labels):
             )
     return proxies
 
-def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca_params=None, robust_pca_params=None, size=60):
+def plot_embedding(
+    group_col: str,
+    algorithm: str,
+    umap_params: dict | None = None,
+    tsne_params: dict | None = None,
+    pca_params: dict | None = None,
+    robust_pca_params: dict | None = None,
+    size: int = 60,
+) -> bool:
     """Update plot with specified algorithm and parameters"""
     try:
         logger.debug(f"plot_embedding called: algorithm={algorithm}, group_col={group_col}, size={size}")
@@ -845,11 +855,11 @@ def plot_embedding(group_col, algorithm, umap_params=None, tsne_params=None, pca
         traceback.print_exc()
         return False
 
-def plot_umap(group_col, params, size):
+def plot_umap(group_col: str, params: dict, size: int) -> bool:
     """Deprecated: Use plot_embedding instead"""
     return plot_embedding(group_col, 'UMAP', umap_params=params, size=size)
 
-def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
+def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_kde: bool = False) -> bool:
     """Render a 2D scatter plot using selected raw measurement columns."""
     try:
         if app_state.fig is None:
@@ -1159,7 +1169,7 @@ def plot_2d_data(group_col, data_columns, size=60, show_kde=False):
         traceback.print_exc()
         return False
 
-def plot_3d_data(group_col, data_columns, size=60):
+def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> bool:
     """Render a 3D scatter plot using selected raw measurement columns."""
     try:
         if app_state.fig is None:
