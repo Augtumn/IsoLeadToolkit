@@ -75,7 +75,8 @@ E2_DEFAULT = 0.0
 
 PRESET_MODELS = {
     "V1V2 (Geokit)": {
-        # Geokit 版本参数（与其他算法保持“年”为单位）
+        # Geokit 版本参数（与其他算法保持"年"为单位）
+        'age_model': 'single_stage',
         'T1': 4430e6,      # Age01
         'T2': 4570e6,      # Age02
         'Tsec': 3700e6,    # Age1
@@ -89,6 +90,7 @@ PRESET_MODELS = {
     },
     "V1V2 (Zhu 1993)": {
         # Zhu (1993): Pb isotope 3D topological projection (forced through origin)
+        'age_model': 'single_stage',
         'T1': T_EARTH_CANON,
         'T2': T_EARTH_CANON,
         'Tsec': 0.0,
@@ -103,6 +105,7 @@ PRESET_MODELS = {
     },
     "Stacey & Kramers (2nd Stage)": {
         # PbIso Table 1: T1 = 3700 Ma for SK2
+        'age_model': 'two_stage',
         'T1': T_SK_STAGE2,
         'T2': T_EARTH_CANON,
         'Tsec': T_SK_STAGE2,
@@ -115,6 +118,7 @@ PRESET_MODELS = {
         'E2': E2_DEFAULT
     },
     "Stacey & Kramers (1st Stage)": {
+        'age_model': 'single_stage',
         'T1': T_EARTH_CANON,
         'T2': T_EARTH_CANON,
         'Tsec': T_SK_STAGE2,
@@ -128,6 +132,7 @@ PRESET_MODELS = {
         'E2': E2_DEFAULT
     },
     "Cumming & Richards (Model III)": {
+        'age_model': 'single_stage',
         'T1': 4509e6, 'T2': 4509e6, 'Tsec': 0, # Continuous
         'a0': A0, 'b0': B0, 'c0': C0,
         'a1': A0, 'b1': B0, 'c1': C0,
@@ -141,6 +146,7 @@ PRESET_MODELS = {
     "Maltese & Mezger (2020)": {
         # BSE evolution model: initial BSE composition at t1 = 4.498 Ga
         # From Maltese & Mezger (2020), GCA
+        'age_model': 'single_stage',
         'T1': 4498e6,
         'T2': 4498e6,
         'Tsec': 0.0,
@@ -169,6 +175,7 @@ class GeochemistryEngine:
     def __init__(self):
         # 默认参数初始化 (与 PbIso 文献默认一致: SK 2nd stage)
         self.params = {
+            'age_model': 'two_stage',
             'T1': T_SK_STAGE2,
             'T2': T_EARTH_CANON,
             'Tsec': T_SK_STAGE2,
@@ -227,10 +234,13 @@ class GeochemistryEngine:
         """
         for k, v in new_params.items():
             if k in self.params:
-                try:
-                    self.params[k] = float(v)
-                except (ValueError, TypeError):
-                    pass # 忽略无效输入
+                if k == 'age_model':
+                    self.params[k] = str(v)
+                else:
+                    try:
+                        self.params[k] = float(v)
+                    except (ValueError, TypeError):
+                        pass # 忽略无效输入
         self._update_derived_params()
 
     def get_parameters(self):

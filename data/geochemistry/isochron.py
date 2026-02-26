@@ -102,15 +102,10 @@ def calculate_isochron1_growth_curve(slope, intercept, age_ma, params=None, step
     l235 = params['lambda_235']
     u_ratio = params['U_ratio']
 
-    is_two_stage = 'a1' in params
-    if is_two_stage:
-        T_start_curve = params.get('Tsec', T_SK_STAGE2)
-        a_start = params.get('a1', A1_SK)
-        b_start = params.get('b1', B1_SK)
-    else:
-        T_start_curve = params.get('T2', T_EARTH_CANON)
-        a_start = params.get('a0', A0)
-        b_start = params.get('b0', B0)
+    is_two_stage = params.get('age_model', 'single_stage') == 'two_stage'
+    T_start_curve = params.get('T1', T_SK_STAGE2)
+    a_start = params.get('a1', A1_SK)
+    b_start = params.get('b1', B1_SK)
 
     t_years = float(age_ma) * 1e6
     t_steps = np.linspace(0, T_start_curve, int(steps))
@@ -153,17 +148,17 @@ def calculate_isochron2_growth_curve(slope_208, slope_207, intercept_207, age_ma
     if params is None:
         params = engine.params
 
-    kappa_source = calculate_source_kappa_from_slope(slope_208, age_ma)
-    mu_source = calculate_source_mu_from_isochron(slope_207, intercept_207, age_ma)
+    kappa_source = calculate_source_kappa_from_slope(slope_208, age_ma, params=params)
+    mu_source = calculate_source_mu_from_isochron(slope_207, intercept_207, age_ma, params=params)
 
     if not kappa_source or not mu_source or kappa_source <= 0 or mu_source <= 0:
         return None
 
     l238 = params['lambda_238']
     l232 = params['lambda_232']
-    T_start = params.get('T2', params.get('T1', T_EARTH_CANON))
-    a0 = params.get('a0', A0)
-    c0 = params.get('c0', C0)
+    T_start = params.get('T1', params.get('T2', T_EARTH_CANON))
+    a0 = params.get('a1', params.get('a0', A0))
+    c0 = params.get('c1', params.get('c0', C0))
     E1_val = params.get('E1', E1_DEFAULT)
     E2_val = params.get('E2', E2_DEFAULT)
 
@@ -316,26 +311,26 @@ def calculate_isochron_age_from_slope(slope, params=None):
     return age_ma
 
 def calculate_source_mu_from_isochron(slope, intercept, age_ma, params=None):
-    """从等时线参数反演源区 Mu"""
+    """从等时线参数反演源区 Mu (model-aware: 使用 T1, a1, b1)"""
     if params is None: params = engine.params
-    
-    T = params['T2']
+
+    T = params['T1']
     t = age_ma * 1e6
     u_r = params['U_ratio']
-    
+
     C1 = np.exp(params['lambda_238'] * T) - np.exp(params['lambda_238'] * t)
     C2 = u_r * (np.exp(params['lambda_235'] * T) - np.exp(params['lambda_235'] * t))
-    
-    num = slope * params['a0'] + intercept - params['b0']
+
+    num = slope * params['a1'] + intercept - params['b1']
     den = C2 - slope * C1
-    
+
     return num / den if abs(den) > 1e-15 else 0.0
 
 def calculate_source_kappa_from_slope(slope_208_206, age_ma, params=None):
-    """从 208/204 vs 206/204 斜率反演源区 Kappa"""
+    """从 208/204 vs 206/204 斜率反演源区 Kappa (model-aware: 使用 T1)"""
     if params is None: params = engine.params
-    
-    T = params['T2']
+
+    T = params['T1']
     t = age_ma * 1e6
     
     num = np.exp(params['lambda_238'] * T) - np.exp(params['lambda_238'] * t)

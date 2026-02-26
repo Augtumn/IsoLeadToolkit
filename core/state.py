@@ -37,6 +37,8 @@ class AppState:
         self.show_paleoisochrons = True
         self.show_model_age_lines = True
         self.show_isochrons = False  # Default to False for isochron overlays
+        self.use_real_age_for_mu_kappa = False  # Use selected age column for PB_MU_AGE/PB_KAPPA_AGE
+        self.mu_kappa_age_col = None  # Optional age column for PB_MU_AGE/PB_KAPPA_AGE
         self.isochron_label_options = {
             'show_age': True,
             'show_mswd': False,

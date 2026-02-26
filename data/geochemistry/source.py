@@ -5,289 +5,268 @@ import numpy as np
 from .engine import engine
 
 
-def calculate_mu_sk(Pb206_204_S, Pb207_204_S, t_Ma, params=None):
+# =============================================================================
+# 内部核心函数 — 统一反演算法
+# =============================================================================
+
+def _prepare_age(t_Ma):
+    """年龄预处理: Ma → 年, 处理 None 和异常值."""
+    if t_Ma is None:
+        return np.array(np.nan)
+    try:
+        t = np.asarray(t_Ma, dtype=float)
+    except (ValueError, TypeError):
+        t_arr = np.asarray(t_Ma)
+        if t_arr.ndim == 0:
+            return np.array(np.nan)
+        t_flat = []
+        for x in t_arr.ravel():
+            try:
+                t_flat.append(float(x))
+            except (ValueError, TypeError):
+                t_flat.append(np.nan)
+        t = np.array(t_flat).reshape(t_arr.shape)
+    return np.maximum(t, 0) * 1e6
+
+
+def _invert_mu(x, y, t_Ma, X_ref, Y_ref, T_ref, params):
     """
-    计算源区 Mu 值 (238U/204Pb)
-    
-    说明:
-    此函数基于给定的样品年龄 t 和测量比值，反演产生该铅同位素组成的源区 U/Pb 比。
-    计算假设铅从初始时间 T (T2) 以单一阶段演化到 t (近似)。
-    
+    统一 μ (238U/204Pb) 反演核心.
+
+    通过当今等时线斜率投影，联合 206Pb 和 207Pb 两个约束求解源区 μ。
+
+    Args:
+        x: 样品 206Pb/204Pb
+        y: 样品 207Pb/204Pb
+        t_Ma: 样品年龄 (Ma)
+        X_ref: 参考 206Pb/204Pb (a0 或 a1)
+        Y_ref: 参考 207Pb/204Pb (b0 或 b1)
+        T_ref: 参考起始时间 (T2 或 T1), 单位: 年
+        params: 参数字典
+
+    Returns:
+        np.ndarray: 源区 μ 值
+    """
+    l238 = params['lambda_238']
+    l235 = params['lambda_235']
+    u_ratio = params['U_ratio']
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+    t = _prepare_age(t_Ma)
+
+    # 当今等时线斜率
+    e5t = np.exp(l235 * t)
+    e8t = np.exp(l238 * t)
+    den_slope = e8t - 1
+    den_slope = np.where(np.abs(den_slope) < 1e-50, 1e-50, den_slope)
+    slope_t = u_ratio * (e5t - 1) / den_slope
+
+    # 放射性成因增量
+    rad207 = u_ratio * (np.exp(l235 * T_ref) - e5t)
+    rad206 = np.exp(l238 * T_ref) - e8t
+
+    # 求解 μ
+    numerator = (y - Y_ref) - slope_t * (x - X_ref)
+    denominator = rad207 - slope_t * rad206
+    denominator = np.where(np.abs(denominator) < 1e-50, 1e-50, denominator)
+
+    return numerator / denominator
+
+
+def _invert_omega(z, t_Ma, Z_ref, T_ref, params):
+    """
+    统一 ω (232Th/204Pb) 反演核心.
+
+    从 208Pb 生长方程直接求解: ω = (z − Z_ref) / [exp(λ232·T) − exp(λ232·t)]
+
+    Args:
+        z: 样品 208Pb/204Pb
+        t_Ma: 样品年龄 (Ma)
+        Z_ref: 参考 208Pb/204Pb (c0 或 c1)
+        T_ref: 参考起始时间, 单位: 年
+        params: 参数字典
+
+    Returns:
+        np.ndarray: 源区 ω 值
+    """
+    l232 = params['lambda_232']
+
+    z = np.asarray(z)
+    t = _prepare_age(t_Ma)
+
+    denom = np.exp(l232 * T_ref) - np.exp(l232 * t)
+    denom = np.where(np.abs(denom) < 1e-50, 1e-50, denom)
+
+    return (z - Z_ref) / denom
+
+
+def _invert_kappa(x, z, t_Ma, X_ref, Z_ref, T_ref, params):
+    """
+    统一 κ (232Th/238U) 反演核心.
+
+    从 206Pb 和 208Pb 生长方程比值消去 μ:
+    κ = [(z−Z_ref)/(x−X_ref)] × [exp(λ238·T)−exp(λ238·t)] / [exp(λ232·T)−exp(λ232·t)]
+
+    Args:
+        x: 样品 206Pb/204Pb
+        z: 样品 208Pb/204Pb
+        t_Ma: 样品年龄 (Ma)
+        X_ref: 参考 206Pb/204Pb (a0 或 a1)
+        Z_ref: 参考 208Pb/204Pb (c0 或 c1)
+        T_ref: 参考起始时间, 单位: 年
+        params: 参数字典
+
+    Returns:
+        np.ndarray: 源区 κ 值
+    """
+    l238 = params['lambda_238']
+    l232 = params['lambda_232']
+
+    x = np.asarray(x)
+    z = np.asarray(z)
+    t = _prepare_age(t_Ma)
+
+    num_time = np.exp(l238 * T_ref) - np.exp(l238 * t)
+    den_time = np.exp(l232 * T_ref) - np.exp(l232 * t)
+    den_time = np.where(np.abs(den_time) < 1e-50, 1e-50, den_time)
+
+    dx = x - X_ref
+    dx = np.where(np.abs(dx) < 1e-50, 1e-50, dx)
+
+    return ((z - Z_ref) / dx) * (num_time / den_time)
+
+
+# =============================================================================
+# 公共 API — 单阶段参考 (CDT: a0/b0/c0, T2)
+# =============================================================================
+
+def calculate_source_mu(Pb206_204_S, Pb207_204_S, t_Ma, params=None):
+    """
+    计算源区 Mu 值 (238U/204Pb) — 原始铅参考（单阶段）
+
+    使用 CDT 原始铅参考值 (a0, b0) 和地球年龄 T2。
+
     Returns:
         np.ndarray: 源区 Mu 值
     """
-    if params is None: params = engine.params
-    
-    l238 = params['lambda_238']
-    l235 = params['lambda_235']
-    T = params['T2']
-    a_init = params['a0']
-    b_init = params['b0']
-    u_ratio = params['U_ratio']
+    if params is None:
+        params = engine.params
+    return _invert_mu(Pb206_204_S, Pb207_204_S, t_Ma,
+                      params['a0'], params['b0'], params['T2'], params)
 
-    # 数据预处理
-    Pb206 = np.asarray(Pb206_204_S)
-    Pb207 = np.asarray(Pb207_204_S)
-    
-    # 年龄预处理
-    if t_Ma is None:
-        t = np.array(np.nan)
-    else:
-        try:
-            t = np.asarray(t_Ma, dtype=float)
-        except (ValueError, TypeError):
-             # 处理可能包含 None 的对象数组
-             t_arr = np.asarray(t_Ma)
-             if t_arr.ndim == 0:
-                 t = np.array(np.nan)
-             else:
-                 t_flat = []
-                 for x in t_arr.ravel():
-                     try: t_flat.append(float(x)) 
-                     except: t_flat.append(np.nan)
-                 t = np.array(t_flat).reshape(t_arr.shape)
 
-    t = np.maximum(t, 0) * 1e6
-    
-    # 1. 计算等时线斜率 slope
-    num = np.exp(l235 * t) - 1
-    den = np.exp(l238 * t) - 1
-    den = np.where(np.abs(den) < 1e-50, 1e-50, den)
-    slope_t = num / ((1.0 / u_ratio) * den)
-    
-    # 2. 计算放射性成因增量因子
-    rad207_growth = u_ratio * (np.exp(l235 * T) - np.exp(l235 * t))
-    rad206_growth = np.exp(l238 * T) - np.exp(l238 * t)
-    
-    # 3. 求解 Mu
-    numerator = (Pb207 - b_init) - slope_t * (Pb206 - a_init)
-    denominator = rad207_growth - slope_t * rad206_growth
-    denominator = np.where(np.abs(denominator) < 1e-50, 1e-50, denominator)
-    
-    return numerator / denominator
-
-def calculate_omega_sk(Pb208_204_S, t_Ma, params=None):
+def calculate_source_omega(Pb208_204_S, t_Ma, params=None):
     """
-    计算源区 Omega 值 (232Th/204Pb)
-    
-    基于 208Pb 生长方程: Pb208 = c0 + omega * (e^λ2*T - e^λ2*t)
+    计算源区 Omega 值 (232Th/204Pb) — 原始铅参考（单阶段）
+
+    使用 CDT 原始铅参考值 (c0) 和地球年龄 T2。
     """
-    if params is None: params = engine.params
-    l232 = params['lambda_232']
-    T = params['T2']
-    c_init = params['c0']
-    
-    Pb208 = np.asarray(Pb208_204_S)
-    
-    if t_Ma is None:
-        t = np.array(np.nan)
-    else:
-        try:
-             t = np.asarray(t_Ma, dtype=float)
-        except:
-             # 简化处理异常
-             t = np.full_like(Pb208, np.nan)
+    if params is None:
+        params = engine.params
+    return _invert_omega(Pb208_204_S, t_Ma,
+                         params['c0'], params['T2'], params)
 
-    t = np.maximum(t, 0) * 1e6
-    
-    denom = np.exp(l232 * T) - np.exp(l232 * t)
-    denom = np.where(np.abs(denom) < 1e-50, 1e-50, denom)
-    
-    return (Pb208 - c_init) / denom
 
-def calculate_nu_sk(mu, params=None):
+def calculate_source_nu(mu, params=None):
     """
     计算源区 Nu 值 (235U/204Pb)
     nu = mu * (235U/238U)
     """
-    if params is None: params = engine.params
-    u_ratio = params['U_ratio']
-    return mu * u_ratio
+    if params is None:
+        params = engine.params
+    return mu * params['U_ratio']
 
-def calculate_mu_sk_model(Pb206_204_S, Pb207_204_S, t_Ma, params=None):
+
+# =============================================================================
+# 公共 API — 模型参考 (a1/b1/c1, T1)
+# =============================================================================
+
+def calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params=None):
     """
-    计算模型源区 Mu (对应 R 包 PbIso 中的 CalcMu)
-    此函数严格遵循 Stacey & Kramers (1975) 第二阶段模型参数。
-    
+    计算模型源区 Mu (对应 R 包 PbIso 中的 CalcMu) — 模型参考
+
+    使用当前模型的参考参数 (T1, a1, b1) 反演源区 238U/204Pb 比值。
+    适用于任何已配置的地球化学模型（SK、CR、MM 等）。
+
     Args:
         Pb206_204_S, Pb207_204_S: 样品同位素比值
         t_Ma: 样品年龄 (Ma)
-        
-    Returns:
-        np.ndarray: 源区 Mu 值, 表示从 Tsec (3.7Ga) 到 t 阶段的 238U/204Pb 比值。
-    """
-    if params is None: params = engine.params
-    
-    l5 = params['lambda_235']
-    l8 = params['lambda_238']
-    
-    T1 = params['T1'] 
-    X1 = params['a1']
-    Y1 = params['b1']
-    u_ratio = params['U_ratio']
-    U8U5 = 1.0 / u_ratio if u_ratio != 0 else 137.88
-    
-    t = np.asarray(t_Ma) * 1e6
-    x = np.asarray(Pb206_204_S)
-    y = np.asarray(Pb207_204_S)
-    
-    # 核心算法 (源自 PbIso CalcMu)
-    e5t = np.exp(l5 * t)
-    e8t = np.exp(l8 * t)
-    e5T = np.exp(l5 * T1)
-    e8T = np.exp(l8 * T1)
-    
-    term_slope = (e5t - 1) / (U8U5 * (e8t - 1))
-    
-    num = term_slope * (X1 - x) + y - Y1
-    den = (e5T - e5t) / U8U5 - term_slope * (e8T - e8t)
-    den = np.where(np.abs(den) < 1e-50, 1e-50, den)
-    
-    return num / den
 
-def calculate_kappa_sk_model(Pb208_204_S, Pb206_204_S, t_Ma, params=None):
+    Returns:
+        np.ndarray: 源区 Mu 值, 表示从 T1 到 t 阶段的 238U/204Pb 比值。
     """
-    计算模型源区 kappa (Th/U) (对应 R 包 PbIso 中的 CalcKa)
-    
+    if params is None:
+        params = engine.params
+    return _invert_mu(Pb206_204_S, Pb207_204_S, t_Ma,
+                      params['a1'], params['b1'], params['T1'], params)
+
+
+def calculate_model_kappa(Pb208_204_S, Pb206_204_S, t_Ma, params=None):
+    """
+    计算模型源区 Kappa (Th/U) (对应 R 包 PbIso 中的 CalcKa) — 模型参考
+
+    使用当前模型的参考参数 (T1, a1, c1) 反演源区 232Th/238U 比值。
+    适用于任何已配置的地球化学模型。
+
     Returns:
         np.ndarray: 源区 Kappa 值 (232Th/238U)
     """
-    if params is None: params = engine.params
-    
-    l238 = params['lambda_238']
-    l232 = params['lambda_232']
-    
-    T = params['T1']
-    X1 = params['a1']
-    Z1 = params['c1']
-    
-    t = np.asarray(t_Ma) * 1e6
-    x = np.asarray(Pb206_204_S)
-    z = np.asarray(Pb208_204_S)
-    
-    num_time = np.exp(l238 * T) - np.exp(l238 * t)
-    den_time = np.exp(l232 * T) - np.exp(l232 * t)
-    den_time = np.where(np.abs(den_time) < 1e-50, 1e-50, den_time)
-    
-    dx = x - X1
-    dx = np.where(np.abs(dx) < 1e-50, 1e-50, dx)
-    
-    kappa = ((z - Z1) / dx) * (num_time / den_time)
-    
-    return kappa
+    if params is None:
+        params = engine.params
+    return _invert_kappa(Pb206_204_S, Pb208_204_S, t_Ma,
+                         params['a1'], params['c1'], params['T1'], params)
+
+
+# =============================================================================
+# 初始比值反演 (复用 calculate_model_mu / calculate_model_kappa)
+# =============================================================================
 
 def calculate_initial_ratio_64(t_Ma, Pb206_204_S, Pb207_204_S, params=None):
     """
     计算样品形成时的初始 206Pb/204Pb (对应 PbIso Calc64in)
     """
-    if params is None: params = engine.params
-    
-    l5 = params['lambda_235']
-    l8 = params['lambda_238']
-    T1 = params['T1']
-    X1 = params['a1']
-    Y1 = params['b1']
-    u_ratio = params['U_ratio']
-    U8U5 = 1.0 / u_ratio
-    
+    if params is None:
+        params = engine.params
+    mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
     t = np.asarray(t_Ma) * 1e6
-    x = np.asarray(Pb206_204_S)
-    y = np.asarray(Pb207_204_S)
+    e8T = np.exp(params['lambda_238'] * params['T1'])
+    e8t = np.exp(params['lambda_238'] * t)
+    return params['a1'] + mu * (e8T - e8t)
 
-    # 1. 计算 Mu
-    e5t = np.exp(l5 * t)
-    e8t = np.exp(l8 * t)
-    e5T = np.exp(l5 * T1)
-    e8T = np.exp(l8 * T1)
-    
-    term_slope = (e5t - 1) / (U8U5 * (e8t - 1))
-    mu_num = term_slope * (X1 - x) + y - Y1
-    mu_den = (e5T - e5t) / U8U5 - term_slope * (e8T - e8t)
-    mu_den = np.where(np.abs(mu_den) < 1e-50, 1e-50, mu_den)
-    mu = mu_num / mu_den
-    
-    # 2. 计算初始比值: X_init = X1 + mu * (e^λ8*T1 - e^λ8*t)
-    # 实际上这是计算模型在时间 t 的值
-    res = X1 + mu * (e8T - e8t)
-    return res
 
 def calculate_initial_ratio_74(t_Ma, Pb206_204_S, Pb207_204_S, params=None):
     """
     计算样品形成时的初始 207Pb/204Pb (对应 PbIso Calc74in)
     """
-    if params is None: params = engine.params
-    
-    l5 = params['lambda_235']
-    l8 = params['lambda_238']
-    T1 = params['T1']
-    X1 = params['a1']
-    Y1 = params['b1']
-    u_ratio = params['U_ratio']
-    U8U5 = 1.0 / u_ratio
-    
+    if params is None:
+        params = engine.params
+    mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
     t = np.asarray(t_Ma) * 1e6
-    x = np.asarray(Pb206_204_S)
-    y = np.asarray(Pb207_204_S)
-    
-    # 1. 计算 Mu
-    e5t = np.exp(l5 * t)
-    e8t = np.exp(l8 * t)
-    e5T = np.exp(l5 * T1)
-    e8T = np.exp(l8 * T1)
-    
-    term_slope = (e5t - 1) / (U8U5 * (e8t - 1))
-    mu_num = term_slope * (X1 - x) + y - Y1
-    mu_den = (e5T - e5t) / U8U5 - term_slope * (e8T - e8t)
-    mu_den = np.where(np.abs(mu_den) < 1e-50, 1e-50, mu_den)
-    mu = mu_num / mu_den
-    
-    # 2. 计算初始比值: Y_init = Y1 + (mu/U_ratio) * (e^λ5*T1 - e^λ5*t)
-    res = Y1 + (mu / U8U5) * (e5T - e5t)
-    return res
+    U8U5 = 1.0 / params['U_ratio']
+    e5T = np.exp(params['lambda_235'] * params['T1'])
+    e5t = np.exp(params['lambda_235'] * t)
+    return params['b1'] + (mu / U8U5) * (e5T - e5t)
+
 
 def calculate_initial_ratio_84(t_Ma, Pb206_204_S, Pb207_204_S, Pb208_204_S, params=None):
     """
     计算样品形成时的初始 208Pb/204Pb (对应 PbIso Calc84in)
     """
-    if params is None: params = engine.params
-    
-    l5 = params['lambda_235']
-    l8 = params['lambda_238']
-    l2 = params['lambda_232']
-    T1 = params['T1']
-    X1 = params['a1']
-    Y1 = params['b1']
-    Z1 = params['c1']
-    u_ratio = params['U_ratio']
-    U8U5 = 1.0 / u_ratio
-    
-    t = np.asarray(t_Ma) * 1e6
-    x = np.asarray(Pb206_204_S)
-    y = np.asarray(Pb207_204_S)
-    z = np.asarray(Pb208_204_S)
-    
-    e5t = np.exp(l5 * t)
-    e8t = np.exp(l8 * t)
-    e2t = np.exp(l2 * t)
-    e5T = np.exp(l5 * T1)
-    e8T = np.exp(l8 * T1)
-    e2T = np.exp(l2 * T1)
-    
-    # 1. 计算 Mu
-    term_slope = (e5t - 1) / (U8U5 * (e8t - 1))
-    mu_num = term_slope * (X1 - x) + y - Y1
-    mu_den = (e5T - e5t) / U8U5 - term_slope * (e8T - e8t)
-    mu_den = np.where(np.abs(mu_den) < 1e-50, 1e-50, mu_den)
-    mu = mu_num / mu_den
-    
-    # 2. 计算 Kappa
-    den_k_num = e2T - e2t
-    den_k_den = e8T - e8t
-    den_k_den = np.where(np.abs(den_k_den) < 1e-50, 1e-50, den_k_den)
-    kappa = ((z - Z1) / (x - X1)) / (den_k_num / den_k_den)
-    
-    # 3. 计算 Omega 并得出初始 208
+    if params is None:
+        params = engine.params
+    mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
+    kappa = calculate_model_kappa(Pb208_204_S, Pb206_204_S, t_Ma, params)
     omega = kappa * mu
-    res = Z1 + omega * (e2T - e2t)
-    
-    return res
+    t = np.asarray(t_Ma) * 1e6
+    e2T = np.exp(params['lambda_232'] * params['T1'])
+    e2t = np.exp(params['lambda_232'] * t)
+    return params['c1'] + omega * (e2T - e2t)
+
+
+# Backward-compatible aliases (deprecated)
+calculate_mu_sk = calculate_source_mu
+calculate_omega_sk = calculate_source_omega
+calculate_nu_sk = calculate_source_nu
+calculate_mu_sk_model = calculate_model_mu
+calculate_kappa_sk_model = calculate_model_kappa

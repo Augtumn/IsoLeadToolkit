@@ -71,6 +71,47 @@ def _draw_model_curves(ax, actual_algorithm, params_list):
         except Exception as err:
             logger.warning("Failed to draw model curve: %s", err)
 
+
+def _draw_mu_kappa_paleoisochrons(ax, ages):
+    """Draw paleoisochron ages as vertical guides for Mu/Kappa plots."""
+    if not ages:
+        return
+    try:
+        paleo_style = resolve_line_style(
+            app_state,
+            'paleoisochron',
+            {
+                'color': '#94a3b8',
+                'linewidth': getattr(app_state, 'paleoisochron_width', 0.9),
+                'linestyle': '--',
+                'alpha': 0.85
+            }
+        )
+        ylim = ax.get_ylim()
+        y_top = max(ylim[0], ylim[1])
+        for age in ages:
+            ax.axvline(
+                age,
+                color=paleo_style['color'],
+                linewidth=paleo_style['linewidth'],
+                linestyle=paleo_style['linestyle'],
+                alpha=paleo_style['alpha'],
+                zorder=2,
+            )
+            ax.text(
+                age,
+                y_top,
+                f" {age:.0f} Ma",
+                color=paleo_style['color'],
+                fontsize=8,
+                rotation=90,
+                va='top',
+                ha='right',
+                alpha=paleo_style['alpha']
+            )
+    except Exception as err:
+        logger.warning("Failed to draw Mu/Kappa paleoisochrons: %s", err)
+
 def _build_isochron_label(result_dict):
     """根据 isochron_label_options 动态构建等时线标注文本。"""
     opts = getattr(app_state, 'isochron_label_options', {})

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Geochemistry package exports."""
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from .engine import (
     PRESET_MODELS,
@@ -35,6 +38,15 @@ from .age import (
     calculate_model_age,
 )
 from .source import (
+    _invert_mu,
+    _invert_omega,
+    _invert_kappa,
+    calculate_source_mu,
+    calculate_source_omega,
+    calculate_source_nu,
+    calculate_model_mu,
+    calculate_model_kappa,
+    # Backward-compatible aliases
     calculate_mu_sk,
     calculate_omega_sk,
     calculate_nu_sk,
@@ -60,6 +72,51 @@ from .isochron import (
     calculate_source_mu_from_isochron,
     calculate_source_kappa_from_slope,
 )
+
+def resolve_age_model(params=None, model_name=None):
+    """Resolve age model mode from params and model name."""
+    if params is None:
+        params = engine.params
+    if model_name is None:
+        model_name = getattr(engine, 'current_model_name', '')
+
+    # Prefer explicit flag
+    age_model = params.get('age_model')
+    if isinstance(age_model, str):
+        mode = age_model.strip().lower().replace('_', '-')
+        if mode in ('two-stage', 'two stage', '2-stage', '2nd', 'second'):
+            return 'two_stage'
+        if mode in ('single-stage', 'single stage', '1-stage', '1st', 'first'):
+            return 'single_stage'
+
+    # Fallback heuristics (for backward compatibility with custom params)
+    logger.debug("age_model flag not found in params, falling back to heuristics for model '%s'", model_name)
+
+    if isinstance(model_name, str):
+        if 'Geokit' in model_name:
+            return 'single_stage'
+        if '1st Stage' in model_name:
+            return 'single_stage'
+        if '2nd Stage' in model_name:
+            return 'two_stage'
+
+    try:
+        tsec = float(params.get('Tsec', 0.0))
+    except Exception:
+        tsec = 0.0
+    if not np.isfinite(tsec) or tsec <= 0:
+        return 'single_stage'
+
+    try:
+        a0, b0, c0 = params.get('a0'), params.get('b0'), params.get('c0')
+        a1, b1, c1 = params.get('a1'), params.get('b1'), params.get('c1')
+        if all(np.isfinite([a0, b0, c0, a1, b1, c1])):
+            if max(abs(a1 - a0), abs(b1 - b0), abs(c1 - c0)) < 1e-6:
+                return 'single_stage'
+    except Exception:
+        pass
+
+    return 'two_stage'
 
 
 def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ages=True, a=None, b=None, c=None, scale=1.0, t_Ma=None, **kwargs):
@@ -92,14 +149,15 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     }
     
     # 获取当前模型设置
+    params_calc = engine.get_parameters()
     current_model = getattr(engine, 'current_model_name', '')
     # V1V2 (Geokit) 模式特殊处理: 使用 T1=4.43Ga 计算 tCDT
     is_geokit = "Geokit" in current_model
-    # 仅在明确的两阶段模型中使用两阶段逻辑
-    is_two_stage = "2nd Stage" in current_model or current_model.endswith("(2nd Stage)")
-    
+    # 使用模型参数与名称判定年龄模型
+    age_model = resolve_age_model(params_calc, current_model)
+    is_two_stage = age_model == 'two_stage'
+
     # 2. 模式年龄计算
-    params_calc = engine.get_parameters()
     if is_geokit:
         tCDT = calculate_single_stage_age(Pb206, Pb207, initial_age=engine.params['T1'])
     else:
@@ -107,15 +165,17 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
 
     tSK = calculate_two_stage_age(Pb206, Pb207)
 
+    t_model = tSK if is_two_stage else tCDT
+
     if t_Ma is None:
-        t_input = tSK
+        t_input = t_model
     else:
         t_input = np.asarray(t_Ma, dtype=float)
         if t_input.ndim == 0:
             if not np.isfinite(t_input):
-                t_input = tSK
+                t_input = t_model
         else:
-            t_input = np.where(np.isfinite(t_input), t_input, tSK)
+            t_input = np.where(np.isfinite(t_input), t_input, t_model)
     
     results['tCDT (Ma)'] = tCDT
     results['tSK (Ma)'] = tSK
@@ -154,19 +214,26 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S, calculate_ag
     results['V1'] = v1
     results['V2'] = v2
     
-    # 5. 源区参数反演
-    # 使用真实年龄（若提供），否则回退到 tSK
-    mu_val = calculate_mu_sk(Pb206, Pb207, t_input, params=params_calc)
+    # 5. 源区参数反演 — 根据模型自动选择参考参数
+    if is_two_stage:
+        X_ref, Y_ref, Z_ref = params_calc['a1'], params_calc['b1'], params_calc['c1']
+        T_ref = params_calc['T1']
+    else:
+        X_ref, Y_ref, Z_ref = params_calc['a0'], params_calc['b0'], params_calc['c0']
+        T_ref = params_calc['T2']
+
+    mu_val = _invert_mu(Pb206, Pb207, t_input, X_ref, Y_ref, T_ref, params_calc)
+    omega_val = _invert_omega(Pb208, t_input, Z_ref, T_ref, params_calc)
     results['mu'] = mu_val
-    results['nu'] = calculate_nu_sk(mu_val, params=params_calc)
-    results['omega'] = calculate_omega_sk(Pb208, t_input, params=params_calc)
-    
-    # 5.2 R语言 PbIso 对应参数 (严格 SK 模型)
-    mu_sk = calculate_mu_sk_model(Pb206, Pb207, t_input, params=params_calc)
-    kappa_sk = calculate_kappa_sk_model(Pb208, Pb206, t_input, params=params_calc)
-    results['mu_SK'] = mu_sk
-    results['kappa_SK'] = kappa_sk
-    results['omega_SK'] = kappa_sk * mu_sk # Omega = Kappa * Mu
+    results['nu'] = calculate_source_nu(mu_val, params=params_calc)
+    results['omega'] = omega_val
+
+    # 5.2 模型参考参数 (始终使用 T1/a1/b1)
+    mu_model = calculate_model_mu(Pb206, Pb207, t_input, params=params_calc)
+    kappa_model = calculate_model_kappa(Pb208, Pb206, t_input, params=params_calc)
+    results['mu_model'] = mu_model
+    results['kappa_model'] = kappa_model
+    results['omega_model'] = kappa_model * mu_model
     
     # 6. 初始比值反演 (基于真实年龄或 tSK)
     results['Init_206_204'] = calculate_initial_ratio_64(t_input, Pb206, Pb207, params=params_calc)
@@ -203,6 +270,12 @@ __all__ = [
     'calculate_single_stage_age',
     'calculate_two_stage_age',
     'calculate_model_age',
+    'calculate_source_mu',
+    'calculate_source_omega',
+    'calculate_source_nu',
+    'calculate_model_mu',
+    'calculate_model_kappa',
+    # Deprecated aliases
     'calculate_mu_sk',
     'calculate_omega_sk',
     'calculate_nu_sk',
@@ -223,5 +296,6 @@ __all__ = [
     'calculate_isochron_age_from_slope',
     'calculate_source_mu_from_isochron',
     'calculate_source_kappa_from_slope',
+    'resolve_age_model',
     'calculate_all_parameters',
 ]

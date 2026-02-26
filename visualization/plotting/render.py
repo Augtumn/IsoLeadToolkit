@@ -39,6 +39,7 @@ from .geo import (
     _draw_paleoisochrons,
     _draw_model_age_lines,
     _draw_model_age_lines_86,
+    _draw_mu_kappa_paleoisochrons,
     _draw_equation_overlays,
 )
 from .ternary import _apply_ternary_stretch
@@ -256,17 +257,39 @@ def plot_embedding(
             pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
 
             if actual_algorithm in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
-                age_col = _find_age_column(df_subset.columns)
-                if not age_col:
-                    logger.error("Age column not found for Mu/Kappa plots.")
-                    return False
-                t_ma = pd.to_numeric(df_subset[age_col], errors='coerce').values
+                t_ma = None
+                if getattr(app_state, 'use_real_age_for_mu_kappa', False):
+                    age_col = getattr(app_state, 'mu_kappa_age_col', None)
+                    if age_col and age_col in df_subset.columns:
+                        t_ma = pd.to_numeric(df_subset[age_col], errors='coerce').values
+
+                if t_ma is None:
+                    try:
+                        from data.geochemistry import engine, resolve_age_model
+                        current_model = getattr(engine, 'current_model_name', '')
+                        params = engine.get_parameters()
+                        age_model = resolve_age_model(params, current_model)
+                        is_geokit = "Geokit" in current_model
+                        if age_model == 'two_stage':
+                            t_ma = geochemistry.calculate_two_stage_age(pb206, pb207, params=params)
+                        elif is_geokit:
+                            t_ma = geochemistry.calculate_single_stage_age(
+                                pb206,
+                                pb207,
+                                params=params,
+                                initial_age=params.get('T1'),
+                            )
+                        else:
+                            t_ma = geochemistry.calculate_single_stage_age(pb206, pb207, params=params)
+                    except Exception as age_err:
+                        logger.warning("Failed to compute model age: %s", age_err)
+                        return False
 
                 if actual_algorithm == 'PB_MU_AGE':
-                    mu_vals = geochemistry.calculate_mu_sk_model(pb206, pb207, t_ma)
+                    mu_vals = geochemistry.calculate_model_mu(pb206, pb207, t_ma)
                     embedding = np.column_stack((t_ma, mu_vals))
                 else:
-                    kappa_vals = geochemistry.calculate_kappa_sk_model(pb208, pb206, t_ma)
+                    kappa_vals = geochemistry.calculate_model_kappa(pb208, pb206, t_ma)
                     embedding = np.column_stack((t_ma, kappa_vals))
             else:
                 if actual_algorithm == 'PB_EVOL_76':
@@ -812,6 +835,11 @@ def plot_embedding(
                             if col_208:
                                 pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
                                 _draw_model_age_lines_86(app_state.ax, pb206, pb207, pb208, params)
+
+        if actual_algorithm in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
+            if getattr(app_state, 'show_paleoisochrons', True):
+                ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
+                _draw_mu_kappa_paleoisochrons(app_state.ax, ages)
 
         if app_state.ax is prev_ax and prev_xlim and prev_ylim:
             if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':

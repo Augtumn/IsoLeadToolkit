@@ -49,12 +49,17 @@ class DataPanel(BasePanel):
         self.modeling_show_paleoisochron_check = None
         self.modeling_show_model_age_check = None
         self.modeling_show_isochron_check = None
+        self.modeling_use_real_age_check = None
+        self.mu_kappa_age_title_label = None
+        self.mu_kappa_age_label = None
+        self.mu_kappa_age_button = None
         self.show_model_check = None
         self.show_paleoisochron_check = None
         self.show_model_age_check = None
         self.show_isochron_check = None
         self.paleo_step_spin = None
         self.calc_isochron_btn = None
+        self.isochron_settings_btn = None
         self.isochron_swatch = None
         self.v1v2_group = None
         self.v1v2_t1_spin = None
@@ -577,6 +582,7 @@ class DataPanel(BasePanel):
                 swatch.setStyleSheet(f"background-color: {swatch_color}; border: 1px solid #111827;")
                 swatch.mousePressEvent = lambda event, k=style_key, s=swatch: self._open_line_style_dialog(k, s)
                 row.addWidget(swatch)
+                chk._style_swatch = swatch
 
             row.addStretch()
             geochem_layout.addLayout(row)
@@ -616,6 +622,30 @@ class DataPanel(BasePanel):
             style_key='model_age_line'
         )
 
+        self.modeling_use_real_age_check = _add_geochem_toggle(
+            "Use Real Age for Mu/Kappa",
+            getattr(app_state, 'use_real_age_for_mu_kappa', False),
+            self._on_mu_kappa_real_age_change,
+        )
+
+        age_row = QHBoxLayout()
+        self.mu_kappa_age_title_label = QLabel(translate("Age Column"))
+        self.mu_kappa_age_title_label.setProperty('translate_key', 'Age Column')
+        age_row.addWidget(self.mu_kappa_age_title_label)
+
+        self.mu_kappa_age_label = QLabel()
+        age_row.addWidget(self.mu_kappa_age_label)
+        age_row.addStretch()
+
+        self.mu_kappa_age_button = QPushButton(translate("Select Age Column"))
+        self.mu_kappa_age_button.setProperty('translate_key', 'Select Age Column')
+        self.mu_kappa_age_button.clicked.connect(self._on_select_mu_kappa_age_column)
+        age_row.addWidget(self.mu_kappa_age_button)
+        geochem_layout.addLayout(age_row)
+
+        self._refresh_mu_kappa_age_label()
+        self._refresh_mu_kappa_age_controls()
+
         isochron_row = QHBoxLayout()
         self.calc_isochron_btn = QPushButton(translate("Calculate Isochron Age"))
         self.calc_isochron_btn.setProperty('translate_key', 'Calculate Isochron Age')
@@ -624,10 +654,10 @@ class DataPanel(BasePanel):
             self.calc_isochron_btn.setText(translate("Hide Isochron"))
         isochron_row.addWidget(self.calc_isochron_btn)
 
-        isochron_settings_btn = QPushButton(translate("Isochron Settings"))
-        isochron_settings_btn.setProperty('translate_key', 'Isochron Settings')
-        isochron_settings_btn.clicked.connect(self._on_isochron_settings)
-        isochron_row.addWidget(isochron_settings_btn)
+        self.isochron_settings_btn = QPushButton(translate("Isochron Settings"))
+        self.isochron_settings_btn.setProperty('translate_key', 'Isochron Settings')
+        self.isochron_settings_btn.clicked.connect(self._on_isochron_settings)
+        isochron_row.addWidget(self.isochron_settings_btn)
 
         iso_style = getattr(app_state, 'line_styles', {}).get('isochron', {}) or {}
         iso_color = iso_style.get('color') or '#e2e8f0'
@@ -738,6 +768,29 @@ class DataPanel(BasePanel):
 
         if self.geochem_plot_group is not None:
             self.geochem_plot_group.setVisible(mode in ('PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE'))
+
+        is_pb_evol = mode in ('PB_EVOL_76', 'PB_EVOL_86')
+        is_pb_evol_76 = mode == 'PB_EVOL_76'
+
+        if self.modeling_show_model_check is not None:
+            self.modeling_show_model_check.setVisible(is_pb_evol)
+            swatch = getattr(self.modeling_show_model_check, '_style_swatch', None)
+            if swatch is not None:
+                swatch.setVisible(is_pb_evol)
+        if self.modeling_show_model_age_check is not None:
+            self.modeling_show_model_age_check.setVisible(is_pb_evol)
+            swatch = getattr(self.modeling_show_model_age_check, '_style_swatch', None)
+            if swatch is not None:
+                swatch.setVisible(is_pb_evol)
+
+        if self.calc_isochron_btn is not None:
+            self.calc_isochron_btn.setVisible(is_pb_evol_76)
+        if self.isochron_settings_btn is not None:
+            self.isochron_settings_btn.setVisible(is_pb_evol_76)
+        if self.isochron_swatch is not None:
+            self.isochron_swatch.setVisible(is_pb_evol_76)
+
+        self._refresh_mu_kappa_age_controls()
 
     def _on_umap_slider_changed(self, param, value, label, slider):
         """UMAP 滑块拖动中 - 仅更新标签和状态，不触发重新计算"""
@@ -985,6 +1038,119 @@ class DataPanel(BasePanel):
             getattr(self, 'show_model_age_check', None)
         )
         self._on_change()
+
+    def _on_mu_kappa_real_age_change(self, state):
+        """Mu/Kappa 图使用真实年龄列"""
+        app_state.use_real_age_for_mu_kappa = (state == Qt.Checked)
+        self._sync_geochem_toggle_widgets(
+            app_state.use_real_age_for_mu_kappa,
+            getattr(self, 'modeling_use_real_age_check', None),
+        )
+        self._refresh_mu_kappa_age_label()
+        if app_state.render_mode in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
+            self._on_change()
+
+    def _on_select_mu_kappa_age_column(self):
+        """选择 Mu/Kappa 年龄列"""
+        if app_state.df_global is None:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("Please load data first.")
+            )
+            return
+
+        import pandas as pd
+
+        df = app_state.df_global
+        try:
+            numeric_cols = df.select_dtypes(include='number').columns.tolist()
+        except Exception:
+            numeric_cols = []
+            for col in df.columns:
+                try:
+                    pd.to_numeric(df[col], errors='raise')
+                    numeric_cols.append(col)
+                except Exception:
+                    continue
+
+        if not numeric_cols:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("No numeric columns available.")
+            )
+            return
+
+        none_label = translate("None")
+        items = [none_label] + numeric_cols
+
+        current = getattr(app_state, 'mu_kappa_age_col', None)
+        if current in items:
+            current_index = items.index(current)
+        else:
+            current_index = 0
+
+        from PyQt5.QtWidgets import QInputDialog
+        selection, ok = QInputDialog.getItem(
+            self,
+            translate("Select Age Column"),
+            translate("Select Age Column"),
+            items,
+            current_index,
+            False
+        )
+        if not ok:
+            return
+
+        if selection == none_label:
+            app_state.mu_kappa_age_col = None
+        else:
+            app_state.mu_kappa_age_col = selection
+
+        app_state.use_real_age_for_mu_kappa = False
+        self._sync_geochem_toggle_widgets(
+            app_state.use_real_age_for_mu_kappa,
+            getattr(self, 'modeling_use_real_age_check', None),
+        )
+        self._refresh_mu_kappa_age_label()
+        self._refresh_mu_kappa_age_controls()
+        if app_state.render_mode in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
+            self._on_change()
+
+    def _refresh_mu_kappa_age_label(self):
+        """刷新 Mu/Kappa 年龄列显示"""
+        if self.mu_kappa_age_label is None:
+            return
+        label = getattr(app_state, 'mu_kappa_age_col', None) or translate("Not Selected")
+        self.mu_kappa_age_label.setText(label)
+
+    def _refresh_mu_kappa_age_controls(self):
+        """刷新 Mu/Kappa 年龄列控件状态"""
+        mode = self._normalize_render_mode(app_state.render_mode)
+        enabled = mode in ('PB_MU_AGE', 'PB_KAPPA_AGE')
+        has_col = bool(getattr(app_state, 'mu_kappa_age_col', None))
+
+        if self.mu_kappa_age_title_label is not None:
+            self.mu_kappa_age_title_label.setVisible(enabled)
+            self.mu_kappa_age_title_label.setEnabled(enabled)
+        if self.mu_kappa_age_label is not None:
+            self.mu_kappa_age_label.setVisible(enabled)
+            self.mu_kappa_age_label.setEnabled(enabled)
+        if self.mu_kappa_age_button is not None:
+            self.mu_kappa_age_button.setVisible(enabled)
+            self.mu_kappa_age_button.setEnabled(enabled)
+
+        if self.modeling_use_real_age_check is not None:
+            if not has_col:
+                app_state.use_real_age_for_mu_kappa = False
+            self.modeling_use_real_age_check.blockSignals(True)
+            self.modeling_use_real_age_check.setVisible(enabled)
+            self.modeling_use_real_age_check.setEnabled(enabled and has_col)
+            self.modeling_use_real_age_check.setChecked(
+                bool(getattr(app_state, 'use_real_age_for_mu_kappa', False)) and has_col
+            )
+            self.modeling_use_real_age_check.blockSignals(False)
 
     def _on_isochron_change(self, state):
         """等时线显示变化"""

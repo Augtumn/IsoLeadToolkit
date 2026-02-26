@@ -60,6 +60,8 @@ Excel/CSV 文件
 实现铅同位素地球化学的完整计算体系，包括模式年龄、Delta 值、V1V2 投影、源区参数反演。
 `data/geochemistry.py` 为兼容 shim，转发到包实现。
 
+> **详细计算原理:** 所有公式推导、物理常数来源、预设模型参数、数值实现细节及已知约定，见 [`docs/geochemistry.md`](geochemistry.md)。
+
 ### 模块拆分
 
 ```
@@ -84,14 +86,14 @@ A0, B0, C0 = 9.307, 10.294, 29.476  # CDT 原始比值
 
 ### 预设模型 (PRESET_MODELS)
 
-| 模型名 | 说明 |
-|--------|------|
-| `V1V2 (Geokit)` | Geokit 默认 V1V2 参数 |
-| `V1V2 (Zhu 1993)` | 朱炳泉 1993 系数 |
-| `Stacey & Kramers (1st Stage)` | SK 第一阶段 (4.57-3.7 Ga) |
-| `Stacey & Kramers (2nd Stage)` | SK 第二阶段 (3.7 Ga-今) — 默认 |
-| `Cumming & Richards` | C&R 模型 |
-| `Maltese & Mezger` | M&M 模型 |
+| 模型名 | age_model | 说明 |
+|--------|-----------|------|
+| `V1V2 (Geokit)` | `single_stage` | Geokit 默认 V1V2 参数 |
+| `V1V2 (Zhu 1993)` | `single_stage` | 朱炳泉 1993 系数 |
+| `Stacey & Kramers (1st Stage)` | `single_stage` | SK 第一阶段 (4.57-3.7 Ga) |
+| `Stacey & Kramers (2nd Stage)` | `two_stage` | SK 第二阶段 (3.7 Ga-今) — 默认 |
+| `Cumming & Richards` | `single_stage` | C&R 模型 (连续演化, E1/E2≠0) |
+| `Maltese & Mezger` | `single_stage` | M&M 模型 (BSE 演化) |
 
 ### GeochemistryEngine 类 (engine.py)
 
@@ -159,14 +161,14 @@ def calculate_v1v2_coordinates(d_alpha, d_beta, d_gamma, params=None)
 ### 源区参数反演 (source.py)
 
 ```python
-# 传统方法
-def calculate_mu_sk(Pb206_204_S, Pb207_204_S, t_Ma, params=None)     # μ (238U/204Pb)
-def calculate_omega_sk(Pb208_204_S, t_Ma, params=None)                # ω (232Th/204Pb)
-def calculate_nu_sk(mu, params=None)                                   # ν = μ × U_ratio
+# 原始铅参考（单阶段，使用 T2/a0/b0）
+def calculate_source_mu(Pb206_204_S, Pb207_204_S, t_Ma, params=None)     # μ (238U/204Pb)
+def calculate_source_omega(Pb208_204_S, t_Ma, params=None)                # ω (232Th/204Pb)
+def calculate_source_nu(mu, params=None)                                   # ν = μ × U_ratio
 
-# R PbIso 兼容方法
-def calculate_mu_sk_model(Pb206_204_S, Pb207_204_S, t_Ma, params=None)     # CalcMu
-def calculate_kappa_sk_model(Pb208_204_S, Pb206_204_S, t_Ma, params=None)  # CalcKa
+# 模型参考（使用 T1/a1/b1，适用于任何模型）
+def calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params=None)       # CalcMu
+def calculate_model_kappa(Pb208_204_S, Pb206_204_S, t_Ma, params=None)    # CalcKa
 ```
 
 ### 初始比值反演 (source.py)
@@ -204,7 +206,7 @@ def calculate_all_parameters(Pb206_204_S, Pb207_204_S, Pb208_204_S,
 - `Delta_alpha`, `Delta_beta`, `Delta_gamma` — Delta 值
 - `V1`, `V2` — V1V2 坐标
 - `mu`, `nu`, `omega` — 传统源区参数
-- `mu_SK`, `kappa_SK`, `omega_SK` — PbIso 兼容参数
+- `mu_model`, `kappa_model`, `omega_model` — 模型参考源区参数（使用 T1/a1/b1）
 - `Init_206_204`, `Init_207_204`, `Init_208_204` — 初始比值
 
 ### 内部求解器 (age.py)
