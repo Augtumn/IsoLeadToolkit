@@ -98,6 +98,7 @@ class Qt5Application:
         self.main_window = None
         self.translator = None
         self.control_panel = None
+        self._style_filter = None
 
     def _configure_fonts(self):
         """配置应用字体"""
@@ -115,7 +116,8 @@ class Qt5Application:
         if preferred is not None:
             self.app.setStyle(preferred)
         self.app.setStyleSheet("")
-        self.app.installEventFilter(_NativeStyleFilter())
+        self._style_filter = _NativeStyleFilter(self.app)
+        self.app.installEventFilter(self._style_filter)
 
     def _install_debug_handlers(self):
         """Capture Qt and Python errors to the unified log via stderr."""

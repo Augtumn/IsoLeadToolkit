@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QLineEdit, QMessageBox, QDialog, QRadioButton,
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
+from visualization.line_styles import ensure_line_style
 
 from core import translate, app_state
 from .base_panel import BasePanel
@@ -527,7 +527,8 @@ class AnalysisPanel(BasePanel):
 
         swatch = QLabel()
         swatch.setFixedSize(16, 16)
-        color_val = overlay.get('color', '#ef4444')
+        _, style = self._ensure_equation_style(overlay)
+        color_val = style.get('color') or '#e2e8f0'
         swatch.setStyleSheet(f"background-color: {color_val}; border: 1px solid #111827;")
         swatch.mousePressEvent = lambda event, ov=overlay, sw=swatch: self._open_equation_style_dialog(ov, sw)
         row_layout.addWidget(swatch)
@@ -535,85 +536,36 @@ class AnalysisPanel(BasePanel):
 
         self.equation_overlays_layout.addWidget(row)
 
+    def _ensure_equation_style(self, overlay):
+        if overlay is None:
+            return None, {}
+        style_key = overlay.get('style_key')
+        if not style_key:
+            overlay_id = overlay.get('id') or overlay.get('expression') or overlay.get('label') or 'equation'
+            style_key = f"equation:{overlay_id}"
+            overlay['style_key'] = style_key
+        existing_style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+        fallback_color = None if existing_style.get('color', '__missing__') in (None, '') else overlay.get('color', '#ef4444')
+        fallback = {
+            'color': fallback_color,
+            'linewidth': overlay.get('linewidth', 1.0),
+            'linestyle': overlay.get('linestyle', '--'),
+            'alpha': overlay.get('alpha', 0.85),
+        }
+        style = ensure_line_style(app_state, style_key, fallback)
+        return style_key, style
+
     def _open_equation_style_dialog(self, overlay, swatch):
         """打开方程线样式对话框"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle(translate("Edit Equation Style"))
-        dialog.setModal(True)
+        from ui.dialogs.line_style_dialog import open_line_style_dialog
 
-        layout = QVBoxLayout(dialog)
-
-        color_row = QHBoxLayout()
-        color_row.addWidget(QLabel(translate("Line Color")))
-        color_swatch = QLabel()
-        color_swatch.setFixedSize(20, 16)
-        color_val = overlay.get('color', '#ef4444')
-        color_swatch.setStyleSheet(f"background-color: {color_val}; border: 1px solid #111827;")
-        color_row.addWidget(color_swatch)
-
-        def _pick_color():
-            from PyQt5.QtWidgets import QColorDialog
-            chosen = QColorDialog.getColor(QColor(color_val), self, translate("Line Color"))
-            if chosen.isValid():
-                new_color = chosen.name()
-                overlay['color'] = new_color
-                color_swatch.setStyleSheet(f"background-color: {new_color}; border: 1px solid #111827;")
-
-        color_btn = QPushButton(translate("Choose Color"))
-        color_btn.clicked.connect(_pick_color)
-        color_row.addWidget(color_btn)
-        color_row.addStretch()
-        layout.addLayout(color_row)
-
-        width_row = QHBoxLayout()
-        width_row.addWidget(QLabel(translate("Line Width")))
-        width_spin = QDoubleSpinBox()
-        width_spin.setRange(0.2, 6.0)
-        width_spin.setSingleStep(0.1)
-        width_spin.setValue(float(overlay.get('linewidth', 1.0)))
-        width_row.addWidget(width_spin)
-        width_row.addStretch()
-        layout.addLayout(width_row)
-
-        style_row = QHBoxLayout()
-        style_row.addWidget(QLabel(translate("Line Style")))
-        style_combo = QComboBox()
-        style_combo.addItems(['-', '--', '-.', ':'])
-        style_combo.setCurrentText(overlay.get('linestyle', '--'))
-        style_row.addWidget(style_combo)
-        style_row.addStretch()
-        layout.addLayout(style_row)
-
-        alpha_row = QHBoxLayout()
-        alpha_row.addWidget(QLabel(translate("Opacity")))
-        alpha_spin = QDoubleSpinBox()
-        alpha_spin.setRange(0.1, 1.0)
-        alpha_spin.setSingleStep(0.05)
-        alpha_spin.setValue(float(overlay.get('alpha', 0.85)))
-        alpha_row.addWidget(alpha_spin)
-        alpha_row.addStretch()
-        layout.addLayout(alpha_row)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(translate("Cancel"))
-        cancel_btn.clicked.connect(dialog.reject)
-        btn_row.addWidget(cancel_btn)
-        save_btn = QPushButton(translate("Save"))
-
-        def _apply():
-            overlay['linewidth'] = float(width_spin.value())
-            overlay['linestyle'] = style_combo.currentText()
-            overlay['alpha'] = float(alpha_spin.value())
-            swatch.setStyleSheet(f"background-color: {overlay.get('color', '#ef4444')}; border: 1px solid #111827;")
-            dialog.accept()
-            self._on_change()
-
-        save_btn.clicked.connect(_apply)
-        btn_row.addWidget(save_btn)
-        layout.addLayout(btn_row)
-
-        dialog.exec_()
+        style_key, style = self._ensure_equation_style(overlay)
+        if style_key is None:
+            return
+        if swatch is not None:
+            swatch_color = style.get('color') or '#e2e8f0'
+            swatch.setStyleSheet(f"background-color: {swatch_color}; border: 1px solid #111827;")
+        open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._on_change)
 
     def _open_kde_style_dialog(self, target, swatch):
         """打开 KDE 样式对话框"""
@@ -624,8 +576,19 @@ class AnalysisPanel(BasePanel):
 
         layout = QVBoxLayout(dialog)
 
-        style_key = 'kde_style' if target == 'kde' else 'marginal_kde_style'
-        style = getattr(app_state, style_key, {}) or {}
+        legacy_key = 'kde_style' if target == 'kde' else 'marginal_kde_style'
+        style_key = 'kde_curve' if target == 'kde' else 'marginal_kde_curve'
+        legacy_style = getattr(app_state, legacy_key, {}) or {}
+        fallback_style = {
+            'color': None,
+            'linewidth': float(legacy_style.get('linewidth', 1.0)),
+            'linestyle': '-',
+            'alpha': float(legacy_style.get('alpha', 0.6 if target == 'kde' else 0.25)),
+            'fill': bool(legacy_style.get('fill', True)),
+        }
+        if target == 'kde':
+            fallback_style['levels'] = int(legacy_style.get('levels', 10))
+        style = ensure_line_style(app_state, style_key, fallback_style)
 
         alpha_row = QHBoxLayout()
         alpha_row.addWidget(QLabel(translate("Opacity")))
@@ -697,7 +660,7 @@ class AnalysisPanel(BasePanel):
         save_btn = QPushButton(translate("Save"))
 
         def _apply():
-            style_ref = getattr(app_state, style_key, {}) or {}
+            style_ref = getattr(app_state, 'line_styles', {}).setdefault(style_key, {})
             style_ref['alpha'] = float(alpha_spin.value())
             style_ref['linewidth'] = float(width_spin.value())
             style_ref['fill'] = bool(fill_check.isChecked())
@@ -708,7 +671,14 @@ class AnalysisPanel(BasePanel):
                     app_state.marginal_kde_top_size = float(top_size_spin.value())
                 if right_size_spin is not None:
                     app_state.marginal_kde_right_size = float(right_size_spin.value())
-            setattr(app_state, style_key, style_ref)
+            legacy_payload = {
+                'alpha': style_ref.get('alpha', 0.6 if target == 'kde' else 0.25),
+                'linewidth': style_ref.get('linewidth', 1.0),
+                'fill': style_ref.get('fill', True),
+            }
+            if target == 'kde':
+                legacy_payload['levels'] = style_ref.get('levels', 10)
+            setattr(app_state, legacy_key, legacy_payload)
 
             if swatch is not None:
                 swatch.setStyleSheet("background-color: #e2e8f0; border: 1px solid #111827;")
@@ -784,7 +754,8 @@ class AnalysisPanel(BasePanel):
 
             swatch = QLabel()
             swatch.setFixedSize(16, 16)
-            swatch_color = overlay.get('color', '#ef4444')
+            style_key, style = self._ensure_equation_style(overlay)
+            swatch_color = style.get('color') or '#e2e8f0'
             swatch.setStyleSheet(f"background-color: {swatch_color}; border: 1px solid #111827;")
             swatch.setProperty("keepStyle", True)
             swatch.mousePressEvent = lambda event, ov=overlay, sw=swatch: self._open_equation_style_dialog(ov, sw)

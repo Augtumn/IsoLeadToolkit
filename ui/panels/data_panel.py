@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
     QButtonGroup, QRadioButton, QDialog, QMessageBox,
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QColor
 
 from core import translate, app_state
 from .base_panel import BasePanel
@@ -50,6 +49,7 @@ class DataPanel(BasePanel):
         self.modeling_show_plumbotectonics_check = None
         self.modeling_show_model_age_check = None
         self.modeling_show_isochron_check = None
+        self.modeling_show_growth_curve_check = None
         self.modeling_use_real_age_check = None
         self.mu_kappa_age_title_label = None
         self.mu_kappa_age_label = None
@@ -648,6 +648,13 @@ class DataPanel(BasePanel):
             style_key='model_age_line'
         )
 
+        self.modeling_show_growth_curve_check = _add_geochem_toggle(
+            "Show Growth Curves",
+            getattr(app_state, 'show_growth_curves', True),
+            self._on_growth_curves_change,
+            style_key='growth_curve'
+        )
+
         self.modeling_use_real_age_check = _add_geochem_toggle(
             "Use Real Age for Mu/Kappa",
             getattr(app_state, 'use_real_age_for_mu_kappa', False),
@@ -817,6 +824,11 @@ class DataPanel(BasePanel):
         if self.modeling_show_model_age_check is not None:
             self.modeling_show_model_age_check.setVisible(is_pb_evol)
             swatch = getattr(self.modeling_show_model_age_check, '_style_swatch', None)
+            if swatch is not None:
+                swatch.setVisible(is_pb_evol)
+        if self.modeling_show_growth_curve_check is not None:
+            self.modeling_show_growth_curve_check.setVisible(is_pb_evol)
+            swatch = getattr(self.modeling_show_growth_curve_check, '_style_swatch', None)
             if swatch is not None:
                 swatch.setVisible(is_pb_evol)
 
@@ -1094,6 +1106,15 @@ class DataPanel(BasePanel):
         )
         self._on_change()
 
+    def _on_growth_curves_change(self, state):
+        """生长曲线显示变化"""
+        app_state.show_growth_curves = (state == Qt.Checked)
+        self._sync_geochem_toggle_widgets(
+            app_state.show_growth_curves,
+            getattr(self, 'modeling_show_growth_curve_check', None)
+        )
+        self._on_change()
+
     def _on_mu_kappa_real_age_change(self, state):
         """Mu/Kappa 图使用真实年龄列"""
         app_state.use_real_age_for_mu_kappa = (state == Qt.Checked)
@@ -1300,148 +1321,8 @@ class DataPanel(BasePanel):
 
     def _open_line_style_dialog(self, style_key, swatch):
         """打开曲线样式对话框"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle(translate("Edit Line Style"))
-        dialog.setModal(True)
-
-        layout = QVBoxLayout(dialog)
-
-        style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
-        color_val = style.get('color') or ''
-
-        color_row = QHBoxLayout()
-        color_row.addWidget(QLabel(translate("Line Color")))
-        color_swatch = QLabel()
-        color_swatch.setFixedSize(20, 16)
-        swatch_color = color_val if color_val else '#e2e8f0'
-        color_swatch.setStyleSheet(f"background-color: {swatch_color}; border: 1px solid #111827;")
-        color_row.addWidget(color_swatch)
-
-        auto_color_check = QCheckBox(translate("Auto Color"))
-        auto_color_check.setChecked(color_val in ('', None))
-        color_row.addWidget(auto_color_check)
-
-        def _pick_color():
-            from PyQt5.QtWidgets import QColorDialog
-            chosen = QColorDialog.getColor(QColor(swatch_color), self, translate("Line Color"))
-            if chosen.isValid():
-                new_color = chosen.name()
-                color_swatch.setStyleSheet(f"background-color: {new_color}; border: 1px solid #111827;")
-                auto_color_check.setChecked(False)
-
-        color_btn = QPushButton(translate("Choose Color"))
-        color_btn.clicked.connect(_pick_color)
-        color_row.addWidget(color_btn)
-        color_row.addStretch()
-        layout.addLayout(color_row)
-
-        width_row = QHBoxLayout()
-        width_row.addWidget(QLabel(translate("Line Width")))
-        width_spin = QDoubleSpinBox()
-        width_spin.setRange(0.2, 6.0)
-        width_spin.setSingleStep(0.1)
-        width_spin.setValue(float(style.get('linewidth', 1.0)))
-        width_row.addWidget(width_spin)
-        width_row.addStretch()
-        layout.addLayout(width_row)
-
-        style_row = QHBoxLayout()
-        style_row.addWidget(QLabel(translate("Line Style")))
-        style_combo = QComboBox()
-        style_combo.addItems(['-', '--', '-.', ':'])
-        style_combo.setCurrentText(style.get('linestyle', '-'))
-        style_row.addWidget(style_combo)
-        style_row.addStretch()
-        layout.addLayout(style_row)
-
-        alpha_row = QHBoxLayout()
-        alpha_row.addWidget(QLabel(translate("Opacity")))
-        alpha_spin = QDoubleSpinBox()
-        alpha_spin.setRange(0.1, 1.0)
-        alpha_spin.setSingleStep(0.05)
-        alpha_spin.setValue(float(style.get('alpha', 0.85)))
-        alpha_row.addWidget(alpha_spin)
-        alpha_row.addStretch()
-        layout.addLayout(alpha_row)
-
-        # 等时线标注显示选项
-        label_checks = {}
-        if style_key == 'isochron':
-            label_group = QGroupBox(translate("Label Display"))
-            label_group.setProperty('translate_key', 'Label Display')
-            label_layout = QVBoxLayout(label_group)
-            label_layout.setContentsMargins(8, 6, 8, 6)
-            label_layout.setSpacing(4)
-
-            opts = getattr(app_state, 'isochron_label_options', {})
-            label_items = [
-                ('show_age', translate("Age")),
-                ('show_n_points', translate("Sample Count (n)")),
-                ('show_mswd', 'MSWD'),
-                ('show_r_squared', 'R²'),
-                ('show_slope', translate("Slope")),
-                ('show_intercept', translate("Intercept")),
-            ]
-            for key, text in label_items:
-                chk = QCheckBox(text)
-                chk.setChecked(opts.get(key, False))
-                label_layout.addWidget(chk)
-                label_checks[key] = chk
-
-            layout.addWidget(label_group)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(translate("Cancel"))
-        cancel_btn.clicked.connect(dialog.reject)
-        btn_row.addWidget(cancel_btn)
-        save_btn = QPushButton(translate("Save"))
-
-        def _apply():
-            if not hasattr(app_state, 'line_styles'):
-                app_state.line_styles = {}
-            style_ref = app_state.line_styles.setdefault(style_key, {})
-            if auto_color_check.isChecked():
-                style_ref['color'] = None
-                new_swatch = '#e2e8f0'
-            else:
-                swatch_style = color_swatch.styleSheet()
-                new_color = swatch_style.split('background-color:')[-1].split(';')[0].strip()
-                style_ref['color'] = new_color or '#ef4444'
-                new_swatch = style_ref['color']
-            style_ref['linewidth'] = float(width_spin.value())
-            style_ref['linestyle'] = style_combo.currentText()
-            style_ref['alpha'] = float(alpha_spin.value())
-
-            if style_key == 'model_curve':
-                app_state.model_curve_width = style_ref['linewidth']
-            elif style_key == 'plumbotectonics_curve':
-                app_state.plumbotectonics_curve_width = style_ref['linewidth']
-            elif style_key == 'paleoisochron':
-                app_state.paleoisochron_width = style_ref['linewidth']
-            elif style_key == 'model_age_line':
-                app_state.model_age_line_width = style_ref['linewidth']
-            elif style_key == 'isochron':
-                app_state.isochron_line_width = style_ref['linewidth']
-                # 保存标注显示选项
-                if label_checks:
-                    if not hasattr(app_state, 'isochron_label_options'):
-                        app_state.isochron_label_options = {}
-                    for key, chk in label_checks.items():
-                        app_state.isochron_label_options[key] = chk.isChecked()
-            elif style_key == 'selected_isochron':
-                app_state.selected_isochron_line_width = style_ref['linewidth']
-
-            if swatch is not None:
-                swatch.setStyleSheet(f"background-color: {new_swatch}; border: 1px solid #111827;")
-            dialog.accept()
-            self._on_change()
-
-        save_btn.clicked.connect(_apply)
-        btn_row.addWidget(save_btn)
-        layout.addLayout(btn_row)
-
-        dialog.exec_()
+        from ui.dialogs.line_style_dialog import open_line_style_dialog
+        open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._on_change)
 
     def _on_calculate_isochron(self):
         """计算等时线年龄：切换显示/隐藏。"""

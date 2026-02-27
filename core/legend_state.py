@@ -1,0 +1,33 @@
+"""Legend display state."""
+from __future__ import annotations
+
+
+class LegendState:
+    """Groups all legend position, style, and panel state fields."""
+
+    def __init__(self):
+        # In-plot legend position
+        self.legend_position = None  # 'upper left', etc. or None to hide
+        self.legend_columns = 0  # 0 means auto
+        self.legend_offset = (0.0, 0.0)  # Nudge in axes fraction
+        self.legend_nudge_step = 0.02
+
+        # Outside legend panel
+        self.legend_location = 'outside_left'  # 'outside_left' | 'outside_right'
+        self.legend_display_mode = 'inline'  # 'inline' | 'window'
+
+        # Legend frame styling
+        self.legend_frame_on = True
+        self.legend_frame_alpha = 0.95
+        self.legend_frame_facecolor = '#ffffff'
+        self.legend_frame_edgecolor = '#cbd5f5'
+
+        # Group visibility in legend
+        self.hidden_groups: set = set()
+        self.legend_to_scatter: dict = {}
+
+        # Runtime callback (not persisted)
+        self.legend_update_callback = None
+        self.legend_last_title = None
+        self.legend_last_handles = None
+        self.legend_last_labels = None

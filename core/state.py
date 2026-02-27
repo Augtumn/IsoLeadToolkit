@@ -4,6 +4,8 @@ Centralized global state to avoid variable chaos
 """
 from .config import CONFIG
 from .cache import EmbeddingCache
+from .overlay_state import OverlayState
+from .legend_state import LegendState
 
 
 class AppState:
@@ -23,7 +25,7 @@ class AppState:
         self.ml_params = CONFIG.get('ml_params', {}).copy()
         self.ml_last_result = None
         self.ml_last_model_meta = None
-        
+
         # V1V2 Parameters
         self.v1v2_params = {
             'a': 0.0,
@@ -32,115 +34,11 @@ class AppState:
             'scale': 1.0
         }
 
-        # Geochemistry plot toggles
-        self.show_model_curves = True
-        self.show_paleoisochrons = True
-        self.show_plumbotectonics_curves = True
-        self.show_model_age_lines = True
-        self.show_isochrons = False  # Default to False for isochron overlays
-        self.use_real_age_for_mu_kappa = False  # Use selected age column for PB_MU_AGE/PB_KAPPA_AGE
-        self.mu_kappa_age_col = None  # Optional age column for PB_MU_AGE/PB_KAPPA_AGE
-        self.isochron_label_options = {
-            'show_age': True,
-            'show_mswd': False,
-            'show_r_squared': False,
-            'show_slope': False,
-            'show_intercept': False,
-            'show_n_points': True,
-        }
-        self.show_equation_overlays = False
-        self.geo_model_name = "Stacey & Kramers (2nd Stage)"  # Default geochemistry model
-        self.equation_overlays = [
-            {
-                'id': 'eq_206_208',
-                'label': 'y=1.0049x+20.259',
-                'latex': r"y=1.0049x+20.259",
-                'expression': '1.0049*x+20.259',
-                'slope': 1.0049,
-                'intercept': 20.259,
-                'enabled': True,
-                'color': '#ef4444',
-                'linewidth': 1.0,
-                'linestyle': '--',
-                'alpha': 0.85
-            },
-            {
-                'id': 'eq_identity',
-                'label': 'y=x',
-                'latex': r"y=x",
-                'expression': 'x',
-                'slope': 1.0,
-                'intercept': 0.0,
-                'enabled': True,
-                'color': '#ef4444',
-                'linewidth': 1.0,
-                'linestyle': '--',
-                'alpha': 0.85
-            }
-        ]
-        self.line_styles = {
-            'model_curve': {
-                'color': None,
-                'linewidth': 1.2,
-                'linestyle': '-',
-                'alpha': 0.8
-            },
-            'plumbotectonics_curve': {
-                'color': None,
-                'linewidth': 1.2,
-                'linestyle': '-',
-                'alpha': 0.85
-            },
-            'growth_curve': {
-                'color': None,
-                'linewidth': 1.2,
-                'linestyle': ':',
-                'alpha': 0.6
-            },
-            'paleoisochron': {
-                'color': '#94a3b8',
-                'linewidth': 0.9,
-                'linestyle': '--',
-                'alpha': 0.85
-            },
-            'model_age_line': {
-                'color': '#cbd5f5',
-                'linewidth': 0.7,
-                'linestyle': '-',
-                'alpha': 0.7
-            },
-            'isochron': {
-                'color': None,
-                'linewidth': 1.5,
-                'linestyle': '-',
-                'alpha': 0.8
-            },
-            'selected_isochron': {
-                'color': '#ef4444',
-                'linewidth': 2.0,
-                'linestyle': '-',
-                'alpha': 0.9
-            }
-        }
-        self.paleoisochron_min_age = 0
-        self.paleoisochron_max_age = 3000
-        self.paleoisochron_step = 1000
-        self.paleoisochron_ages = list(
-            range(self.paleoisochron_max_age, self.paleoisochron_min_age - 1, -self.paleoisochron_step)
-        )
-        self.plumbotectonics_variant = '0'
-        self.model_curve_models = None  # None means all preset models
-            
-        # PCA/RobustPCA Dimension Selection
-        self.pca_component_indices = [0, 1]  # Default to PC1 and PC2
-        self.last_pca_variance = None  # Store explained variance ratio for scree plot
-        self.last_pca_components = None  # Store PCA components (loadings)
-        self.current_feature_names = []  # Store names of features used in analysis
-        
-        self.standardize_data = True  # Default to True for better PCA/RobustPCA performance
-        self.show_ellipses = CONFIG.get('show_ellipses', False)
-        self.show_kde = False  # Global KDE toggle for 2D plots
-        self.show_marginal_kde = True  # Marginal KDE for 2D plots
+        # --- Sub-state objects ---
+        self.overlay = OverlayState()
+        self.legend = LegendState()
+
+        # Sync KDE styles into overlay.line_styles
         self.kde_style = {
             'alpha': 0.6,
             'levels': 10,
@@ -152,6 +50,30 @@ class AppState:
             'linewidth': 1.0,
             'fill': True
         }
+        self.overlay.line_styles.setdefault('kde_curve', {}).update({
+            'linewidth': self.kde_style.get('linewidth', 1.0),
+            'alpha': self.kde_style.get('alpha', 0.6),
+            'fill': self.kde_style.get('fill', True),
+            'levels': self.kde_style.get('levels', 10),
+        })
+        self.overlay.line_styles.setdefault('marginal_kde_curve', {}).update({
+            'linewidth': self.marginal_kde_style.get('linewidth', 1.0),
+            'alpha': self.marginal_kde_style.get('alpha', 0.25),
+            'fill': self.marginal_kde_style.get('fill', True),
+        })
+        self.overlay._init_equation_styles()
+
+        # PCA/RobustPCA Dimension Selection
+        self.pca_component_indices = [0, 1]  # Default to PC1 and PC2
+        self.last_pca_variance = None  # Store explained variance ratio for scree plot
+        self.last_pca_components = None  # Store PCA components (loadings)
+        self.current_feature_names = []  # Store names of features used in analysis
+
+        self.standardize_data = True  # Default to True for better PCA/RobustPCA performance
+        self.show_ellipses = CONFIG.get('show_ellipses', False)
+        self.show_kde = False  # Global KDE toggle for 2D plots
+        self.show_marginal_kde = True  # Marginal KDE for 2D plots
+
         self.marginal_kde_top_size = 15.0
         self.marginal_kde_right_size = 15.0
         self.marginal_kde_max_points = 5000
@@ -183,52 +105,39 @@ class AppState:
         self.artist_to_sample = {}
         self.selection_overlay = None
         self.selection_ellipse = None  # Store the confidence ellipse for selected points
-        self.selected_isochron_data = None  # Stores {slope, intercept, age, r_squared, n_points, mode, x_range, y_range}
-        # Isochron regression error configuration
-        self.isochron_error_mode = 'fixed'  # 'fixed' or 'columns'
-        self.isochron_sx_col = ''
-        self.isochron_sy_col = ''
-        self.isochron_rxy_col = ''
-        self.isochron_sx_value = 0.001
-        self.isochron_sy_value = 0.001
-        self.isochron_rxy_value = 0.0
         self.marginal_axes = None  # (top_ax, right_ax) for marginal KDE
-        self.paleoisochron_label_data = []  # Track paleoisochron labels for updates
         self.paleo_label_refreshing = False
-        self.plumbotectonics_label_data = []
-        self.plumbotectonics_isoage_label_data = []
         self.mixing_groups = {'endmembers': {}, 'mixtures': {}}
         self.mixing_results = []
         self.mixing_calc_cols = []
         self.language = CONFIG.get('default_language', 'zh')
         self.language_labels = CONFIG.get('languages', {'zh': '中文', 'en': 'English'})
         self.language_listeners = []
-        
+
         # Legend and Color State
         self.current_palette = {}  # Map group name to hex color
         self.current_groups = []   # List of current groups in order
-        
+
         # Dynamic column configuration (populated from data)
         self.group_cols = []  # Available grouping columns from data
         self.data_cols = []   # Data columns for visualization
-        
+
         # File information
         self.file_path = None  # Current data file path
         self.sheet_name = None  # Current sheet name for xlsx
         self.recent_files = []  # Recent data files
-        
+
         # GUI components
         self.fig = None
         self.ax = None
         self.scatter_collections = []
         self.sample_index_map = {}
         self.annotation = None
-        self.legend_to_scatter = {}
         self.exported_indices = set()
         self.control_panel_button = None
         self.control_panel_ref = None
         self.initial_render_done = False
-        
+
         # Tooltip configuration
         self.tooltip_columns = ['Lab No.', 'Discovery site', 'Period']  # Default columns
         self.show_tooltip = False
@@ -238,7 +147,7 @@ class AppState:
         self.color_scheme = 'vibrant'
         self.custom_primary_font = '' # User selected primary font
         self.custom_cjk_font = ''     # User selected CJK font
-        
+
         # Advanced Style Configuration
         self.plot_font_sizes = {
             'title': 14,
@@ -247,16 +156,6 @@ class AppState:
             'legend': 10
         }
         self.show_plot_title = False
-        self.legend_columns = 0  # 0 means auto
-        self.legend_position = None  # In-plot legend position; None hides the in-plot legend
-        self.hidden_groups = set()  # Hidden groups in legend
-        self.legend_display_mode = 'inline'  # inline | window
-        self.legend_update_callback = None
-        self.legend_last_title = None
-        self.legend_last_handles = None
-        self.legend_last_labels = None
-        self.legend_offset = (0.0, 0.0)  # In-plot legend nudge (axes fraction)
-        self.legend_nudge_step = 0.02  # Step size for legend nudge
         self.custom_palettes = {}
         self.custom_shape_sets = {}
         self.v1_value = 0.0  # V1 parameter for geochemistry
@@ -292,31 +191,22 @@ class AppState:
         self.show_right_spine = True
         self.scatter_edgecolor = '#1e293b'
         self.scatter_edgewidth = 0.4
-        self.model_curve_width = 1.2
-        self.plumbotectonics_curve_width = 1.2
-        self.paleoisochron_width = 0.9
-        self.model_age_line_width = 0.7
-        self.isochron_line_width = 1.5
         self.label_color = '#1f2937'
         self.label_weight = 'normal'
         self.label_pad = 6.0
         self.title_color = '#111827'
         self.title_weight = 'bold'
         self.title_pad = 20.0
-        self.legend_location = 'outside_left'  # Outside legend panel location
-        self.legend_frame_on = True
-        self.legend_frame_alpha = 0.95
-        self.legend_frame_facecolor = '#ffffff'
-        self.legend_frame_edgecolor = '#cbd5f5'
         self.saved_themes = {} # Dictionary to store user themes
         self.last_2d_cols = None
-        
+
     def clear_plot_state(self):
         """Reset plot-specific state"""
         self.scatter_collections.clear()
         self.sample_index_map.clear()
-        self.legend_to_scatter.clear()
+        self.legend.legend_to_scatter.clear()
         self.group_to_scatter = {}  # Map group name to scatter artist
+        self.overlay.clear_artists()
         self.exported_indices.clear()
         self.annotation = None  # Clear annotation reference
         self.sample_coordinates.clear()
@@ -340,6 +230,446 @@ class AppState:
                 callback()
             except Exception:
                 pass
+
+    # ------------------------------------------------------------------ #
+    # Backward-compatible property delegation: OverlayState
+    # ------------------------------------------------------------------ #
+
+    @property
+    def show_model_curves(self):
+        return self.overlay.show_model_curves
+
+    @show_model_curves.setter
+    def show_model_curves(self, value):
+        self.overlay.show_model_curves = value
+
+    @property
+    def show_paleoisochrons(self):
+        return self.overlay.show_paleoisochrons
+
+    @show_paleoisochrons.setter
+    def show_paleoisochrons(self, value):
+        self.overlay.show_paleoisochrons = value
+
+    @property
+    def show_plumbotectonics_curves(self):
+        return self.overlay.show_plumbotectonics_curves
+
+    @show_plumbotectonics_curves.setter
+    def show_plumbotectonics_curves(self, value):
+        self.overlay.show_plumbotectonics_curves = value
+
+    @property
+    def show_model_age_lines(self):
+        return self.overlay.show_model_age_lines
+
+    @show_model_age_lines.setter
+    def show_model_age_lines(self, value):
+        self.overlay.show_model_age_lines = value
+
+    @property
+    def show_isochrons(self):
+        return self.overlay.show_isochrons
+
+    @show_isochrons.setter
+    def show_isochrons(self, value):
+        self.overlay.show_isochrons = value
+
+    @property
+    def show_growth_curves(self):
+        return self.overlay.show_growth_curves
+
+    @show_growth_curves.setter
+    def show_growth_curves(self, value):
+        self.overlay.show_growth_curves = value
+
+    @property
+    def show_equation_overlays(self):
+        return self.overlay.show_equation_overlays
+
+    @show_equation_overlays.setter
+    def show_equation_overlays(self, value):
+        self.overlay.show_equation_overlays = value
+
+    @property
+    def use_real_age_for_mu_kappa(self):
+        return self.overlay.use_real_age_for_mu_kappa
+
+    @use_real_age_for_mu_kappa.setter
+    def use_real_age_for_mu_kappa(self, value):
+        self.overlay.use_real_age_for_mu_kappa = value
+
+    @property
+    def mu_kappa_age_col(self):
+        return self.overlay.mu_kappa_age_col
+
+    @mu_kappa_age_col.setter
+    def mu_kappa_age_col(self, value):
+        self.overlay.mu_kappa_age_col = value
+
+    @property
+    def isochron_label_options(self):
+        return self.overlay.isochron_label_options
+
+    @isochron_label_options.setter
+    def isochron_label_options(self, value):
+        self.overlay.isochron_label_options = value
+
+    @property
+    def geo_model_name(self):
+        return self.overlay.geo_model_name
+
+    @geo_model_name.setter
+    def geo_model_name(self, value):
+        self.overlay.geo_model_name = value
+
+    @property
+    def equation_overlays(self):
+        return self.overlay.equation_overlays
+
+    @equation_overlays.setter
+    def equation_overlays(self, value):
+        self.overlay.equation_overlays = value
+
+    @property
+    def line_styles(self):
+        return self.overlay.line_styles
+
+    @line_styles.setter
+    def line_styles(self, value):
+        self.overlay.line_styles = value
+
+    @property
+    def paleoisochron_min_age(self):
+        return self.overlay.paleoisochron_min_age
+
+    @paleoisochron_min_age.setter
+    def paleoisochron_min_age(self, value):
+        self.overlay.paleoisochron_min_age = value
+
+    @property
+    def paleoisochron_max_age(self):
+        return self.overlay.paleoisochron_max_age
+
+    @paleoisochron_max_age.setter
+    def paleoisochron_max_age(self, value):
+        self.overlay.paleoisochron_max_age = value
+
+    @property
+    def paleoisochron_step(self):
+        return self.overlay.paleoisochron_step
+
+    @paleoisochron_step.setter
+    def paleoisochron_step(self, value):
+        self.overlay.paleoisochron_step = value
+
+    @property
+    def paleoisochron_ages(self):
+        return self.overlay.paleoisochron_ages
+
+    @paleoisochron_ages.setter
+    def paleoisochron_ages(self, value):
+        self.overlay.paleoisochron_ages = value
+
+    @property
+    def plumbotectonics_variant(self):
+        return self.overlay.plumbotectonics_variant
+
+    @plumbotectonics_variant.setter
+    def plumbotectonics_variant(self, value):
+        self.overlay.plumbotectonics_variant = value
+
+    @property
+    def model_curve_models(self):
+        return self.overlay.model_curve_models
+
+    @model_curve_models.setter
+    def model_curve_models(self, value):
+        self.overlay.model_curve_models = value
+
+    @property
+    def isochron_error_mode(self):
+        return self.overlay.isochron_error_mode
+
+    @isochron_error_mode.setter
+    def isochron_error_mode(self, value):
+        self.overlay.isochron_error_mode = value
+
+    @property
+    def isochron_sx_col(self):
+        return self.overlay.isochron_sx_col
+
+    @isochron_sx_col.setter
+    def isochron_sx_col(self, value):
+        self.overlay.isochron_sx_col = value
+
+    @property
+    def isochron_sy_col(self):
+        return self.overlay.isochron_sy_col
+
+    @isochron_sy_col.setter
+    def isochron_sy_col(self, value):
+        self.overlay.isochron_sy_col = value
+
+    @property
+    def isochron_rxy_col(self):
+        return self.overlay.isochron_rxy_col
+
+    @isochron_rxy_col.setter
+    def isochron_rxy_col(self, value):
+        self.overlay.isochron_rxy_col = value
+
+    @property
+    def isochron_sx_value(self):
+        return self.overlay.isochron_sx_value
+
+    @isochron_sx_value.setter
+    def isochron_sx_value(self, value):
+        self.overlay.isochron_sx_value = value
+
+    @property
+    def isochron_sy_value(self):
+        return self.overlay.isochron_sy_value
+
+    @isochron_sy_value.setter
+    def isochron_sy_value(self, value):
+        self.overlay.isochron_sy_value = value
+
+    @property
+    def isochron_rxy_value(self):
+        return self.overlay.isochron_rxy_value
+
+    @isochron_rxy_value.setter
+    def isochron_rxy_value(self, value):
+        self.overlay.isochron_rxy_value = value
+
+    @property
+    def selected_isochron_data(self):
+        return self.overlay.selected_isochron_data
+
+    @selected_isochron_data.setter
+    def selected_isochron_data(self, value):
+        self.overlay.selected_isochron_data = value
+
+    @property
+    def isochron_results(self):
+        return self.overlay.isochron_results
+
+    @isochron_results.setter
+    def isochron_results(self, value):
+        self.overlay.isochron_results = value
+
+    @property
+    def model_curve_width(self):
+        return self.overlay.model_curve_width
+
+    @model_curve_width.setter
+    def model_curve_width(self, value):
+        self.overlay.model_curve_width = value
+
+    @property
+    def plumbotectonics_curve_width(self):
+        return self.overlay.plumbotectonics_curve_width
+
+    @plumbotectonics_curve_width.setter
+    def plumbotectonics_curve_width(self, value):
+        self.overlay.plumbotectonics_curve_width = value
+
+    @property
+    def paleoisochron_width(self):
+        return self.overlay.paleoisochron_width
+
+    @paleoisochron_width.setter
+    def paleoisochron_width(self, value):
+        self.overlay.paleoisochron_width = value
+
+    @property
+    def model_age_line_width(self):
+        return self.overlay.model_age_line_width
+
+    @model_age_line_width.setter
+    def model_age_line_width(self, value):
+        self.overlay.model_age_line_width = value
+
+    @property
+    def isochron_line_width(self):
+        return self.overlay.isochron_line_width
+
+    @isochron_line_width.setter
+    def isochron_line_width(self, value):
+        self.overlay.isochron_line_width = value
+
+    @property
+    def overlay_artists(self):
+        return self.overlay.overlay_artists
+
+    @overlay_artists.setter
+    def overlay_artists(self, value):
+        self.overlay.overlay_artists = value
+
+    @property
+    def overlay_curve_label_data(self):
+        return self.overlay.overlay_curve_label_data
+
+    @overlay_curve_label_data.setter
+    def overlay_curve_label_data(self, value):
+        self.overlay.overlay_curve_label_data = value
+
+    @property
+    def paleoisochron_label_data(self):
+        return self.overlay.paleoisochron_label_data
+
+    @paleoisochron_label_data.setter
+    def paleoisochron_label_data(self, value):
+        self.overlay.paleoisochron_label_data = value
+
+    @property
+    def plumbotectonics_label_data(self):
+        return self.overlay.plumbotectonics_label_data
+
+    @plumbotectonics_label_data.setter
+    def plumbotectonics_label_data(self, value):
+        self.overlay.plumbotectonics_label_data = value
+
+    @property
+    def plumbotectonics_isoage_label_data(self):
+        return self.overlay.plumbotectonics_isoage_label_data
+
+    @plumbotectonics_isoage_label_data.setter
+    def plumbotectonics_isoage_label_data(self, value):
+        self.overlay.plumbotectonics_isoage_label_data = value
+
+    # ------------------------------------------------------------------ #
+    # Backward-compatible property delegation: LegendState
+    # ------------------------------------------------------------------ #
+
+    @property
+    def legend_position(self):
+        return self.legend.legend_position
+
+    @legend_position.setter
+    def legend_position(self, value):
+        self.legend.legend_position = value
+
+    @property
+    def legend_columns(self):
+        return self.legend.legend_columns
+
+    @legend_columns.setter
+    def legend_columns(self, value):
+        self.legend.legend_columns = value
+
+    @property
+    def legend_offset(self):
+        return self.legend.legend_offset
+
+    @legend_offset.setter
+    def legend_offset(self, value):
+        self.legend.legend_offset = value
+
+    @property
+    def legend_nudge_step(self):
+        return self.legend.legend_nudge_step
+
+    @legend_nudge_step.setter
+    def legend_nudge_step(self, value):
+        self.legend.legend_nudge_step = value
+
+    @property
+    def legend_location(self):
+        return self.legend.legend_location
+
+    @legend_location.setter
+    def legend_location(self, value):
+        self.legend.legend_location = value
+
+    @property
+    def legend_display_mode(self):
+        return self.legend.legend_display_mode
+
+    @legend_display_mode.setter
+    def legend_display_mode(self, value):
+        self.legend.legend_display_mode = value
+
+    @property
+    def legend_frame_on(self):
+        return self.legend.legend_frame_on
+
+    @legend_frame_on.setter
+    def legend_frame_on(self, value):
+        self.legend.legend_frame_on = value
+
+    @property
+    def legend_frame_alpha(self):
+        return self.legend.legend_frame_alpha
+
+    @legend_frame_alpha.setter
+    def legend_frame_alpha(self, value):
+        self.legend.legend_frame_alpha = value
+
+    @property
+    def legend_frame_facecolor(self):
+        return self.legend.legend_frame_facecolor
+
+    @legend_frame_facecolor.setter
+    def legend_frame_facecolor(self, value):
+        self.legend.legend_frame_facecolor = value
+
+    @property
+    def legend_frame_edgecolor(self):
+        return self.legend.legend_frame_edgecolor
+
+    @legend_frame_edgecolor.setter
+    def legend_frame_edgecolor(self, value):
+        self.legend.legend_frame_edgecolor = value
+
+    @property
+    def hidden_groups(self):
+        return self.legend.hidden_groups
+
+    @hidden_groups.setter
+    def hidden_groups(self, value):
+        self.legend.hidden_groups = value
+
+    @property
+    def legend_to_scatter(self):
+        return self.legend.legend_to_scatter
+
+    @legend_to_scatter.setter
+    def legend_to_scatter(self, value):
+        self.legend.legend_to_scatter = value
+
+    @property
+    def legend_update_callback(self):
+        return self.legend.legend_update_callback
+
+    @legend_update_callback.setter
+    def legend_update_callback(self, value):
+        self.legend.legend_update_callback = value
+
+    @property
+    def legend_last_title(self):
+        return self.legend.legend_last_title
+
+    @legend_last_title.setter
+    def legend_last_title(self, value):
+        self.legend.legend_last_title = value
+
+    @property
+    def legend_last_handles(self):
+        return self.legend.legend_last_handles
+
+    @legend_last_handles.setter
+    def legend_last_handles(self, value):
+        self.legend.legend_last_handles = value
+
+    @property
+    def legend_last_labels(self):
+        return self.legend.legend_last_labels
+
+    @legend_last_labels.setter
+    def legend_last_labels(self, value):
+        self.legend.legend_last_labels = value
 
 
 # Global state instance

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from core import app_state
+from visualization.line_styles import ensure_line_style
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,18 @@ def draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col='_emb_
     ax_top = divider.append_axes("top", size=f"{top_size:.0f}%", pad=0.06, sharex=ax)
     ax_right = divider.append_axes("right", size=f"{right_size:.0f}%", pad=0.06, sharey=ax)
 
-    style = getattr(app_state, 'marginal_kde_style', {})
+    legacy_style = getattr(app_state, 'marginal_kde_style', {}) or {}
+    style = ensure_line_style(
+        app_state,
+        'marginal_kde_curve',
+        {
+            'color': None,
+            'linewidth': float(legacy_style.get('linewidth', 1.0)),
+            'linestyle': '-',
+            'alpha': float(legacy_style.get('alpha', 0.25)),
+            'fill': bool(legacy_style.get('fill', True)),
+        }
+    )
     kde_alpha = float(style.get('alpha', 0.25))
     kde_linewidth = float(style.get('linewidth', 1.0))
     kde_fill = bool(style.get('fill', True))

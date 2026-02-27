@@ -330,3 +330,100 @@ def refresh_plot_style() -> None:
         except Exception:
             pass
 
+
+def refresh_overlay_styles():
+    """Refresh overlay curve/label styles without full re-render.
+
+    Updates line styles (color, width, linestyle, alpha) for all overlay artists
+    stored in app_state.overlay_artists based on current app_state.line_styles.
+    """
+    if app_state.fig is None or app_state.ax is None:
+        return
+
+    try:
+        overlay_artists = getattr(app_state, 'overlay_artists', {})
+        line_styles = getattr(app_state, 'line_styles', {})
+
+        # Map overlay category → style_key
+        category_to_style = {
+            'model_curves': 'model_curve',
+            'plumbotectonics_curves': 'plumbotectonics_curve',
+            'paleoisochrons': 'paleoisochron',
+            'model_age_lines': 'model_age_line',
+            'isochrons': 'isochron',
+            'growth_curves': 'growth_curve',
+        }
+
+        for category, style_key in category_to_style.items():
+            if category not in overlay_artists:
+                continue
+
+            style = line_styles.get(style_key, {})
+            color = style.get('color')
+            linewidth = style.get('linewidth', 1.0)
+            linestyle = style.get('linestyle', '-')
+            alpha = style.get('alpha', 0.8)
+
+            for key, artists in overlay_artists[category].items():
+                for artist in artists:
+                    try:
+                        # Update Line2D properties
+                        if hasattr(artist, 'set_color') and color is not None:
+                            artist.set_color(color)
+                        if hasattr(artist, 'set_linewidth'):
+                            artist.set_linewidth(linewidth)
+                        if hasattr(artist, 'set_linestyle'):
+                            artist.set_linestyle(linestyle)
+                        if hasattr(artist, 'set_alpha'):
+                            artist.set_alpha(alpha)
+                    except Exception as e:
+                        logger.debug(f"Failed to update artist in {category}/{key}: {e}")
+
+        if app_state.fig.canvas is not None:
+            app_state.fig.canvas.draw_idle()
+
+    except Exception as e:
+        logger.warning(f"Failed to refresh overlay styles: {e}")
+
+
+def refresh_overlay_visibility():
+    """Refresh overlay visibility based on app_state toggle flags.
+
+    Shows/hides overlay artists based on show_model_curves, show_paleoisochrons, etc.
+    without full re-render.
+    """
+    if app_state.fig is None or app_state.ax is None:
+        return
+
+    try:
+        overlay_artists = getattr(app_state, 'overlay_artists', {})
+
+        # Map overlay category → app_state toggle attribute
+        category_to_toggle = {
+            'model_curves': 'show_model_curves',
+            'plumbotectonics_curves': 'show_plumbotectonics_curves',
+            'paleoisochrons': 'show_paleoisochrons',
+            'model_age_lines': 'show_model_age_lines',
+            'isochrons': 'show_isochrons',
+            'growth_curves': 'show_growth_curves',
+        }
+
+        for category, toggle_attr in category_to_toggle.items():
+            if category not in overlay_artists:
+                continue
+
+            visible = bool(getattr(app_state, toggle_attr, True))
+
+            for key, artists in overlay_artists[category].items():
+                for artist in artists:
+                    try:
+                        artist.set_visible(visible)
+                    except Exception as e:
+                        logger.debug(f"Failed to set visibility for {category}/{key}: {e}")
+
+        if app_state.fig.canvas is not None:
+            app_state.fig.canvas.draw_idle()
+
+    except Exception as e:
+        logger.warning(f"Failed to refresh overlay visibility: {e}")
+

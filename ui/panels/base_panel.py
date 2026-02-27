@@ -344,17 +344,25 @@ class BasePanel(QWidget):
             requires_replot = True
         if app_state.title_pad != previous_title_pad:
             requires_replot = True
-        if (
+
+        # Overlay line width changes → lightweight refresh
+        overlay_widths_changed = (
             app_state.model_curve_width,
             app_state.paleoisochron_width,
             app_state.model_age_line_width,
             app_state.isochron_line_width,
-        ) != previous_line_widths:
-            requires_replot = True
+        ) != previous_line_widths
 
         if requires_replot:
             if self.callback:
                 self.callback()
+        elif overlay_widths_changed:
+            try:
+                from visualization.plotting.style import refresh_overlay_styles
+                refresh_overlay_styles()
+            except Exception:
+                if self.callback:
+                    self.callback()
         else:
             try:
                 from visualization import refresh_plot_style

@@ -8,7 +8,7 @@ import pandas as pd
 
 from core import app_state
 from data.plumbotectonics_data import PLUMBOTECTONICS_SECTIONS
-from visualization.line_styles import resolve_line_style
+from visualization.line_styles import resolve_line_style, ensure_line_style
 from .data import _get_analysis_data, _lazy_import_geochemistry
 from .core import _get_subset_dataframe, _get_pb_columns
 from .isochron import resolve_isochron_errors as _resolve_isochron_errors
@@ -17,6 +17,68 @@ logger = logging.getLogger(__name__)
 
 # Minimum absolute slope to avoid division by zero in label positioning
 _SLOPE_EPSILON = 1e-10
+
+
+def _register_overlay_artist(style_key, artist):
+    if artist is None:
+        return
+    if not hasattr(app_state, 'overlay_artists'):
+        app_state.overlay_artists = {}
+    app_state.overlay_artists.setdefault(style_key, []).append(artist)
+
+
+def _resolve_label_options(style_key, fallback):
+    style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+    resolved = dict(fallback)
+    for key in resolved:
+        if key not in style:
+            continue
+        value = style[key]
+        if value is None:
+            continue
+        if isinstance(value, str) and value.strip() == '':
+            continue
+        resolved[key] = value
+    return resolved
+
+
+def _format_label_text(template, age=None, **kwargs):
+    if not template:
+        return None
+    fmt_kwargs = dict(kwargs)
+    if age is not None:
+        fmt_kwargs['age'] = age
+    try:
+        return template.format(**fmt_kwargs)
+    except Exception:
+        return template
+
+
+def _label_bbox(label_opts, edgecolor=None):
+    if not label_opts.get('label_background', False):
+        return None
+    facecolor = label_opts.get('label_bg_color', '#ffffff')
+    alpha = float(label_opts.get('label_bg_alpha', 0.85))
+    return dict(
+        boxstyle='round,pad=0.25',
+        facecolor=facecolor,
+        edgecolor=edgecolor or 'none',
+        alpha=alpha
+    )
+
+
+def _register_overlay_curve_label(text_artist, x_vals, y_vals, label_text, position_mode):
+    if text_artist is None:
+        return
+    if not hasattr(app_state, 'overlay_curve_label_data'):
+        app_state.overlay_curve_label_data = []
+    app_state.overlay_curve_label_data.append({
+        'text': text_artist,
+        'x_line': list(x_vals),
+        'y_line': list(y_vals),
+        'label_text': label_text,
+        'position': position_mode or 'auto',
+    })
 
 
 def _draw_model_curves(ax, actual_algorithm, params_list):
@@ -59,7 +121,18 @@ def _draw_model_curves(ax, actual_algorithm, params_list):
                     'alpha': 0.8
                 }
             )
-            ax.plot(
+            label_opts = _resolve_label_options(
+                'model_curve',
+                {
+                    'label_text': '',
+                    'label_fontsize': 9,
+                    'label_background': False,
+                    'label_bg_color': '#ffffff',
+                    'label_bg_alpha': 0.85,
+                    'label_position': 'auto',
+                }
+            )
+            line_artists = ax.plot(
                 x_vals,
                 y_vals,
                 color=style['color'],
@@ -69,6 +142,39 @@ def _draw_model_curves(ax, actual_algorithm, params_list):
                 zorder=1,
                 label='_nolegend_'
             )
+            for artist in line_artists:
+                _register_overlay_artist('model_curve', artist)
+
+            label_text = _format_label_text(
+                label_opts.get('label_text'),
+                index=len(getattr(app_state, 'overlay_curve_label_data', [])) + 1
+            )
+            if label_text:
+                text_artist = ax.text(
+                    x_vals[0], y_vals[0],
+                    label_text,
+                    color=style['color'],
+                    fontsize=label_opts['label_fontsize'],
+                    va='center',
+                    ha='center',
+                    alpha=style['alpha'],
+                    bbox=_label_bbox(label_opts, edgecolor=style['color'])
+                )
+                _register_overlay_curve_label(
+                    text_artist,
+                    x_vals,
+                    y_vals,
+                    label_text,
+                    label_opts.get('label_position', 'auto')
+                )
+                _position_isoage_label_on_line(
+                    ax,
+                    text_artist,
+                    x_vals,
+                    y_vals,
+                    label_text=label_text,
+                    position_mode=label_opts.get('label_position', 'auto')
+                )
         except Exception as err:
             logger.warning("Failed to draw model curve: %s", err)
 
@@ -189,6 +295,17 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
             'alpha': 0.85
         }
     )
+    label_opts = _resolve_label_options(
+        'plumbotectonics_curve',
+        {
+            'label_text': '',
+            'label_fontsize': 9,
+            'label_background': False,
+            'label_bg_color': '#ffffff',
+            'label_bg_alpha': 0.85,
+            'label_position': 'auto',
+        }
+    )
 
     variant_label = section.get('label')
     if variant_label:
@@ -203,7 +320,7 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
             continue
         color = base_style['color'] or _plumbotectonics_color(name)
         marker = _plumbotectonics_marker(name)
-        ax.plot(
+        line_artists = ax.plot(
             x_fit,
             y_fit,
             color=color,
@@ -213,7 +330,9 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
             zorder=1.2,
             label='_nolegend_'
         )
-        ax.plot(
+        for artist in line_artists:
+            _register_overlay_artist('plumbotectonics_curve', artist)
+        point_artists = ax.plot(
             x_vals,
             y_vals,
             linestyle='None',
@@ -224,6 +343,36 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
             zorder=1.3,
             label='_nolegend_'
         )
+        for artist in point_artists:
+            _register_overlay_artist('plumbotectonics_curve', artist)
+
+        label_text = _format_label_text(label_opts.get('label_text'), name=name)
+        if label_text:
+            text_artist = ax.text(
+                x_fit[0], y_fit[0],
+                label_text,
+                color=color,
+                fontsize=label_opts['label_fontsize'],
+                va='center',
+                ha='center',
+                alpha=base_style['alpha'],
+                bbox=_label_bbox(label_opts, edgecolor=color)
+            )
+            _register_overlay_curve_label(
+                text_artist,
+                x_fit,
+                y_fit,
+                label_text,
+                label_opts.get('label_position', 'auto')
+            )
+            _position_isoage_label_on_line(
+                ax,
+                text_artist,
+                x_fit,
+                y_fit,
+                label_text=label_text,
+                position_mode=label_opts.get('label_position', 'auto')
+            )
 
 
 def _draw_plumbotectonics_isoage_lines(ax, actual_algorithm):
@@ -257,6 +406,17 @@ def _draw_plumbotectonics_isoage_lines(ax, actual_algorithm):
             'alpha': 0.85
         }
     )
+    label_opts = _resolve_label_options(
+        'paleoisochron',
+        {
+            'label_text': '',
+            'label_fontsize': 8,
+            'label_background': False,
+            'label_bg_color': '#ffffff',
+            'label_bg_alpha': 0.85,
+            'label_position': 'auto',
+        }
+    )
 
     app_state.plumbotectonics_isoage_label_data = []
 
@@ -280,7 +440,7 @@ def _draw_plumbotectonics_isoage_lines(ax, actual_algorithm):
         pts.sort(key=lambda p: p[0])
         x_line = [p[0] for p in pts]
         y_line = [p[1] for p in pts]
-        ax.plot(
+        line_artists = ax.plot(
             x_line,
             y_line,
             linestyle=paleo_style['linestyle'],
@@ -290,24 +450,40 @@ def _draw_plumbotectonics_isoage_lines(ax, actual_algorithm):
             zorder=1.05,
             label='_nolegend_'
         )
+        for artist in line_artists:
+            _register_overlay_artist('paleoisochron', artist)
 
         if t_val is not None and len(x_line) >= 2:
+            label_text = _format_label_text(label_opts.get('label_text'), t_val * 1000.0)
+            if not label_text:
+                label_text = f" {t_val * 1000.0:.0f} Ma"
             text_artist = ax.text(
                 x_line[0], y_line[0],
-                "",
+                label_text,
                 color=paleo_style['color'],
-                fontsize=8,
+                fontsize=label_opts['label_fontsize'],
                 va='center',
                 ha='left',
-                alpha=paleo_style['alpha']
+                alpha=paleo_style['alpha'],
+                bbox=_label_bbox(label_opts, edgecolor=paleo_style['color'])
             )
             app_state.plumbotectonics_isoage_label_data.append({
                 'text': text_artist,
                 'x_line': x_line,
                 'y_line': y_line,
                 'age': t_val * 1000.0,
+                'label_text': label_text,
+                'position': label_opts.get('label_position', 'auto'),
             })
-            _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=t_val * 1000.0)
+            _position_isoage_label_on_line(
+                ax,
+                text_artist,
+                x_line,
+                y_line,
+                age_ma=t_val * 1000.0,
+                label_text=label_text,
+                position_mode=label_opts.get('label_position', 'auto')
+            )
 
 def _draw_mu_kappa_paleoisochrons(ax, ages):
     """Draw paleoisochron ages as vertical guides for Mu/Kappa plots."""
@@ -324,8 +500,25 @@ def _draw_mu_kappa_paleoisochrons(ax, ages):
                 'alpha': 0.85
             }
         )
+        label_opts = _resolve_label_options(
+            'paleoisochron',
+            {
+                'label_text': '',
+                'label_fontsize': 8,
+                'label_background': False,
+                'label_bg_color': '#ffffff',
+                'label_bg_alpha': 0.85,
+                'label_position': 'auto',
+            }
+        )
         # Place labels in axes coordinates so zoom/pan preserves their position.
-        label_y = 0.98
+        position_mode = label_opts.get('label_position', 'auto')
+        if position_mode == 'start':
+            label_y = 0.02
+        elif position_mode == 'center':
+            label_y = 0.5
+        else:
+            label_y = 0.98
         label_transform = ax.get_xaxis_transform()
         for age in ages:
             try:
@@ -334,7 +527,7 @@ def _draw_mu_kappa_paleoisochrons(ax, ages):
                 continue
             if not np.isfinite(age_val):
                 continue
-            ax.axvline(
+            line_artist = ax.axvline(
                 age_val,
                 color=paleo_style['color'],
                 linewidth=paleo_style['linewidth'],
@@ -343,18 +536,20 @@ def _draw_mu_kappa_paleoisochrons(ax, ages):
                 zorder=2,
                 clip_on=True,
             )
+            _register_overlay_artist('paleoisochron', line_artist)
             ax.text(
                 age_val,
                 label_y,
-                f" {age_val:.0f} Ma",
+                _format_label_text(label_opts.get('label_text'), age_val) or f" {age_val:.0f} Ma",
                 color=paleo_style['color'],
-                fontsize=8,
+                fontsize=label_opts['label_fontsize'],
                 rotation=90,
                 va='top',
                 ha='right',
                 alpha=paleo_style['alpha'],
                 transform=label_transform,
                 clip_on=True,
+                bbox=_label_bbox(label_opts, edgecolor=paleo_style['color'])
             )
     except Exception as err:
         logger.warning("Failed to draw Mu/Kappa paleoisochrons: %s", err)
@@ -397,7 +592,8 @@ def _draw_isochron_overlays(ax, actual_algorithm):
         params = geochemistry.engine.get_parameters()
 
         show_fits = getattr(app_state, 'show_isochrons', True)
-        if not show_fits:
+        show_growth = getattr(app_state, 'show_growth_curves', True)
+        if not show_fits and not show_growth:
             return
 
         _, indices = _get_analysis_data()
@@ -521,15 +717,18 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                     'alpha': 0.8
                 }
             )
-            ax.plot(
-                x_line,
-                y_line,
-                linestyle=isochron_style['linestyle'],
-                color=isochron_style['color'] or color,
-                linewidth=isochron_style['linewidth'],
-                alpha=isochron_style['alpha'],
-                zorder=2
-            )
+            if show_fits:
+                line_artists = ax.plot(
+                    x_line,
+                    y_line,
+                    linestyle=isochron_style['linestyle'],
+                    color=isochron_style['color'] or color,
+                    linewidth=isochron_style['linewidth'],
+                    alpha=isochron_style['alpha'],
+                    zorder=2
+                )
+                for artist in line_artists:
+                    _register_overlay_artist('isochron', artist)
 
             if mode == 'ISOCHRON1' and geochemistry:
                 age_ma = None
@@ -540,13 +739,38 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                 except Exception as age_err:
                     logger.warning("Failed to calculate isochron age for slope %.6f: %s", slope, age_err)
 
-                # 动态构建标注
+                label_opts = _resolve_label_options(
+                    'isochron',
+                    {
+                        'label_text': '',
+                        'label_fontsize': 9,
+                        'label_background': False,
+                        'label_bg_color': '#ffffff',
+                        'label_bg_alpha': 0.85,
+                        'label_position': 'auto',
+                    }
+                )
                 label_text = _build_isochron_label(app_state.isochron_results[grp])
-                if label_text:
+                age_val = app_state.isochron_results[grp].get('age')
+                if age_val is None:
+                    age_val = app_state.isochron_results[grp].get('age_ma')
+                label_override = _format_label_text(label_opts.get('label_text'), age_val)
+                if label_override:
+                    label_text = label_override
+
+                if show_fits and label_text:
                     xlim = ax.get_xlim()
                     ylim = ax.get_ylim()
 
-                    txt_x = min(x_max_g, xlim[1] * 0.95)
+                    position_mode = label_opts.get('label_position', 'auto')
+                    if position_mode == 'start':
+                        txt_x = x_min_g
+                    elif position_mode == 'end':
+                        txt_x = x_max_g
+                    elif position_mode == 'center':
+                        txt_x = (x_min_g + x_max_g) / 2
+                    else:
+                        txt_x = min(x_max_g, xlim[1] * 0.95)
                     txt_y = slope * txt_x + intercept
 
                     if txt_y < ylim[0] or txt_y > ylim[1]:
@@ -557,7 +781,17 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                             txt_y = ylim[0] + (ylim[1] - ylim[0]) * 0.05
                             txt_x = (txt_y - intercept) / slope if abs(slope) > _SLOPE_EPSILON else txt_x
 
-                    ax.text(txt_x, txt_y, f" {label_text}", color=color, fontsize=9, va='center', ha='left', fontweight='bold')
+                    ax.text(
+                        txt_x,
+                        txt_y,
+                        f" {label_text}",
+                        color=color,
+                        fontsize=label_opts['label_fontsize'],
+                        va='center',
+                        ha='left',
+                        fontweight='bold',
+                        bbox=_label_bbox(label_opts, edgecolor=color)
+                    )
 
                 if getattr(app_state, 'show_growth_curves', True) and age_ma is not None and age_ma > 0:
                     growth = geochemistry.calculate_isochron1_growth_curve(
@@ -583,7 +817,7 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                                 'alpha': 0.6
                             }
                         )
-                        ax.plot(
+                        line_artists = ax.plot(
                             x_growth,
                             y_growth,
                             linestyle=growth_style['linestyle'],
@@ -592,7 +826,49 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                             linewidth=growth_style['linewidth'],
                             zorder=1.5
                         )
-                        ax.text(x_growth[0], y_growth[0], annot_text, fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
+                        for artist in line_artists:
+                            _register_overlay_artist('growth_curve', artist)
+
+                        label_opts = _resolve_label_options(
+                            'growth_curve',
+                            {
+                                'label_text': '',
+                                'label_fontsize': 8,
+                                'label_background': False,
+                                'label_bg_color': '#ffffff',
+                                'label_bg_alpha': 0.85,
+                                'label_position': 'auto',
+                            }
+                        )
+                        label_text = _format_label_text(label_opts.get('label_text'))
+                        if not label_text:
+                            label_text = annot_text
+                        if label_text:
+                            text_artist = ax.text(
+                                x_growth[0], y_growth[0],
+                                label_text,
+                                fontsize=label_opts['label_fontsize'],
+                                color=color,
+                                va='bottom',
+                                ha='right',
+                                alpha=0.8,
+                                bbox=_label_bbox(label_opts, edgecolor=color)
+                            )
+                            _register_overlay_curve_label(
+                                text_artist,
+                                x_growth,
+                                y_growth,
+                                label_text,
+                                label_opts.get('label_position', 'auto')
+                            )
+                            _position_isoage_label_on_line(
+                                ax,
+                                text_artist,
+                                x_growth,
+                                y_growth,
+                                label_text=label_text,
+                                position_mode=label_opts.get('label_position', 'auto')
+                            )
 
             elif mode == 'ISOCHRON2' and geochemistry:
                 # PB_EVOL_86: 208/204 vs 206/204 等时线
@@ -619,13 +895,38 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                     except Exception as age_err:
                         logger.warning("Failed to calculate 86 isochron age for group %s: %s", grp, age_err)
 
-                # 动态构建标注
+                label_opts = _resolve_label_options(
+                    'isochron',
+                    {
+                        'label_text': '',
+                        'label_fontsize': 9,
+                        'label_background': False,
+                        'label_bg_color': '#ffffff',
+                        'label_bg_alpha': 0.85,
+                        'label_position': 'auto',
+                    }
+                )
                 label_text = _build_isochron_label(app_state.isochron_results[grp])
-                if label_text:
+                age_val = app_state.isochron_results[grp].get('age')
+                if age_val is None:
+                    age_val = app_state.isochron_results[grp].get('age_ma')
+                label_override = _format_label_text(label_opts.get('label_text'), age_val)
+                if label_override:
+                    label_text = label_override
+
+                if show_fits and label_text:
                     xlim = ax.get_xlim()
                     ylim = ax.get_ylim()
 
-                    txt_x = min(x_max_g, xlim[1] * 0.95)
+                    position_mode = label_opts.get('label_position', 'auto')
+                    if position_mode == 'start':
+                        txt_x = x_min_g
+                    elif position_mode == 'end':
+                        txt_x = x_max_g
+                    elif position_mode == 'center':
+                        txt_x = (x_min_g + x_max_g) / 2
+                    else:
+                        txt_x = min(x_max_g, xlim[1] * 0.95)
                     txt_y = slope * txt_x + intercept
 
                     if txt_y < ylim[0] or txt_y > ylim[1]:
@@ -636,7 +937,17 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                             txt_y = ylim[0] + (ylim[1] - ylim[0]) * 0.05
                             txt_x = (txt_y - intercept) / slope if abs(slope) > _SLOPE_EPSILON else txt_x
 
-                    ax.text(txt_x, txt_y, f" {label_text}", color=color, fontsize=9, va='center', ha='left', fontweight='bold')
+                    ax.text(
+                        txt_x,
+                        txt_y,
+                        f" {label_text}",
+                        color=color,
+                        fontsize=label_opts['label_fontsize'],
+                        va='center',
+                        ha='left',
+                        fontweight='bold',
+                        bbox=_label_bbox(label_opts, edgecolor=color)
+                    )
 
                 # 生长曲线 (需要 207/206 斜率 + 208/206 斜率)
                 if getattr(app_state, 'show_growth_curves', True) and age_ma is not None and age_ma > 0 and slope_207 is not None:
@@ -664,7 +975,7 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                                 'alpha': 0.6
                             }
                         )
-                        ax.plot(
+                        line_artists = ax.plot(
                             x_growth,
                             y_growth,
                             linestyle=growth_style['linestyle'],
@@ -673,8 +984,49 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                             linewidth=growth_style['linewidth'],
                             zorder=1.5
                         )
-                        if annot_text:
-                            ax.text(x_growth[0], y_growth[0], annot_text, fontsize=8, color=color, va='bottom', ha='right', alpha=0.8)
+                        for artist in line_artists:
+                            _register_overlay_artist('growth_curve', artist)
+
+                        label_opts = _resolve_label_options(
+                            'growth_curve',
+                            {
+                                'label_text': '',
+                                'label_fontsize': 8,
+                                'label_background': False,
+                                'label_bg_color': '#ffffff',
+                                'label_bg_alpha': 0.85,
+                                'label_position': 'auto',
+                            }
+                        )
+                        label_text = _format_label_text(label_opts.get('label_text'))
+                        if not label_text:
+                            label_text = annot_text
+                        if label_text:
+                            text_artist = ax.text(
+                                x_growth[0], y_growth[0],
+                                label_text,
+                                fontsize=label_opts['label_fontsize'],
+                                color=color,
+                                va='bottom',
+                                ha='right',
+                                alpha=0.8,
+                                bbox=_label_bbox(label_opts, edgecolor=color)
+                            )
+                            _register_overlay_curve_label(
+                                text_artist,
+                                x_growth,
+                                y_growth,
+                                label_text,
+                                label_opts.get('label_position', 'auto')
+                            )
+                            _position_isoage_label_on_line(
+                                ax,
+                                text_artist,
+                                x_growth,
+                                y_growth,
+                                label_text=label_text,
+                                position_mode=label_opts.get('label_position', 'auto')
+                            )
 
     except Exception as err:
         logger.warning("Failed to draw isochron overlays: %s", err)
@@ -698,11 +1050,11 @@ def _draw_selected_isochron(ax):
             'linestyle': '-',
             'alpha': 0.9
         }
-        line_style = resolve_line_style(app_state, 'isochron', fallback_style)
+        line_style = resolve_line_style(app_state, 'selected_isochron', fallback_style)
         # 选中等时线用稍粗的线
         draw_width = line_style['linewidth'] * 1.3
 
-        ax.plot(
+        line_artists = ax.plot(
             x_range,
             y_range,
             color=line_style['color'] or '#ef4444',
@@ -712,9 +1064,27 @@ def _draw_selected_isochron(ax):
             zorder=100,
             label='_nolegend_'
         )
+        for artist in line_artists:
+            _register_overlay_artist('selected_isochron', artist)
 
-        # 动态构建标注
+        label_opts = _resolve_label_options(
+            'isochron',
+            {
+                'label_text': '',
+                'label_fontsize': 10,
+                'label_background': True,
+                'label_bg_color': '#ffffff',
+                'label_bg_alpha': 0.9,
+                'label_position': 'auto',
+            }
+        )
         label_text = _build_isochron_label(data)
+        age_val = data.get('age')
+        if age_val is None:
+            age_val = data.get('age_ma')
+        label_override = _format_label_text(label_opts.get('label_text'), age_val)
+        if label_override:
+            label_text = label_override
         if label_text:
             x_mid = (x_range[0] + x_range[1]) / 2
             y_mid = (y_range[0] + y_range[1]) / 2
@@ -727,11 +1097,12 @@ def _draw_selected_isochron(ax):
                 y_mid + y_offset,
                 label_text,
                 color=line_style['color'] or '#ef4444',
-                fontsize=10,
+                fontsize=label_opts['label_fontsize'],
                 fontweight='bold',
                 ha='center',
                 va='bottom',
-                bbox=dict(
+                bbox=_label_bbox(label_opts, edgecolor=line_style['color'] or '#ef4444')
+                or dict(
                     boxstyle='round,pad=0.4',
                     facecolor='white',
                     edgecolor=line_style['color'] or '#ef4444',
@@ -756,7 +1127,7 @@ def _label_angle_for_slope(ax, x0, y0, slope, dx):
     except Exception:
         return np.degrees(np.arctan(slope))
 
-def _position_paleo_label(ax, text_artist, slope, intercept, age=None):
+def _position_paleo_label(ax, text_artist, slope, intercept, age=None, label_text=None, position_mode='auto'):
     """Position a paleoisochron label inside axes, aligned to line."""
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -770,6 +1141,28 @@ def _position_paleo_label(ax, text_artist, slope, intercept, age=None):
 
     def _in_bounds(x_val, y_val):
         return (xlim[0] + pad_x) <= x_val <= (xlim[1] - pad_x) and (ylim[0] + pad_y) <= y_val <= (ylim[1] - pad_y)
+
+    if position_mode in ('start', 'center', 'end'):
+        if position_mode == 'start':
+            x_anchor = xlim[0] + pad_x
+        elif position_mode == 'end':
+            x_anchor = xlim[1] - pad_x
+        else:
+            x_anchor = (xlim[0] + xlim[1]) / 2
+        y_anchor = slope * x_anchor + intercept
+        if _in_bounds(x_anchor, y_anchor):
+            angle = _label_angle_for_slope(ax, x_anchor, y_anchor, slope, dx=x_span * 0.02)
+            text_artist.set_position((x_anchor, y_anchor))
+            text_artist.set_rotation(angle)
+            text_artist.set_rotation_mode('anchor')
+            text_artist.set_ha('center')
+            text_artist.set_va('center')
+            text_artist.set_clip_on(True)
+            if label_text is not None:
+                text_artist.set_text(label_text)
+            elif age is not None:
+                text_artist.set_text(f" {age:.0f} Ma")
+            return
 
     candidates = []
 
@@ -832,7 +1225,9 @@ def _position_paleo_label(ax, text_artist, slope, intercept, age=None):
         text_artist.set_ha('center')
         text_artist.set_va('top')
     text_artist.set_clip_on(True)
-    if age is not None:
+    if label_text is not None:
+        text_artist.set_text(label_text)
+    elif age is not None:
         text_artist.set_text(f" {age:.0f} Ma")
 
 
@@ -896,7 +1291,7 @@ def _position_curve_label_left(ax, text_artist, x_vals, y_vals):
     text_artist.set_clip_on(True)
 
 
-def _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=None):
+def _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=None, label_text=None, position_mode='auto'):
     """Position an isoage label along its line (not at the axes edge)."""
     if not x_line or not y_line:
         return
@@ -937,7 +1332,7 @@ def _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=None)
     cx = (xlim[0] + xlim[1]) / 2
     cy = (ylim[0] + ylim[1]) / 2
 
-    best = None
+    candidates = []
     for i in range(len(x_arr) - 1):
         x0, y0 = float(x_arr[i]), float(y_arr[i])
         x1, y1 = float(x_arr[i + 1]), float(y_arr[i + 1])
@@ -949,14 +1344,20 @@ def _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=None)
             if x_t < x_min or x_t > x_max or y_t < y_min or y_t > y_max:
                 continue
             dist = (x_t - cx) ** 2 + (y_t - cy) ** 2
-            if best is None or dist < best[0]:
-                best = (dist, x_t, y_t, x0, y0, x1, y1)
+            candidates.append((dist, x_t, y_t, x0, y0, x1, y1))
 
-    if best is None:
+    if not candidates:
         text_artist.set_visible(False)
         return
 
-    _, x_mid, y_mid, x0, y0, x1, y1 = best
+    if position_mode == 'start':
+        selected = candidates[0]
+    elif position_mode == 'end':
+        selected = candidates[-1]
+    else:
+        selected = min(candidates, key=lambda item: item[0])
+
+    _, x_mid, y_mid, x0, y0, x1, y1 = selected
     dx = x1 - x0
     slope = 0.0 if abs(dx) < _SLOPE_EPSILON else (y1 - y0) / dx
     angle = _label_angle_for_slope(ax, x_mid, y_mid, slope, dx=x_span * 0.02)
@@ -967,7 +1368,9 @@ def _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=None)
     text_artist.set_ha('center')
     text_artist.set_va('center')
     text_artist.set_clip_on(True)
-    if age_ma is not None:
+    if label_text is not None:
+        text_artist.set_text(label_text)
+    elif age_ma is not None:
         text_artist.set_text(f" {age_ma:.0f} Ma")
 
 def _draw_paleoisochrons(ax, actual_algorithm, ages, params):
@@ -1004,7 +1407,18 @@ def _draw_paleoisochrons(ax, actual_algorithm, ages, params):
                     'alpha': 0.85
                 }
             )
-            ax.plot(
+            label_opts = _resolve_label_options(
+                'paleoisochron',
+                {
+                    'label_text': '',
+                    'label_fontsize': 8,
+                    'label_background': False,
+                    'label_bg_color': '#ffffff',
+                    'label_bg_alpha': 0.85,
+                    'label_position': 'auto',
+                }
+            )
+            line_artists = ax.plot(
                 x_vals,
                 y_vals,
                 linestyle=paleo_style['linestyle'],
@@ -1014,23 +1428,39 @@ def _draw_paleoisochrons(ax, actual_algorithm, ages, params):
                 zorder=3,
                 label='_nolegend_'
             )
+            for artist in line_artists:
+                _register_overlay_artist('paleoisochron', artist)
             if len(x_vals) > 0:
+                label_text = _format_label_text(label_opts.get('label_text'), age)
+                if not label_text:
+                    label_text = f" {age:.0f} Ma"
                 text_artist = ax.text(
                     x_vals[-1], y_vals[-1],
-                    f" {age:.0f} Ma",
+                    label_text,
                     color=paleo_style['color'],
-                    fontsize=8,
+                    fontsize=label_opts['label_fontsize'],
                     va='center',
                     ha='left',
-                    alpha=paleo_style['alpha']
+                    alpha=paleo_style['alpha'],
+                    bbox=_label_bbox(label_opts, edgecolor=paleo_style['color'])
                 )
                 app_state.paleoisochron_label_data.append({
                     'text': text_artist,
                     'slope': slope,
                     'intercept': intercept,
-                    'age': age
+                    'age': age,
+                    'label_text': label_text,
+                    'position': label_opts.get('label_position', 'auto'),
                 })
-                _position_paleo_label(ax, text_artist, slope, intercept, age=age)
+                _position_paleo_label(
+                    ax,
+                    text_artist,
+                    slope,
+                    intercept,
+                    age=age,
+                    label_text=label_text,
+                    position_mode=label_opts.get('label_position', 'auto')
+                )
     except Exception as err:
         logger.warning("Failed to draw paleoisochrons: %s", err)
 
@@ -1048,7 +1478,15 @@ def refresh_paleoisochron_labels():
         text_artist = entry.get('text')
         if text_artist is None:
             continue
-        _position_paleo_label(ax, text_artist, entry.get('slope', 0), entry.get('intercept', 0), age=entry.get('age'))
+        _position_paleo_label(
+            ax,
+            text_artist,
+            entry.get('slope', 0),
+            entry.get('intercept', 0),
+            age=entry.get('age'),
+            label_text=entry.get('label_text'),
+            position_mode=entry.get('position', 'auto'),
+        )
 
     curve_labels = getattr(app_state, 'plumbotectonics_label_data', [])
     for entry in curve_labels:
@@ -1068,6 +1506,22 @@ def refresh_paleoisochron_labels():
             entry.get('x_line', []),
             entry.get('y_line', []),
             age_ma=entry.get('age'),
+            label_text=entry.get('label_text'),
+            position_mode=entry.get('position', 'auto'),
+        )
+
+    curve_labels = getattr(app_state, 'overlay_curve_label_data', [])
+    for entry in curve_labels:
+        text_artist = entry.get('text')
+        if text_artist is None:
+            continue
+        _position_isoage_label_on_line(
+            ax,
+            text_artist,
+            entry.get('x_line', []),
+            entry.get('y_line', []),
+            label_text=entry.get('label_text'),
+            position_mode=entry.get('position', 'auto'),
         )
 
 def _resolve_model_age(pb206, pb207, params):
@@ -1117,10 +1571,23 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
                 'alpha': 0.7
             }
         )
+        label_opts = _resolve_label_options(
+            'model_age_line',
+            {
+                'label_text': '',
+                'label_fontsize': 8,
+                'label_background': False,
+                'label_bg_color': '#ffffff',
+                'label_bg_alpha': 0.85,
+                'label_position': 'auto',
+            }
+        )
+        label_text = _format_label_text(label_opts.get('label_text'))
+        label_done = False
         for i in idxs:
             if np.isnan(pb206[i]) or np.isnan(pb207[i]) or np.isnan(x_curve[i]) or np.isnan(y_curve[i]):
                 continue
-            ax.plot(
+            line_artists = ax.plot(
                 [x_curve[i], pb206[i]], [y_curve[i], pb207[i]],
                 color=age_style['color'],
                 linewidth=age_style['linewidth'],
@@ -1129,7 +1596,45 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
                 zorder=1,
                 label='_nolegend_'
             )
-            ax.scatter(x_curve[i], y_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
+            for artist in line_artists:
+                _register_overlay_artist('model_age_line', artist)
+            point_artist = ax.scatter(
+                x_curve[i],
+                y_curve[i],
+                s=10,
+                color='#475569',
+                alpha=0.6,
+                zorder=2,
+                label='_nolegend_'
+            )
+            _register_overlay_artist('model_age_line', point_artist)
+            if label_text and not label_done:
+                text_artist = ax.text(
+                    x_curve[i], y_curve[i],
+                    label_text,
+                    color=age_style['color'],
+                    fontsize=label_opts['label_fontsize'],
+                    va='center',
+                    ha='center',
+                    alpha=age_style['alpha'],
+                    bbox=_label_bbox(label_opts, edgecolor=age_style['color'])
+                )
+                _register_overlay_curve_label(
+                    text_artist,
+                    [x_curve[i], pb206[i]],
+                    [y_curve[i], pb207[i]],
+                    label_text,
+                    label_opts.get('label_position', 'auto')
+                )
+                _position_isoage_label_on_line(
+                    ax,
+                    text_artist,
+                    [x_curve[i], pb206[i]],
+                    [y_curve[i], pb207[i]],
+                    label_text=label_text,
+                    position_mode=label_opts.get('label_position', 'auto')
+                )
+                label_done = True
     except Exception as err:
         logger.warning("Failed to draw model age lines: %s", err)
 
@@ -1161,10 +1666,23 @@ def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params):
                 'alpha': 0.7
             }
         )
+        label_opts = _resolve_label_options(
+            'model_age_line',
+            {
+                'label_text': '',
+                'label_fontsize': 8,
+                'label_background': False,
+                'label_bg_color': '#ffffff',
+                'label_bg_alpha': 0.85,
+                'label_position': 'auto',
+            }
+        )
+        label_text = _format_label_text(label_opts.get('label_text'))
+        label_done = False
         for i in idxs:
             if np.isnan(pb206[i]) or np.isnan(pb208[i]) or np.isnan(x_curve[i]) or np.isnan(z_curve[i]):
                 continue
-            ax.plot(
+            line_artists = ax.plot(
                 [x_curve[i], pb206[i]], [z_curve[i], pb208[i]],
                 color=age_style['color'],
                 linewidth=age_style['linewidth'],
@@ -1173,7 +1691,45 @@ def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params):
                 zorder=1,
                 label='_nolegend_'
             )
-            ax.scatter(x_curve[i], z_curve[i], s=10, color='#475569', alpha=0.6, zorder=2, label='_nolegend_')
+            for artist in line_artists:
+                _register_overlay_artist('model_age_line', artist)
+            point_artist = ax.scatter(
+                x_curve[i],
+                z_curve[i],
+                s=10,
+                color='#475569',
+                alpha=0.6,
+                zorder=2,
+                label='_nolegend_'
+            )
+            _register_overlay_artist('model_age_line', point_artist)
+            if label_text and not label_done:
+                text_artist = ax.text(
+                    x_curve[i], z_curve[i],
+                    label_text,
+                    color=age_style['color'],
+                    fontsize=label_opts['label_fontsize'],
+                    va='center',
+                    ha='center',
+                    alpha=age_style['alpha'],
+                    bbox=_label_bbox(label_opts, edgecolor=age_style['color'])
+                )
+                _register_overlay_curve_label(
+                    text_artist,
+                    [x_curve[i], pb206[i]],
+                    [z_curve[i], pb208[i]],
+                    label_text,
+                    label_opts.get('label_position', 'auto')
+                )
+                _position_isoage_label_on_line(
+                    ax,
+                    text_artist,
+                    [x_curve[i], pb206[i]],
+                    [z_curve[i], pb208[i]],
+                    label_text=label_text,
+                    position_mode=label_opts.get('label_position', 'auto')
+                )
+                label_done = True
     except Exception as err:
         logger.warning("Failed to draw model age lines (206-208): %s", err)
 
@@ -1303,21 +1859,76 @@ def _draw_equation_overlays(ax):
         if y_vals is None:
             continue
 
-        style = {
-            'color': overlay.get('color', '#ef4444'),
-            'linewidth': overlay.get('linewidth', 1.0),
-            'linestyle': overlay.get('linestyle', '--'),
-            'alpha': overlay.get('alpha', 0.85)
-        }
+        style_key = overlay.get('style_key')
+        if not style_key:
+            overlay_id = overlay.get('id') or overlay.get('expression') or overlay.get('label') or 'equation'
+            style_key = f"equation:{overlay_id}"
+            overlay['style_key'] = style_key
 
-        ax.plot(
+        existing_style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+        fallback_color = None if existing_style.get('color', '__missing__') in (None, '') else overlay.get('color', '#ef4444')
+        style = ensure_line_style(
+            app_state,
+            style_key,
+            {
+                'color': fallback_color,
+                'linewidth': overlay.get('linewidth', 1.0),
+                'linestyle': overlay.get('linestyle', '--'),
+                'alpha': overlay.get('alpha', 0.85),
+            }
+        )
+
+        line_color = style.get('color') or overlay.get('color', '#ef4444')
+        line_artists = ax.plot(
             x_vals,
             y_vals,
-            color=style['color'],
+            color=line_color,
             linewidth=style['linewidth'],
             linestyle=style['linestyle'],
             alpha=style['alpha'],
             zorder=1,
             label='_nolegend_'
         )
+        for artist in line_artists:
+            _register_overlay_artist(style_key, artist)
+
+        label_opts = _resolve_label_options(
+            style_key,
+            {
+                'label_text': '',
+                'label_fontsize': 8,
+                'label_background': False,
+                'label_bg_color': '#ffffff',
+                'label_bg_alpha': 0.85,
+                'label_position': 'auto',
+            }
+        )
+        label_text = _format_label_text(label_opts.get('label_text'), label=overlay.get('label'))
+        if label_text:
+            text_artist = ax.text(
+                x_vals[0],
+                y_vals[0],
+                label_text,
+                color=line_color,
+                fontsize=label_opts['label_fontsize'],
+                va='center',
+                ha='center',
+                alpha=style['alpha'],
+                bbox=_label_bbox(label_opts, edgecolor=line_color)
+            )
+            _register_overlay_curve_label(
+                text_artist,
+                x_vals,
+                y_vals,
+                label_text,
+                label_opts.get('label_position', 'auto')
+            )
+            _position_isoage_label_on_line(
+                ax,
+                text_artist,
+                x_vals,
+                y_vals,
+                label_text=label_text,
+                position_mode=label_opts.get('label_position', 'auto')
+            )
 

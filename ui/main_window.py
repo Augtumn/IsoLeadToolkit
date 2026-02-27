@@ -11,19 +11,30 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                               QSplitter, QSizePolicy, QListWidget,
                               QListWidgetItem, QAbstractItemView, QLabel,
                               QPushButton, QCheckBox, QMenu)
-from PyQt5.QtCore import Qt, QSize, QSettings
+from PyQt5.QtCore import Qt, QSize, QSettings, QTimer
 from PyQt5.QtGui import QIcon, QKeySequence, QColor, QCursor
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from core import app_state, translate
+from visualization.plotting.legend_model import overlay_legend_items, normalize_render_mode, OVERLAY_TOGGLE_MAP
 from utils.icons import build_marker_icon
 
 logger = logging.getLogger(__name__)
 
 # 默认图标尺寸
 DEFAULT_TOOLBAR_ICON_SIZE = QSize(24, 24)
+
+
+class LegendListWidget(QListWidget):
+    """QListWidget that preserves item widgets after internal move."""
+    def dropEvent(self, event):
+        widgets = {self.item(i): self.itemWidget(self.item(i)) for i in range(self.count())}
+        super().dropEvent(event)
+        for item, widget in widgets.items():
+            if widget is not None and self.itemWidget(item) is None:
+                self.setItemWidget(item, widget)
 
 
 class Qt5MainWindow(QMainWindow):
@@ -72,14 +83,24 @@ class Qt5MainWindow(QMainWindow):
         legend_title = QLabel(translate("Legend"))
         legend_title.setStyleSheet("font-weight: bold;")
         legend_layout.addWidget(legend_title)
-        legend_list = QListWidget()
-        legend_list.setSelectionMode(QAbstractItemView.NoSelection)
+        legend_list = LegendListWidget()
+        legend_list.setSelectionMode(QAbstractItemView.SingleSelection)
         legend_list.setUniformItemSizes(False)
         legend_list.setIconSize(QSize(14, 14))
+        legend_list.setDragDropMode(QAbstractItemView.InternalMove)
+        legend_list.setDefaultDropAction(Qt.MoveAction)
+        legend_list.setDragEnabled(True)
+        legend_list.setAcceptDrops(True)
+        legend_list.setDropIndicatorShown(True)
+        legend_list.itemDoubleClicked.connect(self._on_legend_item_double_clicked)
         legend_layout.addWidget(legend_list, 1)
         self.legend_panel.setMinimumWidth(160)
         self._legend_title_label = legend_title
         self._legend_list = legend_list
+        try:
+            legend_list.model().rowsMoved.connect(self._on_legend_rows_moved)
+        except Exception:
+            pass
 
         self.legend_splitter = QSplitter(Qt.Horizontal)
         self.legend_splitter.setChildrenCollapsible(False)
@@ -260,6 +281,267 @@ class Qt5MainWindow(QMainWindow):
                 translate("Hline (_)"): '_',
             }
 
+    def _overlay_entries_for_legend(self):
+        mode = normalize_render_mode(getattr(app_state, 'render_mode', ''))
+        return [
+            (item['label_key'], item['style_key'])
+            for item in overlay_legend_items(render_mode=mode, include_disabled=True)
+        ]
+
+    def _legend_order_key(self, entry_type, key):
+        return f"{entry_type}:{key}"
+
+    def _set_legend_item_meta(self, item, entry_type, key):
+        if item is None:
+            return
+        item.setData(Qt.UserRole, {'type': entry_type, 'key': key})
+
+    def _apply_legend_z_order(self):
+        if not hasattr(self, '_legend_list') or self._legend_list is None:
+            return
+        ax = getattr(app_state, 'ax', None)
+        if ax is None:
+            return
+
+        order = []
+        for i in range(self._legend_list.count()):
+            item = self._legend_list.item(i)
+            meta = item.data(Qt.UserRole)
+            if not meta:
+                continue
+            entry_type = meta.get('type')
+            entry_key = meta.get('key')
+            if entry_type and entry_key is not None:
+                order.append((entry_type, entry_key))
+
+        if not order:
+            return
+
+        max_z = 2
+        try:
+            for artist in ax.get_children():
+                try:
+                    max_z = max(max_z, artist.get_zorder())
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        target_z = max_z + len(order)
+        overlay_map = getattr(app_state, 'overlay_artists', {}) or {}
+        group_map = getattr(app_state, 'group_to_scatter', {}) or {}
+
+        for entry_type, entry_key in order:
+            if entry_type == 'group':
+                artist = group_map.get(entry_key)
+                if artist is not None:
+                    try:
+                        artist.set_zorder(target_z)
+                    except Exception:
+                        pass
+            elif entry_type == 'overlay':
+                artists = list(overlay_map.get(entry_key, []))
+                if entry_key == 'isochron':
+                    artists.extend(overlay_map.get('selected_isochron', []))
+                for artist in artists:
+                    try:
+                        artist.set_zorder(target_z)
+                    except Exception:
+                        pass
+            target_z -= 1
+
+        app_state.legend_item_order = [
+            self._legend_order_key(entry_type, entry_key)
+            for entry_type, entry_key in order
+        ]
+
+        if app_state.fig is not None and app_state.fig.canvas is not None:
+            app_state.fig.canvas.draw_idle()
+
+    def _on_legend_rows_moved(self, *args):
+        QTimer.singleShot(0, self._apply_legend_z_order)
+
+    def _move_legend_item_to_top(self, entry_type, entry_key):
+        if not hasattr(self, '_legend_list') or self._legend_list is None:
+            return
+        target_index = None
+        target_item = None
+        target_widget = None
+        for i in range(self._legend_list.count()):
+            item = self._legend_list.item(i)
+            meta = item.data(Qt.UserRole)
+            if not meta:
+                continue
+            if meta.get('type') == entry_type and meta.get('key') == entry_key:
+                target_index = i
+                target_item = item
+                target_widget = self._legend_list.itemWidget(item)
+                break
+        if target_item is None or target_index is None or target_index == 0:
+            return
+        self._legend_list.takeItem(target_index)
+        self._legend_list.insertItem(0, target_item)
+        if target_widget is not None:
+            self._legend_list.setItemWidget(target_item, target_widget)
+        self._apply_legend_z_order()
+
+
+    def _open_line_style_dialog(self, style_key, swatch):
+        from ui.dialogs.line_style_dialog import open_line_style_dialog
+        open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._refresh_plot)
+
+    def _add_overlay_legend_item(self, label_key, style_key):
+        item_widget = QWidget()
+        item_layout = QHBoxLayout()
+        item_layout.setContentsMargins(4, 2, 4, 2)
+        item_layout.setSpacing(6)
+
+        style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+        swatch_color = style.get('color') or '#e2e8f0'
+
+        swatch = QPushButton()
+        swatch.setFixedSize(22, 22)
+        swatch.setStyleSheet(f"background-color: {swatch_color}; border: 1px solid #111827;")
+        swatch.setCursor(QCursor(Qt.PointingHandCursor))
+        swatch.clicked.connect(lambda checked=False, k=style_key, btn=swatch: self._open_line_style_dialog(k, btn))
+        item_layout.addWidget(swatch)
+
+        checkbox = QCheckBox()
+        checkbox.setChecked(self._overlay_checked_state(style_key))
+        checkbox.stateChanged.connect(lambda state, k=style_key: self._on_overlay_checkbox_change(k, state))
+        checkbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        checkbox.setFixedWidth(18)
+        item_layout.addWidget(checkbox)
+
+        label = QLabel(translate(label_key))
+        item_layout.addWidget(label, 1)
+        item_layout.addStretch()
+
+        item_widget.setLayout(item_layout)
+
+        item = QListWidgetItem()
+        item.setSizeHint(item_widget.sizeHint())
+        self._set_legend_item_meta(item, 'overlay', style_key)
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
+        self._legend_list.addItem(item)
+        self._legend_list.setItemWidget(item, item_widget)
+
+    def _overlay_checked_state(self, style_key):
+        """Get checked state for overlay using OVERLAY_TOGGLE_MAP."""
+        attr = OVERLAY_TOGGLE_MAP.get(style_key)
+        if attr:
+            return bool(getattr(app_state, attr, True))
+        # Special case for isochron: also check selected_isochron_data
+        if style_key == 'isochron':
+            return bool(getattr(app_state, 'show_isochrons', False) or getattr(app_state, 'selected_isochron_data', None))
+        return True
+
+    def _on_overlay_checkbox_change(self, style_key, state):
+        """Handle overlay checkbox change using OVERLAY_TOGGLE_MAP."""
+        checked = state == Qt.Checked
+        attr = OVERLAY_TOGGLE_MAP.get(style_key)
+        if attr:
+            setattr(app_state, attr, checked)
+
+        # Special case: clear isochron data when unchecked
+        if style_key == 'isochron' and not checked:
+            app_state.selected_isochron_data = None
+            app_state.isochron_results = {}
+
+        self._sync_geochem_toggle_panels(style_key)
+
+        # Lightweight refresh: only toggle visibility
+        try:
+            from visualization.plotting.style import refresh_overlay_visibility
+            refresh_overlay_visibility()
+        except Exception:
+            self._refresh_plot()
+
+    def _sync_geochem_toggle_panels(self, style_key):
+        panel = getattr(app_state, 'control_panel_ref', None)
+        data_panel = getattr(panel, 'data_panel', None) if panel is not None else None
+        if data_panel is None:
+            return
+        try:
+            if style_key == 'model_curve':
+                data_panel._sync_geochem_toggle_widgets(
+                    app_state.show_model_curves,
+                    getattr(data_panel, 'modeling_show_model_check', None),
+                    getattr(data_panel, 'show_model_check', None)
+                )
+            elif style_key == 'plumbotectonics_curve':
+                data_panel._sync_geochem_toggle_widgets(
+                    app_state.show_plumbotectonics_curves,
+                    getattr(data_panel, 'modeling_show_plumbotectonics_check', None)
+                )
+            elif style_key == 'paleoisochron':
+                data_panel._sync_geochem_toggle_widgets(
+                    app_state.show_paleoisochrons,
+                    getattr(data_panel, 'modeling_show_paleoisochron_check', None),
+                    getattr(data_panel, 'show_paleoisochron_check', None)
+                )
+            elif style_key == 'model_age_line':
+                data_panel._sync_geochem_toggle_widgets(
+                    app_state.show_model_age_lines,
+                    getattr(data_panel, 'modeling_show_model_age_check', None),
+                    getattr(data_panel, 'show_model_age_check', None)
+                )
+            elif style_key == 'isochron':
+                data_panel._sync_geochem_toggle_widgets(
+                    app_state.show_isochrons,
+                    getattr(data_panel, 'modeling_show_isochron_check', None),
+                    getattr(data_panel, 'show_isochron_check', None)
+                )
+                if hasattr(data_panel, '_update_isochron_btn_text'):
+                    data_panel._update_isochron_btn_text()
+            elif style_key == 'growth_curve':
+                data_panel._sync_geochem_toggle_widgets(
+                    app_state.show_growth_curves,
+                    getattr(data_panel, 'modeling_show_growth_curve_check', None)
+                )
+        except Exception:
+            pass
+    def _on_legend_item_double_clicked(self, item):
+        meta = item.data(Qt.UserRole) if item is not None else None
+        if not meta:
+            return
+        entry_type = meta.get('type')
+        entry_key = meta.get('key')
+        if entry_type == 'group':
+            self._bring_to_front(entry_key)
+        elif entry_type == 'overlay':
+            self._bring_overlay_to_front(entry_key)
+
+    def _bring_overlay_to_front(self, style_key):
+        ax = getattr(app_state, 'ax', None)
+        if ax is None:
+            return
+        overlay_map = getattr(app_state, 'overlay_artists', {}) or {}
+        artists = list(overlay_map.get(style_key, []))
+        if style_key == 'isochron':
+            artists.extend(overlay_map.get('selected_isochron', []))
+        if not artists:
+            return
+
+        max_z = 2
+        try:
+            for artist in ax.get_children():
+                try:
+                    max_z = max(max_z, artist.get_zorder())
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        target_z = max_z + 1
+        for artist in artists:
+            try:
+                artist.set_zorder(target_z)
+            except Exception:
+                pass
+
+        if app_state.fig is not None and app_state.fig.canvas is not None:
+            app_state.fig.canvas.draw_idle()
     def _update_marker_swatch(self, group, swatch):
         color = app_state.current_palette.get(group, '#cccccc')
         marker = app_state.group_marker_map.get(group, getattr(app_state, 'plot_marker_shape', 'o'))
@@ -267,15 +549,6 @@ class Qt5MainWindow(QMainWindow):
         swatch.setIcon(icon)
         swatch.setIconSize(QSize(16, 16))
         swatch.setStyleSheet("border: 1px solid #111827; border-radius: 3px; background: transparent;")
-
-    def _attach_double_click(self, widget, group):
-        def _handler(event, g=group):
-            self._bring_to_front(g)
-            try:
-                event.accept()
-            except Exception:
-                pass
-        widget.mouseDoubleClickEvent = _handler
 
     def _sync_legend_panel_ui(self, refresh=False):
         panel = getattr(app_state, 'control_panel_ref', None)
@@ -376,6 +649,7 @@ class Qt5MainWindow(QMainWindow):
                     app_state.fig.canvas.draw_idle()
             except Exception as exc:
                 logger.warning("Failed to bring %s to front: %s", group, exc)
+        self._move_legend_item_to_top('group', group)
 
     def _update_legend_panel(self, title, handles, labels):
         try:
@@ -390,46 +664,69 @@ class Qt5MainWindow(QMainWindow):
                 self._legend_title_label.setText(str(title))
 
             self._legend_list.clear()
-            if not app_state.last_group_col or app_state.df_global is None:
-                return
 
-            groups = app_state.df_global[app_state.last_group_col].unique()
-            self._ensure_marker_shape_map()
-            visible = set(app_state.visible_groups) if app_state.visible_groups is not None else set(groups)
+            has_groups = app_state.last_group_col and app_state.df_global is not None
+            groups = []
+            if has_groups:
+                groups = list(app_state.df_global[app_state.last_group_col].unique())
+            overlay_entries = self._overlay_entries_for_legend()
 
-            max_items = 100
-            groups_to_show = list(groups)[:max_items]
+            entries = []
+            if has_groups:
+                max_items = 100
+                groups_to_show = list(groups)[:max_items]
+                if len(groups) > max_items:
+                    logger.warning("Showing first %d groups only.", max_items)
+                for group in groups_to_show:
+                    entries.append({'type': 'group', 'key': group, 'group': group})
+            for label_key, style_key in overlay_entries:
+                entries.append({'type': 'overlay', 'key': style_key, 'label_key': label_key})
 
-            if len(groups) > max_items:
-                logger.warning("Showing first %d groups only.", max_items)
+            order_keys = getattr(app_state, 'legend_item_order', []) or []
+            order_index = {key: idx for idx, key in enumerate(order_keys)}
+            entries.sort(key=lambda e: order_index.get(self._legend_order_key(e['type'], e['key']), 10_000))
 
-            for group in groups_to_show:
-                item_widget = QWidget()
-                item_layout = QHBoxLayout()
-                item_layout.setContentsMargins(4, 2, 4, 2)
-                item_layout.setSpacing(6)
+            if has_groups:
+                self._ensure_marker_shape_map()
+                visible = set(app_state.visible_groups) if app_state.visible_groups is not None else set(groups)
 
-                color_btn = QPushButton()
-                color_btn.setFixedSize(22, 22)
-                self._update_marker_swatch(group, color_btn)
-                color_btn.setCursor(QCursor(Qt.PointingHandCursor))
-                color_btn.clicked.connect(lambda checked=False, g=group, btn=color_btn: self._show_color_shape_menu(g, btn))
-                item_layout.addWidget(color_btn)
+            for entry in entries:
+                if entry['type'] == 'group':
+                    group = entry['group']
+                    item_widget = QWidget()
+                    item_layout = QHBoxLayout()
+                    item_layout.setContentsMargins(4, 2, 4, 2)
+                    item_layout.setSpacing(6)
 
-                checkbox = QCheckBox(str(group))
-                checkbox.setChecked(group in visible)
-                checkbox.stateChanged.connect(lambda state, g=group: self._on_group_checkbox_change(g, state))
-                item_layout.addWidget(checkbox, 1)
+                    color_btn = QPushButton()
+                    color_btn.setFixedSize(22, 22)
+                    self._update_marker_swatch(group, color_btn)
+                    color_btn.setCursor(QCursor(Qt.PointingHandCursor))
+                    color_btn.clicked.connect(lambda checked=False, g=group, btn=color_btn: self._show_color_shape_menu(g, btn))
+                    item_layout.addWidget(color_btn)
 
-                item_widget.setLayout(item_layout)
-                self._attach_double_click(item_widget, group)
-                self._attach_double_click(color_btn, group)
-                self._attach_double_click(checkbox, group)
+                    checkbox = QCheckBox()
+                    checkbox.setChecked(group in visible)
+                    checkbox.stateChanged.connect(lambda state, g=group: self._on_group_checkbox_change(g, state))
+                    checkbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+                    checkbox.setFixedWidth(18)
+                    item_layout.addWidget(checkbox)
 
-                item = QListWidgetItem()
-                item.setSizeHint(item_widget.sizeHint())
-                self._legend_list.addItem(item)
-                self._legend_list.setItemWidget(item, item_widget)
+                    label = QLabel(str(group))
+                    item_layout.addWidget(label, 1)
+                    item_layout.addStretch()
+
+                    item_widget.setLayout(item_layout)
+
+                    item = QListWidgetItem()
+                    item.setSizeHint(item_widget.sizeHint())
+                    self._set_legend_item_meta(item, 'group', group)
+                    item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
+                    self._legend_list.addItem(item)
+                    self._legend_list.setItemWidget(item, item_widget)
+                elif entry['type'] == 'overlay':
+                    self._add_overlay_legend_item(entry['label_key'], entry['key'])
+            self._apply_legend_z_order()
         except Exception as exc:
             import traceback
             logger.error("Legend panel update failed: %s", exc)
