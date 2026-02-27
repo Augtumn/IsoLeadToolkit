@@ -138,6 +138,9 @@ on_slider_change() [events.py]
   ├─ _draw_paleoisochrons() → 参考古等时线
   └─ _draw_model_age_lines() / _draw_model_age_lines_86() → 模式年龄构造线
   ↓
+可选: Mu/Kappa 古等时线 (PB_MU_AGE / PB_KAPPA_AGE)
+  └─ _draw_mu_kappa_paleoisochrons() → 直接以 Age 为横坐标绘制垂线，无需计算
+  ↓
 渲染图例:
   ├─ _legend_layout_config() → 位置/bbox
   ├─ _legend_columns_for_layout() → 自动列数
@@ -284,8 +287,8 @@ def _draw_model_age_lines(ax, pb206, pb207, params)
 def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params)
     """绘制 206-208 模式年龄构造线"""
 
-def _draw_mu_kappa_paleoisochrons(ax, algorithm, params)
-    """绘制 Mu/Kappa 图的古等时线"""
+def _draw_mu_kappa_paleoisochrons(ax, ages)
+    """Mu/Kappa 图古等时线：以 Age 为横坐标直接画垂线/标签，无需计算"""
 
 def _draw_equation_overlays(ax)
     """绘制自定义方程/线叠加"""
@@ -382,7 +385,7 @@ def get_embedding(algorithm, ...) -> np.ndarray | None
 2. York 回归等时线拟合与标签生成 (ISOCHRON1 + ISOCHRON2)
 3. 古等时线与增长曲线绘制
 4. 模式年龄构造线 (206-207 / 206-208)
-5. Mu/Kappa 古等时线 (PB_MU_AGE / PB_KAPPA_AGE 图)
+5. Mu/Kappa 古等时线 (PB_MU_AGE / PB_KAPPA_AGE 图)。古等时线即为 Age 横坐标，直接绘制垂线与标签，不做计算。
 
 **等时线模式:**
 
@@ -415,8 +418,8 @@ def _draw_model_age_lines(ax, pb206, pb207, params)
 def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params)
     """绘制 206-208 模式年龄构造线"""
 
-def _draw_mu_kappa_paleoisochrons(ax, actual_algorithm, params)
-    """绘制 Mu/Kappa 图的古等时线"""
+def _draw_mu_kappa_paleoisochrons(ax, ages)
+    """Mu/Kappa 图古等时线：Age 即横坐标，直接绘制垂线/标签"""
 ```
 
 **实现约束:**

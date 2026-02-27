@@ -87,27 +87,37 @@ def _draw_mu_kappa_paleoisochrons(ax, ages):
                 'alpha': 0.85
             }
         )
-        ylim = ax.get_ylim()
-        y_top = max(ylim[0], ylim[1])
+        # Place labels in axes coordinates so zoom/pan preserves their position.
+        label_y = 0.98
+        label_transform = ax.get_xaxis_transform()
         for age in ages:
+            try:
+                age_val = float(age)
+            except (TypeError, ValueError):
+                continue
+            if not np.isfinite(age_val):
+                continue
             ax.axvline(
-                age,
+                age_val,
                 color=paleo_style['color'],
                 linewidth=paleo_style['linewidth'],
                 linestyle=paleo_style['linestyle'],
                 alpha=paleo_style['alpha'],
                 zorder=2,
+                clip_on=True,
             )
             ax.text(
-                age,
-                y_top,
-                f" {age:.0f} Ma",
+                age_val,
+                label_y,
+                f" {age_val:.0f} Ma",
                 color=paleo_style['color'],
                 fontsize=8,
                 rotation=90,
                 va='top',
                 ha='right',
-                alpha=paleo_style['alpha']
+                alpha=paleo_style['alpha'],
+                transform=label_transform,
+                clip_on=True,
             )
     except Exception as err:
         logger.warning("Failed to draw Mu/Kappa paleoisochrons: %s", err)
