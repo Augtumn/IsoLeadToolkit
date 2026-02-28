@@ -199,6 +199,26 @@ tests/
 - 统一日志级别使用 (移除字符串前缀 `[INFO]`) ✅ 已完成 (ui/ + visualization/ + main.py + data/loader.py + core/session.py 全模块)
 - 日志级别可通过环境变量 `ISOTOPES_LOG_LEVEL` 配置 ✅ 已完成
 
+#### 4.4 Qt 调试与图例拖拽稳定性（2026-02）— ✅ 已完成
+
+**问题描述：**
+- 外部图例拖拽后出现条目重叠/“消失”
+- 双击置顶或拖拽在 Windows 下触发 `access violation`
+- 崩溃前缺少 Qt 框架级上下文日志
+
+**方案与变更：**
+- `main.py`：新增 `--qt-debug` 启动参数，统一开启 Qt 详细日志
+- `ui/app.py`：增强 `qInstallMessageHandler`，输出 `[QT][级别][category]` 诊断信息
+- `ui/main_window.py`：
+  - 拖拽项改为插入模式 (`setDragDropOverwriteMode(False)`)
+  - 图例项关闭 `ItemIsDropEnabled`，避免覆盖式 drop
+  - 双击置顶改为“更新顺序状态 + 重建列表”，不直接搬运旧 item/widget 指针
+  - `rowsMoved` 后延迟重建，规避 Qt 对象生命周期不稳定窗口
+
+**结果：**
+- 解决闪退与条目消失问题
+- 图例拖拽吸附到上/下插入位，行为稳定
+
 ---
 
 ## 模块改进建议

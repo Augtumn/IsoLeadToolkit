@@ -180,3 +180,6 @@ class OverlayState:
         """Reset runtime artist tracking state."""
         self.overlay_artists = {}
         self.overlay_curve_label_data = []
+        self.paleoisochron_label_data = []
+        self.plumbotectonics_label_data = []
+        self.plumbotectonics_isoage_label_data = []

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
 from core import CONFIG, app_state
+from .legend_model import OVERLAY_TOGGLE_MAP
 from ..style_manager import apply_custom_style
 
 logger = logging.getLogger(__name__)
@@ -396,10 +397,19 @@ def refresh_overlay_visibility():
         return
 
     try:
-        overlay_artists = getattr(app_state, 'overlay_artists', {})
+        overlay_artists = getattr(app_state, 'overlay_artists', {}) or {}
 
-        # Map overlay category → app_state toggle attribute
-        category_to_toggle = {
+        style_visibility = {
+            style_key: bool(getattr(app_state, toggle_attr, True))
+            for style_key, toggle_attr in OVERLAY_TOGGLE_MAP.items()
+        }
+        # Selected isochron remains visible when a selected-fit payload exists.
+        style_visibility['selected_isochron'] = bool(
+            getattr(app_state, 'show_isochrons', False)
+            or getattr(app_state, 'selected_isochron_data', None) is not None
+        )
+
+        legacy_category_to_toggle = {
             'model_curves': 'show_model_curves',
             'plumbotectonics_curves': 'show_plumbotectonics_curves',
             'paleoisochrons': 'show_paleoisochrons',
@@ -408,22 +418,52 @@ def refresh_overlay_visibility():
             'growth_curves': 'show_growth_curves',
         }
 
-        for category, toggle_attr in category_to_toggle.items():
-            if category not in overlay_artists:
+        def _resolve_visible(style_key):
+            if style_key in style_visibility:
+                return style_visibility[style_key]
+            toggle_attr = legacy_category_to_toggle.get(style_key)
+            if toggle_attr:
+                return bool(getattr(app_state, toggle_attr, True))
+            return True
+
+        def _set_artist_visible(style_key, artist):
+            if artist is None:
+                return
+            try:
+                artist.set_visible(_resolve_visible(style_key))
+            except Exception as exc:
+                logger.debug("Failed to set visibility for %s: %s", style_key, exc)
+
+        for style_key, payload in overlay_artists.items():
+            if isinstance(payload, dict):
+                # Backward compatibility for historical nested structure.
+                for artists in payload.values():
+                    for artist in artists or []:
+                        _set_artist_visible(style_key, artist)
                 continue
+            for artist in payload or []:
+                _set_artist_visible(style_key, artist)
 
-            visible = bool(getattr(app_state, toggle_attr, True))
+        def _set_label_visibility(entries, fallback_style_key):
+            for entry in entries or []:
+                if not isinstance(entry, dict):
+                    continue
+                text_artist = entry.get('text')
+                style_key = entry.get('style_key') or fallback_style_key
+                _set_artist_visible(style_key, text_artist)
 
-            for key, artists in overlay_artists[category].items():
-                for artist in artists:
-                    try:
-                        artist.set_visible(visible)
-                    except Exception as e:
-                        logger.debug(f"Failed to set visibility for {category}/{key}: {e}")
+        _set_label_visibility(getattr(app_state, 'overlay_curve_label_data', []), 'model_curve')
+        _set_label_visibility(getattr(app_state, 'paleoisochron_label_data', []), 'paleoisochron')
+        _set_label_visibility(getattr(app_state, 'plumbotectonics_label_data', []), 'plumbotectonics_curve')
+        _set_label_visibility(getattr(app_state, 'plumbotectonics_isoage_label_data', []), 'paleoisochron')
 
-        if app_state.fig.canvas is not None:
-            app_state.fig.canvas.draw_idle()
+        canvas = None
+        if app_state.fig is not None and app_state.fig.canvas is not None:
+            canvas = app_state.fig.canvas
+        elif getattr(app_state, 'canvas', None) is not None:
+            canvas = app_state.canvas
+        if canvas is not None:
+            canvas.draw_idle()
 
     except Exception as e:
         logger.warning(f"Failed to refresh overlay visibility: {e}")
-

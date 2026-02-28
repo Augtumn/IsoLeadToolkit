@@ -9,11 +9,11 @@
 | 文件 | 行数 | 职责 |
 |------|------|------|
 | `__init__.py` | 20 | 模块入口 |
-| `app.py` | 452 | 应用生命周期管理 |
-| `main_window.py` | 639 | 主窗口 (画布 + 图例面板 + 工具栏) |
-| `control_panel.py` | ~300 | 控制面板组装 + 对话框入口 |
-| `panels/` | ~4,000 | 6 个标签页的面板实现 |
-| `dialogs/` | 3,704 | 11 个专用对话框 |
+| `app.py` | 481 | 应用生命周期管理 + Qt/Python 调试钩子 |
+| `main_window.py` | 1,084 | 主窗口 (画布 + 图例面板 + 工具栏) |
+| `control_panel.py` | 505 | 控制面板组装 + 对话框入口 |
+| `panels/` | 5,312 | 6 个标签页的面板实现 |
+| `dialogs/` | 3,967 | 11 个专用对话框 |
 
 ---
 
@@ -48,6 +48,25 @@ class Qt5Application:
 - matplotlib 使用 `constrained_layout` 自动布局
 - 会话恢复包含渲染模式验证 (确保所需列存在)
 
+### 调试模式
+
+可通过启动参数或环境变量启用 Qt 详细日志（用于排查 C++ 层崩溃或事件链问题）：
+
+```bash
+python main.py --qt-debug
+```
+
+或：
+
+```bash
+ISOTOPES_QT_DEBUG=1 python main.py
+```
+
+启用后会：
+- 设置 `QT_LOGGING_RULES` 与 `QT_DEBUG_PLUGINS`
+- 通过 `qInstallMessageHandler` 输出 `[QT][级别][category] ...` 诊断日志
+- 保持 Python `sys.excepthook` 与 `faulthandler` 崩溃栈输出
+
 ---
 
 ## 2. main_window.py — 主窗口
@@ -75,6 +94,7 @@ class Qt5MainWindow(QMainWindow):
 │          │                                      │
 │ - 组名 + 显隐 │                                    │
 │ - 颜色/形状 │                                     │
+│ - 拖动排序 │                                      │
 │ - 双击置顶 │                                      │
 │          ├──────────────────────────────────────┤
 │          │  matplotlib 工具栏                     │
@@ -125,7 +145,13 @@ def _apply_legend_panel_layout(self)
     """根据 app_state.legend_location 调整外部图例面板位置"""
 
 def _update_legend_panel(self, title, handles, labels)
-    """更新图例列表 (颜色/形状、显隐、双击置顶)"""
+    """更新图例列表 (颜色/形状、显隐、拖动排序、双击置顶)"""
+
+def _rebuild_legend_after_reorder(self)
+    """拖动完成后应用 z-order 并重建图例项，避免复用失效 QWidget"""
+
+def _move_legend_item_to_top(self, entry_type, entry_key)
+    """双击置顶：更新顺序状态并重建列表，不直接搬运 item/widget 指针"""
 
 def _build_marker_icon(self, marker, color, size=16) -> QIcon
     """委托到 utils.icons.build_marker_icon()"""
@@ -135,7 +161,14 @@ def closeEvent(self, event)
 ```
 
 外部图例面板支持:
-颜色与形状菜单、分组显隐、双击置顶（将对应散点置于最上层）。
+- 颜色与形状菜单
+- 分组/覆盖层显隐
+- 拖动重排（仅插入模式，不覆盖目标条目）
+- 双击置顶（将对应散点/覆盖层置于最上层）
+
+补充：
+- 图内 legend (`on_legend_click`) 的点击行为是**切换可见性**，不负责置顶。
+- 外部 legend 的置顶与重排由 `Qt5MainWindow` 维护 `legend_item_order` 后统一重建。
 
 ### 选择工具
 

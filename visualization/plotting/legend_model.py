@@ -143,20 +143,6 @@ def overlay_legend_items(
             'default_color': '#64748b'
         })
 
-    if is_pb_evol and (include_disabled or getattr(app_state, 'show_growth_curves', True)):
-        entries.append({
-            'type': 'overlay',
-            'label_key': 'Growth Curves',
-            'style_key': 'growth_curve',
-            'fallback': {
-                'color': None,
-                'linewidth': 1.2,
-                'linestyle': ':',
-                'alpha': 0.6
-            },
-            'default_color': '#94a3b8'
-        })
-
     return entries
 
 

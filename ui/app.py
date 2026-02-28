@@ -3,6 +3,7 @@
 管理应用初始化、生命周期和资源清理。
 """
 import logging
+import os
 import sys
 import warnings
 import traceback
@@ -126,14 +127,38 @@ class Qt5Application:
         except Exception:
             return
 
+        debug_enabled = os.environ.get('ISOTOPES_QT_DEBUG', '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+        # Keep handler on the instance to avoid accidental GC in long GUI sessions.
+        self._qt_message_handler = None
+
         def _qt_handler(msg_type, context, message):
             try:
-                sys.stderr.write(f"[QT] {message}\n")
+                msg_type_int = int(msg_type)
+                type_name = {
+                    0: "DEBUG",
+                    1: "WARN",
+                    2: "CRITICAL",
+                    3: "FATAL",
+                    4: "INFO",
+                }.get(msg_type_int, str(msg_type_int))
+
+                if debug_enabled:
+                    file_name = getattr(context, 'file', '') or '<unknown>'
+                    line_no = getattr(context, 'line', 0) or 0
+                    func_name = getattr(context, 'function', '') or '<unknown>'
+                    category = getattr(context, 'category', '') or 'qt'
+                    sys.stderr.write(
+                        f"[QT][{type_name}][{category}] {file_name}:{line_no} {func_name} | {message}\n"
+                    )
+                else:
+                    sys.stderr.write(f"[QT][{type_name}] {message}\n")
                 sys.stderr.flush()
             except Exception:
                 pass
 
-        qInstallMessageHandler(_qt_handler)
+        self._qt_message_handler = _qt_handler
+        qInstallMessageHandler(self._qt_message_handler)
 
         def _excepthook(exc_type, exc, tb):
             try:

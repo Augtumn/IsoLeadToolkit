@@ -458,7 +458,7 @@ def on_click(event)
 
 def on_legend_click(event)
     """点击图例 → 切换组可见性"""
-    # 将点击的组移到最前层 (zorder)
+    # 仅更新散点/图例项可见性与 alpha，不处理置顶排序
 
 def on_slider_change(val=None)
     """参数变更 → 重新渲染"""
@@ -466,6 +466,9 @@ def on_slider_change(val=None)
     # 保存会话参数
     # 刷新画布
 ```
+
+说明：外部图例面板的“拖动重排/双击置顶”属于 `ui/main_window.py` 的 UI 行为，
+通过维护 `app_state.legend_item_order` + `artist.set_zorder()` 实现，不在 `events.py` 内处理。
 
 **关键状态更新:**
 1. 重新计算 `render_mode` 与 `algorithm` 并同步 `app_state`。

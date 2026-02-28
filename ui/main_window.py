@@ -3,6 +3,7 @@
 提供标准的应用程序窗口框架。
 """
 import logging
+import os
 from pathlib import Path
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
@@ -22,19 +23,21 @@ from visualization.plotting.legend_model import overlay_legend_items, normalize_
 from utils.icons import build_marker_icon
 
 logger = logging.getLogger(__name__)
+QT_DEBUG_MODE = os.environ.get('ISOTOPES_QT_DEBUG', '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
 # 默认图标尺寸
 DEFAULT_TOOLBAR_ICON_SIZE = QSize(24, 24)
 
 
 class LegendListWidget(QListWidget):
-    """QListWidget that preserves item widgets after internal move."""
+    """Legend list widget with lightweight debug tracing for drag/drop."""
+
     def dropEvent(self, event):
-        widgets = {self.item(i): self.itemWidget(self.item(i)) for i in range(self.count())}
+        if QT_DEBUG_MODE:
+            logger.debug("Legend dropEvent begin: count=%d", self.count())
         super().dropEvent(event)
-        for item, widget in widgets.items():
-            if widget is not None and self.itemWidget(item) is None:
-                self.setItemWidget(item, widget)
+        if QT_DEBUG_MODE:
+            logger.debug("Legend dropEvent end: count=%d", self.count())
 
 
 class Qt5MainWindow(QMainWindow):
@@ -88,6 +91,7 @@ class Qt5MainWindow(QMainWindow):
         legend_list.setUniformItemSizes(False)
         legend_list.setIconSize(QSize(14, 14))
         legend_list.setDragDropMode(QAbstractItemView.InternalMove)
+        legend_list.setDragDropOverwriteMode(False)
         legend_list.setDefaultDropAction(Qt.MoveAction)
         legend_list.setDragEnabled(True)
         legend_list.setAcceptDrops(True)
@@ -296,6 +300,72 @@ class Qt5MainWindow(QMainWindow):
             return
         item.setData(Qt.UserRole, {'type': entry_type, 'key': key})
 
+    def _overlay_artists_for_style(self, style_key, overlay_map=None):
+        if overlay_map is None:
+            overlay_map = getattr(app_state, 'overlay_artists', {}) or {}
+        artists = []
+
+        def _extend_artists(value):
+            if value is None:
+                return
+            if isinstance(value, dict):
+                for nested in value.values():
+                    _extend_artists(nested)
+                return
+            if isinstance(value, (list, tuple, set)):
+                for artist in value:
+                    if artist is not None:
+                        artists.append(artist)
+                return
+            artists.append(value)
+
+        _extend_artists(overlay_map.get(style_key))
+
+        # Backward/forward compatibility: some code paths may store artists by category.
+        style_to_category = {
+            'model_curve': 'model_curves',
+            'plumbotectonics_curve': 'plumbotectonics_curves',
+            'paleoisochron': 'paleoisochrons',
+            'model_age_line': 'model_age_lines',
+            'isochron': 'isochrons',
+            'growth_curve': 'growth_curves',
+        }
+        category_key = style_to_category.get(style_key)
+        if category_key:
+            _extend_artists(overlay_map.get(category_key))
+
+        if style_key == 'isochron':
+            _extend_artists(overlay_map.get('selected_isochron'))
+
+        def _extend_text_artists(entries):
+            for entry in entries or []:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get('style_key') != style_key:
+                    continue
+                text_artist = entry.get('text')
+                if text_artist is not None:
+                    artists.append(text_artist)
+
+        _extend_text_artists(getattr(app_state, 'overlay_curve_label_data', []))
+        if style_key == 'paleoisochron':
+            _extend_text_artists(getattr(app_state, 'paleoisochron_label_data', []))
+            _extend_text_artists(getattr(app_state, 'plumbotectonics_isoage_label_data', []))
+            _extend_text_artists(getattr(app_state, 'plumbotectonics_label_data', []))
+
+        if not artists:
+            return []
+
+        unique = []
+        seen = set()
+        for artist in artists:
+            aid = id(artist)
+            if aid in seen:
+                continue
+            seen.add(aid)
+            unique.append(artist)
+        return unique
+
     def _apply_legend_z_order(self):
         if not hasattr(self, '_legend_list') or self._legend_list is None:
             return
@@ -340,12 +410,10 @@ class Qt5MainWindow(QMainWindow):
                     except Exception:
                         pass
             elif entry_type == 'overlay':
-                artists = list(overlay_map.get(entry_key, []))
-                if entry_key == 'isochron':
-                    artists.extend(overlay_map.get('selected_isochron', []))
-                for artist in artists:
+                for artist in self._overlay_artists_for_style(entry_key, overlay_map=overlay_map):
                     try:
-                        artist.set_zorder(target_z)
+                        z_value = target_z + 0.25 if hasattr(artist, 'get_text') else target_z
+                        artist.set_zorder(z_value)
                     except Exception:
                         pass
             target_z -= 1
@@ -359,31 +427,53 @@ class Qt5MainWindow(QMainWindow):
             app_state.fig.canvas.draw_idle()
 
     def _on_legend_rows_moved(self, *args):
-        QTimer.singleShot(0, self._apply_legend_z_order)
+        # Rebuild panel after internal move to avoid reusing stale QWidget pointers.
+        QTimer.singleShot(0, self._rebuild_legend_after_reorder)
+
+    def _rebuild_legend_after_reorder(self):
+        self._apply_legend_z_order()
+        title = getattr(app_state, 'legend_last_title', None)
+        handles = getattr(app_state, 'legend_last_handles', None)
+        labels = getattr(app_state, 'legend_last_labels', None)
+        if not title or handles is None or labels is None:
+            return
+        self._update_legend_panel(title, handles, labels)
 
     def _move_legend_item_to_top(self, entry_type, entry_key):
         if not hasattr(self, '_legend_list') or self._legend_list is None:
             return
-        target_index = None
-        target_item = None
-        target_widget = None
+        if QT_DEBUG_MODE:
+            logger.debug("Move legend item to top: type=%s key=%s", entry_type, entry_key)
+        order = []
+        target = (entry_type, entry_key)
         for i in range(self._legend_list.count()):
             item = self._legend_list.item(i)
             meta = item.data(Qt.UserRole)
             if not meta:
                 continue
-            if meta.get('type') == entry_type and meta.get('key') == entry_key:
-                target_index = i
-                target_item = item
-                target_widget = self._legend_list.itemWidget(item)
-                break
-        if target_item is None or target_index is None or target_index == 0:
+            current_type = meta.get('type')
+            current_key = meta.get('key')
+            if current_type and current_key is not None:
+                order.append((current_type, current_key))
+
+        if not order:
             return
-        self._legend_list.takeItem(target_index)
-        self._legend_list.insertItem(0, target_item)
-        if target_widget is not None:
-            self._legend_list.setItemWidget(target_item, target_widget)
-        self._apply_legend_z_order()
+        if order[0] == target or target not in order:
+            return
+
+        new_order = [target] + [entry for entry in order if entry != target]
+        app_state.legend_item_order = [
+            self._legend_order_key(current_type, current_key)
+            for current_type, current_key in new_order
+        ]
+
+        title = getattr(app_state, 'legend_last_title', None)
+        handles = getattr(app_state, 'legend_last_handles', None)
+        labels = getattr(app_state, 'legend_last_labels', None)
+        if title and handles is not None and labels is not None:
+            self._update_legend_panel(title, handles, labels)
+        else:
+            self._apply_legend_z_order()
 
 
     def _open_line_style_dialog(self, style_key, swatch):
@@ -422,7 +512,7 @@ class Qt5MainWindow(QMainWindow):
         item = QListWidgetItem()
         item.setSizeHint(item_widget.sizeHint())
         self._set_legend_item_meta(item, 'overlay', style_key)
-        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
         self._legend_list.addItem(item)
         self._legend_list.setItemWidget(item, item_widget)
 
@@ -517,9 +607,7 @@ class Qt5MainWindow(QMainWindow):
         if ax is None:
             return
         overlay_map = getattr(app_state, 'overlay_artists', {}) or {}
-        artists = list(overlay_map.get(style_key, []))
-        if style_key == 'isochron':
-            artists.extend(overlay_map.get('selected_isochron', []))
+        artists = self._overlay_artists_for_style(style_key, overlay_map=overlay_map)
         if not artists:
             return
 
@@ -536,12 +624,14 @@ class Qt5MainWindow(QMainWindow):
         target_z = max_z + 1
         for artist in artists:
             try:
-                artist.set_zorder(target_z)
+                z_value = target_z + 0.25 if hasattr(artist, 'get_text') else target_z
+                artist.set_zorder(z_value)
             except Exception:
                 pass
 
         if app_state.fig is not None and app_state.fig.canvas is not None:
             app_state.fig.canvas.draw_idle()
+        self._move_legend_item_to_top('overlay', style_key)
     def _update_marker_swatch(self, group, swatch):
         color = app_state.current_palette.get(group, '#cccccc')
         marker = app_state.group_marker_map.get(group, getattr(app_state, 'plot_marker_shape', 'o'))
@@ -721,7 +811,7 @@ class Qt5MainWindow(QMainWindow):
                     item = QListWidgetItem()
                     item.setSizeHint(item_widget.sizeHint())
                     self._set_legend_item_meta(item, 'group', group)
-                    item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
+                    item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
                     self._legend_list.addItem(item)
                     self._legend_list.setItemWidget(item, item_widget)
                 elif entry['type'] == 'overlay':

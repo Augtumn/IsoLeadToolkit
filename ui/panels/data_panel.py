@@ -827,10 +827,11 @@ class DataPanel(BasePanel):
             if swatch is not None:
                 swatch.setVisible(is_pb_evol)
         if self.modeling_show_growth_curve_check is not None:
-            self.modeling_show_growth_curve_check.setVisible(is_pb_evol)
+            # PB_EVOL plots no longer render standalone growth overlays.
+            self.modeling_show_growth_curve_check.setVisible(False)
             swatch = getattr(self.modeling_show_growth_curve_check, '_style_swatch', None)
             if swatch is not None:
-                swatch.setVisible(is_pb_evol)
+                swatch.setVisible(False)
 
         if self.calc_isochron_btn is not None:
             self.calc_isochron_btn.setVisible(is_pb_evol_76)

@@ -67,7 +67,14 @@ def _label_bbox(label_opts, edgecolor=None):
     )
 
 
-def _register_overlay_curve_label(text_artist, x_vals, y_vals, label_text, position_mode):
+def _register_overlay_curve_label(
+    text_artist,
+    x_vals,
+    y_vals,
+    label_text,
+    position_mode,
+    style_key=None
+):
     if text_artist is None:
         return
     if not hasattr(app_state, 'overlay_curve_label_data'):
@@ -78,6 +85,7 @@ def _register_overlay_curve_label(text_artist, x_vals, y_vals, label_text, posit
         'y_line': list(y_vals),
         'label_text': label_text,
         'position': position_mode or 'auto',
+        'style_key': style_key,
     })
 
 
@@ -165,7 +173,8 @@ def _draw_model_curves(ax, actual_algorithm, params_list):
                     x_vals,
                     y_vals,
                     label_text,
-                    label_opts.get('label_position', 'auto')
+                    label_opts.get('label_position', 'auto'),
+                    style_key='model_curve'
                 )
                 _position_isoage_label_on_line(
                     ax,
@@ -363,7 +372,8 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
                 x_fit,
                 y_fit,
                 label_text,
-                label_opts.get('label_position', 'auto')
+                label_opts.get('label_position', 'auto'),
+                style_key='plumbotectonics_curve'
             )
             _position_isoage_label_on_line(
                 ax,
@@ -474,6 +484,7 @@ def _draw_plumbotectonics_isoage_lines(ax, actual_algorithm):
                 'age': t_val * 1000.0,
                 'label_text': label_text,
                 'position': label_opts.get('label_position', 'auto'),
+                'style_key': 'paleoisochron',
             })
             _position_isoage_label_on_line(
                 ax,
@@ -576,7 +587,7 @@ def _build_isochron_label(result_dict):
     return ", ".join(parts) if parts else ""
 
 def _draw_isochron_overlays(ax, actual_algorithm):
-    """Draw isochron reference lines and growth curves for Pb-Pb plots."""
+    """Draw isochron reference lines for Pb-Pb plots."""
     geochemistry, _ = _lazy_import_geochemistry()
     if geochemistry is None:
         return
@@ -592,7 +603,8 @@ def _draw_isochron_overlays(ax, actual_algorithm):
         params = geochemistry.engine.get_parameters()
 
         show_fits = getattr(app_state, 'show_isochrons', True)
-        show_growth = getattr(app_state, 'show_growth_curves', True)
+        # In PB_EVOL_76/86, model curves already represent growth trajectories.
+        show_growth = False
         if not show_fits and not show_growth:
             return
 
@@ -793,7 +805,7 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                         bbox=_label_bbox(label_opts, edgecolor=color)
                     )
 
-                if getattr(app_state, 'show_growth_curves', True) and age_ma is not None and age_ma > 0:
+                if show_growth and age_ma is not None and age_ma > 0:
                     growth = geochemistry.calculate_isochron1_growth_curve(
                         slope,
                         intercept,
@@ -859,7 +871,8 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                                 x_growth,
                                 y_growth,
                                 label_text,
-                                label_opts.get('label_position', 'auto')
+                                label_opts.get('label_position', 'auto'),
+                                style_key='growth_curve'
                             )
                             _position_isoage_label_on_line(
                                 ax,
@@ -950,7 +963,7 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                     )
 
                 # 生长曲线 (需要 207/206 斜率 + 208/206 斜率)
-                if getattr(app_state, 'show_growth_curves', True) and age_ma is not None and age_ma > 0 and slope_207 is not None:
+                if show_growth and age_ma is not None and age_ma > 0 and slope_207 is not None:
                     growth = geochemistry.calculate_isochron2_growth_curve(
                         slope,
                         slope_207,
@@ -1017,7 +1030,8 @@ def _draw_isochron_overlays(ax, actual_algorithm):
                                 x_growth,
                                 y_growth,
                                 label_text,
-                                label_opts.get('label_position', 'auto')
+                                label_opts.get('label_position', 'auto'),
+                                style_key='growth_curve'
                             )
                             _position_isoage_label_on_line(
                                 ax,
@@ -1127,6 +1141,88 @@ def _label_angle_for_slope(ax, x0, y0, slope, dx):
     except Exception:
         return np.degrees(np.arctan(slope))
 
+
+def _collect_avoid_points_display(ax, exclude_artist=None, max_points=1200):
+    """Collect points (in display coordinates) that labels should avoid."""
+    points_data = []
+
+    sample_coords = getattr(app_state, 'sample_coordinates', {}) or {}
+    if isinstance(sample_coords, dict):
+        points_data.extend(sample_coords.values())
+
+    if not points_data:
+        for sc in getattr(app_state, 'scatter_collections', []) or []:
+            try:
+                offsets = sc.get_offsets()
+            except Exception:
+                continue
+            if offsets is None:
+                continue
+            try:
+                for x_val, y_val in np.asarray(offsets, dtype=float):
+                    points_data.append((float(x_val), float(y_val)))
+            except Exception:
+                continue
+
+    label_entries = []
+    label_entries.extend(getattr(app_state, 'overlay_curve_label_data', []) or [])
+    label_entries.extend(getattr(app_state, 'paleoisochron_label_data', []) or [])
+    label_entries.extend(getattr(app_state, 'plumbotectonics_label_data', []) or [])
+    label_entries.extend(getattr(app_state, 'plumbotectonics_isoage_label_data', []) or [])
+    for entry in label_entries:
+        if not isinstance(entry, dict):
+            continue
+        text_artist = entry.get('text')
+        if text_artist is None or text_artist is exclude_artist:
+            continue
+        try:
+            x_val, y_val = text_artist.get_position()
+            points_data.append((float(x_val), float(y_val)))
+        except Exception:
+            continue
+
+    if not points_data:
+        return np.empty((0, 2), dtype=float)
+
+    points_arr = np.asarray(points_data, dtype=float)
+    if points_arr.ndim != 2 or points_arr.shape[1] != 2:
+        return np.empty((0, 2), dtype=float)
+
+    finite = np.isfinite(points_arr[:, 0]) & np.isfinite(points_arr[:, 1])
+    points_arr = points_arr[finite]
+    if points_arr.size == 0:
+        return np.empty((0, 2), dtype=float)
+
+    if points_arr.shape[0] > max_points:
+        idx = np.linspace(0, points_arr.shape[0] - 1, max_points, dtype=int)
+        points_arr = points_arr[idx]
+
+    try:
+        return np.asarray(ax.transData.transform(points_arr), dtype=float)
+    except Exception:
+        return np.empty((0, 2), dtype=float)
+
+
+def _estimate_label_radius_px(text_artist, default_fontsize=9.0):
+    """Estimate a label clearance radius in display pixels."""
+    try:
+        fontsize = float(text_artist.get_fontsize())
+    except Exception:
+        fontsize = float(default_fontsize)
+    if not np.isfinite(fontsize) or fontsize <= 0:
+        fontsize = float(default_fontsize)
+
+    try:
+        text = str(text_artist.get_text() or '')
+    except Exception:
+        text = ''
+    text_len = max(len(text.strip()), 3)
+
+    approx_w = max(18.0, 0.58 * fontsize * text_len)
+    approx_h = max(12.0, 1.35 * fontsize)
+    return max(14.0, 0.5 * np.hypot(approx_w, approx_h))
+
+
 def _position_paleo_label(ax, text_artist, slope, intercept, age=None, label_text=None, position_mode='auto'):
     """Position a paleoisochron label inside axes, aligned to line."""
     xlim = ax.get_xlim()
@@ -1189,19 +1285,35 @@ def _position_paleo_label(ax, text_artist, slope, intercept, age=None, label_tex
             candidates.append((x_bottom, y_bottom, 'bottom'))
 
     if candidates:
-        preferred = None
-        for candidate in candidates:
-            if candidate[2] == 'top':
-                preferred = candidate
-                break
-        if preferred is None:
+        avoid_disp = _collect_avoid_points_display(ax, exclude_artist=text_artist)
+        if avoid_disp.size:
+            candidate_xy = np.asarray([(item[0], item[1]) for item in candidates], dtype=float)
+            candidate_disp = np.asarray(ax.transData.transform(candidate_xy), dtype=float)
+            dist2 = ((candidate_disp[:, None, :] - avoid_disp[None, :, :]) ** 2).sum(axis=2)
+            min_dist2 = dist2.min(axis=1)
+            clearance = _estimate_label_radius_px(text_artist) + 4.0
+            overlap_count = (dist2 <= (clearance ** 2)).sum(axis=1).astype(float)
+            edge_bonus = np.asarray([
+                150.0 if item[2] == 'top' else (80.0 if item[2] == 'right' else 0.0)
+                for item in candidates
+            ], dtype=float)
+            score = min_dist2 + edge_bonus - overlap_count * 12000.0
+            best_idx = int(np.argmax(score))
+            x_anchor, y_anchor, edge = candidates[best_idx]
+        else:
+            preferred = None
             for candidate in candidates:
-                if candidate[2] == 'right':
+                if candidate[2] == 'top':
                     preferred = candidate
                     break
-        if preferred is None:
-            preferred = candidates[0]
-        x_anchor, y_anchor, edge = preferred
+            if preferred is None:
+                for candidate in candidates:
+                    if candidate[2] == 'right':
+                        preferred = candidate
+                        break
+            if preferred is None:
+                preferred = candidates[0]
+            x_anchor, y_anchor, edge = preferred
     else:
         x_anchor = xlim[1] - pad_x
         y_anchor = slope * x_anchor + intercept
@@ -1281,8 +1393,43 @@ def _position_curve_label_left(ax, text_artist, x_vals, y_vals):
     else:
         slope = (y_sorted[i1] - y_sorted[i0]) / dx
 
-    angle = _label_angle_for_slope(ax, x_anchor, y_anchor, slope, dx=x_span * 0.02)
-    y_anchor = min(max(y_anchor, ylim[0] + pad_y), ylim[1] - pad_y)
+    base_disp = np.asarray(ax.transData.transform((x_anchor, y_anchor)), dtype=float)
+    avoid_disp = _collect_avoid_points_display(ax, exclude_artist=text_artist)
+    candidate_offsets = [0.0, 14.0, -14.0, 24.0, -24.0, 34.0, -34.0]
+    best_y = y_anchor
+    if avoid_disp.size:
+        candidates_data = []
+        candidates_disp = []
+        candidates_offset = []
+        inv = ax.transData.inverted()
+        for offset in candidate_offsets:
+            trial_disp = np.asarray((base_disp[0], base_disp[1] + offset), dtype=float)
+            try:
+                x_trial, y_trial = inv.transform(trial_disp)
+            except Exception:
+                continue
+            if not np.isfinite(x_trial) or not np.isfinite(y_trial):
+                continue
+            if y_trial < (ylim[0] + pad_y) or y_trial > (ylim[1] - pad_y):
+                continue
+            candidates_data.append((x_trial, y_trial))
+            candidates_disp.append(trial_disp)
+            candidates_offset.append(float(offset))
+
+        if candidates_data:
+            disp_arr = np.asarray(candidates_disp, dtype=float)
+            dist2 = ((disp_arr[:, None, :] - avoid_disp[None, :, :]) ** 2).sum(axis=2)
+            min_dist2 = dist2.min(axis=1)
+            clearance = _estimate_label_radius_px(text_artist) + 4.0
+            overlap_count = (dist2 <= (clearance ** 2)).sum(axis=1).astype(float)
+            # Keep labels close to original anchor unless clearance gain is meaningful.
+            penalty = (np.asarray(candidates_offset, dtype=float) ** 2) * 0.25
+            score = min_dist2 - penalty - overlap_count * 12000.0
+            best_idx = int(np.argmax(score))
+            best_y = float(candidates_data[best_idx][1])
+
+    angle = _label_angle_for_slope(ax, x_anchor, best_y, slope, dx=x_span * 0.02)
+    y_anchor = min(max(best_y, ylim[0] + pad_y), ylim[1] - pad_y)
     text_artist.set_position((x_anchor, y_anchor))
     text_artist.set_rotation(angle)
     text_artist.set_rotation_mode('anchor')
@@ -1331,33 +1478,73 @@ def _position_isoage_label_on_line(ax, text_artist, x_line, y_line, age_ma=None,
 
     cx = (xlim[0] + xlim[1]) / 2
     cy = (ylim[0] + ylim[1]) / 2
+    cx_disp, cy_disp = ax.transData.transform((cx, cy))
 
     candidates = []
+    inv = ax.transData.inverted()
     for i in range(len(x_arr) - 1):
         x0, y0 = float(x_arr[i]), float(y_arr[i])
         x1, y1 = float(x_arr[i + 1]), float(y_arr[i + 1])
         if not (np.isfinite(x0) and np.isfinite(y0) and np.isfinite(x1) and np.isfinite(y1)):
             continue
+        p0_disp = np.asarray(ax.transData.transform((x0, y0)), dtype=float)
+        p1_disp = np.asarray(ax.transData.transform((x1, y1)), dtype=float)
+        v_disp = p1_disp - p0_disp
+        seg_norm = np.hypot(v_disp[0], v_disp[1])
+        if seg_norm < _SLOPE_EPSILON:
+            continue
+        normal_disp = np.asarray([-v_disp[1], v_disp[0]], dtype=float) / seg_norm
         for t in (0.25, 0.5, 0.75):
-            x_t = x0 + (x1 - x0) * t
-            y_t = y0 + (y1 - y0) * t
-            if x_t < x_min or x_t > x_max or y_t < y_min or y_t > y_max:
-                continue
-            dist = (x_t - cx) ** 2 + (y_t - cy) ** 2
-            candidates.append((dist, x_t, y_t, x0, y0, x1, y1))
+            base_disp = p0_disp + v_disp * t
+            progress = (i + t) / max(len(x_arr) - 1, 1)
+            for px_offset in (0.0, 12.0, -12.0, 20.0, -20.0):
+                cand_disp = base_disp + normal_disp * px_offset
+                try:
+                    x_t, y_t = inv.transform(cand_disp)
+                except Exception:
+                    continue
+                if not np.isfinite(x_t) or not np.isfinite(y_t):
+                    continue
+                if x_t < x_min or x_t > x_max or y_t < y_min or y_t > y_max:
+                    continue
+                center_dist2 = (cand_disp[0] - cx_disp) ** 2 + (cand_disp[1] - cy_disp) ** 2
+                candidates.append((x_t, y_t, x0, y0, x1, y1, progress, abs(px_offset), center_dist2, cand_disp))
 
     if not candidates:
         text_artist.set_visible(False)
         return
 
     if position_mode == 'start':
-        selected = candidates[0]
+        sorted_candidates = sorted(candidates, key=lambda item: item[6])
+        keep = max(1, len(sorted_candidates) // 4)
+        pool = sorted_candidates[:keep]
     elif position_mode == 'end':
-        selected = candidates[-1]
+        sorted_candidates = sorted(candidates, key=lambda item: item[6])
+        keep = max(1, len(sorted_candidates) // 4)
+        pool = sorted_candidates[-keep:]
+    elif position_mode == 'center':
+        pool = sorted(candidates, key=lambda item: abs(item[6] - 0.5))[:max(1, len(candidates) // 3)]
     else:
-        selected = min(candidates, key=lambda item: item[0])
+        pool = candidates
 
-    _, x_mid, y_mid, x0, y0, x1, y1 = selected
+    avoid_disp = _collect_avoid_points_display(ax, exclude_artist=text_artist)
+    if avoid_disp.size:
+        pool_disp = np.asarray([item[9] for item in pool], dtype=float)
+        dist2 = ((pool_disp[:, None, :] - avoid_disp[None, :, :]) ** 2).sum(axis=2)
+        min_dist2 = dist2.min(axis=1)
+        clearance = _estimate_label_radius_px(text_artist) + 4.0
+        overlap_count = (dist2 <= (clearance ** 2)).sum(axis=1).astype(float)
+    else:
+        min_dist2 = np.full((len(pool),), 1e9, dtype=float)
+        overlap_count = np.zeros((len(pool),), dtype=float)
+
+    center_penalty = np.asarray([item[8] for item in pool], dtype=float) * 0.08
+    offset_penalty = np.asarray([item[7] for item in pool], dtype=float) * 1.8
+    score = min_dist2 - center_penalty - offset_penalty - overlap_count * 12000.0
+    best_idx = int(np.argmax(score))
+    selected = pool[best_idx]
+
+    x_mid, y_mid, x0, y0, x1, y1, _progress, _offset, _center_dist2, _disp = selected
     dx = x1 - x0
     slope = 0.0 if abs(dx) < _SLOPE_EPSILON else (y1 - y0) / dx
     angle = _label_angle_for_slope(ax, x_mid, y_mid, slope, dx=x_span * 0.02)
@@ -1451,6 +1638,7 @@ def _draw_paleoisochrons(ax, actual_algorithm, ages, params):
                     'age': age,
                     'label_text': label_text,
                     'position': label_opts.get('label_position', 'auto'),
+                    'style_key': 'paleoisochron',
                 })
                 _position_paleo_label(
                     ax,
@@ -1624,7 +1812,8 @@ def _draw_model_age_lines(ax, pb206, pb207, params):
                     [x_curve[i], pb206[i]],
                     [y_curve[i], pb207[i]],
                     label_text,
-                    label_opts.get('label_position', 'auto')
+                    label_opts.get('label_position', 'auto'),
+                    style_key='model_age_line'
                 )
                 _position_isoage_label_on_line(
                     ax,
@@ -1719,7 +1908,8 @@ def _draw_model_age_lines_86(ax, pb206, pb207, pb208, params):
                     [x_curve[i], pb206[i]],
                     [z_curve[i], pb208[i]],
                     label_text,
-                    label_opts.get('label_position', 'auto')
+                    label_opts.get('label_position', 'auto'),
+                    style_key='model_age_line'
                 )
                 _position_isoage_label_on_line(
                     ax,
@@ -1921,7 +2111,8 @@ def _draw_equation_overlays(ax):
                 x_vals,
                 y_vals,
                 label_text,
-                label_opts.get('label_position', 'auto')
+                label_opts.get('label_position', 'auto'),
+                style_key=style_key
             )
             _position_isoage_label_on_line(
                 ax,

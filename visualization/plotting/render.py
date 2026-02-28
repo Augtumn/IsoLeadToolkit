@@ -873,7 +873,7 @@ def plot_embedding(
                 params_list = [params]
                 _draw_model_curves(app_state.ax, actual_algorithm, params_list)
 
-            if getattr(app_state, 'show_isochrons', True) or getattr(app_state, 'show_growth_curves', True):
+            if getattr(app_state, 'show_isochrons', True):
                 _draw_isochron_overlays(app_state.ax, actual_algorithm)
 
             # Draw selected isochron if isochron tool is active

@@ -182,6 +182,25 @@ logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
 logging.getLogger('numba').setLevel(logging.WARNING)
 ```
 
+### 4.5 Qt 调试日志（崩溃排查）
+
+需要排查 Qt 事件链或 native 崩溃时，使用统一调试入口：
+
+```bash
+python main.py --qt-debug
+```
+
+或设置环境变量：
+
+```bash
+ISOTOPES_QT_DEBUG=1
+```
+
+**规范**：
+- Qt 消息统一通过 `qInstallMessageHandler` 写入日志，格式为 `[QT][级别][category] ...`
+- 不在业务代码中散落 `print()` 调试输出
+- 新增调试入口时同步更新 `docs/ui.md` 与 `README.md`
+
 ---
 
 ## 5. 国际化与用户可见文本
@@ -279,6 +298,7 @@ def _schedule_slider_callback(self, key):
   → 更新 app_state 属性
   → 判断是否需要完整重绘:
       - 调色板/字体/标题变更 → callback() (完整重绘)
+      - 覆盖层样式变更 → refresh_overlay_styles() (轻量刷新)
       - 其他样式变更 → refresh_plot_style() (仅刷新样式)
 ```
 
@@ -304,6 +324,57 @@ class SomeDialog(QDialog):
         # self.accept()
 ```
 
+### 6.6 事件过滤器安全性
+
+Qt 事件过滤器必须防御性处理对象生命周期问题，避免访问已删除的 C++ 对象导致 access violation：
+
+```python
+class _NativeStyleFilter(QObject):
+    """Clear per-widget stylesheets on show to keep native Qt styling."""
+
+    def eventFilter(self, obj, event):
+        try:
+            if event.type() == QEvent.Show and isinstance(obj, QWidget):
+                _clear_widget_styles(obj)
+        except RuntimeError:
+            # Object may have been deleted
+            pass
+        return False
+```
+
+**规范**：
+- 事件过滤器必须捕获 `RuntimeError`（Qt 对象已删除）
+- 访问 Qt 对象属性前检查类型（`isinstance(obj, QWidget)`）
+- 遍历子控件时也需要 try/except 保护
+- 事件过滤器对象必须存储为实例变量，避免被垃圾回收：
+
+```python
+# ✅ 正确
+self._style_filter = _NativeStyleFilter(self.app)
+self.app.installEventFilter(self._style_filter)
+
+# ❌ 错误 - 临时对象会被 GC，导致 access violation
+self.app.installEventFilter(_NativeStyleFilter(self.app))
+```
+
+### 6.7 QListWidget 拖拽安全规范（`setItemWidget` 场景）
+
+对 `QListWidget + setItemWidget` 的内部拖拽（`InternalMove`），必须避免对象生命周期风险：
+
+```python
+legend_list.setDragDropMode(QAbstractItemView.InternalMove)
+legend_list.setDragDropOverwriteMode(False)   # 仅插入，不覆盖
+
+# item flags: 可拖拽，不开启 ItemIsDropEnabled
+item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+```
+
+**规范**：
+- 避免在拖拽回调中直接复用旧 `QWidget` 指针（`takeItem/insertItem + setItemWidget`）  
+- 优先维护“顺序状态”（如 `legend_item_order`），再整体重建列表项
+- `rowsMoved` 后使用 `QTimer.singleShot(0, ...)` 延迟到事件循环稳定后再刷新视图
+- 若出现 native `access violation`，优先检查 accessibility cache 与 itemWidget 生命周期
+
 ---
 
 ## 7. 可视化层规范
@@ -319,11 +390,13 @@ class SomeDialog(QDialog):
 | `render.py` | 散点渲染 + 2D/3D 绘制 |
 | `geo.py` | 地球化学叠加/等时线 |
 | `ternary.py` | 三元图工具 |
-| `style.py` | 绘图样式 + 图例布局 |
+| `style.py` | 绘图样式 + 图例布局 + 轻量刷新 |
 | `kde.py` | KDE 渲染 |
 | `data.py` | 数据准备 (懒加载 ML 依赖) |
 | `isochron.py` | 等时线误差配置 |
 | `analysis_qt.py` | 诊断图 |
+| `legend_model.py` | 图例条目数据模型 |
+| `overlay_helpers.py` | 覆盖层绘制通用工具 |
 
 ### 7.2 渲染函数约束
 
@@ -351,6 +424,212 @@ class SomeDialog(QDialog):
   → 应用样式
   → fig.canvas.draw_idle()
 ```
+
+### 7.5 覆盖层渲染架构
+
+#### 7.5.1 覆盖层类型与 Toggle 映射
+
+所有覆盖层的开关状态通过 `OVERLAY_TOGGLE_MAP` 集中管理（定义在 `visualization/plotting/legend_model.py`）：
+
+```python
+OVERLAY_TOGGLE_MAP = {
+    'model_curve': 'show_model_curves',
+    'plumbotectonics_curve': 'show_plumbotectonics_curves',
+    'paleoisochron': 'show_paleoisochrons',
+    'model_age_line': 'show_model_age_lines',
+    'isochron': 'show_isochrons',
+    'growth_curve': 'show_growth_curves',
+}
+```
+
+**规范**：
+- 新增覆盖层类型必须在此映射中注册
+- UI 层通过此映射查询开关状态，避免硬编码条件判断
+- 样式键（style_key）与 `app_state.overlay.line_styles` 中的键一致
+
+#### 7.5.2 覆盖层绘制通用工具
+
+`visualization/plotting/overlay_helpers.py` 提供通用绘制函数，避免重复代码：
+
+```python
+from visualization.plotting.overlay_helpers import (
+    draw_curve,           # 绘制单条曲线
+    draw_label,           # 绘制文本标签
+    compute_label_position,  # 计算标签位置
+    filter_valid_points,  # 过滤 NaN/Inf
+    clip_to_axes_limits,  # 裁剪到坐标轴范围
+    store_overlay_artist, # 注册 artist 到 app_state
+    clear_overlay_category,  # 清除某类 artist
+)
+
+# 示例：绘制模型曲线
+line = draw_curve(
+    ax, x_data, y_data,
+    style_key='model_curve',
+    line_styles=app_state.overlay.line_styles,
+    label='Stacey-Kramers',
+    zorder=1
+)
+if line:
+    store_overlay_artist(
+        app_state.overlay.overlay_artists,
+        'model_curves',
+        'stacey_kramers',
+        line
+    )
+```
+
+**规范**：
+- 新增覆盖层绘制逻辑优先使用这些工具函数
+- 避免在 `geo.py` 中重复实现样式解析、artist 注册等逻辑
+- 标签定位使用 `compute_label_position()` 统一处理
+
+#### 7.5.3 Artist 跟踪与管理
+
+所有覆盖层 artist 存储在 `app_state.overlay.overlay_artists`，按类别分组：
+
+```python
+app_state.overlay.overlay_artists = {
+    'model_curves': {
+        'stacey_kramers': [line1, text1],
+        'cumming_richards': [line2, text2],
+    },
+    'paleoisochrons': {
+        '4500': [line3, text3],
+        '3800': [line4, text4],
+    },
+    # ...
+}
+```
+
+**规范**：
+- 每次重绘前调用 `clear_overlay_category()` 清除旧 artist
+- 绘制后立即调用 `store_overlay_artist()` 注册新 artist
+- 轻量刷新时直接遍历 artist 更新属性，无需重绘
+
+### 7.6 图例数据模型
+
+#### 7.6.1 统一图例条目生成
+
+图例条目通过 `visualization/plotting/legend_model.py` 统一生成，避免多处重复定义：
+
+```python
+from visualization.plotting.legend_model import (
+    group_legend_items,    # 生成分组图例条目
+    overlay_legend_items,  # 生成覆盖层图例条目
+)
+
+# 获取分组图例条目
+group_items = group_legend_items(
+    palette=app_state.current_palette,
+    marker_map=app_state.group_marker_map,
+    visible_groups=app_state.visible_groups,
+    all_groups=all_groups
+)
+
+# 获取覆盖层图例条目
+overlay_items = overlay_legend_items(
+    actual_algorithm='PB_EVOL_76'
+)
+```
+
+**规范**：
+- `render.py` 中的图例构建使用这些函数生成数据
+- `main_window.py` 中的图例面板同步使用相同数据源
+- 新增覆盖层类型需在 `overlay_legend_items()` 中添加条目定义
+
+#### 7.6.2 图例条目数据结构
+
+```python
+# 分组条目
+{
+    'type': 'group',
+    'label': 'Group A',
+    'color': '#1f77b4',
+    'marker': 'o',
+    'visible': True
+}
+
+# 覆盖层条目
+{
+    'type': 'overlay',
+    'style_key': 'model_curve',
+    'label_key': 'Model Curves',
+    'fallback': {'color': '#64748b', 'linewidth': 1.5, ...},
+    'default_color': '#64748b'
+}
+```
+
+### 7.7 轻量刷新机制
+
+#### 7.7.1 刷新路径分类
+
+| 变更类型 | 刷新方法 | 耗时 | 触发场景 |
+|----------|----------|------|----------|
+| 调色板/字体/标题 | `callback()` (完整重绘) | ~100ms | 调色板切换、字体变更 |
+| 覆盖层样式 | `refresh_overlay_styles()` | ~10ms | 线宽、颜色、透明度变更 |
+| 覆盖层可见性 | `refresh_overlay_visibility()` | ~5ms | 覆盖层开关切换 |
+| 图例位置 | `refresh_plot_style()` | ~20ms | 图例位置、列数变更 |
+
+#### 7.7.2 轻量刷新实现
+
+```python
+# visualization/plotting/style.py
+
+def refresh_overlay_styles():
+    """就地更新覆盖层 artist 样式，无需重绘"""
+    overlay_artists = app_state.overlay.overlay_artists
+    line_styles = app_state.overlay.line_styles
+
+    category_to_style = {
+        'model_curves': 'model_curve',
+        'paleoisochrons': 'paleoisochron',
+        # ...
+    }
+
+    for category, style_key in category_to_style.items():
+        if category not in overlay_artists:
+            continue
+        style = line_styles.get(style_key, {})
+        for key, artists in overlay_artists[category].items():
+            for artist in artists:
+                if hasattr(artist, 'set_color'):
+                    artist.set_color(style.get('color'))
+                if hasattr(artist, 'set_linewidth'):
+                    artist.set_linewidth(style.get('linewidth', 1.0))
+                # ...
+
+    app_state.fig.canvas.draw_idle()
+
+def refresh_overlay_visibility():
+    """切换覆盖层可见性，若需要则返回 True 触发完整重绘"""
+    from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
+
+    overlay_artists = app_state.overlay.overlay_artists
+    needs_replot = False
+
+    for style_key, attr_name in OVERLAY_TOGGLE_MAP.items():
+        enabled = getattr(app_state.overlay, attr_name, False)
+        category = _style_key_to_category(style_key)
+
+        if category in overlay_artists:
+            for artists in overlay_artists[category].values():
+                for artist in artists:
+                    artist.set_visible(enabled)
+        elif enabled:
+            # 覆盖层启用但无 artist，需要重绘
+            needs_replot = True
+
+    if not needs_replot:
+        app_state.fig.canvas.draw_idle()
+
+    return needs_replot
+```
+
+**规范**：
+- UI 层样式变更时优先调用轻量刷新函数
+- 仅在轻量刷新无法满足时才调用 `callback()` 完整重绘
+- `refresh_plot_style()` 末尾自动调用 `refresh_overlay_styles()`
 
 ---
 
@@ -585,21 +864,59 @@ finally:
 
 ## 12. 状态管理
 
-### 12.1 AppState 单例
+### 12.1 AppState 单例与状态组合
 
-全局状态通过 `app_state` 单例访问，直接属性读写：
+全局状态通过 `app_state` 单例访问。为避免 God Object 反模式，使用**状态组合模式**将相关字段分组到子对象：
 
 ```python
 from core import app_state
 
-# 读取
+# 读取基础状态
 current_algo = app_state.algorithm
 df = app_state.df_global
 
-# 写入
+# 写入基础状态
 app_state.algorithm = 'tSNE'
 app_state.umap_params['n_neighbors'] = 15
+
+# 访问组合子状态
+app_state.overlay.show_model_curves = True
+app_state.overlay.line_styles['model_curve']['linewidth'] = 2.0
+app_state.legend.legend_position = 'upper right'
+app_state.legend.legend_columns = 2
 ```
+
+#### 12.1.1 状态组合子对象
+
+| 子对象 | 模块 | 职责 |
+|--------|------|------|
+| `app_state.overlay` | `core/overlay_state.py` | 覆盖层开关、样式、配置、artist 跟踪 |
+| `app_state.legend` | `core/legend_state.py` | 图例位置、样式、可见性、回调 |
+
+#### 12.1.2 向后兼容的 Property 委托
+
+为保持向后兼容，`AppState` 为所有移入子对象的字段提供 property 委托：
+
+```python
+# core/state.py
+class AppState:
+    def __init__(self):
+        self.overlay = OverlayState()
+        self.legend = LegendState()
+
+    @property
+    def show_model_curves(self):
+        return self.overlay.show_model_curves
+
+    @show_model_curves.setter
+    def show_model_curves(self, value):
+        self.overlay.show_model_curves = value
+```
+
+**规范**：
+- 新代码优先使用 `app_state.overlay.xxx` / `app_state.legend.xxx` 访问
+- 旧代码的 `app_state.xxx` 访问通过 property 透明工作
+- 重构时逐步迁移到新访问方式
 
 ### 12.2 CONFIG 访问
 
@@ -812,3 +1129,83 @@ pyinstaller build.spec
 1. `build.spec` 中必须声明所有隐式依赖 (`hiddenimports`)。
 2. `locales/` 目录必须包含在数据文件中。
 3. 新增大型依赖需同步更新 `build.spec`。
+
+---
+
+## 18. 架构演进记录
+
+### 18.1 图例与覆盖层可视化重构 (2026-02)
+
+**背景**：原 `app_state` 包含 330+ 字段，图例和覆盖层状态散落其中；`geo.py` 中 10+ 个 `_draw_*` 函数重复实现样式解析、artist 注册、标签定位逻辑；图例条目在 `render.py`、`main_window.py`、`legend_model.py` 三处定义；样式变更触发全量重绘（含 embedding 重算）。
+
+**目标**：状态内聚、消除重复、轻量刷新。
+
+#### 18.1.1 Phase 1: 状态组合
+
+**新增文件**：
+- `core/overlay_state.py` — 封装 40+ 覆盖层相关字段
+- `core/legend_state.py` — 封装 10+ 图例相关字段
+
+**修改文件**：
+- `core/state.py` — 创建 `self.overlay` 和 `self.legend` 子对象，添加 property 委托实现向后兼容
+
+**效果**：
+- `app_state` 字段按职责分组，避免 God Object
+- 旧代码通过 property 透明访问，无需修改
+- 新代码优先使用 `app_state.overlay.xxx` / `app_state.legend.xxx`
+
+#### 18.1.2 Phase 2: 统一图例数据源
+
+**修改文件**：
+- `visualization/plotting/legend_model.py` — 新增 `OVERLAY_TOGGLE_MAP`、`overlay_legend_items()`
+- `visualization/plotting/render.py` — 提取 `_place_inline_legend()` 辅助函数，消除三处重复图例构建代码
+- `ui/main_window.py` — 使用 `OVERLAY_TOGGLE_MAP` 统一覆盖层开关查询
+
+**效果**：
+- 图例条目定义集中在 `legend_model.py`
+- 消除 200+ 行重复代码
+- UI 层与渲染层使用相同数据源
+
+#### 18.1.3 Phase 3: 覆盖层绘制工具
+
+**新增文件**：
+- `visualization/plotting/overlay_helpers.py` — 提供 `draw_curve()`、`draw_label()`、`compute_label_position()` 等通用函数
+
+**效果**：
+- `geo.py` 中的 `_draw_*` 函数复用通用工具，代码量减半
+- 标签定位、样式解析、artist 注册逻辑统一
+- 新增覆盖层类型更容易实现
+
+#### 18.1.4 Phase 4: 轻量刷新机制
+
+**修改文件**：
+- `visualization/plotting/style.py` — 新增 `refresh_overlay_styles()`、`refresh_overlay_visibility()`
+- `ui/main_window.py` — 覆盖层开关切换优先使用轻量刷新
+- `ui/panels/base_panel.py` — 覆盖层样式变更调用 `refresh_overlay_styles()`
+
+**效果**：
+- 样式变更耗时从 ~100ms 降至 ~10ms
+- 覆盖层开关切换无闪烁
+- 图例位置调整无需重绘散点
+
+#### 18.1.5 关键设计决策
+
+1. **向后兼容优先**：使用 property 委托而非直接重命名字段，避免破坏现有代码
+2. **渐进式重构**：分 4 个阶段，每阶段结束后应用可正常运行
+3. **数据驱动**：图例条目、覆盖层映射通过数据结构定义，减少硬编码
+4. **性能优化**：区分完整重绘与轻量刷新路径，避免不必要的计算
+
+#### 18.1.6 文件变更汇总
+
+| 阶段 | 新增 | 修改 |
+|------|------|------|
+| P1 | `core/overlay_state.py`, `core/legend_state.py` | `core/state.py` |
+| P2 | — | `visualization/plotting/legend_model.py`, `render.py`, `ui/main_window.py` |
+| P3 | `visualization/plotting/overlay_helpers.py` | `visualization/plotting/geo.py` |
+| P4 | — | `visualization/plotting/style.py`, `ui/main_window.py`, `ui/panels/base_panel.py` |
+
+#### 18.1.7 后续改进方向
+
+- 将 `geo.py` 中的 `_draw_*` 函数进一步重构为数据驱动模式
+- 考虑将覆盖层配置（年龄范围、步长等）移入独立配置文件
+- 为覆盖层添加交互式编辑功能（拖拽标签、调整曲线参数）
