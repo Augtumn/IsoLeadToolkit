@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from core import app_state
+from visualization.line_styles import resolve_line_style
+from .geo import get_plumbotectonics_group_entries, _plumbotectonics_color
 
 
 # Maps overlay style_key → app_state toggle attribute name
@@ -82,18 +84,40 @@ def overlay_legend_items(
         })
 
     if is_plumb and (include_disabled or getattr(app_state, 'show_plumbotectonics_curves', True)):
-        entries.append({
-            'type': 'overlay',
-            'label_key': 'Plumbotectonics Curves',
-            'style_key': 'plumbotectonics_curve',
-            'fallback': {
+        group_entries = get_plumbotectonics_group_entries()
+        if group_entries:
+            base_fallback = {
                 'color': None,
                 'linewidth': getattr(app_state, 'plumbotectonics_curve_width', 1.2),
                 'linestyle': '-',
                 'alpha': 0.85
-            },
-            'default_color': '#64748b'
-        })
+            }
+            base_style = resolve_line_style(app_state, 'plumbotectonics_curve', base_fallback)
+            group_visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+            for entry in group_entries:
+                if not include_disabled and not group_visibility.get(entry['style_key'], True):
+                    continue
+                group_name = entry['name']
+                entries.append({
+                    'type': 'overlay',
+                    'label_key': group_name,
+                    'style_key': entry['style_key'],
+                    'fallback': dict(base_style),
+                    'default_color': _plumbotectonics_color(group_name)
+                })
+        else:
+            entries.append({
+                'type': 'overlay',
+                'label_key': 'Plumbotectonics Curves',
+                'style_key': 'plumbotectonics_curve',
+                'fallback': {
+                    'color': None,
+                    'linewidth': getattr(app_state, 'plumbotectonics_curve_width', 1.2),
+                    'linestyle': '-',
+                    'alpha': 0.85
+                },
+                'default_color': '#64748b'
+            })
 
     if (is_pb_evol or is_plumb or is_mu_kappa) and (
         include_disabled or getattr(app_state, 'show_paleoisochrons', True)

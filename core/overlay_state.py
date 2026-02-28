@@ -134,6 +134,7 @@ class OverlayState:
         # Plumbotectonics
         self.plumbotectonics_variant = '0'
         self.model_curve_models = None  # None means all preset models
+        self.plumbotectonics_group_visibility: dict[str, bool] = {}
 
         # Isochron regression error configuration
         self.isochron_error_mode = 'fixed'  # 'fixed' or 'columns'

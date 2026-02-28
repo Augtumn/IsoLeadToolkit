@@ -20,6 +20,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 from core import app_state, translate
 from visualization.plotting.legend_model import overlay_legend_items, normalize_render_mode, OVERLAY_TOGGLE_MAP
+from visualization.line_styles import resolve_line_style
 from utils.icons import build_marker_icon
 
 logger = logging.getLogger(__name__)
@@ -287,10 +288,10 @@ class Qt5MainWindow(QMainWindow):
 
     def _overlay_entries_for_legend(self):
         mode = normalize_render_mode(getattr(app_state, 'render_mode', ''))
-        return [
-            (item['label_key'], item['style_key'])
-            for item in overlay_legend_items(render_mode=mode, include_disabled=True)
-        ]
+        return list(overlay_legend_items(render_mode=mode, include_disabled=True))
+
+    def _is_plumbotectonics_group_style(self, style_key):
+        return isinstance(style_key, str) and style_key.startswith('plumbotectonics_curve:')
 
     def _legend_order_key(self, entry_type, key):
         return f"{entry_type}:{key}"
@@ -480,14 +481,19 @@ class Qt5MainWindow(QMainWindow):
         from ui.dialogs.line_style_dialog import open_line_style_dialog
         open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._refresh_plot)
 
-    def _add_overlay_legend_item(self, label_key, style_key):
+    def _add_overlay_legend_item(self, label_key, style_key, default_color=None, fallback=None):
         item_widget = QWidget()
         item_layout = QHBoxLayout()
         item_layout.setContentsMargins(4, 2, 4, 2)
         item_layout.setSpacing(6)
 
         style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
-        swatch_color = style.get('color') or '#e2e8f0'
+        swatch_color = style.get('color')
+        if not swatch_color and fallback:
+            resolved = resolve_line_style(app_state, style_key, fallback)
+            swatch_color = resolved.get('color')
+        if not swatch_color:
+            swatch_color = default_color or '#e2e8f0'
 
         swatch = QPushButton()
         swatch.setFixedSize(22, 22)
@@ -518,6 +524,9 @@ class Qt5MainWindow(QMainWindow):
 
     def _overlay_checked_state(self, style_key):
         """Get checked state for overlay using OVERLAY_TOGGLE_MAP."""
+        if self._is_plumbotectonics_group_style(style_key):
+            visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+            return bool(getattr(app_state, 'show_plumbotectonics_curves', True) and visibility.get(style_key, True))
         attr = OVERLAY_TOGGLE_MAP.get(style_key)
         if attr:
             return bool(getattr(app_state, attr, True))
@@ -529,6 +538,16 @@ class Qt5MainWindow(QMainWindow):
     def _on_overlay_checkbox_change(self, style_key, state):
         """Handle overlay checkbox change using OVERLAY_TOGGLE_MAP."""
         checked = state == Qt.Checked
+        if self._is_plumbotectonics_group_style(style_key):
+            if not hasattr(app_state, 'plumbotectonics_group_visibility'):
+                app_state.plumbotectonics_group_visibility = {}
+            app_state.plumbotectonics_group_visibility[style_key] = checked
+            try:
+                from visualization.plotting.style import refresh_overlay_visibility
+                refresh_overlay_visibility()
+            except Exception:
+                self._refresh_plot()
+            return
         attr = OVERLAY_TOGGLE_MAP.get(style_key)
         if attr:
             setattr(app_state, attr, checked)
@@ -769,8 +788,14 @@ class Qt5MainWindow(QMainWindow):
                     logger.warning("Showing first %d groups only.", max_items)
                 for group in groups_to_show:
                     entries.append({'type': 'group', 'key': group, 'group': group})
-            for label_key, style_key in overlay_entries:
-                entries.append({'type': 'overlay', 'key': style_key, 'label_key': label_key})
+            for overlay_entry in overlay_entries:
+                entries.append({
+                    'type': 'overlay',
+                    'key': overlay_entry['style_key'],
+                    'label_key': overlay_entry['label_key'],
+                    'default_color': overlay_entry.get('default_color'),
+                    'fallback': overlay_entry.get('fallback')
+                })
 
             order_keys = getattr(app_state, 'legend_item_order', []) or []
             order_index = {key: idx for idx, key in enumerate(order_keys)}
@@ -815,7 +840,12 @@ class Qt5MainWindow(QMainWindow):
                     self._legend_list.addItem(item)
                     self._legend_list.setItemWidget(item, item_widget)
                 elif entry['type'] == 'overlay':
-                    self._add_overlay_legend_item(entry['label_key'], entry['key'])
+                    self._add_overlay_legend_item(
+                        entry['label_key'],
+                        entry['key'],
+                        default_color=entry.get('default_color'),
+                        fallback=entry.get('fallback')
+                    )
             self._apply_legend_z_order()
         except Exception as exc:
             import traceback

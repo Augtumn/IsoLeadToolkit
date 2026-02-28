@@ -419,6 +419,12 @@ def refresh_overlay_visibility():
         }
 
         def _resolve_visible(style_key):
+            if isinstance(style_key, str) and style_key.startswith('plumbotectonics_curve:'):
+                group_visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+                return bool(
+                    getattr(app_state, 'show_plumbotectonics_curves', True)
+                    and group_visibility.get(style_key, True)
+                )
             if style_key in style_visibility:
                 return style_visibility[style_key]
             toggle_attr = legacy_category_to_toggle.get(style_key)

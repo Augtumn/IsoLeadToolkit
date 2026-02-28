@@ -380,6 +380,14 @@ class AppState:
         self.overlay.plumbotectonics_variant = value
 
     @property
+    def plumbotectonics_group_visibility(self):
+        return self.overlay.plumbotectonics_group_visibility
+
+    @plumbotectonics_group_visibility.setter
+    def plumbotectonics_group_visibility(self, value):
+        self.overlay.plumbotectonics_group_visibility = value
+
+    @property
     def model_curve_models(self):
         return self.overlay.model_curve_models
 

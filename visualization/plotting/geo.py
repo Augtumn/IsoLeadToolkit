@@ -2,6 +2,7 @@
 import ast
 import logging
 import operator
+import re
 
 import numpy as np
 import pandas as pd
@@ -223,6 +224,42 @@ def _select_plumbotectonics_section(sections):
     return sections[0]
 
 
+def _normalize_plumbotectonics_group_key(name: str) -> str:
+    value = str(name or '').strip().lower()
+    value = re.sub(r'[^a-z0-9]+', '_', value)
+    return value.strip('_')
+
+
+def _plumbotectonics_group_visible(style_key: str) -> bool:
+    visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+    return bool(visibility.get(style_key, True))
+
+
+def get_plumbotectonics_group_entries(section=None):
+    """Return plumbotectonics group metadata for the active model."""
+    sections = _load_plumbotectonics_data()
+    if section is None:
+        section = _select_plumbotectonics_section(sections)
+    if not section:
+        return []
+
+    used = set()
+    entries = []
+    for idx, group in enumerate(section.get('groups', [])):
+        name = str(group.get('name') or '').strip() or f"Group {idx + 1}"
+        base_key = _normalize_plumbotectonics_group_key(name) or f"group_{idx + 1}"
+        key = base_key
+        if key in used:
+            key = f"{base_key}_{idx + 1}"
+        used.add(key)
+        entries.append({
+            'name': name,
+            'key': key,
+            'style_key': f"plumbotectonics_curve:{key}",
+        })
+    return entries
+
+
 def _fit_plumbotectonics_curve(x_vals, y_vals, n_points=200):
     x_arr = np.asarray(x_vals, dtype=float)
     y_arr = np.asarray(y_vals, dtype=float)
@@ -304,7 +341,7 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
             'alpha': 0.85
         }
     )
-    label_opts = _resolve_label_options(
+    base_label_opts = _resolve_label_options(
         'plumbotectonics_curve',
         {
             'label_text': '',
@@ -320,27 +357,37 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
     if variant_label:
         logger.info("Plumbotectonics model variant: %s", variant_label)
 
-    for group in section.get('groups', []):
-        name = str(group.get('name', ''))
+    group_entries = get_plumbotectonics_group_entries(section=section)
+    for group, meta in zip(section.get('groups', []), group_entries):
+        name = meta['name']
         x_vals = group.get('pb206', [])
         y_vals = group.get(y_key, [])
         x_fit, y_fit = _fit_plumbotectonics_curve(x_vals, y_vals)
         if len(x_fit) < 2:
             continue
-        color = base_style['color'] or _plumbotectonics_color(name)
+        style_key = meta['style_key']
+        style = ensure_line_style(app_state, style_key, dict(base_style))
+        color = style.get('color') or base_style.get('color') or _plumbotectonics_color(name)
         marker = _plumbotectonics_marker(name)
+        label_opts = _resolve_label_options(style_key, dict(base_label_opts))
         line_artists = ax.plot(
             x_fit,
             y_fit,
             color=color,
-            linewidth=base_style['linewidth'],
-            linestyle=base_style['linestyle'],
-            alpha=base_style['alpha'],
+            linewidth=style['linewidth'],
+            linestyle=style['linestyle'],
+            alpha=style['alpha'],
             zorder=1.2,
             label='_nolegend_'
         )
+        is_visible = _plumbotectonics_group_visible(style_key)
         for artist in line_artists:
-            _register_overlay_artist('plumbotectonics_curve', artist)
+            _register_overlay_artist(style_key, artist)
+            if not is_visible:
+                try:
+                    artist.set_visible(False)
+                except Exception:
+                    pass
         point_artists = ax.plot(
             x_vals,
             y_vals,
@@ -348,12 +395,17 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
             marker=marker,
             markersize=4.5,
             color=color,
-            alpha=min(base_style['alpha'] + 0.1, 1.0),
+            alpha=min(style['alpha'] + 0.1, 1.0),
             zorder=1.3,
             label='_nolegend_'
         )
         for artist in point_artists:
-            _register_overlay_artist('plumbotectonics_curve', artist)
+            _register_overlay_artist(style_key, artist)
+            if not is_visible:
+                try:
+                    artist.set_visible(False)
+                except Exception:
+                    pass
 
         label_text = _format_label_text(label_opts.get('label_text'), name=name)
         if label_text:
@@ -364,7 +416,7 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
                 fontsize=label_opts['label_fontsize'],
                 va='center',
                 ha='center',
-                alpha=base_style['alpha'],
+                alpha=style['alpha'],
                 bbox=_label_bbox(label_opts, edgecolor=color)
             )
             _register_overlay_curve_label(
@@ -373,8 +425,13 @@ def _draw_plumbotectonics_curves(ax, actual_algorithm):
                 y_fit,
                 label_text,
                 label_opts.get('label_position', 'auto'),
-                style_key='plumbotectonics_curve'
+                style_key=style_key
             )
+            if not is_visible:
+                try:
+                    text_artist.set_visible(False)
+                except Exception:
+                    pass
             _position_isoage_label_on_line(
                 ax,
                 text_artist,
