@@ -83,13 +83,13 @@ class OverlayState:
                 'alpha': 0.6
             },
             'paleoisochron': {
-                'color': '#94a3b8',
+                'color': None,
                 'linewidth': 0.9,
                 'linestyle': '--',
                 'alpha': 0.85
             },
             'model_age_line': {
-                'color': '#cbd5f5',
+                'color': None,
                 'linewidth': 0.7,
                 'linestyle': '-',
                 'alpha': 0.7

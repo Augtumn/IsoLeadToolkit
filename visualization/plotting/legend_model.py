@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from core import app_state
 from visualization.line_styles import resolve_line_style
-from .geo import get_plumbotectonics_group_entries, _plumbotectonics_color
+from .geo import (
+    get_plumbotectonics_group_entries,
+    get_plumbotectonics_group_palette,
+    get_overlay_default_color,
+)
 
 
 # Maps overlay style_key → app_state toggle attribute name
@@ -80,7 +84,7 @@ def overlay_legend_items(
                 'linestyle': '-',
                 'alpha': 0.8
             },
-            'default_color': '#94a3b8'
+            'default_color': get_overlay_default_color('model_curve')
         })
 
     if is_plumb and (include_disabled or getattr(app_state, 'show_plumbotectonics_curves', True)):
@@ -93,6 +97,7 @@ def overlay_legend_items(
                 'alpha': 0.85
             }
             base_style = resolve_line_style(app_state, 'plumbotectonics_curve', base_fallback)
+            group_palette = get_plumbotectonics_group_palette()
             group_visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
             for entry in group_entries:
                 if not include_disabled and not group_visibility.get(entry['style_key'], True):
@@ -103,7 +108,7 @@ def overlay_legend_items(
                     'label_key': group_name,
                     'style_key': entry['style_key'],
                     'fallback': dict(base_style),
-                    'default_color': _plumbotectonics_color(group_name)
+                    'default_color': group_palette.get(entry['style_key'])
                 })
         else:
             entries.append({
@@ -127,12 +132,12 @@ def overlay_legend_items(
             'label_key': 'Paleoisochrons',
             'style_key': 'paleoisochron',
             'fallback': {
-                'color': '#94a3b8',
+                'color': None,
                 'linewidth': getattr(app_state, 'paleoisochron_width', 0.9),
                 'linestyle': '--',
                 'alpha': 0.85
             },
-            'default_color': '#94a3b8'
+            'default_color': get_overlay_default_color('paleoisochron')
         })
 
     if is_pb_evol and (include_disabled or getattr(app_state, 'show_model_age_lines', True)):
@@ -141,12 +146,12 @@ def overlay_legend_items(
             'label_key': 'Model Age Lines',
             'style_key': 'model_age_line',
             'fallback': {
-                'color': '#cbd5f5',
+                'color': None,
                 'linewidth': getattr(app_state, 'model_age_line_width', 0.7),
                 'linestyle': '-',
                 'alpha': 0.7
             },
-            'default_color': '#cbd5f5'
+            'default_color': get_overlay_default_color('model_age_line')
         })
 
     if is_pb_evol and (
