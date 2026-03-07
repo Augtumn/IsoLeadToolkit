@@ -84,7 +84,7 @@ class Qt5DataImportDialog(QDialog):
 
         layout.addLayout(header_row)
 
-        subtitle = QLabel(translate("Select a file, worksheet, and columns in one step."))
+        subtitle = QLabel(translate("Select file, worksheet, columns, and initial render mode in one workflow."))
         subtitle.setWordWrap(True)
         self.subtitle_label = subtitle
         layout.addWidget(subtitle)
@@ -200,7 +200,7 @@ class Qt5DataImportDialog(QDialog):
         )
         self.data_card = self._build_column_section(
             translate("Data Columns"),
-            translate("Choose numeric measurements that feed into UMAP or t-SNE embeddings."),
+            translate("Choose numeric measurement columns for 2D/3D, dimensionality reduction, and geochemistry views."),
             'data'
         )
 
@@ -218,7 +218,8 @@ class Qt5DataImportDialog(QDialog):
         group_layout.setSpacing(6)
 
         self.preview_label = QLabel(
-            translate("Showing first {rows} rows across all columns.").format(rows=self.PREVIEW_ROWS)
+            translate("Showing first {rows} rows across all columns (scroll horizontally to view more).")
+            .format(rows=self.PREVIEW_ROWS)
         )
         self.preview_label.setWordWrap(True)
         group_layout.addWidget(self.preview_label)
@@ -229,6 +230,9 @@ class Qt5DataImportDialog(QDialog):
         self.preview_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.preview_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.preview_table.horizontalHeader().setStretchLastSection(False)
+        self.preview_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.preview_table.setAlternatingRowColors(True)
+        self.preview_table.setWordWrap(False)
         self.preview_table.verticalHeader().setVisible(False)
         group_layout.addWidget(self.preview_table)
 
@@ -242,7 +246,7 @@ class Qt5DataImportDialog(QDialog):
         group_layout.setSpacing(8)
 
         self.render_label = QLabel(
-            translate("Choose the first view after import to avoid unnecessary heavy embedding computation.")
+            translate("Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.")
         )
         self.render_label.setWordWrap(True)
         group_layout.addWidget(self.render_label, 1)
@@ -305,7 +309,9 @@ class Qt5DataImportDialog(QDialog):
         if self.title_label is not None:
             self.title_label.setText(translate("Data Import Wizard"))
         if self.subtitle_label is not None:
-            self.subtitle_label.setText(translate("Select a file, worksheet, and columns in one step."))
+            self.subtitle_label.setText(
+                translate("Select file, worksheet, columns, and initial render mode in one workflow.")
+            )
         if self.file_group is not None:
             self.file_group.setTitle(translate("File"))
         if self.sheet_group is not None:
@@ -316,7 +322,7 @@ class Qt5DataImportDialog(QDialog):
             self.render_group.setTitle(translate("Initial Render Mode"))
         if getattr(self, 'render_label', None) is not None:
             self.render_label.setText(
-                translate("Choose the first view after import to avoid unnecessary heavy embedding computation.")
+                translate("Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.")
             )
         self._populate_render_modes()
         if self.recent_label is not None:
@@ -339,7 +345,7 @@ class Qt5DataImportDialog(QDialog):
             )
         if self.data_desc_label is not None:
             self.data_desc_label.setText(
-                translate("Choose numeric measurements that feed into UMAP or t-SNE embeddings.")
+                translate("Choose numeric measurement columns for 2D/3D, dimensionality reduction, and geochemistry views.")
             )
         if self.group_select_all_btn is not None:
             self.group_select_all_btn.setText(translate("Select all"))
@@ -351,7 +357,8 @@ class Qt5DataImportDialog(QDialog):
             self.data_clear_btn.setText(translate("Clear"))
         if self.preview_label is not None:
             self.preview_label.setText(
-                translate("Showing first {rows} rows across all columns.").format(rows=self.PREVIEW_ROWS)
+                translate("Showing first {rows} rows across all columns (scroll horizontally to view more).")
+                .format(rows=self.PREVIEW_ROWS)
             )
         if self.file_label is not None and not self.selected_file:
             self.file_label.setText(translate("No file selected"))
@@ -363,9 +370,9 @@ class Qt5DataImportDialog(QDialog):
 
     def _update_language_label(self, current_lang):
         if current_lang == 'zh':
-            self.lang_label.setText("language:")
-        else:
             self.lang_label.setText("语言:")
+        else:
+            self.lang_label.setText("Language:")
 
     def _on_language_change(self, _index):
         code = self.lang_combo.currentData()

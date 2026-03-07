@@ -5,7 +5,7 @@ import logging
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QGroupBox, QComboBox, QCheckBox, QSpinBox, QDoubleSpinBox,
-    QLineEdit, QMessageBox, QGridLayout,
+    QLineEdit, QMessageBox, QGridLayout, QToolBox,
 )
 
 from core import translate, app_state, CONFIG
@@ -95,6 +95,25 @@ class DisplayPanel(BasePanel):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
+
+        section_toolbox = QToolBox()
+        section_toolbox.setObjectName('display_section_toolbox')
+
+        presets_page = QWidget()
+        presets_layout = QVBoxLayout(presets_page)
+        presets_layout.setContentsMargins(6, 6, 6, 6)
+        presets_layout.setSpacing(8)
+
+        style_page = QWidget()
+        style_layout = QVBoxLayout(style_page)
+        style_layout.setContentsMargins(6, 6, 6, 6)
+        style_layout.setSpacing(8)
+
+        axes_page = QWidget()
+        axes_page_layout = QVBoxLayout(axes_page)
+        axes_page_layout.setContentsMargins(6, 6, 6, 6)
+        axes_page_layout.setSpacing(8)
 
         # Interface Theme
         theme_group = QGroupBox(translate("Interface Theme"))
@@ -118,7 +137,7 @@ class DisplayPanel(BasePanel):
         theme_row.addWidget(self.ui_theme_combo)
         theme_layout.addLayout(theme_row)
         theme_group.setLayout(theme_layout)
-        layout.addWidget(theme_group)
+        presets_layout.addWidget(theme_group)
 
         # Saved Plot Settings
         saved_group = QGroupBox(translate("Saved Plot Settings"))
@@ -149,7 +168,7 @@ class DisplayPanel(BasePanel):
         load_row.addWidget(delete_btn)
         saved_layout.addLayout(load_row)
         saved_group.setLayout(saved_layout)
-        layout.addWidget(saved_group)
+        presets_layout.addWidget(saved_group)
         self._refresh_theme_list()
 
         # Font Settings
@@ -211,7 +230,7 @@ class DisplayPanel(BasePanel):
         font_layout.addWidget(self.show_title_check)
 
         font_group.setLayout(font_layout)
-        layout.addWidget(font_group)
+        style_layout.addWidget(font_group)
 
         # Marker Settings
         marker_group = QGroupBox(translate("Marker Settings"))
@@ -240,7 +259,7 @@ class DisplayPanel(BasePanel):
         marker_alpha_row.addWidget(self.marker_alpha_spin)
         marker_layout.addLayout(marker_alpha_row)
         marker_group.setLayout(marker_layout)
-        layout.addWidget(marker_group)
+        style_layout.addWidget(marker_group)
 
         # Axes & Lines
         axes_group = QGroupBox(translate("Axes & Lines"))
@@ -250,6 +269,13 @@ class DisplayPanel(BasePanel):
         auto_layout_btn.setProperty('translate_key', 'Auto Layout')
         auto_layout_btn.clicked.connect(self._apply_auto_layout)
         axes_layout.addWidget(auto_layout_btn)
+
+        advanced_grid = QGridLayout()
+        advanced_grid.setHorizontalSpacing(10)
+        advanced_grid.setVerticalSpacing(8)
+        advanced_grid.setColumnStretch(0, 1)
+        advanced_grid.setColumnStretch(1, 1)
+        section_index = {'value': 0}
 
         def add_row(grid, label_key, widget, row_idx):
             grid.addWidget(QLabel(translate(label_key)), row_idx, 0)
@@ -263,7 +289,11 @@ class DisplayPanel(BasePanel):
             grid.setColumnStretch(0, 1)
             grid.setColumnStretch(1, 2)
             group.setLayout(grid)
-            axes_layout.addWidget(group)
+            index = section_index['value']
+            row = index // 2
+            col = index % 2
+            advanced_grid.addWidget(group, row, col)
+            section_index['value'] += 1
             return grid
 
         figure_grid = make_group("Figure")
@@ -447,8 +477,15 @@ class DisplayPanel(BasePanel):
         self.title_pad_spin.valueChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Title Pad", self.title_pad_spin, row)
 
+        axes_layout.addLayout(advanced_grid)
+
         axes_group.setLayout(axes_layout)
-        layout.addWidget(axes_group)
+        axes_page_layout.addWidget(axes_group)
+
+        section_toolbox.addItem(presets_page, translate("Presets & Themes"))
+        section_toolbox.addItem(style_page, translate("Text & Markers"))
+        section_toolbox.addItem(axes_page, translate("Axes, Grid & Canvas"))
+        layout.addWidget(section_toolbox)
 
         layout.addStretch()
         return widget

@@ -1242,7 +1242,10 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
             except Exception:
                 pass
 
-        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
+        if getattr(app_state, 'show_plot_title', True):
+            app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
+        else:
+            app_state.ax.set_title("")
         app_state.last_2d_cols = list(data_columns)
         app_state.ax.set_xlabel(data_columns[0])
         app_state.ax.set_ylabel(data_columns[1])
@@ -1381,7 +1384,10 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             f"3D Scatter Plot{subset_info} ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n"
             f"Colored by {group_col}"
         )
-        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
+        if getattr(app_state, 'show_plot_title', True):
+            app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
+        else:
+            app_state.ax.set_title("")
         app_state.ax.set_xlabel(data_columns[0])
         app_state.ax.set_ylabel(data_columns[1])
         app_state.ax.set_zlabel(data_columns[2])
