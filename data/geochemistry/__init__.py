@@ -26,6 +26,7 @@ from .engine import (
     MU_M_DEFAULT,
     OMEGA_M_DEFAULT,
     U_RATIO_NATURAL,
+    EPSILON,
     REGRESSION_A,
     REGRESSION_B,
     REGRESSION_C,

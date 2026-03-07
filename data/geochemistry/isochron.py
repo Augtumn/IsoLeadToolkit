@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 """Isochron utilities and regression helpers."""
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
 try:
     from scipy.stats import chi2
@@ -24,12 +28,17 @@ from .engine import (
     OMEGA_M_DEFAULT,
     E1_DEFAULT,
     E2_DEFAULT,
+    EPSILON,
     _exp_evolution_term,
 )
 from .age import _solve_age_scipy
 
 
-def calculate_paleoisochron_line(age_ma, params=None, algorithm='PB_EVOL_76'):
+def calculate_paleoisochron_line(
+    age_ma: float,
+    params: dict[str, Any] | None = None,
+    algorithm: str = 'PB_EVOL_76',
+) -> tuple[float, float] | None:
     """
     计算古等时线的斜率与截距。
 
@@ -81,7 +90,13 @@ def calculate_paleoisochron_line(age_ma, params=None, algorithm='PB_EVOL_76'):
 
     return None
 
-def calculate_isochron1_growth_curve(slope, intercept, age_ma, params=None, steps=100):
+def calculate_isochron1_growth_curve(
+    slope: float,
+    intercept: float,
+    age_ma: float,
+    params: dict[str, Any] | None = None,
+    steps: int = 100,
+) -> dict[str, Any] | None:
     """
     计算 207Pb/204Pb-206Pb/204Pb 等时线对应的生长曲线。
 
@@ -130,7 +145,14 @@ def calculate_isochron1_growth_curve(slope, intercept, age_ma, params=None, step
         't_steps': t_steps
     }
 
-def calculate_isochron2_growth_curve(slope_208, slope_207, intercept_207, age_ma, params=None, steps=100):
+def calculate_isochron2_growth_curve(
+    slope_208: float,
+    slope_207: float,
+    intercept_207: float,
+    age_ma: float,
+    params: dict[str, Any] | None = None,
+    steps: int = 100,
+) -> dict[str, Any] | None:
     """
     计算 208Pb/204Pb-206Pb/204Pb 等时线对应的生长曲线 (需 207/206 约束)。
 
@@ -176,7 +198,15 @@ def calculate_isochron2_growth_curve(slope_208, slope_207, intercept_207, age_ma
         't_steps': t_steps
     }
 
-def york_regression(x, sx, y, sy, rxy=None, max_iter=50, tol=1e-15):
+def york_regression(
+    x: np.ndarray,
+    sx: np.ndarray,
+    y: np.ndarray,
+    sy: np.ndarray,
+    rxy: np.ndarray | None = None,
+    max_iter: int = 50,
+    tol: float = 1e-15,
+) -> dict[str, Any]:
     """York (2004) regression with correlated errors.
 
     Args:
@@ -253,7 +283,11 @@ def york_regression(x, sx, y, sy, rxy=None, max_iter=50, tol=1e-15):
         'df': df,
     }
 
-def calculate_pbpb_age_from_ratio(r76, sr76=None, params=None):
+def calculate_pbpb_age_from_ratio(
+    r76: float,
+    sr76: float | None = None,
+    params: dict[str, Any] | None = None,
+) -> tuple[float, float | None]:
     """Calculate Pb-Pb age from 207Pb/206Pb ratio and its uncertainty."""
     if params is None:
         params = engine.params
@@ -270,8 +304,8 @@ def calculate_pbpb_age_from_ratio(r76, sr76=None, params=None):
             return -r76
         num = np.exp(l235 * t) - 1.0
         den = np.exp(l238 * t) - 1.0
-        if abs(den) < 1e-50:
-            den = 1e-50
+        if abs(den) < EPSILON:
+            den = EPSILON
         return (u_ratio * num / den) - r76
 
     res = _solve_age_scipy(f, bounds=(1e6, 10e9))
@@ -286,7 +320,7 @@ def calculate_pbpb_age_from_ratio(r76, sr76=None, params=None):
     e5 = np.exp(l235 * res)
     e8 = np.exp(l238 * res)
     den = (e8 - 1.0) ** 2
-    if abs(den) < 1e-50:
+    if abs(den) < EPSILON:
         return age_ma, None
 
     dRdt = u_ratio * ((l235 * e5 * (e8 - 1.0)) - ((e5 - 1.0) * l238 * e8)) / den
@@ -297,7 +331,10 @@ def calculate_pbpb_age_from_ratio(r76, sr76=None, params=None):
     age_err_ma = abs(dt_dR * sr76) / 1e6
     return age_ma, age_err_ma
 
-def calculate_isochron_age_from_slope(slope, params=None):
+def calculate_isochron_age_from_slope(
+    slope: float,
+    params: dict[str, Any] | None = None,
+) -> float:
     """
     从 Pb-Pb 等时线斜率计算年龄
 
@@ -310,9 +347,15 @@ def calculate_isochron_age_from_slope(slope, params=None):
     age_ma, _ = calculate_pbpb_age_from_ratio(slope, sr76=None, params=params)
     return age_ma
 
-def calculate_source_mu_from_isochron(slope, intercept, age_ma, params=None):
+def calculate_source_mu_from_isochron(
+    slope: float,
+    intercept: float,
+    age_ma: float,
+    params: dict[str, Any] | None = None,
+) -> float:
     """从等时线参数反演源区 Mu (model-aware: 使用 T1, a1, b1)"""
-    if params is None: params = engine.params
+    if params is None:
+        params = engine.params
 
     T = params['T1']
     t = age_ma * 1e6
@@ -326,9 +369,14 @@ def calculate_source_mu_from_isochron(slope, intercept, age_ma, params=None):
 
     return num / den if abs(den) > 1e-15 else 0.0
 
-def calculate_source_kappa_from_slope(slope_208_206, age_ma, params=None):
+def calculate_source_kappa_from_slope(
+    slope_208_206: float,
+    age_ma: float,
+    params: dict[str, Any] | None = None,
+) -> float:
     """从 208/204 vs 206/204 斜率反演源区 Kappa (model-aware: 使用 T1)"""
-    if params is None: params = engine.params
+    if params is None:
+        params = engine.params
 
     T = params['T1']
     t = age_ma * 1e6

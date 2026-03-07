@@ -20,6 +20,24 @@ logger = logging.getLogger(__name__)
 _SELECTION_MIN_SPAN = 1e-9
 # Maximum distance (data units) for hover nearest-neighbor lookup
 _HOVER_DISTANCE_THRESHOLD = 0.15
+_ASYNC_EMBEDDING_ALGORITHMS = {'UMAP', 'tSNE', 'PCA', 'RobustPCA'}
+
+
+def _data_state():
+    """Return layered data state when available, otherwise fallback to app_state."""
+    return getattr(app_state, 'data', app_state)
+
+
+def _df_global():
+    return getattr(_data_state(), 'df_global', app_state.df_global)
+
+
+def _data_cols():
+    return getattr(_data_state(), 'data_cols', app_state.data_cols)
+
+
+def _group_cols():
+    return getattr(_data_state(), 'group_cols', app_state.group_cols)
 
 def draw_confidence_ellipse(x, y, ax, confidence: float = 0.95, facecolor: str = 'none', **kwargs) -> Ellipse | None:
     """
@@ -382,7 +400,7 @@ def calculate_selected_isochron() -> None:
         y_col = "207Pb/204Pb"
 
         # Get data
-        df = app_state.df_global
+        df = _df_global()
         if df is None or x_col not in df.columns or y_col not in df.columns:
             logger.warning("Required columns %s and %s not found in data.", x_col, y_col)
             app_state.selected_isochron_data = None
@@ -629,7 +647,10 @@ def on_hover(event) -> None:
                 # Use .loc instead of .iloc to ensure we get the correct row by index label
                 # sample_idx is the original index label from df_global
                 try:
-                    row = app_state.df_global.loc[sample_idx]
+                    df = _df_global()
+                    if df is None:
+                        continue
+                    row = df.loc[sample_idx]
                     # Handle case where index is not unique (returns DataFrame)
                     if isinstance(row, pd.DataFrame):
                         row = row.iloc[0]
@@ -648,7 +669,7 @@ def on_hover(event) -> None:
                 else:
                     found_any = False
                     for col in cols_to_show:
-                        if col in app_state.df_global.columns:
+                        if col in df.columns:
                             val = row[col]
                             val_str = str(val) if pd.notna(val) else 'N/A'
                             lines.append(f"{col}: {val_str}")
@@ -703,12 +724,16 @@ def on_click(event) -> None:
                     return
 
                 try:
-                    row = app_state.df_global.loc[sample_idx]
-                    lab_value = row['Lab No.'] if 'Lab No.' in app_state.df_global.columns else sample_idx
-                    if pd.notna(lab_value):
-                        lab_label = str(lab_value)
-                    else:
+                    df = _df_global()
+                    if df is None:
                         lab_label = str(sample_idx)
+                    else:
+                        row = df.loc[sample_idx]
+                        lab_value = row['Lab No.'] if 'Lab No.' in df.columns else sample_idx
+                        if pd.notna(lab_value):
+                            lab_label = str(lab_value)
+                        else:
+                            lab_label = str(sample_idx)
                 except Exception:
                     lab_label = str(sample_idx)
 
@@ -817,9 +842,10 @@ def on_legend_click(event) -> None:
 def _resolve_group_col():
     """Resolve the current group column, falling back to the first available."""
     group_col = app_state.last_group_col
-    if not group_col or group_col not in app_state.group_cols:
-        if app_state.group_cols:
-            group_col = app_state.group_cols[0]
+    group_cols = _group_cols()
+    if not group_col or group_col not in group_cols:
+        if group_cols:
+            group_col = group_cols[0]
             logger.debug("Using default group_col: %s", group_col)
         else:
             return None
@@ -829,8 +855,12 @@ def _resolve_group_col():
 def _sync_visible_groups(group_col):
     """Refresh available_groups and prune visible_groups."""
     try:
-        df_groups_source = app_state.df_global[group_col].fillna('Unknown').astype(str)
-        all_groups = sorted(df_groups_source.unique())
+        df = _df_global()
+        if df is None:
+            all_groups = []
+        else:
+            df_groups_source = df[group_col].fillna('Unknown').astype(str)
+            all_groups = sorted(df_groups_source.unique())
     except Exception:
         all_groups = []
 
@@ -845,8 +875,11 @@ def _validate_render_columns(render_mode, selected_columns_2d, selected_columns_
 
     Returns (render_mode, selected_columns_2d, selected_columns_3d).
     """
+    df = _df_global()
+    data_cols = _data_cols()
+
     if render_mode == '3D':
-        available_cols = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+        available_cols = [c for c in data_cols if df is not None and c in df.columns]
         logger.debug("Available numeric columns for 3D: %s", available_cols)
         if len(available_cols) < 3:
             logger.warning("Not enough numeric columns for 3D view; reverting to 2D")
@@ -862,7 +895,7 @@ def _validate_render_columns(render_mode, selected_columns_2d, selected_columns_
                 logger.info("Using default 3D columns: %s", selected_columns_3d)
 
     if render_mode == '2D':
-        available_cols_2d = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+        available_cols_2d = [c for c in data_cols if df is not None and c in df.columns]
         logger.debug("Available numeric columns for 2D: %s", available_cols_2d)
         if len(available_cols_2d) < 2:
             logger.warning("Not enough numeric columns for 2D view; falling back to UMAP")
@@ -878,7 +911,7 @@ def _validate_render_columns(render_mode, selected_columns_2d, selected_columns_
                 logger.info("Using default 2D columns: %s", selected_columns_2d)
 
     if render_mode == 'Ternary':
-        available_cols_ternary = [c for c in app_state.data_cols if c in app_state.df_global.columns]
+        available_cols_ternary = [c for c in data_cols if df is not None and c in df.columns]
         if len(available_cols_ternary) < 3:
             logger.warning("Not enough numeric columns for Ternary view; falling back to UMAP")
             render_mode = 'UMAP'
@@ -911,8 +944,142 @@ def _sync_render_mode(render_mode):
         logger.warning("Unable to sync control panel render mode: %s", sync_err)
 
 
+def _cancel_embedding_task(reason: str = "") -> None:
+    """Request cancellation for any running embedding task."""
+    worker = getattr(app_state, 'embedding_worker', None)
+    if worker is None:
+        return
+
+    try:
+        if worker.isRunning():
+            worker.request_cancel()
+            logger.debug("Requested cancellation of embedding task. reason=%s", reason)
+    except Exception as err:
+        logger.warning("Failed to cancel embedding task: %s", err)
+
+
+def _on_embedding_task_progress(task_token: int, percent: int, stage: str) -> None:
+    if task_token != getattr(app_state, 'embedding_task_token', -1):
+        return
+    callback = getattr(app_state, 'embedding_progress_callback', None)
+    if callable(callback):
+        try:
+            callback(percent, stage)
+        except Exception:
+            pass
+
+
+def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) -> None:
+    if task_token != getattr(app_state, 'embedding_task_token', -1):
+        logger.debug("Ignore stale embedding result token=%s", task_token)
+        return
+
+    app_state.embedding_task_running = False
+    app_state.embedding_worker = None
+
+    algorithm = payload.get('algorithm', app_state.render_mode)
+    if app_state.render_mode != algorithm:
+        logger.debug("Ignore embedding result due to render mode change: %s -> %s", algorithm, app_state.render_mode)
+        return
+
+    from .plotting import plot_embedding
+
+    render_ok = plot_embedding(
+        group_col,
+        algorithm,
+        umap_params=app_state.umap_params,
+        tsne_params=app_state.tsne_params,
+        pca_params=app_state.pca_params,
+        robust_pca_params=app_state.robust_pca_params,
+        size=app_state.point_size,
+        precomputed_embedding=payload.get('embedding'),
+        precomputed_meta=payload.get('meta', {}),
+    )
+
+    if render_ok:
+        refresh_selection_overlay()
+        sync_selection_tools()
+        _notify_selection_ui()
+        try:
+            app_state.fig.canvas.draw_idle()
+        except Exception:
+            pass
+        app_state.initial_render_done = True
+        logger.debug("Async embedding render completed for %s", algorithm)
+    else:
+        logger.warning("Async embedding render failed for %s", algorithm)
+
+
+def _on_embedding_task_failed(task_token: int, error_message: str) -> None:
+    if task_token != getattr(app_state, 'embedding_task_token', -1):
+        return
+
+    app_state.embedding_task_running = False
+    app_state.embedding_worker = None
+    logger.warning("Embedding task failed: %s", error_message)
+
+
+def _on_embedding_task_cancelled(task_token: int) -> None:
+    if task_token != getattr(app_state, 'embedding_task_token', -1):
+        return
+
+    app_state.embedding_task_running = False
+    app_state.embedding_worker = None
+    logger.debug("Embedding task cancelled: token=%s", task_token)
+
+
+def _start_async_embedding_render(group_col: str) -> bool:
+    """Start background embedding computation for heavy algorithms."""
+    from .embedding_worker import EmbeddingWorker
+    from .plotting.data import _get_analysis_data
+
+    algorithm = app_state.render_mode
+    if algorithm not in _ASYNC_EMBEDDING_ALGORITHMS:
+        return False
+
+    x_data, _ = _get_analysis_data()
+    if x_data is None:
+        return False
+
+    params_map = {
+        'UMAP': app_state.umap_params,
+        'tSNE': app_state.tsne_params,
+        'PCA': app_state.pca_params,
+        'RobustPCA': app_state.robust_pca_params,
+    }
+    params = dict(params_map.get(algorithm, {}))
+
+    _cancel_embedding_task(reason='start_new_task')
+
+    task_token = int(getattr(app_state, 'embedding_task_token', 0)) + 1
+    app_state.embedding_task_token = task_token
+
+    worker = EmbeddingWorker(
+        task_token=task_token,
+        algorithm=algorithm,
+        x_data=x_data,
+        params=params,
+        feature_names=list(getattr(app_state, 'data_cols', [])),
+    )
+
+    worker.progress.connect(_on_embedding_task_progress)
+    worker.finished_signal.connect(lambda token, payload: _on_embedding_task_finished(token, payload, group_col))
+    worker.failed.connect(_on_embedding_task_failed)
+    worker.cancelled.connect(_on_embedding_task_cancelled)
+
+    app_state.embedding_worker = worker
+    app_state.embedding_task_running = True
+    worker.start()
+    logger.debug("Started async embedding task token=%s, algorithm=%s", task_token, algorithm)
+    return True
+
+
 def _dispatch_render(group_col, selected_columns_2d, selected_columns_3d):
-    """Dispatch to the appropriate plot function. Returns True on success."""
+    """Dispatch to the appropriate plot function.
+
+    Returns:
+        tuple[bool, bool]: (render_ok, pending_async_result)
+    """
     from .plotting import plot_embedding, plot_3d_data, plot_2d_data
 
     if app_state.render_mode == '3D':
@@ -924,28 +1091,38 @@ def _dispatch_render(group_col, selected_columns_2d, selected_columns_3d):
             logger.info("Selection mode automatically disabled for 3D view.")
         if len(selected_columns_3d) != 3:
             logger.warning("Invalid 3D column selection; skipping plot")
-            return False
+            return False, False
+        _cancel_embedding_task(reason='switch_to_3d')
         logger.debug("Rendering 3D plot with columns=%s", selected_columns_3d)
-        return plot_3d_data(group_col, selected_columns_3d, size=app_state.point_size)
+        return plot_3d_data(group_col, selected_columns_3d, size=app_state.point_size), False
 
     if app_state.render_mode == '2D':
         if len(selected_columns_2d) != 2:
             logger.warning("Invalid 2D column selection; skipping plot")
-            return False
+            return False, False
+        _cancel_embedding_task(reason='switch_to_2d')
         logger.debug("Rendering 2D plot with columns=%s", selected_columns_2d)
         is_kde = getattr(app_state, 'show_kde', False) or getattr(app_state, 'show_2d_kde', False)
-        return plot_2d_data(group_col, selected_columns_2d, size=app_state.point_size, show_kde=is_kde)
+        return plot_2d_data(group_col, selected_columns_2d, size=app_state.point_size, show_kde=is_kde), False
 
     algorithm = app_state.render_mode
+    if algorithm in _ASYNC_EMBEDDING_ALGORITHMS:
+        started = _start_async_embedding_render(group_col)
+        return started, started
+
+    _cancel_embedding_task(reason='switch_to_sync_embedding')
     logger.debug("Calling plot_embedding with algorithm=%s, group_col=%s", algorithm, group_col)
-    return plot_embedding(
-        group_col,
-        algorithm,
-        umap_params=app_state.umap_params,
-        tsne_params=app_state.tsne_params,
-        pca_params=app_state.pca_params,
-        robust_pca_params=app_state.robust_pca_params,
-        size=app_state.point_size,
+    return (
+        plot_embedding(
+            group_col,
+            algorithm,
+            umap_params=app_state.umap_params,
+            tsne_params=app_state.tsne_params,
+            pca_params=app_state.pca_params,
+            robust_pca_params=app_state.robust_pca_params,
+            size=app_state.point_size,
+        ),
+        False,
     )
 
 
@@ -989,7 +1166,8 @@ def on_slider_change(val=None) -> None:
     try:
         logger.debug("on_slider_change called, val=%s", val)
 
-        if app_state.df_global is None or len(app_state.df_global) == 0:
+        df = _df_global()
+        if df is None or len(df) == 0:
             logger.warning("No data available")
             return
 
@@ -1010,7 +1188,11 @@ def on_slider_change(val=None) -> None:
             )
             _sync_render_mode(render_mode)
 
-            rendered_ok = _dispatch_render(group_col, selected_columns_2d, selected_columns_3d)
+            rendered_ok, pending_async = _dispatch_render(group_col, selected_columns_2d, selected_columns_3d)
+
+            if pending_async:
+                logger.debug("Render deferred to async embedding task")
+                return
 
             if rendered_ok:
                 logger.debug("Plot rendered successfully, calling draw_idle")

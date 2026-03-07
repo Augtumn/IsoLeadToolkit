@@ -2,15 +2,214 @@
 Application State Management
 Centralized global state to avoid variable chaos
 """
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Callable
+
 from .config import CONFIG
 from .cache import EmbeddingCache
 from .overlay_state import OverlayState
 from .legend_state import LegendState
 
 
+@dataclass
+class DataState:
+    """Compatibility view for data-related app state fields."""
+
+    app_state: "AppState"
+
+    @property
+    def df_global(self) -> Any:
+        return self.app_state.df_global
+
+    @df_global.setter
+    def df_global(self, value: Any) -> None:
+        self.app_state.df_global = value
+
+    @property
+    def data_cols(self) -> Any:
+        return self.app_state.data_cols
+
+    @data_cols.setter
+    def data_cols(self, value: Any) -> None:
+        self.app_state.data_cols = value
+
+    @property
+    def group_cols(self) -> Any:
+        return self.app_state.group_cols
+
+    @group_cols.setter
+    def group_cols(self, value: Any) -> None:
+        self.app_state.group_cols = value
+
+    @property
+    def active_subset_indices(self) -> Any:
+        return self.app_state.active_subset_indices
+
+    @active_subset_indices.setter
+    def active_subset_indices(self, value: Any) -> None:
+        self.app_state.active_subset_indices = value
+
+
+@dataclass
+class AlgorithmState:
+    """Compatibility view for algorithm/cache-related fields."""
+
+    app_state: "AppState"
+
+    @property
+    def algorithm(self) -> Any:
+        return self.app_state.algorithm
+
+    @algorithm.setter
+    def algorithm(self, value: Any) -> None:
+        self.app_state.algorithm = value
+
+    @property
+    def embedding_cache(self) -> Any:
+        return self.app_state.embedding_cache
+
+    @property
+    def umap_params(self) -> Any:
+        return self.app_state.umap_params
+
+    @umap_params.setter
+    def umap_params(self, value: Any) -> None:
+        self.app_state.umap_params = value
+
+    @property
+    def tsne_params(self) -> Any:
+        return self.app_state.tsne_params
+
+    @tsne_params.setter
+    def tsne_params(self, value: Any) -> None:
+        self.app_state.tsne_params = value
+
+    @property
+    def pca_params(self) -> Any:
+        return self.app_state.pca_params
+
+    @pca_params.setter
+    def pca_params(self, value: Any) -> None:
+        self.app_state.pca_params = value
+
+    @property
+    def robust_pca_params(self) -> Any:
+        return self.app_state.robust_pca_params
+
+    @robust_pca_params.setter
+    def robust_pca_params(self, value: Any) -> None:
+        self.app_state.robust_pca_params = value
+
+
+@dataclass
+class VisualState:
+    """Compatibility view for figure/axes/rendered artist fields."""
+
+    app_state: "AppState"
+
+    @property
+    def fig(self) -> Any:
+        return self.app_state.fig
+
+    @fig.setter
+    def fig(self, value: Any) -> None:
+        self.app_state.fig = value
+
+    @property
+    def ax(self) -> Any:
+        return self.app_state.ax
+
+    @ax.setter
+    def ax(self, value: Any) -> None:
+        self.app_state.ax = value
+
+    @property
+    def scatter_collections(self) -> Any:
+        return self.app_state.scatter_collections
+
+
+@dataclass
+class GeochemState:
+    """Compatibility view for geochemistry overlay related fields."""
+
+    app_state: "AppState"
+
+    @property
+    def overlay(self) -> Any:
+        return self.app_state.overlay
+
+    @property
+    def line_styles(self) -> Any:
+        return self.app_state.line_styles
+
+
+@dataclass
+class StyleState:
+    """Compatibility view for style and palette fields."""
+
+    app_state: "AppState"
+
+    @property
+    def current_palette(self) -> Any:
+        return self.app_state.current_palette
+
+    @current_palette.setter
+    def current_palette(self, value: Any) -> None:
+        self.app_state.current_palette = value
+
+    @property
+    def color_scheme(self) -> Any:
+        return self.app_state.color_scheme
+
+    @color_scheme.setter
+    def color_scheme(self, value: Any) -> None:
+        self.app_state.color_scheme = value
+
+    @property
+    def custom_primary_font(self) -> Any:
+        return self.app_state.custom_primary_font
+
+    @property
+    def custom_cjk_font(self) -> Any:
+        return self.app_state.custom_cjk_font
+
+
+@dataclass
+class InteractionState:
+    """Compatibility view for selection and interaction fields."""
+
+    app_state: "AppState"
+
+    @property
+    def selection_tool(self) -> Any:
+        return self.app_state.selection_tool
+
+    @selection_tool.setter
+    def selection_tool(self, value: Any) -> None:
+        self.app_state.selection_tool = value
+
+    @property
+    def selected_indices(self) -> Any:
+        return self.app_state.selected_indices
+
+    @selected_indices.setter
+    def selected_indices(self, value: Any) -> None:
+        self.app_state.selected_indices = value
+
+    @property
+    def artist_to_sample(self) -> Any:
+        return self.app_state.artist_to_sample
+
+    @property
+    def sample_coordinates(self) -> Any:
+        return self.app_state.sample_coordinates
+
+
 class AppState:
     """Centralized application state"""
-    def __init__(self):
+    def __init__(self) -> None:
         self.df_global = None
         self.data_version = 0
         self.embedding_cache = EmbeddingCache(max_entries=CONFIG.get('embedding_cache_size', 8))
@@ -26,6 +225,12 @@ class AppState:
         self.ml_last_result = None
         self.ml_last_model_meta = None
 
+        # Async embedding task state
+        self.embedding_task_token = 0
+        self.embedding_worker = None
+        self.embedding_task_running = False
+        self.embedding_task_algorithm = None
+
         # V1V2 Parameters
         self.v1v2_params = {
             'a': 0.0,
@@ -37,6 +242,22 @@ class AppState:
         # --- Sub-state objects ---
         self.overlay = OverlayState()
         self.legend = LegendState()
+
+        # Compatibility stepping-stone for layered AppState refactor.
+        self.data_state = DataState(self)
+        self.algorithm_state = AlgorithmState(self)
+        self.visual_state = VisualState(self)
+        self.geochem_state = GeochemState(self)
+        self.style_state = StyleState(self)
+        self.interaction_state = InteractionState(self)
+
+        # Shorthand aliases aligned with the planned layered naming.
+        self.data = self.data_state
+        self.algorithm_config = self.algorithm_state
+        self.visual = self.visual_state
+        self.geochem = self.geochem_state
+        self.style = self.style_state
+        self.interaction = self.interaction_state
 
         # Sync KDE styles into overlay.line_styles
         self.kde_style = {
@@ -200,7 +421,7 @@ class AppState:
         self.saved_themes = {} # Dictionary to store user themes
         self.last_2d_cols = None
 
-    def clear_plot_state(self):
+    def clear_plot_state(self) -> None:
         """Reset plot-specific state"""
         self.scatter_collections.clear()
         self.sample_index_map.clear()
@@ -218,12 +439,12 @@ class AppState:
                 pass
         self.selection_overlay = None
 
-    def register_language_listener(self, callback):
+    def register_language_listener(self, callback: Callable[[], None]) -> None:
         """Register a callback to be invoked when language changes."""
         if callback and callback not in self.language_listeners:
             self.language_listeners.append(callback)
 
-    def notify_language_change(self):
+    def notify_language_change(self) -> None:
         """Notify registered listeners about language changes."""
         for callback in list(self.language_listeners):
             try:

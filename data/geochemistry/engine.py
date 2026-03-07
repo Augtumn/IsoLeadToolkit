@@ -58,6 +58,7 @@ OMEGA_M_DEFAULT = 36.84       # 默认地幔 omega 值 (232Th/204Pb)
 
 # 1.6 物理比值
 U_RATIO_NATURAL = 1.0 / 137.88  # 天然 235U/238U 比值
+EPSILON = 1e-50  # Shared denominator floor for numerical stability
 
 # 1.7 V1-V2 判别图回归平面参数
 # 来源: Zhu (1995, 1998)

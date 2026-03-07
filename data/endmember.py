@@ -15,6 +15,7 @@
 
 import logging
 import numpy as np
+import pandas as pd
 from typing import Dict, Optional, Tuple, Any
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def compute_geochron_slope(t_earth: Optional[float] = None) -> float:
     Returns:
         geochron 斜率 (约 0.6262)
     """
-    from data.geochemistry import LAMBDA_238, LAMBDA_235, U_RATIO_NATURAL, T_EARTH_CANON
+    from data.geochemistry import LAMBDA_238, LAMBDA_235, U_RATIO_NATURAL, T_EARTH_CANON, EPSILON
 
     if t_earth is None:
         t_earth = T_EARTH_CANON
@@ -40,7 +41,7 @@ def compute_geochron_slope(t_earth: Optional[float] = None) -> float:
     e235 = np.exp(LAMBDA_235 * t_earth) - 1.0
     e238 = np.exp(LAMBDA_238 * t_earth) - 1.0
 
-    if abs(e238) < 1e-50:
+    if abs(e238) < EPSILON:
         return 0.0
 
     return U_RATIO_NATURAL * e235 / e238
@@ -178,7 +179,7 @@ def validate_groups(
 
 
 def run_endmember_analysis(
-    df,
+    df: pd.DataFrame,
     col_206: str,
     col_207: str,
     col_208: str,
@@ -201,7 +202,11 @@ def run_endmember_analysis(
               validation, warnings 等
     """
     # 提取数据
-    data = df[[col_206, col_207, col_208]].values.astype(float)
+    data = (
+        df[[col_206, col_207, col_208]]
+        .apply(pd.to_numeric, errors='coerce')
+        .to_numpy()
+    )
     valid_mask = ~np.isnan(data).any(axis=1)
     data_clean = data[valid_mask]
     valid_indices = np.where(valid_mask)[0]

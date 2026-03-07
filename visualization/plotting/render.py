@@ -184,6 +184,363 @@ def _resolve_kde_style(target: str = 'kde') -> dict:
         fallback['levels'] = int(legacy_style.get('levels', 10))
     return ensure_line_style(app_state, style_key, fallback)
 
+
+def _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_palette):
+    if not getattr(app_state, 'show_kde', False):
+        return
+    try:
+        kde_utils.lazy_import_seaborn()
+        if actual_algorithm == 'TERNARY':
+            logger.info("Generating KDE for Ternary Plot...")
+            for cat in unique_cats:
+                subset = df_plot[df_plot[group_col] == cat].copy()
+                if subset.empty:
+                    continue
+
+                ts = subset['_emb_t'].to_numpy(dtype=float)
+                ls = subset['_emb_l'].to_numpy(dtype=float)
+                rs = subset['_emb_r'].to_numpy(dtype=float)
+
+                ts, ls, rs = _apply_ternary_stretch(ts, ls, rs)
+
+                sums = ts + ls + rs
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    sums[sums == 0] = 1.0
+                    t_norm = ts / sums
+                    r_norm = rs / sums
+
+                h = np.sqrt(3) / 2
+                x_cart = 0.5 * t_norm + 1.0 * r_norm
+                y_cart = h * t_norm
+
+                kde_style = _resolve_kde_style('kde')
+                kde_utils.sns.kdeplot(
+                    x=x_cart,
+                    y=y_cart,
+                    color=new_palette[cat],
+                    ax=app_state.ax,
+                    levels=int(kde_style.get('levels', 10)),
+                    fill=bool(kde_style.get('fill', True)),
+                    alpha=float(kde_style.get('alpha', 0.6)),
+                    linewidth=float(kde_style.get('linewidth', 1.0)),
+                    warn_singular=False,
+                    legend=False,
+                    zorder=1,
+                )
+        else:
+            logger.info("Generating KDE for %s...", actual_algorithm)
+            kde_style = _resolve_kde_style('kde')
+            kde_utils.sns.kdeplot(
+                data=df_plot,
+                x='_emb_x',
+                y='_emb_y',
+                hue=group_col,
+                palette=new_palette,
+                ax=app_state.ax,
+                levels=int(kde_style.get('levels', 10)),
+                fill=bool(kde_style.get('fill', True)),
+                alpha=float(kde_style.get('alpha', 0.6)),
+                linewidth=float(kde_style.get('linewidth', 1.0)),
+                warn_singular=False,
+                legend=False,
+                zorder=1,
+            )
+    except Exception as kde_err:
+        logger.warning("Failed to render KDE: %s", kde_err)
+
+
+def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, size):
+    scatters = []
+    is_kde_mode = getattr(app_state, 'show_kde', False)
+
+    for cat in unique_cats:
+        if is_kde_mode:
+            continue
+
+        try:
+            subset = df_plot[df_plot[group_col] == cat]
+            if subset.empty:
+                continue
+            indices = subset.index.tolist()
+
+            if actual_algorithm == 'TERNARY':
+                ts = subset['_emb_t'].to_numpy(dtype=float, copy=False)
+                ls = subset['_emb_l'].to_numpy(dtype=float, copy=False)
+                rs = subset['_emb_r'].to_numpy(dtype=float, copy=False)
+
+                if len(ts) == 0:
+                    continue
+
+                t_vals, l_vals, r_vals = _apply_ternary_stretch(ts, ls, rs)
+
+                sums = t_vals + l_vals + r_vals
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    sums[sums == 0] = 1.0
+                    t_norm = t_vals / sums
+                    r_norm = r_vals / sums
+
+                h = np.sqrt(3) / 2
+                x_cart = 0.5 * t_norm + 1.0 * r_norm
+                y_cart = h * t_norm
+
+                marker_size = getattr(app_state, 'plot_marker_size', size)
+                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                marker_shape = app_state.group_marker_map.get(cat, getattr(app_state, 'plot_marker_shape', 'o'))
+                color = app_state.current_palette[cat]
+
+                sc = app_state.ax.scatter(
+                    x_cart,
+                    y_cart,
+                    label=cat,
+                    color=color,
+                    s=marker_size,
+                    marker=marker_shape,
+                    alpha=marker_alpha,
+                    edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                    linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                    zorder=2,
+                    picker=5,
+                )
+
+                offsets = sc.get_offsets()
+                sc.indices = indices
+                scatters.append(sc)
+
+                for j, idx in enumerate(indices):
+                    if j < len(offsets):
+                        x_val, y_val = offsets[j]
+                        key = (round(float(x_val), 2), round(float(y_val), 2))
+                        app_state.sample_index_map[key] = idx
+                        app_state.sample_coordinates[idx] = (x_val, y_val)
+                        app_state.artist_to_sample[(id(sc), j)] = idx
+
+            else:
+                xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)
+                ys = subset['_emb_y'].to_numpy(dtype=float, copy=False)
+
+                if len(xs) == 0:
+                    continue
+
+                marker_size = getattr(app_state, 'plot_marker_size', size)
+                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                marker_shape = app_state.group_marker_map.get(cat, getattr(app_state, 'plot_marker_shape', 'o'))
+
+                color = app_state.current_palette[cat]
+                sc = app_state.ax.scatter(
+                    xs,
+                    ys,
+                    label=cat,
+                    color=color,
+                    s=marker_size,
+                    marker=marker_shape,
+                    alpha=marker_alpha,
+                    edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                    linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                    zorder=2,
+                    picker=5,
+                )
+
+                for j, idx in enumerate(indices):
+                    x_val = float(xs[j])
+                    y_val = float(ys[j])
+                    key = (round(x_val, 2), round(y_val, 2))
+                    app_state.sample_index_map[key] = idx
+                    app_state.sample_coordinates[idx] = (x_val, y_val)
+                    app_state.artist_to_sample[(id(sc), j)] = idx
+
+            scatters.append(sc)
+            app_state.scatter_collections.append(sc)
+            app_state.group_to_scatter[cat] = sc
+
+        except Exception as err:
+            logger.warning("Error plotting category %s: %s", cat, err)
+
+    if not scatters and not is_kde_mode:
+        logger.error("No data points plotted")
+        return None
+
+    return scatters
+
+
+def _render_legend(actual_algorithm, group_col, unique_cats, scatters):
+    try:
+        handles = []
+        labels = []
+        is_kde_mode = getattr(app_state, 'show_kde', False)
+        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
+
+        if is_kde_mode:
+            for cat in unique_cats:
+                color = app_state.current_palette[cat]
+                patch = Patch(facecolor=color, edgecolor='none', label=cat, alpha=0.6)
+                handles.append(patch)
+                labels.append(cat)
+
+        legend_handles = handles if handles else list(scatters)
+        legend_labels = labels if labels else list(unique_cats)
+        for handle, label in _build_overlay_legend_entries(actual_algorithm):
+            if label in legend_labels:
+                continue
+            legend_handles.append(handle)
+            legend_labels.append(label)
+
+        _place_inline_legend(
+            app_state.ax,
+            group_col,
+            legend_handles,
+            legend_labels,
+            show_marginal_kde=show_marginal_kde,
+            scatters=scatters,
+            is_kde_mode=is_kde_mode,
+        )
+    except Exception as err:
+        logger.warning("Legend creation error: %s", err)
+
+
+def _render_title_labels(actual_algorithm, group_col, umap_params, tsne_params, pca_params, robust_pca_params):
+    subset_info = " (Subset)" if app_state.active_subset_indices is not None else ""
+
+    if actual_algorithm == 'UMAP':
+        title = (
+            f'Embedding - UMAP{subset_info} (n_neighbors={umap_params["n_neighbors"]}, min_dist={umap_params["min_dist"]})\n'
+            f'Colored by {group_col}'
+        )
+    elif actual_algorithm == 'TSNE':
+        title = (
+            f'Embedding - t-SNE{subset_info} (perplexity={tsne_params["perplexity"]}, lr={tsne_params["learning_rate"]})\n'
+            f'Colored by {group_col}'
+        )
+    elif actual_algorithm == 'PCA':
+        title = f'Embedding - PCA{subset_info} (n_components={pca_params["n_components"]})\nColored by {group_col}'
+    elif actual_algorithm == 'RobustPCA':
+        title = (
+            f'Embedding - Robust PCA{subset_info} (n_components={robust_pca_params["n_components"]})\n'
+            f'Colored by {group_col}'
+        )
+    elif actual_algorithm == 'V1V2':
+        title = f'Geochem - V1-V2 Diagram{subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'TERNARY':
+        title = f'Raw - Ternary Plot{subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'PB_EVOL_76':
+        title = f'Geochem - Pb Evolution / Model Curves (206-207){subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'PB_EVOL_86':
+        title = f'Geochem - Pb Evolution / Model Curves (206-208){subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'PLUMBOTECTONICS_76':
+        title = f'Geochem - Plumbotectonics (206-207){subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'PLUMBOTECTONICS_86':
+        title = f'Geochem - Plumbotectonics (206-208){subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'PB_MU_AGE':
+        title = f'Geochem - Mu vs Age{subset_info}\nColored by {group_col}'
+    elif actual_algorithm == 'PB_KAPPA_AGE':
+        title = f'Geochem - Kappa vs Age{subset_info}\nColored by {group_col}'
+    else:
+        title = f'{actual_algorithm}{subset_info}\nColored by {group_col}'
+
+    title_font_dict = {}
+    has_cjk = any('\u4e00' <= char <= '\u9fff' for char in title)
+    if has_cjk:
+        cjk_font = getattr(app_state, 'custom_cjk_font', '')
+        if cjk_font:
+            title_font_dict['fontname'] = cjk_font
+        else:
+            try:
+                available = {f.name for f in font_manager.fontManager.ttflist}
+                for font_name in CONFIG.get('preferred_plot_fonts', []):
+                    if font_name in available:
+                        title_font_dict['fontname'] = font_name
+                        break
+            except Exception:
+                pass
+
+    if getattr(app_state, 'show_plot_title', True):
+        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0), **title_font_dict)
+    else:
+        app_state.ax.set_title("")
+
+    if actual_algorithm == 'V1V2':
+        app_state.ax.set_xlabel("V1")
+        app_state.ax.set_ylabel("V2")
+    elif actual_algorithm in ('PB_EVOL_76', 'PLUMBOTECTONICS_76'):
+        app_state.ax.set_xlabel("206Pb/204Pb")
+        app_state.ax.set_ylabel("207Pb/204Pb")
+    elif actual_algorithm in ('PB_EVOL_86', 'PLUMBOTECTONICS_86'):
+        app_state.ax.set_xlabel("206Pb/204Pb")
+        app_state.ax.set_ylabel("208Pb/204Pb")
+    elif actual_algorithm == 'PB_MU_AGE':
+        app_state.ax.set_xlabel("Age (Ma)")
+        app_state.ax.set_ylabel("Mu (238U/204Pb)")
+    elif actual_algorithm == 'PB_KAPPA_AGE':
+        app_state.ax.set_xlabel("Age (Ma)")
+        app_state.ax.set_ylabel("Kappa (232Th/238U)")
+    elif actual_algorithm == 'TERNARY':
+        app_state.ax.set_aspect('equal')
+    elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
+        idx_x = app_state.pca_component_indices[0] + 1
+        idx_y = app_state.pca_component_indices[1] + 1
+        app_state.ax.set_xlabel(f"PC{idx_x}")
+        app_state.ax.set_ylabel(f"PC{idx_y}")
+    else:
+        app_state.ax.set_xlabel(f"{actual_algorithm} Dimension 1")
+        app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2")
+
+    _apply_axis_text_style(app_state.ax)
+
+
+def _render_geo_overlays(actual_algorithm, prev_ax, prev_embedding_type, prev_xlim, prev_ylim):
+    if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
+        geochemistry, _ = _lazy_import_geochemistry()
+        params = geochemistry.engine.get_parameters() if geochemistry else {}
+        if getattr(app_state, 'show_model_curves', True):
+            _draw_model_curves(app_state.ax, actual_algorithm, [params])
+
+        if getattr(app_state, 'show_isochrons', True):
+            _draw_isochron_overlays(app_state.ax, actual_algorithm)
+
+        if app_state.selection_tool == 'isochron':
+            _draw_selected_isochron(app_state.ax)
+
+        if getattr(app_state, 'show_paleoisochrons', True):
+            ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
+            _draw_paleoisochrons(app_state.ax, actual_algorithm, ages, params)
+
+        if getattr(app_state, 'show_model_age_lines', True):
+            df_subset, _ = _get_subset_dataframe()
+            if df_subset is not None:
+                col_206, col_207, _ = _get_pb_columns(df_subset.columns)
+                if col_206 and col_207:
+                    pb206 = pd.to_numeric(df_subset[col_206], errors='coerce').values
+                    pb207 = pd.to_numeric(df_subset[col_207], errors='coerce').values
+                    if actual_algorithm == 'PB_EVOL_76':
+                        _draw_model_age_lines(app_state.ax, pb206, pb207, params)
+                    else:
+                        col_208 = "208Pb/204Pb" if "208Pb/204Pb" in df_subset.columns else None
+                        if col_208:
+                            pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
+                            _draw_model_age_lines_86(app_state.ax, pb206, pb207, pb208, params)
+
+    if actual_algorithm in ('PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86'):
+        if getattr(app_state, 'show_paleoisochrons', True):
+            _draw_plumbotectonics_isoage_lines(app_state.ax, actual_algorithm)
+        if getattr(app_state, 'show_plumbotectonics_curves', True):
+            _draw_plumbotectonics_curves(app_state.ax, actual_algorithm)
+
+    if actual_algorithm in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
+        if getattr(app_state, 'show_paleoisochrons', True):
+            ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
+            _draw_mu_kappa_paleoisochrons(app_state.ax, ages)
+
+    if app_state.ax is prev_ax and prev_xlim and prev_ylim:
+        if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
+            try:
+                if prev_embedding_type and str(prev_embedding_type).upper() == str(actual_algorithm).upper():
+                    app_state.ax.set_xlim(prev_xlim)
+                    app_state.ax.set_ylim(prev_ylim)
+            except Exception:
+                pass
+
+    if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
+        _draw_equation_overlays(app_state.ax)
+
 def plot_embedding(
     group_col: str,
     algorithm: str,
@@ -192,6 +549,8 @@ def plot_embedding(
     pca_params: dict | None = None,
     robust_pca_params: dict | None = None,
     size: int = 60,
+    precomputed_embedding: np.ndarray | None = None,
+    precomputed_meta: dict | None = None,
 ) -> bool:
     """Update plot with specified algorithm and parameters"""
     try:
@@ -264,7 +623,23 @@ def plot_embedding(
         embedding = None
         logger.debug("Actual algorithm (normalized): %s", actual_algorithm)
 
-        if actual_algorithm == 'UMAP':
+        if precomputed_embedding is not None and actual_algorithm in ('UMAP', 'TSNE', 'PCA', 'RobustPCA'):
+            embedding = np.asarray(precomputed_embedding)
+            last_type = 'tSNE' if actual_algorithm == 'TSNE' else actual_algorithm
+            app_state.last_embedding = embedding
+            app_state.last_embedding_type = last_type
+
+            if isinstance(precomputed_meta, dict):
+                if precomputed_meta.get('last_pca_variance') is not None:
+                    app_state.last_pca_variance = precomputed_meta.get('last_pca_variance')
+                if precomputed_meta.get('last_pca_components') is not None:
+                    app_state.last_pca_components = precomputed_meta.get('last_pca_components')
+                if precomputed_meta.get('current_feature_names') is not None:
+                    app_state.current_feature_names = precomputed_meta.get('current_feature_names')
+
+            logger.debug("Using precomputed embedding for %s", actual_algorithm)
+
+        elif actual_algorithm == 'UMAP':
             logger.debug("Computing UMAP embedding")
             embedding = get_umap_embedding(umap_params)
         elif actual_algorithm == 'TSNE':
@@ -558,188 +933,12 @@ def plot_embedding(
             app_state.ax.set_xlim(-0.1, 1.1)
             app_state.ax.set_ylim(-0.1, h + 0.1)
 
-        if getattr(app_state, 'show_kde', False):
-            try:
-                kde_utils.lazy_import_seaborn()
-                if actual_algorithm == 'TERNARY':
-                    logger.info("Generating KDE for Ternary Plot...")
-                    for cat in unique_cats:
-                        subset = df_plot[df_plot[group_col] == cat].copy()
-                        if subset.empty:
-                            continue
+        _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_palette)
 
-                        ts = subset['_emb_t'].to_numpy(dtype=float)
-                        ls = subset['_emb_l'].to_numpy(dtype=float)
-                        rs = subset['_emb_r'].to_numpy(dtype=float)
-
-                        ts, ls, rs = _apply_ternary_stretch(ts, ls, rs)
-
-                        sums = ts + ls + rs
-                        with np.errstate(divide='ignore', invalid='ignore'):
-                            sums[sums == 0] = 1.0
-                            t_norm = ts / sums
-                            r_norm = rs / sums
-
-                        h = np.sqrt(3) / 2
-                        x_cart = 0.5 * t_norm + 1.0 * r_norm
-                        y_cart = h * t_norm
-
-                        kde_style = _resolve_kde_style('kde')
-                        kde_utils.sns.kdeplot(
-                            x=x_cart,
-                            y=y_cart,
-                            color=new_palette[cat],
-                            ax=app_state.ax,
-                            levels=int(kde_style.get('levels', 10)),
-                            fill=bool(kde_style.get('fill', True)),
-                            alpha=float(kde_style.get('alpha', 0.6)),
-                            linewidth=float(kde_style.get('linewidth', 1.0)),
-                            warn_singular=False,
-                            legend=False,
-                            zorder=1,
-                        )
-                else:
-                    logger.info(f"Generating KDE for {actual_algorithm}...")
-                    kde_style = _resolve_kde_style('kde')
-                    kde_utils.sns.kdeplot(
-                        data=df_plot,
-                        x='_emb_x',
-                        y='_emb_y',
-                        hue=group_col,
-                        palette=new_palette,
-                        ax=app_state.ax,
-                        levels=int(kde_style.get('levels', 10)),
-                        fill=bool(kde_style.get('fill', True)),
-                        alpha=float(kde_style.get('alpha', 0.6)),
-                        linewidth=float(kde_style.get('linewidth', 1.0)),
-                        warn_singular=False,
-                        legend=False,
-                        zorder=1,
-                    )
-            except Exception as kde_err:
-                logger.warning(f"Failed to render KDE: {kde_err}")
-
-        scatters = []
+        scatters = _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, size)
         is_kde_mode = getattr(app_state, 'show_kde', False)
         show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
-
-        for i, cat in enumerate(unique_cats):
-            if is_kde_mode:
-                continue
-
-            try:
-                subset = df_plot[df_plot[group_col] == cat]
-                if subset.empty:
-                    continue
-                indices = subset.index.tolist()
-
-                if actual_algorithm == 'TERNARY':
-                    ts = subset['_emb_t'].to_numpy(dtype=float, copy=False)
-                    ls = subset['_emb_l'].to_numpy(dtype=float, copy=False)
-                    rs = subset['_emb_r'].to_numpy(dtype=float, copy=False)
-
-                    if len(ts) == 0:
-                        continue
-
-                    t_vals = ts
-                    l_vals = ls
-                    r_vals = rs
-
-                    t_vals, l_vals, r_vals = _apply_ternary_stretch(t_vals, l_vals, r_vals)
-
-                    sums = t_vals + l_vals + r_vals
-                    with np.errstate(divide='ignore', invalid='ignore'):
-                        sums[sums == 0] = 1.0
-
-                        t_norm = t_vals / sums
-                        l_norm = l_vals / sums
-                        r_norm = r_vals / sums
-
-                    h = np.sqrt(3) / 2
-                    x_cart = 0.5 * t_norm + 1.0 * r_norm
-                    y_cart = h * t_norm
-
-                    marker_size = getattr(app_state, 'plot_marker_size', size)
-                    marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
-                    marker_shape = app_state.group_marker_map.get(
-                        cat,
-                        getattr(app_state, 'plot_marker_shape', 'o')
-                    )
-                    color = app_state.current_palette[cat]
-
-                    sc = app_state.ax.scatter(
-                        x_cart,
-                        y_cart,
-                        label=cat,
-                        color=color,
-                        s=marker_size,
-                        marker=marker_shape,
-                        alpha=marker_alpha,
-                        edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
-                        linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
-                        zorder=2,
-                        picker=5,
-                    )
-
-                    offsets = sc.get_offsets()
-                    sc.indices = indices
-                    scatters.append(sc)
-
-                    for j, idx in enumerate(indices):
-                        if j < len(offsets):
-                            x_val, y_val = offsets[j]
-                            key = (round(float(x_val), 2), round(float(y_val), 2))
-                            app_state.sample_index_map[key] = idx
-                            app_state.sample_coordinates[idx] = (x_val, y_val)
-                            app_state.artist_to_sample[(id(sc), j)] = idx
-
-                else:
-                    xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)
-                    ys = subset['_emb_y'].to_numpy(dtype=float, copy=False)
-
-                    if len(xs) == 0:
-                        continue
-
-                    marker_size = getattr(app_state, 'plot_marker_size', size)
-                    marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
-                    marker_shape = app_state.group_marker_map.get(
-                        cat,
-                        getattr(app_state, 'plot_marker_shape', 'o')
-                    )
-
-                    color = app_state.current_palette[cat]
-                    sc = app_state.ax.scatter(
-                        xs,
-                        ys,
-                        label=cat,
-                        color=color,
-                        s=marker_size,
-                        marker=marker_shape,
-                        alpha=marker_alpha,
-                        edgecolors=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
-                        linewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
-                        zorder=2,
-                        picker=5,
-                    )
-
-                    for j, idx in enumerate(indices):
-                        x_val = float(xs[j])
-                        y_val = float(ys[j])
-                        key = (round(x_val, 2), round(y_val, 2))
-                        app_state.sample_index_map[key] = idx
-                        app_state.sample_coordinates[idx] = (x_val, y_val)
-                        app_state.artist_to_sample[(id(sc), j)] = idx
-
-                scatters.append(sc)
-                app_state.scatter_collections.append(sc)
-                app_state.group_to_scatter[cat] = sc
-
-            except Exception as e:
-                logger.warning(f"Error plotting category {cat}: {e}")
-                continue
-
-        if not scatters and not is_kde_mode:
-            logger.error("No data points plotted")
+        if scatters is None:
             return False
 
         kde_utils.clear_marginal_axes()
@@ -750,177 +949,9 @@ def plot_embedding(
             except Exception as kde_err:
                 logger.warning(f"Failed to render marginal KDE: {kde_err}")
 
-        try:
-            handles = []
-            labels = []
-
-            if is_kde_mode:
-                from matplotlib.patches import Patch
-                for cat in unique_cats:
-                    color = app_state.current_palette[cat]
-                    patch = Patch(facecolor=color, edgecolor='none', label=cat, alpha=0.6)
-                    handles.append(patch)
-                    labels.append(cat)
-
-            legend_handles = handles if handles else list(scatters)
-            legend_labels = labels if labels else list(unique_cats)
-            for handle, label in _build_overlay_legend_entries(actual_algorithm):
-                if label in legend_labels:
-                    continue
-                legend_handles.append(handle)
-                legend_labels.append(label)
-
-            _place_inline_legend(
-                app_state.ax, group_col, legend_handles, legend_labels,
-                show_marginal_kde=show_marginal_kde,
-                scatters=scatters, is_kde_mode=is_kde_mode,
-            )
-        except Exception as e:
-            logger.warning(f"Legend creation error: {e}")
-
-        subset_info = " (Subset)" if app_state.active_subset_indices is not None else ""
-
-        if actual_algorithm == 'UMAP':
-            title = (
-                f'Embedding - UMAP{subset_info} (n_neighbors={umap_params["n_neighbors"]}, min_dist={umap_params["min_dist"]})\n'
-                f'Colored by {group_col}'
-            )
-        elif actual_algorithm == 'TSNE':
-            title = (
-                f'Embedding - t-SNE{subset_info} (perplexity={tsne_params["perplexity"]}, lr={tsne_params["learning_rate"]})\n'
-                f'Colored by {group_col}'
-            )
-        elif actual_algorithm == 'PCA':
-            title = f'Embedding - PCA{subset_info} (n_components={pca_params["n_components"]})\nColored by {group_col}'
-        elif actual_algorithm == 'RobustPCA':
-            title = (
-                f'Embedding - Robust PCA{subset_info} (n_components={robust_pca_params["n_components"]})\n'
-                f'Colored by {group_col}'
-            )
-        elif actual_algorithm == 'V1V2':
-            title = f'Geochem - V1-V2 Diagram{subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'TERNARY':
-            title = f'Raw - Ternary Plot{subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PB_EVOL_76':
-            title = f'Geochem - Pb Evolution / Model Curves (206-207){subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PB_EVOL_86':
-            title = f'Geochem - Pb Evolution / Model Curves (206-208){subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PLUMBOTECTONICS_76':
-            title = f'Geochem - Plumbotectonics (206-207){subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PLUMBOTECTONICS_86':
-            title = f'Geochem - Plumbotectonics (206-208){subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PB_MU_AGE':
-            title = f'Geochem - Mu vs Age{subset_info}\nColored by {group_col}'
-        elif actual_algorithm == 'PB_KAPPA_AGE':
-            title = f'Geochem - Kappa vs Age{subset_info}\nColored by {group_col}'
-        else:
-            title = f'{actual_algorithm}{subset_info}\nColored by {group_col}'
-
-        title_font_dict = {}
-
-        has_cjk = any('\u4e00' <= char <= '\u9fff' for char in title)
-        if has_cjk:
-            cjk_font = getattr(app_state, 'custom_cjk_font', '')
-            if cjk_font:
-                title_font_dict['fontname'] = cjk_font
-            else:
-                try:
-                    available = {f.name for f in font_manager.fontManager.ttflist}
-                    for f in CONFIG.get('preferred_plot_fonts', []):
-                        if f in available:
-                            title_font_dict['fontname'] = f
-                            break
-                except Exception:
-                    pass
-
-        if getattr(app_state, 'show_plot_title', True):
-            app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0), **title_font_dict)
-        else:
-            app_state.ax.set_title("")
-
-        if actual_algorithm == 'V1V2':
-            app_state.ax.set_xlabel("V1")
-            app_state.ax.set_ylabel("V2")
-        elif actual_algorithm in ('PB_EVOL_76', 'PLUMBOTECTONICS_76'):
-            app_state.ax.set_xlabel("206Pb/204Pb")
-            app_state.ax.set_ylabel("207Pb/204Pb")
-        elif actual_algorithm in ('PB_EVOL_86', 'PLUMBOTECTONICS_86'):
-            app_state.ax.set_xlabel("206Pb/204Pb")
-            app_state.ax.set_ylabel("208Pb/204Pb")
-        elif actual_algorithm == 'PB_MU_AGE':
-            app_state.ax.set_xlabel("Age (Ma)")
-            app_state.ax.set_ylabel("Mu (238U/204Pb)")
-        elif actual_algorithm == 'PB_KAPPA_AGE':
-            app_state.ax.set_xlabel("Age (Ma)")
-            app_state.ax.set_ylabel("Kappa (232Th/238U)")
-        elif actual_algorithm == 'TERNARY':
-            app_state.ax.set_aspect('equal')
-        elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
-            idx_x = app_state.pca_component_indices[0] + 1
-            idx_y = app_state.pca_component_indices[1] + 1
-            app_state.ax.set_xlabel(f"PC{idx_x}")
-            app_state.ax.set_ylabel(f"PC{idx_y}")
-        else:
-            app_state.ax.set_xlabel(f"{actual_algorithm} Dimension 1")
-            app_state.ax.set_ylabel(f"{actual_algorithm} Dimension 2")
-
-        _apply_axis_text_style(app_state.ax)
-
-        if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
-            geochemistry, _ = _lazy_import_geochemistry()
-            params = geochemistry.engine.get_parameters() if geochemistry else {}
-            if getattr(app_state, 'show_model_curves', True):
-                params_list = [params]
-                _draw_model_curves(app_state.ax, actual_algorithm, params_list)
-
-            if getattr(app_state, 'show_isochrons', True):
-                _draw_isochron_overlays(app_state.ax, actual_algorithm)
-
-            # Draw selected isochron if isochron tool is active
-            if app_state.selection_tool == 'isochron':
-                _draw_selected_isochron(app_state.ax)
-
-            if getattr(app_state, 'show_paleoisochrons', True):
-                ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
-                _draw_paleoisochrons(app_state.ax, actual_algorithm, ages, params)
-
-            if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86') and getattr(app_state, 'show_model_age_lines', True):
-                df_subset, _ = _get_subset_dataframe()
-                if df_subset is not None:
-                    col_206, col_207, _ = _get_pb_columns(df_subset.columns)
-                    if col_206 and col_207:
-                        pb206 = pd.to_numeric(df_subset[col_206], errors='coerce').values
-                        pb207 = pd.to_numeric(df_subset[col_207], errors='coerce').values
-                        if actual_algorithm == 'PB_EVOL_76':
-                            _draw_model_age_lines(app_state.ax, pb206, pb207, params)
-                        else:
-                            col_208 = "208Pb/204Pb" if "208Pb/204Pb" in df_subset.columns else None
-                            if col_208:
-                                pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
-                                _draw_model_age_lines_86(app_state.ax, pb206, pb207, pb208, params)
-
-        if actual_algorithm in ('PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86'):
-            if getattr(app_state, 'show_paleoisochrons', True):
-                _draw_plumbotectonics_isoage_lines(app_state.ax, actual_algorithm)
-            if getattr(app_state, 'show_plumbotectonics_curves', True):
-                _draw_plumbotectonics_curves(app_state.ax, actual_algorithm)
-
-        if actual_algorithm in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
-            if getattr(app_state, 'show_paleoisochrons', True):
-                ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
-                _draw_mu_kappa_paleoisochrons(app_state.ax, ages)
-
-        if app_state.ax is prev_ax and prev_xlim and prev_ylim:
-            if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
-                try:
-                    if prev_embedding_type and str(prev_embedding_type).upper() == str(actual_algorithm).upper():
-                        app_state.ax.set_xlim(prev_xlim)
-                        app_state.ax.set_ylim(prev_ylim)
-                except Exception:
-                    pass
-
-        if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
-            _draw_equation_overlays(app_state.ax)
+        _render_legend(actual_algorithm, group_col, unique_cats, scatters)
+        _render_title_labels(actual_algorithm, group_col, umap_params, tsne_params, pca_params, robust_pca_params)
+        _render_geo_overlays(actual_algorithm, prev_ax, prev_embedding_type, prev_xlim, prev_ylim)
 
         app_state.ax.tick_params()
 
@@ -1093,8 +1124,8 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
                 if subset.empty:
                     continue
 
-                xs = subset[data_columns[0]].astype(float).values
-                ys = subset[data_columns[1]].astype(float).values
+                xs = pd.to_numeric(subset[data_columns[0]], errors='coerce').values
+                ys = pd.to_numeric(subset[data_columns[1]], errors='coerce').values
                 indices = subset.index.tolist()
 
                 color = app_state.current_palette[cat]
@@ -1277,9 +1308,9 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             if subset.empty:
                 continue
 
-            xs = subset[data_columns[0]].astype(float).values
-            ys = subset[data_columns[1]].astype(float).values
-            zs = subset[data_columns[2]].astype(float).values
+            xs = pd.to_numeric(subset[data_columns[0]], errors='coerce').values
+            ys = pd.to_numeric(subset[data_columns[1]], errors='coerce').values
+            zs = pd.to_numeric(subset[data_columns[2]], errors='coerce').values
 
             marker_size = getattr(app_state, 'plot_marker_size', size)
             marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.85)

@@ -2,15 +2,18 @@
 Session Management - Save and Load Algorithm Parameters
 Handles persistence of last used parameters across program sessions
 """
+from __future__ import annotations
+
 import json
 import logging
+from typing import Any
 
 from .config import CONFIG
 
 logger = logging.getLogger(__name__)
 
 
-def _normalize_list(value):
+def _normalize_list(value: Any) -> list[Any]:
     if value is None:
         return []
     if isinstance(value, list):
@@ -22,7 +25,7 @@ def _normalize_list(value):
     return []
 
 
-def _normalize_algorithm(value):
+def _normalize_algorithm(value: Any) -> str:
     if not value:
         return 'UMAP'
     value_str = str(value).strip()
@@ -38,7 +41,7 @@ def _normalize_algorithm(value):
     return value_str if value_str else 'UMAP'
 
 
-def _normalize_render_mode(value, algorithm, plot_mode):
+def _normalize_render_mode(value: Any, algorithm: str, plot_mode: Any) -> str:
     if value:
         value_str = str(value).strip()
         if value_str in ('UMAP', 'tSNE', 'PCA', 'RobustPCA', '2D', '3D'):
@@ -50,7 +53,7 @@ def _normalize_render_mode(value, algorithm, plot_mode):
     return algorithm or 'UMAP'
 
 
-def _merge_params(defaults, override):
+def _merge_params(defaults: dict[str, Any], override: dict[str, Any] | None) -> dict[str, Any]:
     if not isinstance(override, dict):
         override = {}
     merged = defaults.copy()
@@ -58,7 +61,7 @@ def _merge_params(defaults, override):
     return merged
 
 
-def _migrate_session_data(session_data, current_version):
+def _migrate_session_data(session_data: Any, current_version: int) -> tuple[dict[str, Any], bool]:
     if not isinstance(session_data, dict):
         session_data = {}
     migrated = dict(session_data)
@@ -139,10 +142,23 @@ def _migrate_session_data(session_data, current_version):
     return migrated, changed
 
 
-def save_session_params(algorithm, umap_params, tsne_params, point_size, group_col,
-                        group_cols=None, data_cols=None, file_path=None, sheet_name=None,
-                        render_mode='UMAP', selected_2d_cols=None, selected_3d_cols=None,
-                        language=None, tooltip_columns=None, ui_theme=None):
+def save_session_params(
+    algorithm: str,
+    umap_params: dict[str, Any],
+    tsne_params: dict[str, Any],
+    point_size: float | int,
+    group_col: str,
+    group_cols: list[str] | None = None,
+    data_cols: list[str] | None = None,
+    file_path: str | None = None,
+    sheet_name: str | None = None,
+    render_mode: str = 'UMAP',
+    selected_2d_cols: list[str] | None = None,
+    selected_3d_cols: list[str] | None = None,
+    language: str | None = None,
+    tooltip_columns: list[str] | None = None,
+    ui_theme: str | None = None,
+) -> bool:
     """
     Save current session parameters to temporary file
     """
@@ -178,7 +194,7 @@ def save_session_params(algorithm, umap_params, tsne_params, point_size, group_c
         return False
 
 
-def load_session_params():
+def load_session_params() -> dict[str, Any] | None:
     """
     Load last session parameters from temporary file
     
@@ -232,7 +248,7 @@ def load_session_params():
         return None
 
 
-def clear_session_params():
+def clear_session_params() -> bool:
     """Clear saved session parameters"""
     try:
         params_file = CONFIG['params_temp_file']
@@ -245,7 +261,7 @@ def clear_session_params():
     return False
 
 
-def get_temp_dir_size():
+def get_temp_dir_size() -> float:
     """Get size of temp directory in MB"""
     try:
         total_size = 0

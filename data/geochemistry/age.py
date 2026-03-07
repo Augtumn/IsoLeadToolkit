@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 """Model age calculations."""
+from __future__ import annotations
+
+from typing import Any, Callable
+
 import numpy as np
 from scipy import optimize
 
@@ -11,10 +15,15 @@ from .engine import (
     B1_SK,
     T_EARTH_CANON,
     T_SK_STAGE2,
+    EPSILON,
 )
 
 
-def _solve_age_scipy(f, bounds, search_points=200):
+def _solve_age_scipy(
+    f: Callable[[float], float],
+    bounds: tuple[float, float],
+    search_points: int = 200,
+) -> float | None:
     """
     使用 Brent 方法求解年龄方程的根
     
@@ -64,7 +73,12 @@ def _solve_age_scipy(f, bounds, search_points=200):
     except Exception:
         return None
 
-def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_age=None):
+def calculate_single_stage_age(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+    initial_age: float | None = None,
+) -> np.ndarray | float | None:
     """
     计算单阶段模式年龄 (Single Stage Model Age)
     通常称为 Holmes-Houtermans 年龄或 CDT 模式年龄。
@@ -81,7 +95,8 @@ def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_ag
     Returns:
         np.ndarray or float: 模式年龄 (Ma)
     """
-    if params is None: params = engine.params
+    if params is None:
+        params = engine.params
     
     l238 = params['lambda_238']
     l235 = params['lambda_235']
@@ -99,7 +114,7 @@ def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_ag
     if S206.ndim == 0:
         def f(t):
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < 1e-50: denom = 1e-50
+            if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(S206 - a0_val) < 1e-10: return 1e10
@@ -119,7 +134,7 @@ def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_ag
 
         def f_scalar(t):
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < 1e-50: denom = 1e-50
+            if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(s206 - a0_val) < 1e-10: return 1e10 # 避免除零
@@ -132,7 +147,11 @@ def calculate_single_stage_age(Pb206_204_S, Pb207_204_S, params=None, initial_ag
         
     return np.array(results).reshape(S206.shape)
 
-def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
+def calculate_two_stage_age(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray | float | None:
     """
     计算两阶段模式年龄 (Two Stage Model Age - Stacey & Kramers)
     基于 SK 模型第二阶段方程求解。
@@ -144,7 +163,8 @@ def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
     Returns:
         np.ndarray or float: 模式年龄 (Ma)
     """
-    if params is None: params = engine.params
+    if params is None:
+        params = engine.params
 
     l238 = params['lambda_238']
     l235 = params['lambda_235']
@@ -160,7 +180,7 @@ def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
     if S206.ndim == 0:
         def f(t):
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < 1e-50: denom = 1e-50
+            if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(S206 - a1_val) < 1e-10: return 1e10
@@ -180,7 +200,7 @@ def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
             
         def f_scalar(t):
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < 1e-50: denom = 1e-50
+            if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(s206 - a1_val) < 1e-10: return 1e10
@@ -193,7 +213,11 @@ def calculate_two_stage_age(Pb206_204_S, Pb207_204_S, params=None):
 
     return np.array(results).reshape(S206.shape)
 
-def calculate_model_age(Pb206_204_S, Pb207_204_S, two_stage=False):
+def calculate_model_age(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    two_stage: bool = False,
+) -> np.ndarray | float | None:
     """
     Calculate model age (backward compatible function)
     

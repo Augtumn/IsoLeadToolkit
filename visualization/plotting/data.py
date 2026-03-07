@@ -62,14 +62,19 @@ def _lazy_import_geochemistry():
 
 def _get_analysis_data():
     """Helper to get the data subset for analysis (all or selected)."""
-    if app_state.active_subset_indices is not None:
-        indices = sorted(list(app_state.active_subset_indices))
+    data_state = getattr(app_state, 'data', app_state)
+    subset_indices = getattr(data_state, 'active_subset_indices', None)
+    data_cols = getattr(data_state, 'data_cols', app_state.data_cols)
+    df_global = getattr(data_state, 'df_global', app_state.df_global)
+
+    if subset_indices is not None:
+        indices = sorted(list(subset_indices))
         if not indices:
             return None, None
-        X = app_state.df_global.iloc[indices][app_state.data_cols].values
+        X = df_global.iloc[indices][data_cols].values
     else:
-        X = app_state.df_global[app_state.data_cols].values
-        indices = list(range(len(app_state.df_global)))
+        X = df_global[data_cols].values
+        indices = list(range(len(df_global)))
 
     try:
         X = pd.to_numeric(pd.DataFrame(X).stack(), errors='coerce').unstack().values

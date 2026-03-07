@@ -289,16 +289,20 @@ def _build_group_palette(unique_cats):
 
 def _get_subset_dataframe():
     """Return the active subset of the dataframe and its indices."""
-    if app_state.df_global is None:
+    data_state = getattr(app_state, 'data', app_state)
+    df_global = getattr(data_state, 'df_global', app_state.df_global)
+    subset_indices = getattr(data_state, 'active_subset_indices', app_state.active_subset_indices)
+
+    if df_global is None:
         return None, None
 
-    if app_state.active_subset_indices is not None:
-        indices = sorted(list(app_state.active_subset_indices))
+    if subset_indices is not None:
+        indices = sorted(list(subset_indices))
         if not indices:
             return None, None
-        return app_state.df_global.iloc[indices].copy(), indices
+        return df_global.iloc[indices].copy(), indices
 
-    return app_state.df_global.copy(), list(range(len(app_state.df_global)))
+    return df_global.copy(), list(range(len(df_global)))
 
 def _get_pb_columns(columns):
     """Find Pb isotope ratio columns with a best-effort heuristic."""

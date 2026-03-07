@@ -4,9 +4,11 @@ Mixing model calculations for endmember contributions.
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
+from typing import Any
 
 
-def _solve_simplex_weights(endmember_matrix, target):
+def _solve_simplex_weights(endmember_matrix: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, float]:
     """Solve for non-negative weights summing to 1."""
     endmember_matrix = np.asarray(endmember_matrix, dtype=float)
     target = np.asarray(target, dtype=float)
@@ -57,7 +59,12 @@ def _solve_simplex_weights(endmember_matrix, target):
         raise ValueError(f"Mixing solve failed: {err}") from err
 
 
-def calculate_mixing(df, endmember_groups, mixture_groups, columns):
+def calculate_mixing(
+    df: pd.DataFrame,
+    endmember_groups: dict[str, list[int]],
+    mixture_groups: dict[str, list[int]],
+    columns: list[str],
+) -> list[dict[str, Any]]:
     """Calculate mixing proportions for each mixture group."""
     if df is None or df.empty:
         raise ValueError("No data available.")
@@ -76,7 +83,7 @@ def calculate_mixing(df, endmember_groups, mixture_groups, columns):
         indices = list(endmember_groups.get(name, []))
         if not indices:
             raise ValueError(f"Endmember group '{name}' is empty.")
-        values = df.iloc[indices][columns].astype(float)
+        values = df.iloc[indices][columns].apply(pd.to_numeric, errors='coerce')
         endmember_means.append(values.mean(axis=0).to_numpy())
 
     endmember_matrix = np.column_stack(endmember_means)
@@ -84,7 +91,7 @@ def calculate_mixing(df, endmember_groups, mixture_groups, columns):
     for mix_name, mix_indices in mixture_groups.items():
         if not mix_indices:
             continue
-        mix_values = df.iloc[list(mix_indices)][columns].astype(float)
+        mix_values = df.iloc[list(mix_indices)][columns].apply(pd.to_numeric, errors='coerce')
         target = mix_values.mean(axis=0).to_numpy()
 
         weights, residual = _solve_simplex_weights(endmember_matrix, target)
