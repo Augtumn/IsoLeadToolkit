@@ -370,7 +370,7 @@ class MLClassifierPlugin(BasePlugin, Protocol):
 ### 已完成（本轮）
 
 - 显示面板布局重构为三段式：`Presets & Themes`、`Text & Markers`、`Axes, Grid & Canvas`。
-- 轴线与网格高级参数改为双列网格布局，减少长滚动，提高参数可见性。
+- 轴线与网格高级参数使用单列分组布局（Figure/Grid/Ticks/Spines/Text），提升可读性。
 
 ### 下一步功能规划
 
@@ -382,7 +382,7 @@ class MLClassifierPlugin(BasePlugin, Protocol):
 #### F2 颜色选择统一（高优先级）
 
 - 显示面板颜色项采用与曲线样式一致的小方块取色交互。
-- 保留颜色文本输入，同时增加合法性校验与自动归一化（统一为十六进制颜色）。
+- 移除手动输入颜色路径，仅保留色块按钮取色；按钮实时显示当前颜色。
 
 #### F3 主题管理收敛（说明）
 

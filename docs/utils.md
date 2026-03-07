@@ -2,15 +2,14 @@
 
 ## 模块概述
 
-`utils/` 提供日志和通用工具函数。
+`utils/` 提供日志相关工具函数。
 
 **文件清单**
 
 | 文件 | 职责 |
 |------|------|
-| `__init__.py` | 模块入口，导出 `setup_logging`, `LoggerWriter`, `build_marker_icon` |
+| `__init__.py` | 模块入口，导出 `setup_logging`, `LoggerWriter` |
 | `logger.py` | 旋转文件日志 + stdout/stderr 重定向 |
-| `icons.py` | matplotlib 标记形状渲染为 Qt5 QIcon |
 
 ---
 
@@ -59,16 +58,10 @@ def setup_logging(log_filename='isotopes_analyse.log',
 
 ---
 
-## 2. icons.py — 标记图标渲染
+## 2. 图标与色块工具迁移
 
-```python
-def build_marker_icon(color: str, marker: str, size: int = 16) -> QIcon
-```
-
-- 将 matplotlib 标记形状渲染为 Qt5 QIcon
-- 支持标记: `'o'`, `'s'`, `'^'`, `'v'`, `'D'`, `'P'`, `'*'`, `'+'`, `'x'`, `'X'`
-- 填充标记集: `{'o', 's', '^', 'v', 'D', 'P', '*'}`
-- 渲染失败时回退为纯色 pixmap
+- 图标与色块渲染工具已迁移到 `ui/icons.py`
+- `utils/` 不再维护 `icons.py`
 
 ---
 
@@ -78,10 +71,6 @@ def build_marker_icon(color: str, marker: str, size: int = 16) -> QIcon
 logger.py (无内部依赖)
   ↑
 main.py (启动时调用 setup_logging())
-
-icons.py (依赖 PyQt5)
-  ↑
-ui/main_window.py, ui/panels/legend_panel.py
 ```
 
 ---

@@ -12,6 +12,7 @@
 | `app.py` | 481 | 应用生命周期管理 + Qt/Python 调试钩子 |
 | `main_window.py` | 1,084 | 主窗口 (画布 + 图例面板 + 工具栏) |
 | `control_panel.py` | 505 | 控制面板组装 + 对话框入口 |
+| `icons.py` | 230 | UI 色块/标记图标渲染工具 |
 | `panels/` | 5,312 | 6 个标签页的面板实现 |
 | `dialogs/` | 3,967 | 11 个专用对话框 |
 
@@ -154,7 +155,7 @@ def _move_legend_item_to_top(self, entry_type, entry_key)
     """双击置顶：更新顺序状态并重建列表，不直接搬运 item/widget 指针"""
 
 def _build_marker_icon(self, marker, color, size=16) -> QIcon
-    """委托到 utils.icons.build_marker_icon()"""
+    """委托到 ui.icons.build_marker_icon()"""
 
 def closeEvent(self, event)
     """关闭时保存会话参数"""
@@ -224,6 +225,7 @@ ui/
 #### Display (显示)
 - UI 主题 (Modern Light/Dark, Scientific Blue, Retro Lab)
 - 保存/加载绘图主题
+- 三段式分区：`Presets & Themes`、`Text & Markers`、`Axes, Grid & Canvas`
 - 字体设置 (主字体 + CJK 字体)
 - 字体大小 (标题/标签/刻度/图例)
 - 标记大小/透明度
@@ -236,6 +238,8 @@ ui/
 - 脊柱显示 (上/右)
 - 标签/标题样式 (颜色/粗细/间距)
 - 图例框样式
+- 颜色选择统一为“小方块按钮”交互，点击弹出取色器；按钮实时显示当前颜色
+- `Axes & Lines` 高级参数使用单列分组布局（Figure/Grid/Ticks/Spines/Text）
 
 调色板/色阶选择已移至 Legend 面板的自动样式配置。
 
@@ -327,6 +331,7 @@ def _delete_theme(self)   # 删除已保存主题
 ### DisplayPanel
 - UI 主题/绘图样式/主题保存
 - 样式变更统一走 BasePanel._on_style_change()
+- 标题显隐/标题间距走轻量刷新 (`refresh_plot_style`)；调色板/字体等关键变更仍触发完整重绘
 
 ### AnalysisPanel
 - KDE、选择工具、分析/混合/端元/ML
