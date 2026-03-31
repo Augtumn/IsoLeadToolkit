@@ -321,6 +321,12 @@ src/
 
 ## 阶段进展（2026-04-01）
 
+- 已完成 A1（测试与 CI 最小门禁）首轮落地：
+    - 新增 `tests/` 最小 smoke 集合，覆盖导出用例、选择/tooltip 用例、状态直写检查脚本调用。
+    - 新增 `pyproject.toml` 中的 `pytest` 配置与 `dev` 可选依赖（`pytest`）。
+    - 新增 GitHub Actions 工作流 `.github/workflows/quality-gate.yml`（Windows）执行：`pytest` + `scripts/check_state_mutations.py --fail-on-hits`。
+    - 本地验证已通过：`8 passed`，状态直写检查保持 `TOTAL=0`。
+
 - 已创建并推送架构改造总分支：`epic/architecture-modernization-2026q2`。
 - 已完成 A3（Application 层）导出链路的一步到位迁移：
     - 新增 `application/use_cases/export_data.py`，统一承载导出 DataFrame 构建、CSV/Excel 写出、Excel 追加。
