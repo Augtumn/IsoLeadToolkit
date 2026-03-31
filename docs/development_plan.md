@@ -403,6 +403,11 @@ src/
     - `ui/panels/legend/build.py` 已剥离色阶/形状编辑器逻辑到 `ui/panels/legend/editors.py`，`LegendPanelMixin` 更新为 build/editors/actions 三层组合。
     - `ui/dialogs/provenance_ml_dialog.py` 已收敛为兼容包装器，新增 `ui/dialogs/provenance_ml/dialog.py`、`build.py`、`workflow.py` 形成初始化/构建/执行分层。
     - 兼容性验证：`ProvenanceMLDialog` 与 `show_provenance_ml` 入口保持不变，导入冒烟通过。
+- 已完成可视化绘图层双模块拆分（2026-04-01 夜间续）：
+    - `visualization/plotting/render.py` 已抽离通用绘图辅助逻辑到 `visualization/plotting/render_helpers.py`，主文件聚焦 `plot_embedding` / `plot_2d_data` / `plot_3d_data` 主流程。
+    - `visualization/plotting/geo.py` 已抽离覆盖层与 plumbotectonics 逻辑到 `visualization/plotting/geo_overlay_helpers.py`，主文件聚焦等时线拟合、模型年龄线、方程覆盖等核心计算。
+    - 兼容性验证：`pytest`（8 passed）与导入冒烟通过，`scripts/check_state_mutations.py --fail-on-hits` 仍保持 `TOTAL=0`。
+    - 量化结果：`render.py` 由约 1297 行降至 758 行；`geo.py` 由约 1733 行降至 1140 行。
 
 ## 全局改进计划
 
