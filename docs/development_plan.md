@@ -359,6 +359,10 @@ src/
     - 新增 `application/use_cases/tooltip_content.py`，承载 hover 提示文本拼装逻辑（默认字段、空列回退、选中状态标记）。
     - `visualization/events.py` 相关路径已改为调用 use case，事件层进一步收敛为交互编排与 UI 回调。
     - 新增 `visualization/selection_overlay.py`，将选中高亮圈与置信椭圆绘制从 events 模块拆分为独立渲染服务。
+- 已完成 UI 大文件结构化拆分（DataPanel）：
+    - `ui/panels/data_panel.py` 已收敛为薄组装器（18 行），仅负责 mixin 组合。
+    - 新增 `ui/panels/data/` 子包并拆分职责：`build.py`（UI 构建）、`projection.py`（渲染/算法参数）、`geochem.py`（地球化学交互）、`grouping.py`（分组与 tooltip）。
+    - 可量化结果：原 `ui/panels/data_panel.py` 约 1356 行已拆分为多个职责模块，降低单文件认知复杂度并与 `export/` 子包模式保持一致。
 
 ## 全局改进计划
 

@@ -205,7 +205,13 @@ ui/
 ├── control_panel.py
 └── panels/
     ├── base_panel.py
-    ├── data_panel.py
+    ├── data_panel.py  # 组装器
+    ├── data/
+    │   ├── __init__.py
+    │   ├── build.py
+    │   ├── projection.py
+    │   ├── geochem.py
+    │   └── grouping.py
     ├── display_panel.py
     ├── analysis_panel.py
     ├── export_panel.py
