@@ -363,6 +363,14 @@ src/
     - `ui/panels/data_panel.py` 已收敛为薄组装器（18 行），仅负责 mixin 组合。
     - 新增 `ui/panels/data/` 子包并拆分职责：`build.py`（UI 构建）、`projection.py`（渲染/算法参数）、`geochem.py`（地球化学交互）、`grouping.py`（分组与 tooltip）。
     - 可量化结果：原 `ui/panels/data_panel.py` 约 1356 行已拆分为多个职责模块，降低单文件认知复杂度并与 `export/` 子包模式保持一致。
+- 已完成 UI 面板第二轮结构化拆分（Analysis/Display/Legend）：
+    - `ui/panels/analysis_panel.py`、`ui/panels/display_panel.py`、`ui/panels/legend_panel.py` 已收敛为薄组装器。
+    - 新增子包：`ui/panels/analysis/`、`ui/panels/display/`、`ui/panels/legend/`，对应 `panel.py` 承载原业务逻辑。
+    - 兼容性验证：原导入路径保持不变，面板类名保持不变。
+- 已完成对话框模块化拆分（DataImportDialog）：
+    - `ui/dialogs/data_import_dialog.py` 已收敛为包装器（保留 `Qt5DataImportDialog` 与 `get_data_import_configuration` 兼容入口）。
+    - 新增 `ui/dialogs/data_import/dialog.py` 承载原统一导入对话框逻辑。
+    - 导入冒烟检查通过，UI 对外 API 无破坏性变更。
 
 ## 全局改进计划
 

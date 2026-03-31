@@ -212,8 +212,14 @@ ui/
     │   ├── projection.py
     │   ├── geochem.py
     │   └── grouping.py
-    ├── display_panel.py
-    ├── analysis_panel.py
+    ├── display_panel.py  # 组装器
+    ├── display/
+    │   ├── __init__.py
+    │   └── panel.py
+    ├── analysis_panel.py  # 组装器
+    ├── analysis/
+    │   ├── __init__.py
+    │   └── panel.py
     ├── export_panel.py
     ├── export/
     │   ├── __init__.py
@@ -222,7 +228,10 @@ ui/
     │   ├── data_export.py
     │   ├── image_export.py
     │   └── common.py
-    ├── legend_panel.py
+    ├── legend_panel.py  # 组装器
+    ├── legend/
+    │   ├── __init__.py
+    │   └── panel.py
     └── geo_panel.py
 ```
 
@@ -350,10 +359,18 @@ def _delete_theme(self)   # 删除已保存主题
 - 标题显隐/标题间距走轻量刷新 (`refresh_plot_style`)；调色板/字体等关键变更仍触发完整重绘
 - 使用 `QToolBox` 折叠分区：`Presets & Themes`、`Text & Markers`、`Axes, Grid & Canvas`
 
+模块拆分说明（2026-04）:
+- `panels/display_panel.py` 仅保留 `DisplayPanel` 组装类。
+- `panels/display/panel.py` 承载显示面板全部构建与交互逻辑。
+
 ### AnalysisPanel
 - KDE、选择工具、分析/混合/端元/ML
 - 选择状态同步与配置对话框
 - 使用 `QToolBox` 折叠分区：KDE、方程叠加、选择工具、数据分析、子集分析、混合、端元识别、ML、置信椭圆
+
+模块拆分说明（2026-04）:
+- `panels/analysis_panel.py` 仅保留 `AnalysisPanel` 组装类。
+- `panels/analysis/panel.py` 承载分析面板全部构建与交互逻辑。
 
 ### ExportPanel
 - 数据导出：导出选中数据 (CSV/Excel/追加)
@@ -380,6 +397,10 @@ def _delete_theme(self)   # 删除已保存主题
 - 自定义色阶/形状阶梯
 - 使用 `QToolBox` 折叠分区：`Legend Position`、`Inline Legend Style`
 
+模块拆分说明（2026-04）:
+- `panels/legend_panel.py` 仅保留 `LegendPanel` 组装类。
+- `panels/legend/panel.py` 承载图例面板全部构建与交互逻辑。
+
 ### GeoPanel
 - 模型选择与参数管理
 - 使用 `QToolBox` 折叠分区：模型、时间参数、衰变常数、初始铅组成、地幔参数、应用操作
@@ -397,7 +418,7 @@ def _delete_theme(self)   # 删除已保存主题
 
 | 对话框 | 行数 | 职责 |
 |--------|------|------|
-| `data_import_dialog.py` | 694 | 统一数据导入 (文件+工作表+列) |
+| `data_import_dialog.py` + `data_import/dialog.py` | 27 + 647 | 统一数据导入 (文件+工作表+列)，包装器 + 逻辑模块 |
 | `provenance_ml_dialog.py` | 663 | ML 产地分析配置 |
 | `endmember_dialog.py` | 431 | 端元识别参数 |
 | `isochron_dialog.py` | 317 | 等时线回归设置 |
@@ -433,7 +454,7 @@ class SomeDialog(QDialog):
 
 ### 关键对话框详解
 
-#### Qt5DataImportDialog (data_import_dialog.py)
+#### Qt5DataImportDialog (data_import_dialog.py + data_import/dialog.py)
 - 三栏布局: 文件 | 工作表 | 列选择
 - 数据预览表 (前 8 行 × 6 列)
 - 最近文件列表 (最多 8 个)
