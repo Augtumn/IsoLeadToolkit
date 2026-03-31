@@ -209,6 +209,13 @@ ui/
     ├── display_panel.py
     ├── analysis_panel.py
     ├── export_panel.py
+    ├── export/
+    │   ├── __init__.py
+    │   ├── build.py
+    │   ├── selection.py
+    │   ├── data_export.py
+    │   ├── image_export.py
+    │   └── common.py
     ├── legend_panel.py
     └── geo_panel.py
 ```
@@ -350,6 +357,15 @@ def _delete_theme(self)   # 删除已保存主题
 - 导出入口：`Export Image`（直接导出）+ `Preview Export`（预览后保存）
 - 选择状态同步
 - 使用 `QToolBox` 折叠分区：`Data Export`、`Image Export`
+- 专题文档：`docs/export.md`
+
+模块拆分说明（2026-03）:
+- `panels/export_panel.py` 仅保留 `ExportPanel` 组装类与轻量入口方法。
+- `panels/export/build.py`：UI 构建、控件初始化、信号连接。
+- `panels/export/selection.py`：选择状态同步、选择工具联动。
+- `panels/export/data_export.py`：CSV/Excel/追加导出流程。
+- `panels/export/image_export.py`：离屏重绘、预览导出、直接导出。
+- `panels/export/common.py`：导出通用工具与共享辅助逻辑。
 
 ### LegendPanel
 - 图例位置 (外部/图内)

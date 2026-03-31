@@ -29,6 +29,8 @@
     - 新增导出参数：`DPI`、`Tight Bounding Box`、`Padding (inch)`、`Transparent Background`。
     - 新增模板来源提示：优先 `SciencePlots`，不可用时自动回退到内置样式。
     - 统一预览保存与直接导出的 `savefig` 选项解析与后缀归一化逻辑。
+    - 导出面板完成模块化拆分：`export_panel.py` 收敛为组装器，图像导出/数据导出/选择同步/公共逻辑迁移到 `ui/panels/export/` 子包。
+    - E5 文档项部分完成：新增 `docs/export.md`，补充导出架构、流程、参数与依赖说明。
 
 ---
 
