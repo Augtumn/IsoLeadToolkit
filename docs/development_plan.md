@@ -22,6 +22,14 @@
 - 延后事项：`1.2 ML 管线增强`（依赖插件接口与插件管理能力）。
 - 进入条件：`插件开发计划` 至少完成 M2（内置插件迁移）。
 
+## 阶段进展（2026-03-31）
+
+- 图像导出能力完成一轮增强（对应 1.1 的 E2/E3 局部落地）：
+    - `ExportPanel` 图像导出新增 `Export Image` 直接导出入口，保留 `Preview Export` 预览链路。
+    - 新增导出参数：`DPI`、`Tight Bounding Box`、`Padding (inch)`、`Transparent Background`。
+    - 新增模板来源提示：优先 `SciencePlots`，不可用时自动回退到内置样式。
+    - 统一预览保存与直接导出的 `savefig` 选项解析与后缀归一化逻辑。
+
 ---
 
 ## 全局改进计划

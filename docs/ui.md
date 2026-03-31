@@ -253,8 +253,9 @@ ui/
 
 #### Export (导出)
 - 数据导出：导出选中数据（CSV/Excel/追加）
-- 图像导出：按期刊预设进行 SciencePlots 离屏重绘后导出（已实现）
-- 格式选项
+- 图像导出：按期刊预设离屏重绘导出（优先 SciencePlots，缺失时自动回退内置样式）
+- 图像参数：格式、DPI、点大小、图例大小、紧凑边界框、透明背景、边距
+- 导出流程：支持“直接导出”与“预览后导出”两种模式
 
 #### Legend (图例)
 - 图例位置 (外部 OUT L/OUT R，图内九宫格)
@@ -343,7 +344,10 @@ def _delete_theme(self)   # 删除已保存主题
 
 ### ExportPanel
 - 数据导出：导出选中数据 (CSV/Excel/追加)
-- 图像导出：基于 SciencePlots 的期刊预设离屏重绘导出（PNG/TIFF/PDF/SVG/EPS）
+- 图像导出：期刊预设离屏重绘导出（PNG/TIFF/PDF/SVG/EPS）
+- SciencePlots 可用时使用期刊样式链；不可用时自动回退内置 rcParams 样式
+- 图像参数控制：DPI、点大小、图例大小、tight bbox、padding、透明背景
+- 导出入口：`Export Image`（直接导出）+ `Preview Export`（预览后保存）
 - 选择状态同步
 - 使用 `QToolBox` 折叠分区：`Data Export`、`Image Export`
 

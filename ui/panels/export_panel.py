@@ -9,11 +9,12 @@ from matplotlib.colors import to_hex
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QGroupBox, QMessageBox, QToolBox,
     QHBoxLayout, QLabel, QComboBox, QSpinBox, QDialog, QDialogButtonBox, QSlider, QFileDialog,
+    QCheckBox, QDoubleSpinBox,
     QScrollArea,
 )
 from PyQt5.QtCore import Qt
 
-from core import translate, app_state
+from core import CONFIG, translate, app_state
 from .base_panel import BasePanel
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,14 @@ class ExportPanel(BasePanel):
         self.image_format_combo = None
         self.image_point_size_spin = None
         self.image_legend_size_spin = None
+        self.image_dpi_spin = None
+        self.image_tight_bbox_check = None
+        self.image_transparent_check = None
+        self.image_pad_inches_spin = None
+        self.image_style_source_label = None
+        self.export_image_button = None
         self.preview_image_button = None
+        self._scienceplots_available = None
 
     def build(self) -> QWidget:
         widget = QWidget()
@@ -111,6 +119,25 @@ class ExportPanel(BasePanel):
         format_row.addWidget(self.image_format_combo)
         image_layout.addLayout(format_row)
 
+        style_source_row = QHBoxLayout()
+        style_source_label = QLabel(translate("Template Source"))
+        style_source_label.setProperty('translate_key', 'Template Source')
+        style_source_row.addWidget(style_source_label)
+        self.image_style_source_label = QLabel()
+        style_source_row.addWidget(self.image_style_source_label)
+        image_layout.addLayout(style_source_row)
+
+        dpi_row = QHBoxLayout()
+        dpi_label = QLabel(translate("Export DPI"))
+        dpi_label.setProperty('translate_key', 'Export DPI')
+        dpi_row.addWidget(dpi_label)
+        self.image_dpi_spin = QSpinBox()
+        self.image_dpi_spin.setRange(72, 1200)
+        self.image_dpi_spin.setSingleStep(25)
+        self.image_dpi_spin.setValue(int(CONFIG.get('savefig_dpi', 400)))
+        dpi_row.addWidget(self.image_dpi_spin)
+        image_layout.addLayout(dpi_row)
+
         point_size_row = QHBoxLayout()
         point_size_label = QLabel(translate("Point Size"))
         point_size_label.setProperty('translate_key', 'Point Size')
@@ -133,11 +160,46 @@ class ExportPanel(BasePanel):
         legend_size_row.addWidget(self.image_legend_size_spin)
         image_layout.addLayout(legend_size_row)
 
+        bbox_row = QHBoxLayout()
+        self.image_tight_bbox_check = QCheckBox(translate("Tight Bounding Box"))
+        self.image_tight_bbox_check.setProperty('translate_key', 'Tight Bounding Box')
+        self.image_tight_bbox_check.setChecked(True)
+        self.image_transparent_check = QCheckBox(translate("Transparent Background"))
+        self.image_transparent_check.setProperty('translate_key', 'Transparent Background')
+        self.image_transparent_check.setChecked(False)
+        bbox_row.addWidget(self.image_tight_bbox_check)
+        bbox_row.addWidget(self.image_transparent_check)
+        image_layout.addLayout(bbox_row)
+
+        pad_row = QHBoxLayout()
+        pad_label = QLabel(translate("Padding (inch)"))
+        pad_label.setProperty('translate_key', 'Padding (inch)')
+        pad_row.addWidget(pad_label)
+        self.image_pad_inches_spin = QDoubleSpinBox()
+        self.image_pad_inches_spin.setRange(0.0, 1.0)
+        self.image_pad_inches_spin.setSingleStep(0.01)
+        self.image_pad_inches_spin.setDecimals(2)
+        self.image_pad_inches_spin.setValue(0.02)
+        pad_row.addWidget(self.image_pad_inches_spin)
+        image_layout.addLayout(pad_row)
+
+        if self.image_tight_bbox_check is not None and self.image_pad_inches_spin is not None:
+            self.image_tight_bbox_check.toggled.connect(self.image_pad_inches_spin.setEnabled)
+            self.image_pad_inches_spin.setEnabled(self.image_tight_bbox_check.isChecked())
+
+        button_row = QHBoxLayout()
+        self.export_image_button = QPushButton(translate("Export Image"))
+        self.export_image_button.setProperty('translate_key', 'Export Image')
+        self.export_image_button.setFixedWidth(160)
+        self.export_image_button.clicked.connect(self._on_export_image_clicked)
+        button_row.addWidget(self.export_image_button, 0, Qt.AlignHCenter)
+
         self.preview_image_button = QPushButton(translate("Preview Export"))
         self.preview_image_button.setProperty('translate_key', 'Preview Export')
-        self.preview_image_button.setFixedWidth(240)
+        self.preview_image_button.setFixedWidth(160)
         self.preview_image_button.clicked.connect(self._on_preview_image_clicked)
-        image_layout.addWidget(self.preview_image_button, 0, Qt.AlignHCenter)
+        button_row.addWidget(self.preview_image_button, 0, Qt.AlignHCenter)
+        image_layout.addLayout(button_row)
 
         image_group.setLayout(image_layout)
 
@@ -170,6 +232,29 @@ class ExportPanel(BasePanel):
             self.image_legend_size_spin.blockSignals(True)
             self.image_legend_size_spin.setValue(default_legend_size)
             self.image_legend_size_spin.blockSignals(False)
+        if self.image_dpi_spin is not None:
+            self.image_dpi_spin.blockSignals(True)
+            self.image_dpi_spin.setValue(int(profile.get('dpi', CONFIG.get('savefig_dpi', 400))))
+            self.image_dpi_spin.blockSignals(False)
+        self._update_style_source_label()
+
+    def _is_scienceplots_available(self) -> bool:
+        """Cache SciencePlots availability for responsive UI interactions."""
+        cached = getattr(self, '_scienceplots_available', None)
+        if cached is None:
+            cached = self._load_scienceplots()
+            self._scienceplots_available = bool(cached)
+        return bool(cached)
+
+    def _update_style_source_label(self) -> None:
+        """Refresh style source hint for current export preset."""
+        if self.image_style_source_label is None:
+            return
+        if self._is_scienceplots_available():
+            text = translate("Template Source: SciencePlots")
+        else:
+            text = translate("Template Source: Built-in fallback")
+        self.image_style_source_label.setText(text)
 
     # ------ 选择控制 ------
 
@@ -780,12 +865,169 @@ class ExportPanel(BasePanel):
 
     def _resolve_export_legend_size(self, profile: dict) -> int:
         """Resolve legend font size from UI override or profile default."""
-        point_size = int(round(float((profile.get('legend', {}) or {}).get('fontsize', 8.0))) )
+        point_size = int(round(float((profile.get('legend', {}) or {}).get('fontsize', 8.0))))
         if self.image_legend_size_spin is not None:
             point_size = int(self.image_legend_size_spin.value())
         return point_size
 
-    def _create_export_figure(self, profile: dict, point_size_for_export: int, legend_size_for_export: int | None = None):
+    def _resolve_export_dpi(self, profile: dict) -> int:
+        """Resolve export DPI from UI override or profile default."""
+        dpi_value = int(profile.get('dpi', CONFIG.get('savefig_dpi', 400)))
+        if self.image_dpi_spin is not None:
+            dpi_value = int(self.image_dpi_spin.value())
+        return max(72, dpi_value)
+
+    def _resolve_export_save_options(self, profile: dict) -> dict:
+        """Collect figure save options from export controls."""
+        export_dpi = self._resolve_export_dpi(profile)
+        use_tight_bbox = bool(self.image_tight_bbox_check.isChecked()) if self.image_tight_bbox_check is not None else True
+        transparent = bool(self.image_transparent_check.isChecked()) if self.image_transparent_check is not None else False
+        pad_inches = 0.02
+        if self.image_pad_inches_spin is not None:
+            pad_inches = float(self.image_pad_inches_spin.value())
+        return {
+            'dpi': export_dpi,
+            'bbox_tight': use_tight_bbox,
+            'pad_inches': max(0.0, pad_inches),
+            'transparent': transparent,
+        }
+
+    @staticmethod
+    def _fallback_export_rc(profile: dict) -> dict:
+        """Fallback rcParams when SciencePlots is unavailable."""
+        legend_style = dict(profile.get('legend', {}) or {})
+        base_font_size = float(legend_style.get('fontsize', 8.0))
+        return {
+            'font.size': base_font_size + 0.5,
+            'axes.titlesize': base_font_size + 1.8,
+            'axes.labelsize': base_font_size + 1.0,
+            'xtick.labelsize': base_font_size,
+            'ytick.labelsize': base_font_size,
+            'legend.fontsize': base_font_size,
+            'axes.grid': True,
+            'grid.alpha': 0.22,
+            'grid.linestyle': '--',
+            'axes.linewidth': 0.8,
+            'lines.linewidth': 1.15,
+        }
+
+    @staticmethod
+    def _normalize_export_target(file_path: str, preferred_ext: str) -> tuple[str, str]:
+        """Normalize output path and extension using supported export formats."""
+        supported = {'png', 'tiff', 'pdf', 'svg', 'eps'}
+        normalized_ext = str(preferred_ext or 'png').lower().strip('.')
+        if normalized_ext not in supported:
+            normalized_ext = 'png'
+
+        target_path = Path(file_path)
+        suffix = target_path.suffix.lower().strip('.')
+        if suffix in supported:
+            return str(target_path), suffix
+
+        if target_path.suffix:
+            target_path = target_path.with_suffix(f'.{normalized_ext}')
+        else:
+            target_path = Path(f"{file_path}.{normalized_ext}")
+        return str(target_path), normalized_ext
+
+    def _save_export_figure(
+        self,
+        export_fig,
+        file_path: str,
+        image_ext: str,
+        export_dpi: int,
+        bbox_tight: bool,
+        pad_inches: float,
+        transparent: bool,
+    ) -> None:
+        """Save figure using unified export options."""
+        save_kwargs = {
+            'format': image_ext,
+            'dpi': int(export_dpi),
+            'bbox_inches': 'tight' if bbox_tight else None,
+            'transparent': bool(transparent),
+        }
+        if bbox_tight:
+            save_kwargs['pad_inches'] = float(max(0.0, pad_inches))
+
+        # EPS backend does not preserve alpha channels reliably.
+        if image_ext == 'eps' and save_kwargs['transparent']:
+            save_kwargs['transparent'] = False
+
+        export_fig.savefig(file_path, **save_kwargs)
+
+    def _on_export_image_clicked(self):
+        """Export figure directly without opening preview dialog."""
+        import matplotlib.pyplot as plt
+
+        if getattr(app_state, 'df_global', None) is None or len(app_state.df_global) == 0:
+            QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
+            return
+        if getattr(app_state, 'fig', None) is None:
+            QMessageBox.warning(self, translate("Warning"), translate("Plot figure is not initialized."))
+            return
+
+        preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
+        profile = self._image_export_profile(str(preset_key))
+        preferred_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
+        filters = (
+            "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"
+            "SVG Files (*.svg);;EPS Files (*.eps);;All Files (*.*)"
+        )
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            translate("Export Figure"),
+            "",
+            filters,
+        )
+        if not file_path:
+            return
+
+        file_path, image_ext = self._normalize_export_target(file_path, str(preferred_ext))
+        point_size_for_export = self._resolve_export_point_size(profile)
+        legend_size_for_export = self._resolve_export_legend_size(profile)
+        save_options = self._resolve_export_save_options(profile)
+
+        export_fig = None
+        try:
+            export_fig = self._create_export_figure(
+                profile,
+                point_size_for_export,
+                legend_size_for_export,
+            )
+            self._save_export_figure(
+                export_fig,
+                file_path,
+                image_ext,
+                export_dpi=int(save_options['dpi']),
+                bbox_tight=bool(save_options['bbox_tight']),
+                pad_inches=float(save_options['pad_inches']),
+                transparent=bool(save_options['transparent']),
+            )
+            QMessageBox.information(
+                self,
+                translate("Success"),
+                translate("Figure exported successfully to {file}").format(file=file_path),
+            )
+        except Exception as export_err:
+            QMessageBox.critical(
+                self,
+                translate("Error"),
+                translate("Failed to export image: {error}").format(error=str(export_err)),
+            )
+        finally:
+            if export_fig is not None:
+                try:
+                    plt.close(export_fig)
+                except Exception:
+                    pass
+
+    def _create_export_figure(
+        self,
+        profile: dict,
+        point_size_for_export: int,
+        legend_size_for_export: int | None = None,
+    ):
         """Create an offscreen figure rendered with current mode and export profile."""
         import matplotlib.pyplot as plt
         from matplotlib.figure import Figure
@@ -803,7 +1045,11 @@ class ExportPanel(BasePanel):
         original_has_marginal_axes = bool(original_fig is not None and len(getattr(original_fig, 'axes', [])) > 1)
 
         try:
-            with plt.style.context(profile['styles']):
+            use_scienceplots = self._is_scienceplots_available()
+            style_chain = profile['styles'] if use_scienceplots else ['default']
+            with plt.style.context(style_chain):
+                if not use_scienceplots:
+                    plt.rcParams.update(self._fallback_export_rc(profile))
                 export_fig = Figure(
                     figsize=profile['figsize'],
                     dpi=int(profile['dpi']),
@@ -1101,13 +1347,6 @@ class ExportPanel(BasePanel):
         if getattr(app_state, 'fig', None) is None:
             QMessageBox.warning(self, translate("Warning"), translate("Plot figure is not initialized."))
             return
-        if not self._load_scienceplots():
-            QMessageBox.warning(
-                self,
-                translate("Warning"),
-                translate("SciencePlots is not available. Please ensure reference/SciencePlots-master/src exists or install scienceplots."),
-            )
-            return
 
         preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
         profile = self._image_export_profile(str(preset_key))
@@ -1227,12 +1466,20 @@ class ExportPanel(BasePanel):
                 point_size_spin.blockSignals(True)
                 point_size_spin.setValue(value)
                 point_size_spin.blockSignals(False)
+                if self.image_point_size_spin is not None:
+                    self.image_point_size_spin.blockSignals(True)
+                    self.image_point_size_spin.setValue(value)
+                    self.image_point_size_spin.blockSignals(False)
                 _apply_preview_point_size(value)
 
             def _on_spin_changed(value: int):
                 point_size_slider.blockSignals(True)
                 point_size_slider.setValue(value)
                 point_size_slider.blockSignals(False)
+                if self.image_point_size_spin is not None:
+                    self.image_point_size_spin.blockSignals(True)
+                    self.image_point_size_spin.setValue(value)
+                    self.image_point_size_spin.blockSignals(False)
                 _apply_preview_point_size(value)
 
             point_size_slider.valueChanged.connect(_on_slider_changed)
@@ -1264,12 +1511,20 @@ class ExportPanel(BasePanel):
                 legend_size_spin.blockSignals(True)
                 legend_size_spin.setValue(value)
                 legend_size_spin.blockSignals(False)
+                if self.image_legend_size_spin is not None:
+                    self.image_legend_size_spin.blockSignals(True)
+                    self.image_legend_size_spin.setValue(value)
+                    self.image_legend_size_spin.blockSignals(False)
                 _apply_preview_legend_size(value)
 
             def _on_legend_spin_changed(value: int):
                 legend_size_slider.blockSignals(True)
                 legend_size_slider.setValue(value)
                 legend_size_slider.blockSignals(False)
+                if self.image_legend_size_spin is not None:
+                    self.image_legend_size_spin.blockSignals(True)
+                    self.image_legend_size_spin.setValue(value)
+                    self.image_legend_size_spin.blockSignals(False)
                 _apply_preview_legend_size(value)
 
             legend_size_slider.valueChanged.connect(_on_legend_slider_changed)
@@ -1288,14 +1543,17 @@ class ExportPanel(BasePanel):
                 )
                 if not file_path:
                     return
-                if not file_path.lower().endswith(f'.{image_ext}'):
-                    file_path = f"{file_path}.{image_ext}"
+                file_path, export_ext = self._normalize_export_target(file_path, str(image_ext))
+                save_options = self._resolve_export_save_options(profile)
                 try:
-                    preview_fig.savefig(
+                    self._save_export_figure(
+                        preview_fig,
                         file_path,
-                        format=image_ext,
-                        dpi=int(profile['dpi']),
-                        bbox_inches=None,
+                        export_ext,
+                        export_dpi=int(save_options['dpi']),
+                        bbox_tight=bool(save_options['bbox_tight']),
+                        pad_inches=float(save_options['pad_inches']),
+                        transparent=bool(save_options['transparent']),
                     )
                     QMessageBox.information(
                         dialog,
