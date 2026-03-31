@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
 from core import CONFIG, app_state
+from .event_bridge import refresh_selection_overlay_safe
 from .legend_model import OVERLAY_TOGGLE_MAP
 from ..style_manager import apply_custom_style
 
@@ -338,8 +339,7 @@ def refresh_plot_style() -> None:
 
     try:
         if getattr(app_state, 'selected_indices', None):
-            from ..events import refresh_selection_overlay
-            refresh_selection_overlay()
+            refresh_selection_overlay_safe()
     except Exception:
         pass
 

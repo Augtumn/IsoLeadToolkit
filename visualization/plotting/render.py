@@ -10,6 +10,7 @@ import pandas as pd
 
 from core import CONFIG, app_state, state_gateway, translate
 from . import kde as kde_utils
+from .event_bridge import refresh_selection_overlay_safe
 from .style import (
     _apply_current_style,
     _enforce_plot_style,
@@ -30,11 +31,6 @@ from .core import (
 from .geo import _draw_equation_overlays
 
 logger = logging.getLogger(__name__)
-
-try:
-    from ..events import refresh_selection_overlay
-except ImportError:
-    refresh_selection_overlay = None
 
 
 from .render_helpers import (
@@ -484,11 +480,10 @@ def plot_embedding(
         except Exception:
             pass
 
-        if refresh_selection_overlay:
-            try:
-                refresh_selection_overlay()
-            except Exception as e:
-                logger.warning(f"Failed to restore selection overlay: {e}")
+        try:
+            refresh_selection_overlay_safe()
+        except Exception as e:
+            logger.warning(f"Failed to restore selection overlay: {e}")
 
         return True
 

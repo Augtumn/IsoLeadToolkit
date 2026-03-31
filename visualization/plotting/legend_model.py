@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from core import app_state
 from visualization.line_styles import resolve_line_style
-from .geo import (
+from .geo_overlay_helpers import (
     get_plumbotectonics_group_entries,
     get_plumbotectonics_group_palette,
     get_overlay_default_color,
