@@ -380,6 +380,10 @@ src/
     - `ui/dialogs/data_import/dialog.py` 已收敛为组合层。
     - 新增 `ui/dialogs/data_import/build.py`、`workflow.py`、`submit.py`，实现 UI 构建、导入流程、提交校验解耦。
     - 导入冒烟检查通过，UI 对外 API 无破坏性变更。
+- 已完成主窗口模块化拆分（MainWindow）：
+    - `ui/main_window.py` 已收敛为薄入口组合类（`Qt5MainWindow` 保持不变）。
+    - 新增 `ui/main_window_parts/` 子包并拆分职责：`setup.py`（窗口/菜单/工具栏/状态栏）、`legend.py`（图例面板交互）、`canvas.py`（画布与工具操作）、`lifecycle.py`（会话与事件绑定）。
+    - 兼容性验证：外部导入路径 `from ui.main_window import Qt5MainWindow` 无变化。
 
 ## 全局改进计划
 

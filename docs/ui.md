@@ -10,7 +10,8 @@
 |------|------|------|
 | `__init__.py` | 20 | 模块入口 |
 | `app.py` | 481 | 应用生命周期管理 + Qt/Python 调试钩子 |
-| `main_window.py` | 1,084 | 主窗口 (画布 + 图例面板 + 工具栏) |
+| `main_window.py` | 34 | 主窗口组合入口 (Qt5MainWindow) |
+| `main_window_parts/` | 1,070+ | 主窗口 mixin 分层实现（setup/legend/canvas/lifecycle） |
 | `control_panel.py` | 505 | 控制面板组装 + 对话框入口 |
 | `icons.py` | 230 | UI 色块/标记图标渲染工具 |
 | `panels/` | 5,312 | 6 个标签页的面板实现 |
@@ -70,10 +71,10 @@ ISOTOPES_QT_DEBUG=1 python main.py
 
 ---
 
-## 2. main_window.py — 主窗口
+## 2. main_window.py + main_window_parts/ — 主窗口
 
 ### 职责
-主窗口布局、菜单栏、工具栏、图例面板、matplotlib 画布集成。
+主窗口入口类与 UI/图例/画布/生命周期四类职责分层。
 
 ### Qt5MainWindow 类
 
@@ -81,6 +82,21 @@ ISOTOPES_QT_DEBUG=1 python main.py
 class Qt5MainWindow(QMainWindow):
     def __init__(self, parent=None)
 ```
+
+### 主窗口模块拆分
+
+```
+ui/
+├── main_window.py  # 组合入口
+└── main_window_parts/
+    ├── __init__.py
+    ├── setup.py      # 窗口布局、菜单栏、工具栏、状态栏
+    ├── legend.py     # 外部图例面板交互与排序
+    ├── canvas.py     # matplotlib 画布/工具栏/缩放/框选
+    └── lifecycle.py  # 会话恢复、关闭保存、重载数据、事件绑定
+```
+
+拆分后保持外部接口不变：`from ui.main_window import Qt5MainWindow`。
 
 ### 窗口布局
 
