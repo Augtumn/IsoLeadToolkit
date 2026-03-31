@@ -367,13 +367,18 @@ src/
     - `ui/panels/analysis_panel.py`、`ui/panels/display_panel.py`、`ui/panels/legend_panel.py` 已收敛为薄组装器。
     - 新增子包：`ui/panels/analysis/`、`ui/panels/display/`、`ui/panels/legend/`，对应 `panel.py` 承载原业务逻辑。
     - 兼容性验证：原导入路径保持不变，面板类名保持不变。
+- 已完成 Analysis 子包内部模块化拆分（第四轮）：
+    - `ui/panels/analysis/panel.py` 已收敛为 mixin 组合层。
+    - 新增 `ui/panels/analysis/build.py`、`diagnostics.py`、`selection.py`、`equations.py`、`mixing.py`。
+    - 兼容性验证：`AnalysisPanelMixin` 对外名称不变，`ui/panels/analysis_panel.py` 调用路径不变。
 - 已完成 UI 面板第三轮细化拆分（Display/Legend 内部模块）：
     - `ui/panels/display/panel.py` 已收敛为 mixin 组合层，新增 `ui/panels/display/build.py` 与 `ui/panels/display/themes.py`。
     - `ui/panels/legend/panel.py` 已收敛为 mixin 组合层，新增 `ui/panels/legend/build.py` 与 `ui/panels/legend/actions.py`。
     - 兼容性验证：`DisplayPanelMixin` / `LegendPanelMixin` 对外名称不变，`ui/panels/display_panel.py` 与 `ui/panels/legend_panel.py` 无需变更调用。
 - 已完成对话框模块化拆分（DataImportDialog）：
     - `ui/dialogs/data_import_dialog.py` 已收敛为包装器（保留 `Qt5DataImportDialog` 与 `get_data_import_configuration` 兼容入口）。
-    - 新增 `ui/dialogs/data_import/dialog.py` 承载原统一导入对话框逻辑。
+    - `ui/dialogs/data_import/dialog.py` 已收敛为组合层。
+    - 新增 `ui/dialogs/data_import/build.py`、`workflow.py`、`submit.py`，实现 UI 构建、导入流程、提交校验解耦。
     - 导入冒烟检查通过，UI 对外 API 无破坏性变更。
 
 ## 全局改进计划

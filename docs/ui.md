@@ -219,7 +219,12 @@ ui/
     ├── analysis_panel.py  # 组装器
     ├── analysis/
     │   ├── __init__.py
-    │   └── panel.py
+    │   ├── panel.py
+    │   ├── build.py
+    │   ├── diagnostics.py
+    │   ├── selection.py
+    │   ├── equations.py
+    │   └── mixing.py
     ├── export_panel.py
     ├── export/
     │   ├── __init__.py
@@ -372,7 +377,12 @@ def _delete_theme(self)   # 删除已保存主题
 
 模块拆分说明（2026-04）:
 - `panels/analysis_panel.py` 仅保留 `AnalysisPanel` 组装类。
-- `panels/analysis/panel.py` 承载分析面板全部构建与交互逻辑。
+- `panels/analysis/panel.py` 作为 mixin 组合层。
+- `panels/analysis/build.py`：分析页 `QToolBox` 构建与控件初始化。
+- `panels/analysis/diagnostics.py`：相关性热图、轴相关、Shepard 图入口。
+- `panels/analysis/selection.py`：选择工具、tooltip、置信区间切换。
+- `panels/analysis/equations.py`：KDE 与方程叠加管理、样式对话框。
+- `panels/analysis/mixing.py`：混合组、端元、溯源 ML 与状态文案。
 
 ### ExportPanel
 - 数据导出：导出选中数据 (CSV/Excel/追加)
@@ -422,7 +432,7 @@ def _delete_theme(self)   # 删除已保存主题
 
 | 对话框 | 行数 | 职责 |
 |--------|------|------|
-| `data_import_dialog.py` + `data_import/dialog.py` | 27 + 647 | 统一数据导入 (文件+工作表+列)，包装器 + 逻辑模块 |
+| `data_import_dialog.py` + `data_import/*.py` | 27 + 442 | 统一数据导入 (文件+工作表+列)，包装器 + 模块化逻辑层 |
 | `provenance_ml_dialog.py` | 663 | ML 产地分析配置 |
 | `endmember_dialog.py` | 431 | 端元识别参数 |
 | `isochron_dialog.py` | 317 | 等时线回归设置 |
@@ -458,12 +468,13 @@ class SomeDialog(QDialog):
 
 ### 关键对话框详解
 
-#### Qt5DataImportDialog (data_import_dialog.py + data_import/dialog.py)
+#### Qt5DataImportDialog (data_import_dialog.py + data_import/*.py)
 - 三栏布局: 文件 | 工作表 | 列选择
 - 数据预览表 (前 8 行 × 6 列)
 - 最近文件列表 (最多 8 个)
 - 自动推荐数据列 (206Pb/204Pb, 207Pb/204Pb, 208Pb/204Pb)
 - 内置语言切换
+- 模块分层：`build.py`(UI构建/翻译)、`workflow.py`(文件与预览流程)、`submit.py`(校验与结果提交)
 
 #### Qt5IsochronDialog (isochron_dialog.py)
 - 误差输入模式: 固定值 / 列选择
