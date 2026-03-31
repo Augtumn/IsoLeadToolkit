@@ -384,6 +384,14 @@ src/
     - `ui/main_window.py` 已收敛为薄入口组合类（`Qt5MainWindow` 保持不变）。
     - 新增 `ui/main_window_parts/` 子包并拆分职责：`setup.py`（窗口/菜单/工具栏/状态栏）、`legend.py`（图例面板交互）、`canvas.py`（画布与工具操作）、`lifecycle.py`（会话与事件绑定）。
     - 兼容性验证：外部导入路径 `from ui.main_window import Qt5MainWindow` 无变化。
+- 已完成应用启动层模块化拆分（Qt5Application）：
+    - `ui/app.py` 已收敛为薄编排入口，职责拆分到 `ui/app_parts/`。
+    - 新增 `ui/app_parts/styles.py`、`session.py`、`plotting.py`，分别承载样式与调试钩子、会话恢复、绘图构建与事件连接。
+    - 兼容性验证：外部导入路径 `from ui.app import Qt5Application` 无变化，导入冒烟通过。
+- 已完成主窗口图例模块二次拆分（Legend internals）：
+    - `ui/main_window_parts/legend.py` 已收敛为组合入口。
+    - 新增 `ui/main_window_parts/legend_core.py` 与 `legend_actions.py`，将图例排序核心与 UI 交互动作解耦。
+    - 兼容性验证：`Qt5MainWindow` 外部行为不变，图例导入与启动冒烟通过。
 
 ## 全局改进计划
 

@@ -9,9 +9,10 @@
 | 文件 | 行数 | 职责 |
 |------|------|------|
 | `__init__.py` | 20 | 模块入口 |
-| `app.py` | 481 | 应用生命周期管理 + Qt/Python 调试钩子 |
+| `app.py` | 180 | 应用启动编排入口（薄组合层） |
+| `app_parts/` | 374 | 应用启动 mixin 分层实现（styles/session/plotting） |
 | `main_window.py` | 34 | 主窗口组合入口 (Qt5MainWindow) |
-| `main_window_parts/` | 1,070+ | 主窗口 mixin 分层实现（setup/legend/canvas/lifecycle） |
+| `main_window_parts/` | 1,297+ | 主窗口 mixin 分层实现（setup/legend*/canvas/lifecycle） |
 | `control_panel.py` | 505 | 控制面板组装 + 对话框入口 |
 | `icons.py` | 230 | UI 色块/标记图标渲染工具 |
 | `panels/` | 5,312 | 6 个标签页的面板实现 |
@@ -22,7 +23,21 @@
 ## 1. app.py — 应用生命周期
 
 ### 职责
-Qt 应用初始化、会话恢复、图形创建、事件连接。
+Qt 应用初始化、会话恢复、图形创建、事件连接的启动编排；具体职责下沉到 `app_parts/`。
+
+### 启动层模块拆分
+
+```
+ui/
+├── app.py
+└── app_parts/
+    ├── __init__.py
+    ├── styles.py    # 字体、原生样式、Qt/Python 调试钩子
+    ├── session.py   # 会话加载/恢复、渲染模式校验
+    └── plotting.py  # Figure 创建、事件绑定、初始渲染
+```
+
+拆分后保持外部入口不变：`from ui.app import Qt5Application`。
 
 ### Qt5Application 类
 
@@ -37,7 +52,7 @@ class Qt5Application:
 3. `_configure_native_style()` — 应用原生 Qt 样式 (WindowsVista/Fusion)
 4. `_install_debug_handlers()` — 捕获 Qt/Python 错误
 5. `_load_session()` — 加载会话参数
-6. `load_data()` — 显示数据导入对话框
+6. `load_dataset()` — 显示数据导入对话框并注入状态
 7. `_restore_session_state()` — 恢复算法、参数、渲染模式
 8. `Qt5MainWindow` 创建并显示
 9. `_create_plot_figure()` — 创建 matplotlib Figure (constrained_layout)
@@ -91,7 +106,9 @@ ui/
 └── main_window_parts/
     ├── __init__.py
     ├── setup.py      # 窗口布局、菜单栏、工具栏、状态栏
-    ├── legend.py     # 外部图例面板交互与排序
+    ├── legend.py     # 图例组合入口
+    ├── legend_core.py    # 图例顺序与状态核心逻辑
+    ├── legend_actions.py # 图例交互动作与 UI 更新
     ├── canvas.py     # matplotlib 画布/工具栏/缩放/框选
     └── lifecycle.py  # 会话恢复、关闭保存、重载数据、事件绑定
 ```
