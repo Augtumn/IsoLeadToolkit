@@ -14,6 +14,7 @@ from ..core import (
     _ensure_axes,
     _build_group_palette,
 )
+from ..ternary import configure_ternary_axis, prepare_ternary_components
 from .embedding.algorithm import (
     compute_embedding,
     normalize_algorithm,
@@ -28,6 +29,7 @@ from .geo_layers import _render_geo_overlays
 from .kde import _render_kde_overlay
 
 logger = logging.getLogger(__name__)
+
 
 def plot_embedding(
     group_col: str,
@@ -74,9 +76,10 @@ def plot_embedding(
 
         app_state.ax.clear()
         try:
-            # Reset any prior aspect/scale settings (e.g., ternary plots) for 2D
-            app_state.ax.set_aspect('auto')
-            app_state.ax.set_autoscale_on(True)
+            if actual_algorithm != 'TERNARY':
+                # Reset any prior aspect/scale settings (e.g., ternary plots) for 2D
+                app_state.ax.set_aspect('auto')
+                app_state.ax.set_autoscale_on(True)
         except Exception:
             pass
         _enforce_plot_style(app_state.ax)
@@ -119,33 +122,29 @@ def plot_embedding(
         if actual_algorithm == 'TERNARY':
             t_cols = getattr(app_state, 'selected_ternary_cols', ['Top', 'Left', 'Right'])
 
-            h = np.sqrt(3) / 2
+            ts = df_plot['_emb_t'].to_numpy(dtype=float, copy=False)
+            ls = df_plot['_emb_l'].to_numpy(dtype=float, copy=False)
+            rs = df_plot['_emb_r'].to_numpy(dtype=float, copy=False)
 
-            app_state.ax.plot([0, 1, 0.5, 0], [0, 0, h, 0], 'k-', linewidth=1.5, zorder=0)
+            t_norm, l_norm, r_norm = prepare_ternary_components(ts, ls, rs)
+            df_plot['_emb_tn'] = t_norm
+            df_plot['_emb_ln'] = l_norm
+            df_plot['_emb_rn'] = r_norm
 
-            if getattr(app_state, 'plot_style_grid', False):
-                grid_color = '#e2e8f0'
-                for i in range(1, 10):
-                    val = i * 0.1
-                    app_state.ax.plot([val * 0.5, 1 - val * 0.5], [val * h, val * h], '-', color=grid_color, lw=0.6, zorder=0)
-
-                    x1, y1 = (1 - val), 0
-                    x2, y2 = (0.5 * (1 - val)), h * (1 - val)
-                    app_state.ax.plot([x1, x2], [y1, y2], '-', color=grid_color, lw=0.6, zorder=0)
-
-                    x3, y3 = val, 0
-                    x4, y4 = (0.5 + 0.5 * val), h * (1 - val)
-                    app_state.ax.plot([x3, x4], [y3, y4], '-', color=grid_color, lw=0.6, zorder=0)
-
-            app_state.ax.text(0.5, h + 0.05, t_cols[0], ha='center', va='bottom', fontsize=10, fontweight='bold')
-            app_state.ax.text(-0.05, -0.05, t_cols[1], ha='right', va='top', fontsize=10, fontweight='bold')
-            app_state.ax.text(1.05, -0.05, t_cols[2], ha='left', va='top', fontsize=10, fontweight='bold')
-
-            app_state.ax.axis('off')
-            app_state.ax.set_aspect('equal')
-
-            app_state.ax.set_xlim(-0.1, 1.1)
-            app_state.ax.set_ylim(-0.1, h + 0.1)
+            auto_zoom = bool(getattr(app_state, 'ternary_auto_zoom', True))
+            tmin, tmax, lmin, lmax, rmin, rmax = configure_ternary_axis(
+                app_state.ax,
+                t_norm,
+                l_norm,
+                r_norm,
+                labels=t_cols,
+                auto_zoom=auto_zoom,
+            )
+            app_state.ternary_ranges = {
+                't': (tmin, tmax),
+                'l': (lmin, lmax),
+                'r': (rmin, rmax),
+            }
 
         _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_palette)
 
@@ -198,4 +197,3 @@ def plot_embedding(
         logger.error("Plot update failed: %s", err)
         traceback.print_exc()
         return False
-

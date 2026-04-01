@@ -130,8 +130,14 @@ def _enforce_plot_style(ax):
     for spine in ax.spines.values():
         spine.set_linewidth(getattr(app_state, 'axis_linewidth', 1.0))
         spine.set_color(getattr(app_state, 'axis_line_color', '#1f2937'))
-    ax.spines['top'].set_visible(getattr(app_state, 'show_top_spine', True))
-    ax.spines['right'].set_visible(getattr(app_state, 'show_right_spine', True))
+
+    top_spine = ax.spines.get('top')
+    if top_spine is not None:
+        top_spine.set_visible(getattr(app_state, 'show_top_spine', True))
+
+    right_spine = ax.spines.get('right')
+    if right_spine is not None:
+        right_spine.set_visible(getattr(app_state, 'show_right_spine', True))
 
 
 def _apply_axis_text_style(ax):
@@ -169,3 +175,4 @@ def _apply_axis_text_style(ax):
         title.set_fontweight(title_weight)
     except Exception:
         pass
+

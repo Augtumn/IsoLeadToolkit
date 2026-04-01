@@ -8,7 +8,7 @@ import numpy as np
 from core import app_state
 from visualization.line_styles import ensure_line_style
 from .. import kde as kde_utils
-from ..ternary import _apply_ternary_stretch
+from ..ternary import prepare_ternary_components
 
 logger = logging.getLogger(__name__)
 
@@ -41,21 +41,17 @@ def _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_p
                 if subset.empty:
                     continue
 
-                ts = subset['_emb_t'].to_numpy(dtype=float)
-                ls = subset['_emb_l'].to_numpy(dtype=float)
-                rs = subset['_emb_r'].to_numpy(dtype=float)
+                if {'_emb_tn', '_emb_ln', '_emb_rn'}.issubset(subset.columns):
+                    t_norm = subset['_emb_tn'].to_numpy(dtype=float)
+                    r_norm = subset['_emb_rn'].to_numpy(dtype=float)
+                else:
+                    ts = subset['_emb_t'].to_numpy(dtype=float)
+                    ls = subset['_emb_l'].to_numpy(dtype=float)
+                    rs = subset['_emb_r'].to_numpy(dtype=float)
+                    t_norm, _, r_norm = prepare_ternary_components(ts, ls, rs)
 
-                ts, ls, rs = _apply_ternary_stretch(ts, ls, rs)
-
-                sums = ts + ls + rs
-                with np.errstate(divide='ignore', invalid='ignore'):
-                    sums[sums == 0] = 1.0
-                    t_norm = ts / sums
-                    r_norm = rs / sums
-
-                h = np.sqrt(3) / 2
-                x_cart = 0.5 * t_norm + 1.0 * r_norm
-                y_cart = h * t_norm
+                x_cart = 0.5 * t_norm + r_norm
+                y_cart = (np.sqrt(3.0) / 2.0) * t_norm
 
                 kde_style = _resolve_kde_style('kde')
                 kde_utils.sns.kdeplot(

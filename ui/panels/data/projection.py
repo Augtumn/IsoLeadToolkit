@@ -50,6 +50,7 @@ class DataPanelProjectionMixin:
         self.pca_group.setVisible(mode == "PCA")
         self.robust_pca_group.setVisible(mode == "RobustPCA")
         self.ternary_group.setVisible(mode == "Ternary")
+        self._refresh_ternary_limit_controls_enabled()
 
         if self.v1v2_group is not None:
             self.v1v2_group.setVisible(mode == "V1V2")
@@ -220,7 +221,124 @@ class DataPanelProjectionMixin:
     def _on_ternary_zoom_change(self, state):
         """Handle ternary auto-zoom toggle."""
         state_gateway.set_attr("ternary_auto_zoom", state == Qt.Checked)
+        self._refresh_ternary_limit_controls_enabled()
         self._on_change()
+
+    def _refresh_ternary_limit_controls_enabled(self):
+        """Enable/disable ternary limit controls based on auto-zoom/manual toggles."""
+        auto_zoom_enabled = bool(getattr(app_state, "ternary_auto_zoom", True))
+        base_widgets = [
+            getattr(self, "ternary_limit_mode_combo", None),
+            getattr(self, "ternary_boundary_percent_spin", None),
+            getattr(self, "ternary_auto_optimize_btn", None),
+            getattr(self, "ternary_manual_limits_check", None),
+        ]
+        for widget in base_widgets:
+            if widget is not None:
+                widget.setEnabled(auto_zoom_enabled)
+
+        manual_enabled = auto_zoom_enabled and bool(getattr(app_state, "ternary_manual_limits_enabled", False))
+        for spin in (getattr(self, "ternary_limit_spins", None) or {}).values():
+            spin.setEnabled(manual_enabled)
+
+    def _on_ternary_limit_mode_change(self, index):
+        """Handle ternary limit mode changes."""
+        mode = str(self._combo_value(self.ternary_limit_mode_combo, index)).strip().lower()
+        if mode not in ("min", "max", "both"):
+            mode = "min"
+
+        state_gateway.set_attr("ternary_limit_mode", mode)
+        if mode in ("min", "max"):
+            state_gateway.set_attr("ternary_limit_anchor", mode)
+        self._on_change()
+
+    def _on_ternary_boundary_percent_change(self, value):
+        """Handle boundary percent changes for ternary limit optimization."""
+        try:
+            percent = float(value)
+        except (TypeError, ValueError):
+            percent = 5.0
+        percent = max(0.0, min(30.0, percent))
+        state_gateway.set_attr("ternary_boundary_percent", percent)
+        self._on_change()
+
+    def _on_ternary_manual_limits_change(self, state):
+        """Toggle manual ternary min/max parameter mode."""
+        enabled = state == Qt.Checked
+        state_gateway.set_attr("ternary_manual_limits_enabled", enabled)
+        self._refresh_ternary_limit_controls_enabled()
+        self._on_change()
+
+    def _on_ternary_limit_param_change(self, key, value):
+        """Update a single manual ternary limit parameter."""
+        manual = dict(getattr(app_state, "ternary_manual_limits", {}) or {})
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            return
+        manual[key] = max(0.0, min(1.0, val))
+        state_gateway.set_attr("ternary_manual_limits", manual)
+
+        if bool(getattr(app_state, "ternary_manual_limits_enabled", False)):
+            self._on_change()
+
+    def _on_ternary_auto_optimize(self):
+        """Auto-optimize ternary boundary parameters from current data distribution."""
+        try:
+            from visualization.plotting.ternary import optimize_current_ternary_limits
+
+            mode = str(getattr(app_state, "ternary_limit_mode", "min")).strip().lower()
+            if mode not in ("min", "max", "both"):
+                mode = "min"
+            boundary_percent = float(getattr(app_state, "ternary_boundary_percent", 5.0))
+
+            optimized = optimize_current_ternary_limits(mode=mode, boundary_percent=boundary_percent)
+            if not optimized:
+                logger.warning("Ternary auto-optimize skipped: no valid ternary data available.")
+                return
+
+            optimized_mode = str(optimized.get("mode", mode)).strip().lower()
+            limits = optimized.get("limits")
+
+            updates = {
+                "ternary_limit_mode": optimized_mode,
+            }
+            if optimized_mode in ("min", "max"):
+                updates["ternary_limit_anchor"] = optimized_mode
+            if isinstance(limits, (list, tuple)) and len(limits) == 6:
+                updates["ternary_manual_limits"] = {
+                    "tmin": float(limits[0]),
+                    "tmax": float(limits[1]),
+                    "lmin": float(limits[2]),
+                    "lmax": float(limits[3]),
+                    "rmin": float(limits[4]),
+                    "rmax": float(limits[5]),
+                }
+
+            state_gateway.set_attrs(updates)
+
+            if getattr(self, "ternary_limit_mode_combo", None) is not None:
+                self.ternary_limit_mode_combo.blockSignals(True)
+                self._set_combo_value(self.ternary_limit_mode_combo, optimized_mode)
+                self.ternary_limit_mode_combo.blockSignals(False)
+
+            manual_limits = updates.get("ternary_manual_limits", {})
+            for key, spin in (getattr(self, "ternary_limit_spins", None) or {}).items():
+                if key not in manual_limits:
+                    continue
+                spin.blockSignals(True)
+                spin.setValue(float(manual_limits[key]))
+                spin.blockSignals(False)
+
+            logger.info(
+                "Ternary auto-optimized: mode=%s, boundary=%.1f%% (fixed), limits=%s",
+                optimized_mode,
+                boundary_percent,
+                limits,
+            )
+            self._on_change()
+        except Exception as err:
+            logger.warning("Failed ternary auto-optimize: %s", err)
 
     def _on_ternary_stretch_mode_change(self, index):
         """Handle ternary stretch mode changes."""
@@ -320,3 +438,8 @@ class DataPanelProjectionMixin:
             logger.info("Selected ternary columns: %s", result["columns"])
             logger.info("Ternary stretch: %s, factors: %s", result["stretch"], result["factors"])
             self._on_change()
+
+
+
+
+

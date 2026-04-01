@@ -181,6 +181,19 @@
   "Please select three distinct columns.": "请选择三个不同的列。",
   "Using Standard Ternary Plot.\nData is plotted as relative proportions.": "使用标准三元图。\n数据将按相对比例绘制。",
   "Auto-Zoom to Data": "自动缩放到数据范围",
+  "Limit Mode": "限制模式",
+  "Boundary Percent (%)": "边界百分比 (%)",
+  "Minimum Only": "仅最小值",
+  "Maximum Only": "仅最大值",
+  "Both Ends": "两端限定",
+  "Auto Optimize": "自动优化",
+  "Manual Limit Parameters": "手动限制参数",
+  "Top Min": "顶部最小值",
+  "Top Max": "顶部最大值",
+  "Left Min": "左轴最小值",
+  "Left Max": "左轴最大值",
+  "Right Min": "右轴最小值",
+  "Right Max": "右轴最大值",
   "Standard Ternary Diagram (mpltern)": "标准三元图（mpltern）",
   "Ternary": "三元图",
   "V1-V2 Diagram": "地化-V1V2判别图",
@@ -943,3 +956,4 @@
   "Embedding Distance": "嵌入距离",
   "Shepard Diagram\nSpearman Correlation: {value}": "Shepard 图\nSpearman 相关系数：{value}"
 }
+

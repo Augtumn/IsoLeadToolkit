@@ -59,6 +59,19 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.ternary_stretch_mode = 'power'
     state.ternary_factors = [1.0, 1.0, 1.0]
     state.ternary_stretch = False
+    state.ternary_auto_zoom = True
+    state.ternary_limit_mode = 'min'
+    state.ternary_boundary_percent = 5.0
+    state.ternary_manual_limits_enabled = False
+    state.ternary_manual_limits = {
+        'tmin': 0.0,
+        'tmax': 1.0,
+        'lmin': 0.0,
+        'lmax': 1.0,
+        'rmin': 0.0,
+        'rmax': 1.0,
+    }
+    state.ternary_limit_anchor = 'min'
     state.ui_theme = 'Modern Light'
     state.available_groups = []
     state.visible_groups = None
@@ -178,3 +191,6 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.adjust_text_time_lim = 0.25
     state.saved_themes = {}
     state.last_2d_cols = None
+
+
+

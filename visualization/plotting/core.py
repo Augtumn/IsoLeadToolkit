@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 umap = None
 Axes3D = None
 Ellipse = None
+mpltern = None
 
 
 def _data_state() -> Any:
@@ -61,21 +62,37 @@ def _lazy_import_ellipse():
         from matplotlib.patches import Ellipse as _Ellipse
         Ellipse = _Ellipse
 
+def _lazy_import_mpltern():
+    global mpltern
+    if mpltern is None:
+        import mpltern as _mpltern
+        mpltern = _mpltern
+
 def _ensure_axes(dimensions=2):
     """Ensure the figure has the correct axes dimensionality."""
     if app_state.fig is None:
         return None
 
+    current_name = getattr(app_state.ax, 'name', '') if app_state.ax is not None else ''
+
     if dimensions == 3:
         _lazy_import_mplot3d()
-        if app_state.ax is None or getattr(app_state.ax, 'name', '') != '3d':
+        if app_state.ax is None or current_name != '3d':
             try:
                 app_state.fig.clf()
             except Exception:
                 pass
             state_gateway.set_attr('ax', app_state.fig.add_subplot(111, projection='3d'))
+    elif dimensions == 'ternary':
+        _lazy_import_mpltern()
+        if app_state.ax is None or current_name != 'ternary':
+            try:
+                app_state.fig.clf()
+            except Exception:
+                pass
+            state_gateway.set_attr('ax', app_state.fig.add_subplot(111, projection='ternary'))
     else:
-        if app_state.ax is None or getattr(app_state.ax, 'name', '') == '3d':
+        if app_state.ax is None or current_name in ('3d', 'ternary'):
             try:
                 app_state.fig.clf()
             except Exception:
@@ -84,7 +101,6 @@ def _ensure_axes(dimensions=2):
     state_gateway.set_attr('legend_ax', None)
 
     return app_state.ax
-
 def get_umap_embedding(params: dict) -> np.ndarray | None:
     """Get or compute UMAP embedding with caching."""
     try:
@@ -362,4 +378,6 @@ def _find_age_column(columns):
         if "age" in low:
             return col
     return None
+
+
 

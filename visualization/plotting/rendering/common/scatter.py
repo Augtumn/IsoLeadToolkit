@@ -7,7 +7,7 @@ import numpy as np
 
 from core import app_state
 
-from ...ternary import _apply_ternary_stretch
+from ...ternary import prepare_ternary_components
 
 logger = logging.getLogger(__name__)
 
@@ -30,24 +30,18 @@ def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, si
             indices = subset.index.tolist()
 
             if actual_algorithm == 'TERNARY':
-                ts = subset['_emb_t'].to_numpy(dtype=float, copy=False)
-                ls = subset['_emb_l'].to_numpy(dtype=float, copy=False)
-                rs = subset['_emb_r'].to_numpy(dtype=float, copy=False)
+                if {'_emb_tn', '_emb_ln', '_emb_rn'}.issubset(subset.columns):
+                    t_norm = subset['_emb_tn'].to_numpy(dtype=float, copy=False)
+                    l_norm = subset['_emb_ln'].to_numpy(dtype=float, copy=False)
+                    r_norm = subset['_emb_rn'].to_numpy(dtype=float, copy=False)
+                else:
+                    ts = subset['_emb_t'].to_numpy(dtype=float, copy=False)
+                    ls = subset['_emb_l'].to_numpy(dtype=float, copy=False)
+                    rs = subset['_emb_r'].to_numpy(dtype=float, copy=False)
+                    t_norm, l_norm, r_norm = prepare_ternary_components(ts, ls, rs)
 
-                if len(ts) == 0:
+                if len(t_norm) == 0:
                     continue
-
-                t_vals, l_vals, r_vals = _apply_ternary_stretch(ts, ls, rs)
-
-                sums = t_vals + l_vals + r_vals
-                with np.errstate(divide='ignore', invalid='ignore'):
-                    sums[sums == 0] = 1.0
-                    t_norm = t_vals / sums
-                    r_norm = r_vals / sums
-
-                h = np.sqrt(3) / 2
-                x_cart = 0.5 * t_norm + 1.0 * r_norm
-                y_cart = h * t_norm
 
                 marker_size = getattr(app_state, 'plot_marker_size', size)
                 marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
@@ -55,8 +49,9 @@ def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, si
                 color = app_state.current_palette[cat]
 
                 sc = app_state.ax.scatter(
-                    x_cart,
-                    y_cart,
+                    t_norm,
+                    l_norm,
+                    r_norm,
                     label=cat,
                     color=color,
                     s=marker_size,
@@ -69,15 +64,23 @@ def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, si
                 )
 
                 offsets = sc.get_offsets()
+                if offsets is None or len(offsets) < len(indices):
+                    x_cart = 0.5 * t_norm + r_norm
+                    y_cart = (np.sqrt(3.0) / 2.0) * t_norm
+                    offsets = np.column_stack((x_cart, y_cart))
+
                 sc.indices = indices
 
                 for j, idx in enumerate(indices):
-                    if j < len(offsets):
-                        x_val, y_val = offsets[j]
-                        key = (round(float(x_val), 2), round(float(y_val), 2))
-                        app_state.sample_index_map[key] = idx
-                        app_state.sample_coordinates[idx] = (x_val, y_val)
-                        app_state.artist_to_sample[(id(sc), j)] = idx
+                    if j >= len(offsets):
+                        continue
+                    x_val, y_val = offsets[j]
+                    x_val = float(x_val)
+                    y_val = float(y_val)
+                    key = (round(x_val, 2), round(y_val, 2))
+                    app_state.sample_index_map[key] = idx
+                    app_state.sample_coordinates[idx] = (x_val, y_val)
+                    app_state.artist_to_sample[(id(sc), j)] = idx
 
             else:
                 xs = subset['_emb_x'].to_numpy(dtype=float, copy=False)

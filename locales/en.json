@@ -400,6 +400,19 @@
   "Showing first {max} groups only.": "Showing first {max} groups only.",
   "Using Standard Ternary Plot.\nData is plotted as relative proportions.": "Using Standard Ternary Plot.\nData is plotted as relative proportions.",
   "Auto-Zoom to Data": "Auto-Zoom to Data",
+  "Limit Mode": "Limit Mode",
+  "Boundary Percent (%)": "Boundary Percent (%)",
+  "Minimum Only": "Minimum Only",
+  "Maximum Only": "Maximum Only",
+  "Both Ends": "Both Ends",
+  "Auto Optimize": "Auto Optimize",
+  "Manual Limit Parameters": "Manual Limit Parameters",
+  "Top Min": "Top Min",
+  "Top Max": "Top Max",
+  "Left Min": "Left Min",
+  "Left Max": "Left Max",
+  "Right Min": "Right Min",
+  "Right Max": "Right Max",
   "Standard Ternary Diagram (mpltern)": "Standard Ternary Diagram (mpltern)",
   "Ternary Plot": "Raw - Ternary Plot",
   "Select Ternary Axes": "Select Ternary Axes",
@@ -943,3 +956,4 @@
   "min_dist: {value:.2f}": "min_dist: {value:.2f}",
   "{param}: {value:.2f}": "{param}: {value:.2f}"
 }
+

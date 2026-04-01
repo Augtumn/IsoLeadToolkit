@@ -57,6 +57,11 @@ class DataPanelBuildMixin:
         self.ternary_scale_label = None
         self.ternary_scale_slider = None
         self.ternary_auto_zoom_check = None
+        self.ternary_limit_mode_combo = None
+        self.ternary_boundary_percent_spin = None
+        self.ternary_auto_optimize_btn = None
+        self.ternary_manual_limits_check = None
+        self.ternary_limit_spins = {}
         self.ternary_stretch_check = None
         self.geochem_plot_group = None
         self.modeling_show_model_check = None
@@ -91,6 +96,24 @@ class DataPanelBuildMixin:
         self.plumbotectonics_model_label = None
         self.plumbotectonics_model_combo = None
         self.plumbotectonics_model_keys = []
+
+    def _update_translations(self, root: QWidget | None = None) -> None:
+        """Refresh translated widget text and ternary mode combo options."""
+        super()._update_translations(root)
+
+        combo = getattr(self, "ternary_limit_mode_combo", None)
+        if combo is not None:
+            current_mode = str(combo.currentData()).strip().lower() if combo.currentData() is not None else "min"
+            if current_mode not in ("min", "max", "both"):
+                current_mode = "min"
+
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItem(translate("Minimum Only"), "min")
+            combo.addItem(translate("Maximum Only"), "max")
+            combo.addItem(translate("Both Ends"), "both")
+            self._set_combo_value(combo, current_mode)
+            combo.blockSignals(False)
 
     def build(self) -> QWidget:
         widget = self._build_data_section()
@@ -497,6 +520,85 @@ class DataPanelBuildMixin:
         self.ternary_auto_zoom_check.stateChanged.connect(self._on_ternary_zoom_change)
         ternary_layout.addWidget(self.ternary_auto_zoom_check)
 
+        limit_mode_row = QHBoxLayout()
+        limit_mode_label = QLabel(translate("Limit Mode"))
+        limit_mode_label.setProperty("translate_key", "Limit Mode")
+        limit_mode_row.addWidget(limit_mode_label)
+
+        self.ternary_limit_mode_combo = QComboBox()
+        self.ternary_limit_mode_combo.addItem(translate("Minimum Only"), "min")
+        self.ternary_limit_mode_combo.addItem(translate("Maximum Only"), "max")
+        self.ternary_limit_mode_combo.addItem(translate("Both Ends"), "both")
+        limit_mode_row.addWidget(self.ternary_limit_mode_combo)
+        ternary_layout.addLayout(limit_mode_row)
+
+        current_limit_mode = str(getattr(app_state, "ternary_limit_mode", "min")).strip().lower()
+        if current_limit_mode not in ("min", "max", "both"):
+            current_limit_mode = "min"
+        self._set_combo_value(self.ternary_limit_mode_combo, current_limit_mode)
+        self.ternary_limit_mode_combo.currentIndexChanged.connect(self._on_ternary_limit_mode_change)
+
+        boundary_row = QHBoxLayout()
+        boundary_label = QLabel(translate("Boundary Percent (%)"))
+        boundary_label.setProperty("translate_key", "Boundary Percent (%)")
+        boundary_row.addWidget(boundary_label)
+
+        self.ternary_boundary_percent_spin = QDoubleSpinBox()
+        self.ternary_boundary_percent_spin.setRange(0.0, 30.0)
+        self.ternary_boundary_percent_spin.setDecimals(1)
+        self.ternary_boundary_percent_spin.setSingleStep(0.5)
+        self.ternary_boundary_percent_spin.setSuffix("%")
+        self.ternary_boundary_percent_spin.setValue(float(getattr(app_state, "ternary_boundary_percent", 5.0)))
+        self.ternary_boundary_percent_spin.valueChanged.connect(self._on_ternary_boundary_percent_change)
+        boundary_row.addWidget(self.ternary_boundary_percent_spin)
+        ternary_layout.addLayout(boundary_row)
+
+        self.ternary_auto_optimize_btn = QPushButton(translate("Auto Optimize"))
+        self.ternary_auto_optimize_btn.setProperty("translate_key", "Auto Optimize")
+        self.ternary_auto_optimize_btn.clicked.connect(self._on_ternary_auto_optimize)
+        ternary_layout.addWidget(self.ternary_auto_optimize_btn)
+
+        self.ternary_manual_limits_check = QCheckBox(translate("Manual Limit Parameters"))
+        self.ternary_manual_limits_check.setProperty("translate_key", "Manual Limit Parameters")
+        self.ternary_manual_limits_check.setChecked(bool(getattr(app_state, "ternary_manual_limits_enabled", False)))
+        self.ternary_manual_limits_check.stateChanged.connect(self._on_ternary_manual_limits_change)
+        ternary_layout.addWidget(self.ternary_manual_limits_check)
+
+        manual_limits = getattr(app_state, "ternary_manual_limits", None) or {}
+        default_limits = {
+            "tmin": 0.0,
+            "tmax": 1.0,
+            "lmin": 0.0,
+            "lmax": 1.0,
+            "rmin": 0.0,
+            "rmax": 1.0,
+        }
+        default_limits.update({k: v for k, v in manual_limits.items() if k in default_limits})
+
+        manual_grid = QGridLayout()
+
+        def _add_limit_spin(row, title, key):
+            label = QLabel(translate(title))
+            label.setProperty("translate_key", title)
+            manual_grid.addWidget(label, row, 0)
+
+            spin = QDoubleSpinBox()
+            spin.setRange(0.0, 1.0)
+            spin.setDecimals(3)
+            spin.setSingleStep(0.01)
+            spin.setValue(float(default_limits[key]))
+            spin.valueChanged.connect(lambda v, name=key: self._on_ternary_limit_param_change(name, v))
+            manual_grid.addWidget(spin, row, 1)
+            self.ternary_limit_spins[key] = spin
+
+        _add_limit_spin(0, "Top Min", "tmin")
+        _add_limit_spin(1, "Top Max", "tmax")
+        _add_limit_spin(2, "Left Min", "lmin")
+        _add_limit_spin(3, "Left Max", "lmax")
+        _add_limit_spin(4, "Right Min", "rmin")
+        _add_limit_spin(5, "Right Max", "rmax")
+        ternary_layout.addLayout(manual_grid)
+
         stretch_header = QHBoxLayout()
         stretch_label = QLabel(translate("Stretch Mode"))
         stretch_label.setProperty("translate_key", "Stretch Mode")
@@ -527,6 +629,7 @@ class DataPanelBuildMixin:
         self.ternary_stretch_check.stateChanged.connect(self._on_ternary_stretch_change)
         ternary_layout.addWidget(self.ternary_stretch_check)
 
+        self._refresh_ternary_limit_controls_enabled()
         self.ternary_group.setLayout(ternary_layout)
         layout.addWidget(self.ternary_group)
 
@@ -746,3 +849,11 @@ class DataPanelBuildMixin:
 
         layout.addStretch()
         return widget
+
+
+
+
+
+
+
+
