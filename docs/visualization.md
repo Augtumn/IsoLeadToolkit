@@ -38,20 +38,20 @@
 
 `plotting/api.py` 仅汇总公共绘图函数，私有 helper 保留在 `plotting/core.py`, `plotting/rendering/*`, `plotting/geochem/*` 等模块中，不作为对外 API 承诺。
 
-`plotting/rendering/` 近期已拆分出以下实现模块，用于降低 `embedding_plot.py` 与 `raw_plots.py` 的复杂度：
-- `embedding_algorithm.py`: 算法归一化、参数解析、embedding 计算调度。
-- `embedding_dataframe.py`: embedding 与 DataFrame 对齐、可见分组过滤。
-- `embedding_compute_ml.py`: UMAP/t-SNE/PCA/RobustPCA 计算与预计算 embedding 元数据回填。
-- `embedding_compute_geochem.py`: V1V2 与 Pb 演化/Mu/Kappa 图的 embedding 计算。
-- `embedding_compute_ternary.py`: 三元图 embedding 计算与三元范围状态清理。
+`plotting/rendering/` 近期已按职责落入子目录，避免平铺文件继续膨胀：
+- `embedding/algorithm.py`: 算法归一化、参数解析、embedding 计算调度。
+- `embedding/dataframe.py`: embedding 与 DataFrame 对齐、可见分组过滤。
+- `embedding/compute_ml.py`: UMAP/t-SNE/PCA/RobustPCA 计算与预计算 embedding 元数据回填。
+- `embedding/compute_geochem.py`: V1V2 与 Pb 演化/Mu/Kappa 图的 embedding 计算。
+- `embedding/compute_ternary.py`: 三元图 embedding 计算与三元范围状态清理。
+- `common/state_access.py`: 渲染层共享状态访问入口（`df_global`、`data_cols`、活动子集）。
+- `common/legend.py`: 图例构建、图内放置、外部图例面板通知。
+- `common/scatter.py`: 分组散点绘制与样本命中映射维护。
+- `common/title.py`: 标题与坐标轴标签构建。
 - `raw_plot_2d.py`: 原始 2D 散点渲染实现。
 - `raw_plot_3d.py`: 原始 3D 散点渲染实现。
-- `state_access.py`: 渲染层共享状态访问入口（`df_global`、`data_cols`、活动子集）。
-- `legend_helpers.py`: 图例构建、图内放置、外部图例面板通知。
-- `scatter_helpers.py`: 分组散点绘制与样本命中映射维护。
-- `title_helpers.py`: 标题与坐标轴标签构建。
 - `raw_plots.py`: 仅保留向后兼容导出门面。
-- `helpers.py`: 兼容门面，聚合导出常用 helper 以避免旧导入路径失效。
+- `embedding_algorithm.py`、`embedding_dataframe.py`、`embedding_compute_*.py`、`state_access.py`、`legend_helpers.py`、`scatter_helpers.py`、`title_helpers.py`、`helpers.py`: 兼容门面，避免旧导入路径失效。
 
 ---
 

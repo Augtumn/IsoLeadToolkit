@@ -39,6 +39,7 @@
     - `visualization/plotting/rendering/embedding_plot.py` 继续瘦身，算法归一化与嵌入计算逻辑下沉到 `embedding_algorithm.py`，DataFrame 对齐与可见组过滤下沉到 `embedding_dataframe.py`。
     - `visualization/plotting/rendering/helpers.py` 进一步门面化，图例/散点/标题/状态访问分别下沉到 `legend_helpers.py`、`scatter_helpers.py`、`title_helpers.py`、`state_access.py`。
     - `visualization/plotting/rendering/embedding_algorithm.py` 进一步收敛为调度门面，ML 计算、地球化学计算、三元图计算分别下沉到 `embedding_compute_ml.py`、`embedding_compute_geochem.py`、`embedding_compute_ternary.py`。
+    - 结构归位：将 embedding 子模块统一迁移到 `visualization/plotting/rendering/embedding/`，将通用渲染 helper 迁移到 `visualization/plotting/rendering/common/`，根目录同名文件保留为兼容门面。
     - 目标达成：在不变更外部导入路径的前提下，进一步降低单文件复杂度并提升渲染链路可维护性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
