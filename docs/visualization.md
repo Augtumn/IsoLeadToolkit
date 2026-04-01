@@ -12,7 +12,7 @@
 | `plotting/api.py` | ~200 | 渲染入口（汇总导出） |
 | `plotting/core.py` | ~600 | 嵌入计算 + 核心工具 |
 | `plotting/render.py` | ~20 | 渲染兼容门面（向后兼容导出） |
-| `plotting/rendering/` | 多文件 | 渲染辅助层（图例、KDE、地球化学覆盖层） |
+| `plotting/rendering/` | 多文件 | 渲染辅助层（图例、KDE、地球化学覆盖层、embedding 算法/数据准备、raw 2D/3D） |
 | `plotting/geo.py` | ~70 | 地球化学兼容门面（向后兼容导出） |
 | `plotting/geochem/` | 多文件 | 地球化学辅助函数（`isochron_fits.py`、`isochron_fit_76.py`、`isochron_fit_86.py`、`selected_isochron_overlay.py`、`paleoisochron_overlays.py`、模型年龄线、标签刷新、方程覆盖、Plumbotectonics 子域） |
 | `plotting/ternary.py` | ~120 | 三元图工具 |
@@ -37,6 +37,13 @@
 - 绘图接口: `plot_embedding`, `plot_2d_data`, `plot_3d_data`, `plot_umap`, `refresh_plot_style`, `get_embedding` 等
 
 `plotting/api.py` 仅汇总公共绘图函数，私有 helper 保留在 `plotting/core.py`, `plotting/rendering/*`, `plotting/geochem/*` 等模块中，不作为对外 API 承诺。
+
+`plotting/rendering/` 近期已拆分出以下实现模块，用于降低 `embedding_plot.py` 与 `raw_plots.py` 的复杂度：
+- `embedding_algorithm.py`: 算法归一化、参数解析、embedding 计算调度。
+- `embedding_dataframe.py`: embedding 与 DataFrame 对齐、可见分组过滤。
+- `raw_plot_2d.py`: 原始 2D 散点渲染实现。
+- `raw_plot_3d.py`: 原始 3D 散点渲染实现。
+- `raw_plots.py`: 仅保留向后兼容导出门面。
 
 ---
 

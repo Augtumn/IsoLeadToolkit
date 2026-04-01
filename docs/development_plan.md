@@ -32,6 +32,13 @@
     - 导出面板完成模块化拆分：`export_panel.py` 收敛为组装器，图像导出/数据导出/选择同步/公共逻辑迁移到 `ui/panels/export/` 子包。
     - E5 文档项部分完成：新增 `docs/export.md`，补充导出架构、流程、参数与依赖说明。
 
+## 阶段进展（2026-04-01）
+
+- 可视化渲染层完成新一轮大块拆分（保持旧入口兼容）：
+    - `visualization/plotting/rendering/raw_plots.py` 收敛为兼容门面，2D/3D 原始散点实现分别下沉到 `raw_plot_2d.py` 与 `raw_plot_3d.py`。
+    - `visualization/plotting/rendering/embedding_plot.py` 继续瘦身，算法归一化与嵌入计算逻辑下沉到 `embedding_algorithm.py`，DataFrame 对齐与可见组过滤下沉到 `embedding_dataframe.py`。
+    - 目标达成：在不变更外部导入路径的前提下，进一步降低单文件复杂度并提升渲染链路可维护性。
+
 ## 架构现代化改造方案（2026-03-31 新增）
 
 ### 0. 现状审计摘要（基于代码检查）
