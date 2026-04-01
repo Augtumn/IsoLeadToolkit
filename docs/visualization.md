@@ -18,6 +18,7 @@
 | `plotting/ternary.py` | ~120 | 三元图工具 |
 | `plotting/isochron.py` | 60 | 等时线误差配置与共享工具 |
 | `events.py` | ~170 | 事件编排入口（渲染触发 + 异步 embedding 管理） |
+| `workers/` | 多文件 | 后台计算辅助（embedding 计算与算法归一化） |
 | `event_handlers/` | 多文件 | 交互事件实现（`selection_tools.py`、`pointer_events.py`、`legend.py`、`isochron.py`、`overlay.py`、`shared.py`） |
 | `plotting/style.py` | 320 | 绘图样式 + 图例布局 |
 | `plotting/styling/` | 多文件 | 样式辅助层（核心样式、图例布局、覆盖层可见性） |
