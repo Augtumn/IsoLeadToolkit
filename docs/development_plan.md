@@ -425,6 +425,13 @@ src/
     - 新增 `visualization/plotting/geochem/equation_overlays.py`，承载方程表达式安全求值与曲线叠加渲染。
     - 量化结果：`geo.py` 由约 1233 行降至 64 行。
     - 验证结果：`pytest` 全通过（8 passed），兼容导入冒烟通过。
+- 已完成 geochem 第三轮拆分（2026-04-01 夜间续）：
+    - `visualization/plotting/geochem/isochron_overlays.py` 已收敛为兼容门面。
+    - 新增 `visualization/plotting/geochem/isochron_labels.py`，承载等时线标签构建与标签重布局刷新。
+    - 新增 `visualization/plotting/geochem/isochron_rendering.py`，承载等时线/选中等时线/古等时线渲染。
+    - 新增 `visualization/plotting/geochem/model_age_lines.py`，承载模型年龄线与年龄解算逻辑。
+    - 量化结果：`isochron_overlays.py` 由约 1021 行降至 27 行。
+    - 验证结果：`pytest` 全通过（8 passed），兼容导入冒烟通过。
 
 ## 全局改进计划
 

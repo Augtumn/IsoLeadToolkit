@@ -14,7 +14,7 @@
 | `plotting/render.py` | ~1,400 | 嵌入渲染 + 2D/3D 绘制 |
 | `plotting/rendering/` | 多文件 | 渲染辅助层（图例、KDE、地球化学覆盖层） |
 | `plotting/geo.py` | ~70 | 地球化学兼容门面（向后兼容导出） |
-| `plotting/geochem/` | 多文件 | 地球化学辅助函数（曲线元数据、标签与样式） |
+| `plotting/geochem/` | 多文件 | 地球化学辅助函数（曲线元数据、等时线渲染、模型年龄线、标签刷新、方程覆盖） |
 | `plotting/ternary.py` | ~120 | 三元图工具 |
 | `plotting/isochron.py` | 60 | 等时线误差配置与共享工具 |
 | `events.py` | 1,057 | 交互事件 (hover, 选择, 图例点击) |
