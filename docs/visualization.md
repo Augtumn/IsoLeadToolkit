@@ -50,10 +50,7 @@
 - `common/title.py`: 标题与坐标轴标签构建。
 - `raw/plot2d.py`: 原始 2D 散点渲染实现。
 - `raw/plot3d.py`: 原始 3D 散点渲染实现。
-- `raw_plot_2d.py`: 原始 2D 散点渲染实现。
-- `raw_plot_3d.py`: 原始 3D 散点渲染实现。
-- `raw_plots.py`: 仅保留向后兼容导出门面。
-- `embedding_algorithm.py`、`embedding_dataframe.py`、`embedding_compute_*.py`、`state_access.py`、`legend_helpers.py`、`scatter_helpers.py`、`title_helpers.py`、`helpers.py`、`raw_plot_2d.py`、`raw_plot_3d.py`: 兼容门面，避免旧导入路径失效。
+- 渲染层已移除不必要兼容门面，内部调用统一直接指向 `embedding/*`、`common/*` 与 `raw/*` 子目录实现。
 
 ---
 

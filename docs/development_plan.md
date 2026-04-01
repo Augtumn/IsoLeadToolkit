@@ -34,14 +34,12 @@
 
 ## 阶段进展（2026-04-01）
 
-- 可视化渲染层完成新一轮大块拆分（保持旧入口兼容）：
-    - `visualization/plotting/rendering/raw_plots.py` 收敛为兼容门面，2D/3D 原始散点实现分别下沉到 `raw_plot_2d.py` 与 `raw_plot_3d.py`。
-    - `visualization/plotting/rendering/embedding_plot.py` 继续瘦身，算法归一化与嵌入计算逻辑下沉到 `embedding_algorithm.py`，DataFrame 对齐与可见组过滤下沉到 `embedding_dataframe.py`。
-    - `visualization/plotting/rendering/helpers.py` 进一步门面化，图例/散点/标题/状态访问分别下沉到 `legend_helpers.py`、`scatter_helpers.py`、`title_helpers.py`、`state_access.py`。
-    - `visualization/plotting/rendering/embedding_algorithm.py` 进一步收敛为调度门面，ML 计算、地球化学计算、三元图计算分别下沉到 `embedding_compute_ml.py`、`embedding_compute_geochem.py`、`embedding_compute_ternary.py`。
-    - 结构归位：将 embedding 子模块统一迁移到 `visualization/plotting/rendering/embedding/`，将通用渲染 helper 迁移到 `visualization/plotting/rendering/common/`，根目录同名文件保留为兼容门面。
-    - raw 渲染归位：将 `plot_2d_data`、`plot_3d_data` 实现迁移到 `visualization/plotting/rendering/raw/`（`plot2d.py`、`plot3d.py`），根目录 `raw_plot_2d.py`、`raw_plot_3d.py` 与 `raw_plots.py` 保留兼容导出。
-    - 目标达成：在不变更外部导入路径的前提下，进一步降低单文件复杂度并提升渲染链路可维护性。
+- 可视化渲染层完成新一轮大块拆分并清理冗余兼容层：
+    - embedding 计算链路归位到 `visualization/plotting/rendering/embedding/`（`algorithm.py`、`dataframe.py`、`compute_ml.py`、`compute_geochem.py`、`compute_ternary.py`）。
+    - 通用渲染 helper 归位到 `visualization/plotting/rendering/common/`（`state_access.py`、`legend.py`、`scatter.py`、`title.py`）。
+    - raw 渲染归位到 `visualization/plotting/rendering/raw/`（`plot2d.py`、`plot3d.py`）。
+    - 已移除无调用的兼容门面文件（旧的 `embedding_*`、`raw_plot_*`、`helpers`/`*_helpers` 等平铺门面），内部调用统一指向子目录实现。
+    - 目标达成：降低平铺文件噪音与导入歧义，进一步提升渲染层可维护性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
