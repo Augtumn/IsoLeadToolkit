@@ -21,13 +21,11 @@ from .embedding.algorithm import (
     resolve_target_dimensions,
 )
 from .embedding.dataframe import prepare_plot_dataframe
-from .helpers import (
-    _render_geo_overlays,
-    _render_kde_overlay,
-    _render_legend,
-    _render_scatter_groups,
-    _render_title_labels,
-)
+from .common.legend import _render_legend
+from .common.scatter import _render_scatter_groups
+from .common.title import _render_title_labels
+from .geo_layers import _render_geo_overlays
+from .kde import _render_kde_overlay
 
 logger = logging.getLogger(__name__)
 

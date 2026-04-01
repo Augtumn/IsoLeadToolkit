@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .rendering.embedding_plot import plot_embedding
-from .rendering.raw_plots import plot_2d_data, plot_3d_data
+from .rendering.raw import plot_2d_data, plot_3d_data
 
 
 def plot_umap(group_col: str, params: dict, size: int) -> bool:

@@ -10,7 +10,8 @@ from core import app_state, state_gateway
 
 from ...core import _build_group_palette, _ensure_axes
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
-from ..helpers import _active_subset_indices, _df_global, _place_inline_legend
+from ..common.legend import _place_inline_legend
+from ..common.state_access import _active_subset_indices, _df_global
 
 logger = logging.getLogger(__name__)
 
