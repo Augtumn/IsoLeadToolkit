@@ -140,11 +140,14 @@ def plot_embedding(
                 labels=t_cols,
                 auto_zoom=auto_zoom,
             )
-            app_state.ternary_ranges = {
-                't': (tmin, tmax),
-                'l': (lmin, lmax),
-                'r': (rmin, rmax),
-            }
+            state_gateway.set_attr(
+                'ternary_ranges',
+                {
+                    't': (tmin, tmax),
+                    'l': (lmin, lmax),
+                    'r': (rmin, rmax),
+                },
+            )
 
         _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_palette)
 

@@ -100,11 +100,6 @@ def calculate_v1v2_coordinates(
     来源: Zhu (1995)
     """
     if params is None: params = engine.params
-    if params.get('v1v2_formula') == 'zhu1993':
-        # Explicit coefficients reported in Zhu (1993)
-        v1 = 0.44073 * d_alpha + 0.89764 * d_gamma
-        v2 = 0.84204 * d_alpha + 0.34648 * d_beta - 0.41343 * d_gamma
-        return v1, v2
     
     a, b, c = params['a'], params['b'], params['c']
     

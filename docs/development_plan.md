@@ -47,6 +47,21 @@
     - 异步 embedding 计算当前保留在 `visualization/embedding_worker.py` 单文件实现，避免过度拆分导致可读性下降。
     - 目标达成：降低平铺文件噪音与导入歧义，进一步提升渲染层可维护性。
 
+## 阶段进展（2026-04-01 · V1V2 一致性修复）
+
+- 已完成 V1V2 与文献实现一致性的关键修复与回归保护：
+    - 修复 `GeochemistryEngine` 预设参数更新缺陷：`v1v2_formula` 现在可被正确写入和切换，`V1V2 (Zhu 1993)` 预设可稳定触发 Zhu(1993) 直接系数分支。
+    - 为非 Zhu 模型补充显式 `v1v2_formula='default'`，避免模型切换后公式状态残留。
+    - 修复菜单对话框模式下 Data 面板的地球化学模型自动同步失效：切换到 `V1V2` 可自动应用 `V1V2 (Zhu 1993)`，切回 Pb 演化图自动恢复 `Stacey & Kramers (2nd Stage)`。
+    - 新增回归测试 `tests/test_geochem_model_sync.py`，覆盖“无 GeoPanel 引用时的模型自动同步”场景。
+    - 同步清理一个历史状态写入守卫违规点：`embedding_plot.py` 中 `ternary_ranges` 改为通过 `state_gateway` 写入。
+
+## 阶段进展（2026-04-02 · V1V2 投影口径统一）
+
+- 根据业务决策，`V1V2 (Zhu 1993)` 的坐标计算改为与 Geokit 一致：统一走 `a/b/c` 回归平面投影路径，不再使用直接系数分支。
+- 更新 `docs/geochemistry.md` 中 Zhu1993 与 V1V2 方法描述，反映“统一平面投影实现”。
+- 增加回归测试，确保 `v1v2_formula='zhu1993'` 与 `default` 在相同 `a/b/c` 下得到一致的 `V1/V2` 结果。
+
 ## 架构现代化改造方案（2026-03-31 新增）
 
 ### 0. 现状审计摘要（基于代码检查）

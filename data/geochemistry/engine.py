@@ -87,7 +87,8 @@ PRESET_MODELS = {
         'omega_M': 4.04 * 7.8,
         'U_ratio': 1.0 / 137.88,
         'E1': E1_DEFAULT,
-        'E2': E2_DEFAULT
+        'E2': E2_DEFAULT,
+        'v1v2_formula': 'default',
     },
     "V1V2 (Zhu 1993)": {
         # Zhu (1993): Pb isotope 3D topological projection (forced through origin)
@@ -116,7 +117,8 @@ PRESET_MODELS = {
         'omega_M': 36.84, # Derived from kappa=3.78 or similar
         'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
-        'E2': E2_DEFAULT
+        'E2': E2_DEFAULT,
+        'v1v2_formula': 'default',
     },
     "Stacey & Kramers (1st Stage)": {
         'age_model': 'single_stage',
@@ -130,7 +132,8 @@ PRESET_MODELS = {
         'omega_M': 33.2,
         'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
-        'E2': E2_DEFAULT
+        'E2': E2_DEFAULT,
+        'v1v2_formula': 'default',
     },
     "Cumming & Richards (Model III)": {
         'age_model': 'single_stage',
@@ -142,7 +145,8 @@ PRESET_MODELS = {
         'omega_M': 41.2,
         'U_ratio': U_RATIO_NATURAL,
         'E1': 5e-11,
-        'E2': 3.7e-11
+        'E2': 3.7e-11,
+        'v1v2_formula': 'default',
     },
     "Maltese & Mezger (2020)": {
         # BSE evolution model: initial BSE composition at t1 = 4.498 Ga
@@ -157,7 +161,8 @@ PRESET_MODELS = {
         'omega_M': 34.8,  # kappa~4.05 -> omega ~ 34.8
         'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
-        'E2': E2_DEFAULT
+        'E2': E2_DEFAULT,
+        'v1v2_formula': 'default',
     }
 }
 
@@ -193,6 +198,7 @@ class GeochemistryEngine:
             'U_ratio': U_RATIO_NATURAL,
             
             'a': REGRESSION_A, 'b': REGRESSION_B, 'c': REGRESSION_C,
+            'v1v2_formula': 'default',
             'E1': E1_DEFAULT, 'E2': E2_DEFAULT
         }
         self.current_model_name = "Stacey & Kramers (2nd Stage)"
@@ -235,7 +241,7 @@ class GeochemistryEngine:
         """
         for k, v in new_params.items():
             if k in self.params:
-                if k == 'age_model':
+                if k in ('age_model', 'v1v2_formula'):
                     self.params[k] = str(v)
                 else:
                     try:

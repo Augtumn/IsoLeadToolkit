@@ -29,10 +29,6 @@ class DataPanelGroupingMixin:
             panel._update_group_list()
 
     def _sync_geochem_model_for_mode(self, mode):
-        panel = getattr(self, "geo_panel", None)
-        combo = getattr(panel, "geo_model_combo", None) if panel is not None else None
-        if combo is None:
-            return
         try:
             from data.geochemistry import engine
         except Exception:
@@ -51,9 +47,21 @@ class DataPanelGroupingMixin:
         if current_model == target_model:
             return
 
-        available_models = [combo.itemText(i) for i in range(combo.count())]
-        if target_model in available_models:
+        # In dialog mode, DataPanel and GeoPanel are opened separately,
+        # so DataPanel may not hold a live geo_model_combo reference.
+        available_models = engine.get_available_models() if hasattr(engine, "get_available_models") else []
+        if target_model not in available_models:
+            return
+
+        if engine.load_preset(target_model):
+            state_gateway.set_attr("geo_model_name", target_model)
+
+        panel = getattr(self, "geo_panel", None)
+        combo = getattr(panel, "geo_model_combo", None) if panel is not None else None
+        if combo is not None:
+            combo.blockSignals(True)
             combo.setCurrentText(target_model)
+            combo.blockSignals(False)
 
     def _sync_geochem_toggle_widgets(self, checked, *widgets):
         """Synchronize geochemistry toggle states."""

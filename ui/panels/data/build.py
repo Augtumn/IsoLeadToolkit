@@ -115,6 +115,18 @@ class DataPanelBuildMixin:
             self._set_combo_value(combo, current_mode)
             combo.blockSignals(False)
 
+    def _connect_spinbox_deferred(self, spinbox, callback, *, pass_value: bool = True) -> None:
+        """Apply spinbox changes only when editing is finished."""
+        try:
+            spinbox.setKeyboardTracking(False)
+        except Exception:
+            pass
+
+        if pass_value:
+            spinbox.editingFinished.connect(lambda s=spinbox: callback(s.value()))
+        else:
+            spinbox.editingFinished.connect(callback)
+
     def build(self) -> QWidget:
         widget = self._build_data_section()
         self._is_initialized = True
@@ -341,7 +353,10 @@ class DataPanelBuildMixin:
         tsne_rs_spin = QSpinBox()
         tsne_rs_spin.setRange(0, 200)
         tsne_rs_spin.setValue(app_state.tsne_params.get("random_state", 42))
-        tsne_rs_spin.valueChanged.connect(lambda v: self._on_tsne_param_change("random_state", v, tsne_rs_label))
+        self._connect_spinbox_deferred(
+            tsne_rs_spin,
+            lambda v: self._on_tsne_param_change("random_state", v, tsne_rs_label),
+        )
         tsne_layout.addWidget(tsne_rs_spin)
 
         self.tsne_group.setLayout(tsne_layout)
@@ -357,7 +372,7 @@ class DataPanelBuildMixin:
         n_comp_spin = QSpinBox()
         n_comp_spin.setRange(2, 10)
         n_comp_spin.setValue(app_state.pca_params.get("n_components", 2))
-        n_comp_spin.valueChanged.connect(lambda v: self._on_pca_param_change("n_components", v))
+        self._connect_spinbox_deferred(n_comp_spin, lambda v: self._on_pca_param_change("n_components", v))
         pca_layout.addWidget(n_comp_spin)
 
         pca_rs_label = QLabel(translate("random_state: {value}").format(value=app_state.pca_params.get("random_state", 42)))
@@ -366,7 +381,10 @@ class DataPanelBuildMixin:
         pca_rs_spin = QSpinBox()
         pca_rs_spin.setRange(0, 200)
         pca_rs_spin.setValue(app_state.pca_params.get("random_state", 42))
-        pca_rs_spin.valueChanged.connect(lambda v: self._on_pca_param_change("random_state", v, pca_rs_label))
+        self._connect_spinbox_deferred(
+            pca_rs_spin,
+            lambda v: self._on_pca_param_change("random_state", v, pca_rs_label),
+        )
         pca_layout.addWidget(pca_rs_spin)
 
         standardize_check = QCheckBox(translate("Standardize data"))
@@ -398,7 +416,7 @@ class DataPanelBuildMixin:
         self.pca_x_spin.setRange(1, 10)
         self.pca_x_spin.setValue(app_state.pca_component_indices[0] + 1)
         self.pca_x_spin.setMaximumWidth(60)
-        self.pca_x_spin.valueChanged.connect(self._on_pca_dim_change)
+        self._connect_spinbox_deferred(self.pca_x_spin, self._on_pca_dim_change, pass_value=False)
         dim_layout.addWidget(self.pca_x_spin)
 
         y_label = QLabel(translate("Y:"))
@@ -408,7 +426,7 @@ class DataPanelBuildMixin:
         self.pca_y_spin.setRange(1, 10)
         self.pca_y_spin.setValue(app_state.pca_component_indices[1] + 1)
         self.pca_y_spin.setMaximumWidth(60)
-        self.pca_y_spin.valueChanged.connect(self._on_pca_dim_change)
+        self._connect_spinbox_deferred(self.pca_y_spin, self._on_pca_dim_change, pass_value=False)
         dim_layout.addWidget(self.pca_y_spin)
 
         dim_layout.addStretch()
@@ -428,7 +446,10 @@ class DataPanelBuildMixin:
         robust_n_comp_spin = QSpinBox()
         robust_n_comp_spin.setRange(2, 10)
         robust_n_comp_spin.setValue(app_state.robust_pca_params.get("n_components", 2))
-        robust_n_comp_spin.valueChanged.connect(lambda v: self._on_robust_pca_param_change("n_components", v))
+        self._connect_spinbox_deferred(
+            robust_n_comp_spin,
+            lambda v: self._on_robust_pca_param_change("n_components", v),
+        )
         robust_pca_layout.addWidget(robust_n_comp_spin)
 
         support_label = QLabel(
@@ -443,7 +464,8 @@ class DataPanelBuildMixin:
         support_spin.setSingleStep(0.05)
         support_spin.setDecimals(2)
         support_spin.setValue(app_state.robust_pca_params.get("support_fraction", 0.75))
-        support_spin.valueChanged.connect(
+        self._connect_spinbox_deferred(
+            support_spin,
             lambda v: self._on_robust_pca_param_change("support_fraction", v, support_label)
         )
         robust_pca_layout.addWidget(support_spin)
@@ -457,7 +479,10 @@ class DataPanelBuildMixin:
         robust_rs_spin = QSpinBox()
         robust_rs_spin.setRange(0, 9999)
         robust_rs_spin.setValue(app_state.robust_pca_params.get("random_state", 42))
-        robust_rs_spin.valueChanged.connect(lambda v: self._on_robust_pca_param_change("random_state", v))
+        self._connect_spinbox_deferred(
+            robust_rs_spin,
+            lambda v: self._on_robust_pca_param_change("random_state", v),
+        )
         robust_pca_layout.addWidget(robust_rs_spin)
 
         rpca_tools_layout = QHBoxLayout()
@@ -483,7 +508,7 @@ class DataPanelBuildMixin:
         self.rpca_x_spin.setRange(1, 10)
         self.rpca_x_spin.setValue(app_state.pca_component_indices[0] + 1)
         self.rpca_x_spin.setMaximumWidth(60)
-        self.rpca_x_spin.valueChanged.connect(self._on_pca_dim_change)
+        self._connect_spinbox_deferred(self.rpca_x_spin, self._on_pca_dim_change, pass_value=False)
         rpca_dim_layout.addWidget(self.rpca_x_spin)
 
         rpca_y_label = QLabel(translate("Y:"))
@@ -493,7 +518,7 @@ class DataPanelBuildMixin:
         self.rpca_y_spin.setRange(1, 10)
         self.rpca_y_spin.setValue(app_state.pca_component_indices[1] + 1)
         self.rpca_y_spin.setMaximumWidth(60)
-        self.rpca_y_spin.valueChanged.connect(self._on_pca_dim_change)
+        self._connect_spinbox_deferred(self.rpca_y_spin, self._on_pca_dim_change, pass_value=False)
         rpca_dim_layout.addWidget(self.rpca_y_spin)
 
         rpca_dim_layout.addStretch()
@@ -549,7 +574,7 @@ class DataPanelBuildMixin:
         self.ternary_boundary_percent_spin.setSingleStep(0.5)
         self.ternary_boundary_percent_spin.setSuffix("%")
         self.ternary_boundary_percent_spin.setValue(float(getattr(app_state, "ternary_boundary_percent", 5.0)))
-        self.ternary_boundary_percent_spin.valueChanged.connect(self._on_ternary_boundary_percent_change)
+        self._connect_spinbox_deferred(self.ternary_boundary_percent_spin, self._on_ternary_boundary_percent_change)
         boundary_row.addWidget(self.ternary_boundary_percent_spin)
         ternary_layout.addLayout(boundary_row)
 
@@ -587,7 +612,10 @@ class DataPanelBuildMixin:
             spin.setDecimals(3)
             spin.setSingleStep(0.01)
             spin.setValue(float(default_limits[key]))
-            spin.valueChanged.connect(lambda v, name=key: self._on_ternary_limit_param_change(name, v))
+            self._connect_spinbox_deferred(
+                spin,
+                lambda v, name=key: self._on_ternary_limit_param_change(name, v),
+            )
             manual_grid.addWidget(spin, row, 1)
             self.ternary_limit_spins[key] = spin
 
@@ -655,7 +683,7 @@ class DataPanelBuildMixin:
         self.v1v2_t1_spin.setRange(0.0, 10000.0)
         self.v1v2_t1_spin.setDecimals(3)
         self.v1v2_t1_spin.setValue(t1_val)
-        self.v1v2_t1_spin.valueChanged.connect(self._on_v1v2_param_change)
+        self._connect_spinbox_deferred(self.v1v2_t1_spin, self._on_v1v2_param_change, pass_value=False)
         t1_layout.addWidget(self.v1v2_t1_spin)
         v1v2_layout.addLayout(t1_layout)
 
@@ -667,7 +695,7 @@ class DataPanelBuildMixin:
         self.v1v2_t2_spin.setRange(0.0, 10000.0)
         self.v1v2_t2_spin.setDecimals(3)
         self.v1v2_t2_spin.setValue(t2_val)
-        self.v1v2_t2_spin.valueChanged.connect(self._on_v1v2_param_change)
+        self._connect_spinbox_deferred(self.v1v2_t2_spin, self._on_v1v2_param_change, pass_value=False)
         t2_layout.addWidget(self.v1v2_t2_spin)
         v1v2_layout.addLayout(t2_layout)
 
@@ -741,7 +769,7 @@ class DataPanelBuildMixin:
         self.paleo_step_spin.setRange(50, 5000)
         self.paleo_step_spin.setSingleStep(50)
         self.paleo_step_spin.setValue(getattr(app_state, "paleoisochron_step", 1000))
-        self.paleo_step_spin.valueChanged.connect(self._on_paleo_step_change)
+        self._connect_spinbox_deferred(self.paleo_step_spin, self._on_paleo_step_change)
         paleo_step_layout.addWidget(self.paleo_step_spin)
         paleo_step_layout.addStretch()
         geochem_layout.addLayout(paleo_step_layout)
