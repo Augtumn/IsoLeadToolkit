@@ -33,9 +33,13 @@ from .geo import _draw_equation_overlays
 logger = logging.getLogger(__name__)
 
 
-from .render_helpers import (
+from .rendering.helpers import (
     _active_subset_indices,
     _build_legend_proxies,
+    _data_cols,
+    _df_global,
+    _place_inline_legend,
+    _resolve_kde_style,
     _render_geo_overlays,
     _render_kde_overlay,
     _render_legend,

@@ -15,7 +15,7 @@ from .isochron import resolve_isochron_errors as _resolve_isochron_errors
 
 logger = logging.getLogger(__name__)
 
-from .geo_overlay_helpers import (
+from .geochem.overlay_helpers import (
     _draw_model_curves,
     _draw_mu_kappa_paleoisochrons,
     _draw_plumbotectonics_curves,

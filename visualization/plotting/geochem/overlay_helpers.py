@@ -7,8 +7,8 @@ import numpy as np
 from core import app_state, state_gateway
 from data.plumbotectonics_data import PLUMBOTECTONICS_SECTIONS
 from visualization.line_styles import ensure_line_style, resolve_line_style
-from .data import _lazy_import_geochemistry
-from .label_layout import position_curve_label
+from ..data import _lazy_import_geochemistry
+from ..label_layout import position_curve_label
 
 logger = logging.getLogger(__name__)
 
