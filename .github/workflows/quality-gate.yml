@@ -26,7 +26,9 @@ jobs:
           pip install pytest pandas
 
       - name: Run smoke tests
-        run: pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest
 
       - name: Check app_state direct assignments
         run: python scripts/check_state_mutations.py --fail-on-hits
