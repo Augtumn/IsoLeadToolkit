@@ -15,8 +15,8 @@ from .overlay_helpers import (
     _label_bbox,
     _register_overlay_artist,
     _resolve_label_options,
-    get_overlay_default_color,
 )
+from .plumbotectonics_metadata import get_overlay_default_color
 
 logger = logging.getLogger(__name__)
 

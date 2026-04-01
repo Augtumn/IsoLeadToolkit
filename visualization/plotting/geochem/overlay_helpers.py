@@ -1,7 +1,7 @@
 """Geochemistry overlay helper compatibility facade.
 
 This module keeps backward-compatible imports while implementation is split
-across overlay_common, model_overlays and plumbotectonics modules.
+across overlay_common, model_overlays and plumbotectonics submodules.
 """
 from __future__ import annotations
 
@@ -17,9 +17,9 @@ from .model_overlays import (
     _draw_model_curves,
     _draw_mu_kappa_paleoisochrons,
 )
-from .plumbotectonics import (
-    _draw_plumbotectonics_curves,
-    _draw_plumbotectonics_isoage_lines,
+from .plumbotectonics_curves import _draw_plumbotectonics_curves
+from .plumbotectonics_isoage import _draw_plumbotectonics_isoage_lines
+from .plumbotectonics_metadata import (
     get_overlay_default_color,
     get_plumbotectonics_group_entries,
     get_plumbotectonics_group_palette,

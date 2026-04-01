@@ -16,7 +16,7 @@ from .overlay_common import (
     _register_overlay_curve_label,
     _resolve_label_options,
 )
-from .plumbotectonics import get_overlay_default_color
+from .plumbotectonics_metadata import get_overlay_default_color
 
 logger = logging.getLogger(__name__)
 

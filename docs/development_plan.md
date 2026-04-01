@@ -40,6 +40,9 @@
     - raw 渲染归位到 `visualization/plotting/rendering/raw/`（`plot2d.py`、`plot3d.py`）。
     - 已移除无调用的兼容门面文件（旧的 `embedding_*`、`raw_plot_*`、`helpers`/`*_helpers` 等平铺门面），内部调用统一指向子目录实现。
     - 已进一步移除 visualization 内无调用兼容层：`event_handlers/selection_interaction.py`、`plotting/geochem/isochron_overlays.py`、`plotting/geochem/isochron_rendering.py`；`plotting/geo.py` 改为直接导入底层实现模块。
+    - Plumbotectonics 叠加能力按职责拆分为 `plotting/geochem/plumbotectonics_metadata.py`、`plotting/geochem/plumbotectonics_curves.py`、`plotting/geochem/plumbotectonics_isoage.py`，并删除旧单体 `plotting/geochem/plumbotectonics.py`。
+    - `core/state.py` 初始化职责完成模块化下沉：新增 `core/state_bootstrap.py` 承载 KDE 覆盖层样式同步与运行期默认状态初始化，`AppState` 入口保留且外部字段行为不变。
+    - `core/session.py` 会话迁移规则完成解耦：新增 `core/session_migration.py` 承载算法/渲染模式/列表字段规范化与版本迁移逻辑，`session.py` 聚焦文件 I/O 与持久化编排。
     - 异步 embedding 计算当前保留在 `visualization/embedding_worker.py` 单文件实现，避免过度拆分导致可读性下降。
     - 目标达成：降低平铺文件噪音与导入歧义，进一步提升渲染层可维护性。
 
