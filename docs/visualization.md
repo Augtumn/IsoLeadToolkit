@@ -12,11 +12,14 @@
 | `plotting/api.py` | ~200 | 渲染入口（汇总导出） |
 | `plotting/core.py` | ~600 | 嵌入计算 + 核心工具 |
 | `plotting/render.py` | ~1,400 | 嵌入渲染 + 2D/3D 绘制 |
+| `plotting/rendering/` | 多文件 | 渲染辅助层（图例、KDE、地球化学覆盖层） |
 | `plotting/geo.py` | ~400 | 地球化学叠加/等时线 |
+| `plotting/geochem/` | 多文件 | 地球化学辅助函数（曲线元数据、标签与样式） |
 | `plotting/ternary.py` | ~120 | 三元图工具 |
 | `plotting/isochron.py` | 60 | 等时线误差配置与共享工具 |
 | `events.py` | 1,057 | 交互事件 (hover, 选择, 图例点击) |
 | `plotting/style.py` | 320 | 绘图样式 + 图例布局 |
+| `plotting/styling/` | 多文件 | 样式辅助层（核心样式、图例布局、覆盖层可见性） |
 | `style_manager.py` | 224 | 调色板 + 字体 + UI 主题 |
 | `plotting/analysis_qt.py` | 261 | 诊断图 (scree, loadings, 相关性) |
 | `plotting/kde.py` | 127 | KDE 叠加渲染 |

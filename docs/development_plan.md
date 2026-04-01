@@ -413,6 +413,12 @@ src/
     - 新增 `visualization/plotting/event_bridge.py`，统一 `plotting -> events` 的回调桥接，移除 `render.py` 与 `style.py` 的分散式动态导入。
     - `visualization/plotting/legend_model.py` 已改为直接依赖 `geo_overlay_helpers` 的元数据函数，减少对 `geo.py` 主模块的耦合。
     - 验证结果：`pytest` 全通过，改动文件错误检查通过。
+- 已完成 plotting 子目录重组（2026-04-01 夜间续）：
+    - 新增 `visualization/plotting/rendering/`，并迁移 `render_helpers.py`、`render_kde.py`、`render_geo_layers.py` 到子目录（分别为 `helpers.py`、`kde.py`、`geo_layers.py`）。
+    - 新增 `visualization/plotting/styling/`，并迁移 `style_core.py`、`style_legend.py`、`style_overlays.py` 到子目录（分别为 `core.py`、`legend.py`、`overlays.py`）。
+    - 新增 `visualization/plotting/geochem/`，并迁移 `geo_overlay_helpers.py` 到 `overlay_helpers.py`。
+    - `render.py`、`style.py`、`geo.py`、`legend_model.py` 已完成导入路径切换，plotting 顶层文件堆积明显下降。
+    - 验证结果：`pytest` 全通过（8 passed），导入冒烟通过。
 
 ## 全局改进计划
 
