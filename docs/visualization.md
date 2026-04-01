@@ -14,10 +14,11 @@
 | `plotting/render.py` | ~20 | 渲染兼容门面（向后兼容导出） |
 | `plotting/rendering/` | 多文件 | 渲染辅助层（图例、KDE、地球化学覆盖层） |
 | `plotting/geo.py` | ~70 | 地球化学兼容门面（向后兼容导出） |
-| `plotting/geochem/` | 多文件 | 地球化学辅助函数（曲线元数据、等时线渲染、模型年龄线、标签刷新、方程覆盖、Plumbotectonics 子域） |
+| `plotting/geochem/` | 多文件 | 地球化学辅助函数（`isochron_fits.py`、`selected_isochron_overlay.py`、`paleoisochron_overlays.py`、模型年龄线、标签刷新、方程覆盖、Plumbotectonics 子域） |
 | `plotting/ternary.py` | ~120 | 三元图工具 |
 | `plotting/isochron.py` | 60 | 等时线误差配置与共享工具 |
-| `events.py` | 1,057 | 交互事件 (hover, 选择, 图例点击) |
+| `events.py` | ~170 | 事件编排入口（渲染触发 + 异步 embedding 管理） |
+| `event_handlers/` | 多文件 | 交互事件实现（`selection_tools.py`、`pointer_events.py`、`legend.py`、`isochron.py`、`overlay.py`、`shared.py`） |
 | `plotting/style.py` | 320 | 绘图样式 + 图例布局 |
 | `plotting/styling/` | 多文件 | 样式辅助层（核心样式、图例布局、覆盖层可见性） |
 | `style_manager.py` | 224 | 调色板 + 字体 + UI 主题 |
@@ -76,7 +77,7 @@
 2. `umap-learn` / `sklearn` / `seaborn` / `data.geochemistry` 使用惰性导入，缺失时记录 `warning` 并跳过相关功能。
 3. 数值列转换使用 `pd.to_numeric(..., errors='coerce')` 或 `astype(float)` 并在失败时退出当前渲染流程。
 4. 缺失值默认采用常量填充 (`SimpleImputer` fill 0)，失败时退化为删除含 NaN 行。
-5. 事件处理与渲染异常由 `events.py` 与 `plotting/render.py` 捕获，保证 UI 不崩溃。
+5. 事件处理与渲染异常由 `events.py`、`event_handlers/*` 与 `plotting/render.py` 捕获，保证 UI 不崩溃。
 
 ---
 

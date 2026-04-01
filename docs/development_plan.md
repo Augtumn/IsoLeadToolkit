@@ -418,6 +418,19 @@ src/
     - 新增 `visualization/plotting/styling/`，并迁移 `style_core.py`、`style_legend.py`、`style_overlays.py` 到子目录（分别为 `core.py`、`legend.py`、`overlays.py`）。
     - 新增 `visualization/plotting/geochem/`，并迁移 `geo_overlay_helpers.py` 到 `overlay_helpers.py`。
     - `render.py`、`style.py`、`geo.py`、`legend_model.py` 已完成导入路径切换，plotting 顶层文件堆积明显下降。
+- 已完成 visualization 事件层拆分（2026-04-01 夜间续）：
+    - 新增 `visualization/event_handlers/selection_interaction.py`，迁移 hover、点击、图例可见性切换、选择工具与选中等时线计算链路。
+    - 新增 `visualization/event_handlers/__init__.py` 聚合交互事件公开函数，保留外部导入习惯。
+    - `visualization/events.py` 已收敛为渲染触发与异步 embedding 编排入口（164 行），对外 API 名称保持不变。
+    - 兼容性验证：`pytest` 全通过（8 passed），`from visualization.events import ...` 冒烟导入通过。
+- 已完成 visualization 事件子包二次细拆（2026-04-01 夜间续）：
+    - 新增 `visualization/event_handlers/shared.py`、`overlay.py`、`isochron.py`、`selection_tools.py`、`pointer_events.py`、`legend.py`，将共享状态、覆盖层刷新、等时线计算、选择工具、指针事件、图例事件进一步解耦。
+    - `visualization/event_handlers/selection_interaction.py` 已收敛为兼容门面，继续保留原导入路径。
+    - 兼容性验证：`pytest` 全通过（8 passed），`visualization.events` 与 `visualization.event_handlers.selection_interaction` 双路径导入冒烟通过。
+- 已完成 geochem 等时线渲染模块细拆（2026-04-01 夜间续）：
+    - `visualization/plotting/geochem/isochron_rendering.py` 已收敛为兼容门面。
+    - 新增 `visualization/plotting/geochem/isochron_fits.py`（等时线拟合主流程）、`selected_isochron_overlay.py`（选中等时线高亮）、`paleoisochron_overlays.py`（古等时线覆盖层）。
+    - 兼容性验证：`pytest` 全通过（8 passed），`isochron_rendering` 与 `isochron_overlays` 双路径导入冒烟通过。
     - 验证结果：`pytest` 全通过（8 passed），导入冒烟通过。
 - 已完成 geochem 第二轮拆分（2026-04-01 夜间续）：
     - `visualization/plotting/geo.py` 已收敛为兼容门面，保留原函数导出以避免外部调用断裂。
