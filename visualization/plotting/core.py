@@ -303,7 +303,7 @@ def get_embedding(
 def _build_group_palette(unique_cats):
     """Build or reuse a stable group -> color mapping."""
     if not hasattr(app_state, 'current_palette'):
-        state_gateway.set_attr('current_palette', {})
+        state_gateway.set_current_palette({})
 
     prop_cycle = plt.rcParams.get('axes.prop_cycle', None)
     cycle_colors = []
