@@ -164,6 +164,6 @@ class AnalysisPanelSelectionMixin:
 
     def _on_confidence_change(self, level):
         """Handle confidence level change."""
-        state_gateway.set_attr('confidence_level', level)
+        state_gateway.set_confidence_level(level)
         logger.info("Confidence level changed to: %s", level)
         self._on_change()

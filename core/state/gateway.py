@@ -48,6 +48,9 @@ class AppStateGateway:
         if name == "control_panel_ref":
             self.set_control_panel_ref(value)
             return
+        if name == "confidence_level":
+            self.set_confidence_level(float(value))
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -231,6 +234,9 @@ class AppStateGateway:
 
     def set_control_panel_ref(self, panel: Any) -> None:
         self._state.control_panel_ref = panel
+
+    def set_confidence_level(self, level: float) -> None:
+        self._state.confidence_level = float(level)
 
     def set_overlay_label_state(self, label_state: dict[str, Any]) -> None:
         for key, value in label_state.items():
