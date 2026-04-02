@@ -329,6 +329,25 @@ def test_state_store_data_source_and_columns_domains() -> None:
         _restore_state(snapshot)
 
 
+def test_state_store_group_data_columns_set_attr_compatibility() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_group_data_columns(["G0"], ["A", "B", "C"])
+        state_gateway.set_attr("group_cols", ["G1", "G2"])
+        assert app_state.group_cols == ["G1", "G2"]
+        assert app_state.data_cols == ["A", "B", "C"]
+
+        state_gateway.set_attr("data_cols", ["X", "Y"])
+        assert app_state.group_cols == ["G1", "G2"]
+        assert app_state.data_cols == ["X", "Y"]
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["group_cols"] == ["G1", "G2"]
+        assert store_snapshot["data_cols"] == ["X", "Y"]
+    finally:
+        _restore_state(snapshot)
+
+
 def test_state_store_bump_data_version_clears_cache() -> None:
     snapshot = _snapshot_state()
     try:

@@ -126,6 +126,10 @@
         - `StateStore` 新增 tooltip 显示开关 action，`AppStateGateway` 新增 `set_show_tooltip`。
         - `ui/panels/analysis/selection.py` 与 `ui/panels/data/grouping.py` tooltip 开关改为显式 gateway API。
         - `tests/test_state_store.py` 新增 tooltip 显示开关回归测试，覆盖显式 API 与兼容桥接。
+    - 第九批状态域继续迁移（分组列兼容桥接清理）：
+        - `group_cols/data_cols` 的 `set_attr` 兼容路径改为转发 `set_group_data_columns`，避免旁路 StateStore。
+        - `ui/panels/data/grouping.py` 分组列应用动作改为显式 `set_group_data_columns`。
+        - `tests/test_state_store.py` 新增兼容桥接回归测试，验证 `set_attr("group_cols"/"data_cols")` 不会破坏已托管域一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

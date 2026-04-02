@@ -90,6 +90,14 @@ class AppStateGateway:
         if name == "visible_groups":
             self.set_visible_groups(value)
             return
+        if name == "group_cols":
+            group_cols = [] if value is None else list(value)
+            self.set_group_data_columns(group_cols, list(getattr(self._state, "data_cols", []) or []))
+            return
+        if name == "data_cols":
+            data_cols = [] if value is None else list(value)
+            self.set_group_data_columns(list(getattr(self._state, "group_cols", []) or []), data_cols)
+            return
         if name == "export_image_options" and isinstance(value, dict):
             self.set_export_image_options(**value)
             return
