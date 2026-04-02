@@ -54,6 +54,12 @@ class AppStateGateway:
         if name == "legend_update_callback":
             self.set_legend_update_callback(value)
             return
+        if name == "fig":
+            self.set_figure(value)
+            return
+        if name == "canvas":
+            self.set_canvas(value)
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -227,6 +233,12 @@ class AppStateGateway:
     def set_figure_axes(self, fig: Any, ax: Any) -> None:
         self._state.fig = fig
         self._state.ax = ax
+
+    def set_figure(self, fig: Any) -> None:
+        self._state.fig = fig
+
+    def set_canvas(self, canvas: Any) -> None:
+        self._state.canvas = canvas
 
     def set_overlay_label_flags(self, *, refreshing: bool, adjust_in_progress: bool) -> None:
         self._state.overlay_label_refreshing = bool(refreshing)

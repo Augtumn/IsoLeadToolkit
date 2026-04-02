@@ -72,8 +72,8 @@ class MainWindowCanvasMixin:
         self.canvas_layout.addWidget(canvas)
         self.canvas_layout.addWidget(canvas)
 
-        state_gateway.set_attr("fig", fig)
-        state_gateway.set_attr("canvas", canvas)
+        state_gateway.set_figure(fig)
+        state_gateway.set_canvas(canvas)
 
         self._connect_event_handlers(canvas)
 
