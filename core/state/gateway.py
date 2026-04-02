@@ -78,6 +78,9 @@ class AppStateGateway:
         if name == "current_palette":
             self.set_current_palette(value)
             return
+        if name == "adjust_text_in_progress":
+            self.set_adjust_text_in_progress(bool(value))
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -307,6 +310,9 @@ class AppStateGateway:
 
     def set_current_palette(self, palette: Any) -> None:
         self._state.current_palette = dict(palette or {})
+
+    def set_adjust_text_in_progress(self, in_progress: bool) -> None:
+        self._state.adjust_text_in_progress = bool(in_progress)
 
     def set_marginal_axes(self, marginal_axes: Any) -> None:
         self._state.marginal_axes = marginal_axes

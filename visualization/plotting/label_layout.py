@@ -292,7 +292,7 @@ def apply_adjust_text_to_labels(ax, text_artists):
             break
 
     try:
-        state_gateway.set_attr('adjust_text_in_progress', True)
+        state_gateway.set_adjust_text_in_progress(True)
         adjust_text(
             texts,
             ax=ax,
@@ -316,4 +316,4 @@ def apply_adjust_text_to_labels(ax, text_artists):
     except Exception as err:
         logger.debug("adjustText layout skipped: %s", err)
     finally:
-        state_gateway.set_attr('adjust_text_in_progress', False)
+        state_gateway.set_adjust_text_in_progress(False)
