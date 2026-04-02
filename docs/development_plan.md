@@ -284,6 +284,12 @@
                                                                 - `scripts/check_gateway_generic_mutations.py` 与
                                                                     `scripts/check_gateway_generic_mutations_in_tests.py`
                                                                     改为复用共享模块，去除重复扫描实现。
+                                - 第四十八批迁移清理（守护测试去重）：
+                                                                - 新增 `tests/guard_helpers.py`，统一封装 guard 脚本执行与断言。
+                                                                - `tests/test_state_mutation_guard.py`、
+                                                                    `tests/test_gateway_generic_mutation_guard.py`、
+                                                                    `tests/test_gateway_generic_mutation_test_guard.py`
+                                                                    改为复用共享 helper，移除重复 subprocess 模板代码。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
