@@ -241,12 +241,8 @@ class ProvenanceMLWorkflowMixin:
             result['prediction_count'] = int(len(df_pred))
 
             self._result = result
-            state_gateway.set_attrs(
-                {
-                    'ml_last_result': result,
-                    'ml_last_model_meta': result.get('model_info'),
-                }
-            )
+            state_gateway.set_ml_last_result(result)
+            state_gateway.set_ml_last_model_meta(result.get('model_info'))
 
             self._display_results()
         except ProvenanceMLError as exc:

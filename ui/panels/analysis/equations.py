@@ -536,12 +536,8 @@ class AnalysisPanelEquationMixin:
                     overlay['enabled'] = checked
                     new_overlays.append(overlay)
 
-            state_gateway.set_attrs(
-                {
-                    'equation_overlays': new_overlays,
-                    'show_equation_overlays': any(ov.get('enabled', False) for ov in new_overlays),
-                }
-            )
+            state_gateway.set_equation_overlays(new_overlays)
+            state_gateway.set_show_equation_overlays(any(ov.get('enabled', False) for ov in new_overlays))
             self._on_change()
             dialog.accept()
 

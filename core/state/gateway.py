@@ -255,6 +255,15 @@ class AppStateGateway:
         if name == "marginal_kde_style":
             self.set_marginal_kde_style(value)
             return
+        if name == "ml_last_result":
+            self.set_ml_last_result(value)
+            return
+        if name == "ml_last_model_meta":
+            self.set_ml_last_model_meta(value)
+            return
+        if name == "equation_overlays":
+            self.set_equation_overlays(value)
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -685,6 +694,15 @@ class AppStateGateway:
 
     def set_marginal_kde_style(self, style: Any) -> None:
         self._state.marginal_kde_style = dict(style or {})
+
+    def set_ml_last_result(self, result: Any) -> None:
+        self._state.ml_last_result = result
+
+    def set_ml_last_model_meta(self, meta: Any) -> None:
+        self._state.ml_last_model_meta = meta
+
+    def set_equation_overlays(self, overlays: Any) -> None:
+        self._state.equation_overlays = list(overlays or [])
 
     def set_overlay_toggle(self, attr: str, checked: bool) -> None:
         if attr == "show_model_curves":

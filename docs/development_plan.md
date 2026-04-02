@@ -237,6 +237,11 @@
                     `ui/panels/data/geochem.py`、`ui/panels/display/themes.py`、`ui/panels/legend/build.py`、
                     `visualization/plotting/rendering/common/legend.py` 对应 `set_attrs` 调用迁移到显式 API。
                 - `visualization/plotting/core.py` RobustPCA 分支诊断写入改为 `set_pca_diagnostics`。
+        - 第三十九批迁移清理（ML/方程叠加固定写入）：
+                - `core/state/gateway.py` 新增 `set_ml_last_result`、`set_ml_last_model_meta`、
+                    `set_equation_overlays`，并在 `set_attr` 中添加兼容分发。
+                - `ui/dialogs/provenance_ml/workflow.py` 与 `ui/panels/analysis/equations.py`
+                    将固定字段 `set_attrs` 调用迁移到显式 API。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
