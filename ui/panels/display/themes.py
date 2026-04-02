@@ -358,4 +358,4 @@ class DisplayThemeMixin:
         """保存 UI 主题选择"""
         if not theme_name:
             theme_name = 'Modern Light'
-        state_gateway.set_attr('ui_theme', theme_name)
+        state_gateway.set_ui_theme(theme_name)
