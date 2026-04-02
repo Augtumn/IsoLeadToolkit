@@ -112,3 +112,35 @@ def test_overlay_toggle_fallback_attr_assignment() -> None:
             setattr(app_state, fallback_attr, original_value)
         elif hasattr(app_state, fallback_attr):
             delattr(app_state, fallback_attr)
+
+
+def test_point_size_set_attr_conversion() -> None:
+    original_point_size = int(getattr(app_state, "point_size", 60))
+
+    try:
+        state_gateway.set_attr("point_size", "77")
+        assert app_state.point_size == 77
+        assert app_state.state_store.snapshot()["point_size"] == 77
+    finally:
+        state_gateway.set_point_size(original_point_size)
+
+
+def test_ui_theme_set_attr_conversion() -> None:
+    original_theme = str(getattr(app_state, "ui_theme", "Modern Light"))
+
+    try:
+        state_gateway.set_attr("ui_theme", 123)
+        assert app_state.ui_theme == "123"
+        assert app_state.state_store.snapshot()["ui_theme"] == "123"
+    finally:
+        state_gateway.set_ui_theme(original_theme)
+
+
+def test_confidence_level_set_attr_conversion() -> None:
+    original_level = float(getattr(app_state, "confidence_level", 0.95))
+
+    try:
+        state_gateway.set_attr("confidence_level", "0.91")
+        assert app_state.confidence_level == 0.91
+    finally:
+        state_gateway.set_confidence_level(original_level)

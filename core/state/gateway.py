@@ -41,22 +41,126 @@ class AppStateGateway:
             return
         self._state.export_image_options = value
 
+    def _compat_handler(
+        self,
+        setter_name: str,
+        converter: Callable[[Any], Any] | None = None,
+    ) -> Callable[[Any], None]:
+        """Build a set_attr compatibility handler from setter metadata."""
+        setter = getattr(self, setter_name)
+        if converter is None:
+            return setter
+        return lambda value, _setter=setter, _converter=converter: _setter(_converter(value))
+
     def _build_compat_attr_handlers(self) -> dict[str, Callable[[Any], None]]:
         """Build compatibility dispatch table for legacy set_attr callers."""
-        return {
-            "algorithm": lambda v: self.set_algorithm(str(v)),
-            "show_kde": lambda v: self.set_show_kde(bool(v)),
-            "show_marginal_kde": lambda v: self.set_show_marginal_kde(bool(v)),
-            "show_equation_overlays": lambda v: self.set_show_equation_overlays(bool(v)),
-            "geo_model_name": lambda v: self.set_geo_model_name(str(v)),
-            "paleo_label_refreshing": lambda v: self.set_paleo_label_refreshing(bool(v)),
-            "control_panel_ref": self.set_control_panel_ref,
-            "confidence_level": lambda v: self.set_confidence_level(float(v)),
-            "legend_update_callback": self.set_legend_update_callback,
-            "fig": self.set_figure,
-            "canvas": self.set_canvas,
-            "ax": self.set_axis,
-            "legend_ax": self.set_legend_ax,
+        direct_map = {
+            "control_panel_ref": "set_control_panel_ref",
+            "legend_update_callback": "set_legend_update_callback",
+            "fig": "set_figure",
+            "canvas": "set_canvas",
+            "ax": "set_axis",
+            "legend_ax": "set_legend_ax",
+            "current_palette": "set_current_palette",
+            "annotation": "set_annotation",
+            "last_2d_cols": "set_last_2d_cols",
+            "recent_files": "set_recent_files",
+            "line_styles": "set_line_styles",
+            "saved_themes": "set_saved_themes",
+            "legend_position": "set_legend_position",
+            "legend_location": "set_legend_location",
+            "legend_offset": "set_legend_offset",
+            "isochron_results": "set_isochron_results",
+            "plumbotectonics_group_visibility": "set_plumbotectonics_group_visibility",
+            "mu_kappa_age_col": "set_mu_kappa_age_col",
+            "paleoisochron_ages": "set_paleoisochron_ages",
+            "overlay_artists": "set_overlay_artists",
+            "overlay_curve_label_data": "set_overlay_curve_label_data",
+            "paleoisochron_label_data": "set_paleoisochron_label_data",
+            "plumbotectonics_isoage_label_data": "set_plumbotectonics_isoage_label_data",
+            "pca_component_indices": "set_pca_component_indices",
+            "ternary_manual_limits": "set_ternary_manual_limits",
+            "ternary_factors": "set_ternary_factors",
+            "isochron_label_options": "set_isochron_label_options",
+            "mixing_endmembers": "set_mixing_endmembers",
+            "mixing_mixtures": "set_mixing_mixtures",
+            "custom_palettes": "set_custom_palettes",
+            "custom_shape_sets": "set_custom_shape_sets",
+            "legend_item_order": "set_legend_item_order",
+            "ternary_ranges": "set_ternary_ranges",
+            "kde_style": "set_kde_style",
+            "marginal_kde_style": "set_marginal_kde_style",
+            "ml_last_result": "set_ml_last_result",
+            "ml_last_model_meta": "set_ml_last_model_meta",
+            "equation_overlays": "set_equation_overlays",
+            "tooltip_columns": "set_tooltip_columns",
+            "selected_indices": "set_selected_indices",
+            "selection_tool": "set_selection_tool",
+            "visible_groups": "set_visible_groups",
+            "group_cols": "_set_group_cols_compat",
+            "data_cols": "_set_data_cols_compat",
+            "export_image_options": "_set_export_image_options_compat",
+        }
+        bool_map = {
+            "show_kde": "set_show_kde",
+            "show_marginal_kde": "set_show_marginal_kde",
+            "show_equation_overlays": "set_show_equation_overlays",
+            "paleo_label_refreshing": "set_paleo_label_refreshing",
+            "adjust_text_in_progress": "set_adjust_text_in_progress",
+            "overlay_label_refreshing": "set_overlay_label_refreshing",
+            "show_model_curves": "set_show_model_curves",
+            "show_plumbotectonics_curves": "set_show_plumbotectonics_curves",
+            "show_paleoisochrons": "set_show_paleoisochrons",
+            "show_model_age_lines": "set_show_model_age_lines",
+            "show_growth_curves": "set_show_growth_curves",
+            "use_real_age_for_mu_kappa": "set_use_real_age_for_mu_kappa",
+            "standardize_data": "set_standardize_data",
+            "ternary_auto_zoom": "set_ternary_auto_zoom",
+            "ternary_manual_limits_enabled": "set_ternary_manual_limits_enabled",
+            "ternary_stretch": "set_ternary_stretch",
+            "marginal_kde_log_transform": "set_marginal_kde_compute_options",
+            "show_tooltip": "set_show_tooltip",
+            "preserve_import_render_mode": "set_preserve_import_render_mode",
+            "selection_mode": "set_selection_mode",
+        }
+        int_map = {
+            "legend_columns": "set_legend_columns",
+            "paleoisochron_step": "set_paleoisochron_step",
+            "marginal_kde_max_points": "set_marginal_kde_compute_options",
+            "marginal_kde_gridsize": "set_marginal_kde_compute_options",
+            "point_size": "set_point_size",
+            "data_version": "set_data_version",
+        }
+        float_map = {
+            "confidence_level": "set_confidence_level",
+            "legend_nudge_step": "set_legend_nudge_step",
+            "ternary_boundary_percent": "set_ternary_boundary_percent",
+            "model_curve_width": "set_model_curve_width",
+            "plumbotectonics_curve_width": "set_plumbotectonics_curve_width",
+            "paleoisochron_width": "set_paleoisochron_width",
+            "model_age_line_width": "set_model_age_line_width",
+            "isochron_line_width": "set_isochron_line_width",
+            "selected_isochron_line_width": "set_selected_isochron_line_width",
+            "marginal_kde_top_size": "set_marginal_kde_layout",
+            "marginal_kde_right_size": "set_marginal_kde_layout",
+            "marginal_kde_bw_adjust": "set_marginal_kde_compute_options",
+            "marginal_kde_cut": "set_marginal_kde_compute_options",
+        }
+        str_map = {
+            "algorithm": "set_algorithm",
+            "geo_model_name": "set_geo_model_name",
+            "current_plot_title": "set_current_plot_title",
+            "language": "set_language_code",
+            "color_scheme": "set_color_scheme",
+            "plumbotectonics_variant": "set_plumbotectonics_variant",
+            "ternary_limit_mode": "set_ternary_limit_mode",
+            "ternary_limit_anchor": "set_ternary_limit_anchor",
+            "ternary_stretch_mode": "set_ternary_stretch_mode",
+            "render_mode": "set_render_mode",
+            "ui_theme": "set_ui_theme",
+        }
+
+        handlers: dict[str, Callable[[Any], None]] = {
             "last_embedding": lambda v: self.set_last_embedding(
                 v,
                 str(getattr(self._state, "last_embedding_type", "")),
@@ -68,68 +172,6 @@ class AppStateGateway:
             "last_pca_variance": lambda v: self.set_pca_diagnostics(last_pca_variance=v),
             "last_pca_components": lambda v: self.set_pca_diagnostics(last_pca_components=v),
             "current_feature_names": lambda v: self.set_pca_diagnostics(current_feature_names=v),
-            "current_palette": self.set_current_palette,
-            "adjust_text_in_progress": lambda v: self.set_adjust_text_in_progress(bool(v)),
-            "overlay_label_refreshing": lambda v: self.set_overlay_label_refreshing(bool(v)),
-            "current_plot_title": lambda v: self.set_current_plot_title(str(v)),
-            "annotation": self.set_annotation,
-            "last_2d_cols": self.set_last_2d_cols,
-            "recent_files": self.set_recent_files,
-            "language": lambda v: self.set_language_code(str(v)),
-            "line_styles": self.set_line_styles,
-            "saved_themes": self.set_saved_themes,
-            "color_scheme": lambda v: self.set_color_scheme(str(v)),
-            "legend_position": self.set_legend_position,
-            "legend_location": self.set_legend_location,
-            "legend_columns": lambda v: self.set_legend_columns(int(v)),
-            "legend_nudge_step": lambda v: self.set_legend_nudge_step(float(v)),
-            "legend_offset": self.set_legend_offset,
-            "isochron_results": self.set_isochron_results,
-            "plumbotectonics_group_visibility": self.set_plumbotectonics_group_visibility,
-            "show_model_curves": lambda v: self.set_show_model_curves(bool(v)),
-            "show_plumbotectonics_curves": lambda v: self.set_show_plumbotectonics_curves(bool(v)),
-            "show_paleoisochrons": lambda v: self.set_show_paleoisochrons(bool(v)),
-            "show_model_age_lines": lambda v: self.set_show_model_age_lines(bool(v)),
-            "show_growth_curves": lambda v: self.set_show_growth_curves(bool(v)),
-            "use_real_age_for_mu_kappa": lambda v: self.set_use_real_age_for_mu_kappa(bool(v)),
-            "mu_kappa_age_col": self.set_mu_kappa_age_col,
-            "plumbotectonics_variant": lambda v: self.set_plumbotectonics_variant(str(v)),
-            "paleoisochron_step": lambda v: self.set_paleoisochron_step(int(v)),
-            "paleoisochron_ages": self.set_paleoisochron_ages,
-            "overlay_artists": self.set_overlay_artists,
-            "overlay_curve_label_data": self.set_overlay_curve_label_data,
-            "paleoisochron_label_data": self.set_paleoisochron_label_data,
-            "plumbotectonics_isoage_label_data": self.set_plumbotectonics_isoage_label_data,
-            "standardize_data": lambda v: self.set_standardize_data(bool(v)),
-            "pca_component_indices": self.set_pca_component_indices,
-            "ternary_auto_zoom": lambda v: self.set_ternary_auto_zoom(bool(v)),
-            "ternary_limit_mode": lambda v: self.set_ternary_limit_mode(str(v)),
-            "ternary_limit_anchor": lambda v: self.set_ternary_limit_anchor(str(v)),
-            "ternary_boundary_percent": lambda v: self.set_ternary_boundary_percent(float(v)),
-            "ternary_manual_limits_enabled": lambda v: self.set_ternary_manual_limits_enabled(bool(v)),
-            "ternary_manual_limits": self.set_ternary_manual_limits,
-            "ternary_stretch_mode": lambda v: self.set_ternary_stretch_mode(str(v)),
-            "ternary_stretch": lambda v: self.set_ternary_stretch(bool(v)),
-            "ternary_factors": self.set_ternary_factors,
-            "model_curve_width": lambda v: self.set_model_curve_width(float(v)),
-            "plumbotectonics_curve_width": lambda v: self.set_plumbotectonics_curve_width(float(v)),
-            "paleoisochron_width": lambda v: self.set_paleoisochron_width(float(v)),
-            "model_age_line_width": lambda v: self.set_model_age_line_width(float(v)),
-            "isochron_line_width": lambda v: self.set_isochron_line_width(float(v)),
-            "selected_isochron_line_width": lambda v: self.set_selected_isochron_line_width(float(v)),
-            "isochron_label_options": self.set_isochron_label_options,
-            "mixing_endmembers": self.set_mixing_endmembers,
-            "mixing_mixtures": self.set_mixing_mixtures,
-            "custom_palettes": self.set_custom_palettes,
-            "custom_shape_sets": self.set_custom_shape_sets,
-            "legend_item_order": self.set_legend_item_order,
-            "ternary_ranges": self.set_ternary_ranges,
-            "kde_style": self.set_kde_style,
-            "marginal_kde_style": self.set_marginal_kde_style,
-            "ml_last_result": self.set_ml_last_result,
-            "ml_last_model_meta": self.set_ml_last_model_meta,
-            "equation_overlays": self.set_equation_overlays,
-            "render_mode": lambda v: self.set_render_mode(str(v)),
             "marginal_kde_top_size": lambda v: self.set_marginal_kde_layout(top_size=float(v)),
             "marginal_kde_right_size": lambda v: self.set_marginal_kde_layout(right_size=float(v)),
             "marginal_kde_max_points": lambda v: self.set_marginal_kde_compute_options(max_points=int(v)),
@@ -137,20 +179,28 @@ class AppStateGateway:
             "marginal_kde_gridsize": lambda v: self.set_marginal_kde_compute_options(gridsize=int(v)),
             "marginal_kde_cut": lambda v: self.set_marginal_kde_compute_options(cut=float(v)),
             "marginal_kde_log_transform": lambda v: self.set_marginal_kde_compute_options(log_transform=bool(v)),
-            "point_size": lambda v: self.set_point_size(int(v)),
-            "show_tooltip": lambda v: self.set_show_tooltip(bool(v)),
-            "tooltip_columns": self.set_tooltip_columns,
-            "ui_theme": lambda v: self.set_ui_theme(str(v)),
-            "preserve_import_render_mode": lambda v: self.set_preserve_import_render_mode(bool(v)),
-            "selected_indices": self.set_selected_indices,
-            "selection_mode": lambda v: self.set_selection_mode(bool(v)),
-            "selection_tool": self.set_selection_tool,
-            "data_version": lambda v: self.set_data_version(int(v)),
-            "visible_groups": self.set_visible_groups,
-            "group_cols": self._set_group_cols_compat,
-            "data_cols": self._set_data_cols_compat,
-            "export_image_options": self._set_export_image_options_compat,
         }
+
+        for name, setter_name in direct_map.items():
+            handlers[name] = self._compat_handler(setter_name)
+        for name, setter_name in bool_map.items():
+            if name in handlers:
+                continue
+            handlers[name] = self._compat_handler(setter_name, bool)
+        for name, setter_name in int_map.items():
+            if name in handlers:
+                continue
+            handlers[name] = self._compat_handler(setter_name, int)
+        for name, setter_name in float_map.items():
+            if name in handlers:
+                continue
+            handlers[name] = self._compat_handler(setter_name, float)
+        for name, setter_name in str_map.items():
+            if name in handlers:
+                continue
+            handlers[name] = self._compat_handler(setter_name, str)
+
+        return handlers
 
     def _build_overlay_toggle_handlers(self) -> dict[str, Callable[[bool], None]]:
         """Build dispatch table for overlay visibility toggle handlers."""

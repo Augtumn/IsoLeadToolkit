@@ -302,6 +302,12 @@
                                                                     `_overlay_toggle_handlers` 分发表，替换 if 链路由实现。
                                                                 - `tests/test_gateway_set_attr_compatibility.py` 新增参数化回归，
                                                                     覆盖已知 overlay 开关路由与未知字段兜底赋值路径。
+                                - 第五十一批迁移清理（兼容分发表声明式重构）：
+                                                                - `core/state/gateway.py` 的 `set_attr` 兼容映射改为
+                                                                    分组声明式构建（direct/bool/int/float/str + special handlers），
+                                                                    并引入 `_compat_handler` 统一包装转换逻辑。
+                                                                - `tests/test_gateway_set_attr_compatibility.py` 增加
+                                                                    `point_size/ui_theme/confidence_level` 转换路径回归测试。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
