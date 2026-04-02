@@ -26,12 +26,11 @@ def apply_precomputed_embedding(
     state_gateway.set_attrs({'last_embedding': embedding, 'last_embedding_type': last_type})
 
     if isinstance(precomputed_meta, dict):
-        if precomputed_meta.get('last_pca_variance') is not None:
-            state_gateway.set_attr('last_pca_variance', precomputed_meta.get('last_pca_variance'))
-        if precomputed_meta.get('last_pca_components') is not None:
-            state_gateway.set_attr('last_pca_components', precomputed_meta.get('last_pca_components'))
-        if precomputed_meta.get('current_feature_names') is not None:
-            state_gateway.set_attr('current_feature_names', precomputed_meta.get('current_feature_names'))
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=precomputed_meta.get('last_pca_variance'),
+            last_pca_components=precomputed_meta.get('last_pca_components'),
+            current_feature_names=precomputed_meta.get('current_feature_names'),
+        )
 
     logger.debug('Using precomputed embedding for %s', actual_algorithm)
     return embedding

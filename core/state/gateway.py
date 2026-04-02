@@ -66,6 +66,15 @@ class AppStateGateway:
         if name == "legend_ax":
             self.set_legend_ax(value)
             return
+        if name == "last_pca_variance":
+            self.set_pca_diagnostics(last_pca_variance=value)
+            return
+        if name == "last_pca_components":
+            self.set_pca_diagnostics(last_pca_components=value)
+            return
+        if name == "current_feature_names":
+            self.set_pca_diagnostics(current_feature_names=value)
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -251,6 +260,20 @@ class AppStateGateway:
 
     def set_legend_ax(self, legend_ax: Any) -> None:
         self._state.legend_ax = legend_ax
+
+    def set_pca_diagnostics(
+        self,
+        *,
+        last_pca_variance: Any | None = None,
+        last_pca_components: Any | None = None,
+        current_feature_names: Any | None = None,
+    ) -> None:
+        if last_pca_variance is not None:
+            self._state.last_pca_variance = last_pca_variance
+        if last_pca_components is not None:
+            self._state.last_pca_components = last_pca_components
+        if current_feature_names is not None:
+            self._state.current_feature_names = current_feature_names
 
     def set_overlay_label_flags(self, *, refreshing: bool, adjust_in_progress: bool) -> None:
         self._state.overlay_label_refreshing = bool(refreshing)

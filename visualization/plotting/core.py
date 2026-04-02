@@ -203,12 +203,10 @@ def get_pca_embedding(params: dict) -> np.ndarray | None:
         )
 
         embedding = reducer.fit_transform(X_scaled)
-        state_gateway.set_attrs(
-            {
-                'last_pca_variance': reducer.explained_variance_ratio_,
-                'last_pca_components': reducer.components_,
-                'current_feature_names': _data_cols(),
-            }
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=reducer.explained_variance_ratio_,
+            last_pca_components=reducer.components_,
+            current_feature_names=_data_cols(),
         )
 
         app_state.embedding_cache.set(key, embedding)
@@ -270,10 +268,10 @@ def get_robust_pca_embedding(params: dict) -> np.ndarray | None:
             components = eigvecs[:, :n_components]
             embedding = (X_scaled - mean) @ components
             if eigvals.sum() > 0:
-                state_gateway.set_attr('last_pca_variance', eigvals[:n_components] / eigvals.sum())
-            state_gateway.set_attr('last_pca_components', components.T)
+                state_gateway.set_pca_diagnostics(last_pca_variance=eigvals[:n_components] / eigvals.sum())
+            state_gateway.set_pca_diagnostics(last_pca_components=components.T)
 
-        state_gateway.set_attr('current_feature_names', _data_cols())
+        state_gateway.set_pca_diagnostics(current_feature_names=_data_cols())
         app_state.embedding_cache.set(key, embedding)
         state_gateway.set_attrs({'last_embedding': embedding, 'last_embedding_type': 'RobustPCA'})
         return embedding
