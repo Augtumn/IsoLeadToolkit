@@ -28,7 +28,7 @@ class LegendActionsMixin:
                     self.auto_palette_combo.setCurrentIndex(index)
                     self.auto_palette_combo.blockSignals(False)
                 return
-        state_gateway.set_attr('color_scheme', palette_name)
+        state_gateway.set_color_scheme(palette_name)
         self._last_palette_name = palette_name
         try:
             from visualization import refresh_plot_style
@@ -57,25 +57,25 @@ class LegendActionsMixin:
     def _on_legend_inside_position_change(self, position):
         current = getattr(app_state, 'legend_position', None)
         if current == position:
-            state_gateway.set_attr('legend_position', None)
+            state_gateway.set_legend_position(None)
             self._set_legend_inside_position_button(None)
         else:
-            state_gateway.set_attr('legend_position', position)
+            state_gateway.set_legend_position(position)
             self._set_legend_inside_position_button(position)
         self._on_change()
 
     def _on_legend_outside_position_change(self, position):
         current = getattr(app_state, 'legend_location', None)
         if current == position:
-            state_gateway.set_attr('legend_location', None)
+            state_gateway.set_legend_location(None)
             self._set_legend_outside_position_button(None)
         else:
-            state_gateway.set_attr('legend_location', position)
+            state_gateway.set_legend_location(position)
             self._set_legend_outside_position_button(position)
         self._on_change()
 
     def _on_legend_columns_change(self, columns):
-        state_gateway.set_attr('legend_columns', columns)
+        state_gateway.set_legend_columns(columns)
         self._on_change()
 
     def _on_nudge_step_change(self, value):
@@ -84,7 +84,7 @@ class LegendActionsMixin:
         except Exception:
             return
         self.legend_nudge_step = step
-        state_gateway.set_attr('legend_nudge_step', step)
+        state_gateway.set_legend_nudge_step(step)
 
     def _nudge_legend(self, dx, dy):
         current = getattr(app_state, 'legend_offset', (0.0, 0.0))
@@ -92,7 +92,7 @@ class LegendActionsMixin:
             new_offset = (float(current[0]) + float(dx), float(current[1]) + float(dy))
         except Exception:
             new_offset = (0.0, 0.0)
-        state_gateway.set_attr('legend_offset', new_offset)
+        state_gateway.set_legend_offset(new_offset)
         try:
             from visualization import refresh_plot_style
             refresh_plot_style()
@@ -112,7 +112,7 @@ class LegendActionsMixin:
         if palette_name:
             if palette_name == "__custom__":
                 palette_name = getattr(app_state, 'color_scheme', None)
-            state_gateway.set_attr('color_scheme', palette_name)
+            state_gateway.set_color_scheme(palette_name)
 
         color_pool = []
         try:

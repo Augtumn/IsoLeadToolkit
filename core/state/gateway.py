@@ -105,6 +105,24 @@ class AppStateGateway:
         if name == "saved_themes":
             self.set_saved_themes(value)
             return
+        if name == "color_scheme":
+            self.set_color_scheme(str(value))
+            return
+        if name == "legend_position":
+            self.set_legend_position(value)
+            return
+        if name == "legend_location":
+            self.set_legend_location(value)
+            return
+        if name == "legend_columns":
+            self.set_legend_columns(int(value))
+            return
+        if name == "legend_nudge_step":
+            self.set_legend_nudge_step(float(value))
+            return
+        if name == "legend_offset":
+            self.set_legend_offset(value)
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -361,6 +379,24 @@ class AppStateGateway:
 
     def set_saved_themes(self, themes: Any) -> None:
         self._state.saved_themes = dict(themes or {})
+
+    def set_color_scheme(self, color_scheme: str) -> None:
+        self._state.color_scheme = str(color_scheme)
+
+    def set_legend_position(self, position: Any) -> None:
+        self._state.legend_position = position
+
+    def set_legend_location(self, location: Any) -> None:
+        self._state.legend_location = location
+
+    def set_legend_columns(self, columns: int) -> None:
+        self._state.legend_columns = int(columns)
+
+    def set_legend_nudge_step(self, step: float) -> None:
+        self._state.legend_nudge_step = float(step)
+
+    def set_legend_offset(self, offset: Any) -> None:
+        self._state.legend_offset = tuple(offset) if offset is not None else (0.0, 0.0)
 
     def set_marginal_axes(self, marginal_axes: Any) -> None:
         self._state.marginal_axes = marginal_axes

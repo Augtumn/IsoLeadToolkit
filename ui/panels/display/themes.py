@@ -147,7 +147,7 @@ class DisplayThemeMixin:
         if self.color_combo:
             self.color_combo.setCurrentText(data.get('color_scheme', 'vibrant'))
         else:
-            state_gateway.set_attr('color_scheme', data.get('color_scheme', getattr(app_state, 'color_scheme', 'vibrant')))
+            state_gateway.set_color_scheme(data.get('color_scheme', getattr(app_state, 'color_scheme', 'vibrant')))
 
         primary_font = data.get('primary_font', '') or '<Default>'
         if self.primary_font_combo:
