@@ -23,7 +23,7 @@ class _DummyGroupingPanel(DataPanelGroupingMixin):
 def _restore_model(model_name: str) -> None:
     if model_name in PRESET_MODELS:
         engine.load_preset(model_name)
-        state_gateway.set_attr("geo_model_name", model_name)
+        state_gateway.set_geo_model_name(model_name)
 
 
 def test_sync_geochem_model_for_v1v2_without_geo_panel() -> None:
@@ -32,7 +32,7 @@ def test_sync_geochem_model_for_v1v2_without_geo_panel() -> None:
 
     try:
         engine.load_preset("Stacey & Kramers (2nd Stage)")
-        state_gateway.set_attr("geo_model_name", "Stacey & Kramers (2nd Stage)")
+        state_gateway.set_geo_model_name("Stacey & Kramers (2nd Stage)")
 
         panel._sync_geochem_model_for_mode("V1V2")
 
@@ -49,7 +49,7 @@ def test_sync_geochem_model_for_pb_evolution_without_geo_panel() -> None:
 
     try:
         engine.load_preset("V1V2 (Zhu 1993)")
-        state_gateway.set_attr("geo_model_name", "V1V2 (Zhu 1993)")
+        state_gateway.set_geo_model_name("V1V2 (Zhu 1993)")
 
         panel._sync_geochem_model_for_mode("PB_EVOL_76")
 
@@ -95,7 +95,7 @@ def test_geokit_clamps_negative_single_stage_age_for_delta(monkeypatch) -> None:
 
     try:
         engine.load_preset("V1V2 (Geokit)")
-        state_gateway.set_attr("geo_model_name", "V1V2 (Geokit)")
+        state_gateway.set_geo_model_name("V1V2 (Geokit)")
 
         monkeypatch.setattr(geochemistry_module, "calculate_single_stage_age", fake_single_stage_age)
         monkeypatch.setattr(geochemistry_module, "calculate_two_stage_age", fake_two_stage_age)

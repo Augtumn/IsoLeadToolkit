@@ -54,7 +54,7 @@ class DataPanelGroupingMixin:
             return
 
         if engine.load_preset(target_model):
-            state_gateway.set_attr("geo_model_name", target_model)
+            state_gateway.set_geo_model_name(target_model)
 
         panel = getattr(self, "geo_panel", None)
         combo = getattr(panel, "geo_model_combo", None) if panel is not None else None

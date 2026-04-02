@@ -39,6 +39,9 @@ class AppStateGateway:
         if name == "show_equation_overlays":
             self.set_show_equation_overlays(bool(value))
             return
+        if name == "geo_model_name":
+            self.set_geo_model_name(str(value))
+            return
         if name == "paleo_label_refreshing":
             self.set_paleo_label_refreshing(bool(value))
             return
@@ -128,6 +131,9 @@ class AppStateGateway:
 
     def set_show_equation_overlays(self, show: bool) -> None:
         self._dispatch("SET_SHOW_EQUATION_OVERLAYS", show=bool(show))
+
+    def set_geo_model_name(self, model_name: str) -> None:
+        self._state.geo_model_name = str(model_name)
 
     def set_marginal_kde_layout(
         self,

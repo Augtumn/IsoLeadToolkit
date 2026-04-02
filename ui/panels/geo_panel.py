@@ -257,7 +257,7 @@ class GeoPanel(BasePanel):
 
                 self._update_geo_param_visibility(model_name, current_params)
 
-                state_gateway.set_attr('geo_model_name', model_name)
+                state_gateway.set_geo_model_name(model_name)
                 logger.info("Loaded Geochemistry Model: %s", model_name)
 
                 if app_state.render_mode in ('V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE'):
