@@ -24,6 +24,7 @@ class StateStore:
         self._state = state
         self._snapshot: dict[str, Any] = {
             "render_mode": str(getattr(state, "render_mode", "UMAP")),
+            "algorithm": str(getattr(state, "algorithm", "UMAP")),
             "selected_indices": set(getattr(state, "selected_indices", set()) or set()),
             "df_global": getattr(state, "df_global", None),
             "file_path": getattr(state, "file_path", None),
@@ -34,6 +35,10 @@ class StateStore:
             "last_group_col": getattr(state, "last_group_col", None),
             "selection_mode": bool(getattr(state, "selection_mode", False)),
             "selection_tool": getattr(state, "selection_tool", None),
+            "point_size": int(getattr(state, "point_size", 60)),
+            "tooltip_columns": list(getattr(state, "tooltip_columns", []) or []),
+            "ui_theme": str(getattr(state, "ui_theme", "Modern Light")),
+            "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
             "selected_2d_cols": list(getattr(state, "selected_2d_cols", []) or []),
@@ -55,6 +60,23 @@ class StateStore:
         if action_type == "SET_RENDER_MODE":
             render_mode = str(action.get("render_mode", "UMAP") or "UMAP")
             self._snapshot["render_mode"] = render_mode
+            if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
+                self._snapshot["algorithm"] = render_mode
+
+        elif action_type == "SET_ALGORITHM":
+            self._snapshot["algorithm"] = str(action.get("algorithm", "UMAP") or "UMAP")
+
+        elif action_type == "SET_POINT_SIZE":
+            self._snapshot["point_size"] = max(1, int(action.get("point_size", 60)))
+
+        elif action_type == "SET_TOOLTIP_COLUMNS":
+            self._snapshot["tooltip_columns"] = [str(col) for col in list(action.get("columns") or [])]
+
+        elif action_type == "SET_UI_THEME":
+            self._snapshot["ui_theme"] = str(action.get("theme", "Modern Light") or "Modern Light")
+
+        elif action_type == "SET_PRESERVE_IMPORT_RENDER_MODE":
+            self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_SELECTED_INDICES":
             indices = self._to_index_set(action.get("indices", []))
@@ -154,6 +176,7 @@ class StateStore:
         """Return shallow-copied tracked domains."""
         return {
             "render_mode": str(self._snapshot["render_mode"]),
+            "algorithm": str(self._snapshot["algorithm"]),
             "selected_indices": set(self._snapshot["selected_indices"]),
             "df_global": self._snapshot["df_global"],
             "file_path": self._snapshot["file_path"],
@@ -164,6 +187,10 @@ class StateStore:
             "last_group_col": self._snapshot["last_group_col"],
             "selection_mode": bool(self._snapshot["selection_mode"]),
             "selection_tool": self._snapshot["selection_tool"],
+            "point_size": int(self._snapshot["point_size"]),
+            "tooltip_columns": list(self._snapshot["tooltip_columns"]),
+            "ui_theme": str(self._snapshot["ui_theme"]),
+            "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
             "selected_2d_cols": list(self._snapshot["selected_2d_cols"]),
@@ -178,8 +205,11 @@ class StateStore:
     def _sync_state(self) -> None:
         render_mode = str(self._snapshot["render_mode"])
         self._state.render_mode = render_mode
+        algorithm = str(self._snapshot["algorithm"])
         if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
-            self._state.algorithm = render_mode
+            algorithm = render_mode
+            self._snapshot["algorithm"] = algorithm
+        self._state.algorithm = algorithm
 
         self._state.selected_indices = set(self._snapshot["selected_indices"])
         self._state.df_global = self._snapshot["df_global"]
@@ -191,6 +221,10 @@ class StateStore:
         self._state.last_group_col = self._snapshot["last_group_col"]
         self._state.selection_mode = bool(self._snapshot["selection_mode"])
         self._state.selection_tool = self._snapshot["selection_tool"]
+        self._state.point_size = int(self._snapshot["point_size"])
+        self._state.tooltip_columns = list(self._snapshot["tooltip_columns"])
+        self._state.ui_theme = str(self._snapshot["ui_theme"])
+        self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])
         self._state.selected_2d_cols = list(self._snapshot["selected_2d_cols"])

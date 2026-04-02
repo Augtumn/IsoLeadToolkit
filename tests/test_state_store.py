@@ -21,6 +21,10 @@ def _snapshot_state() -> dict[str, Any]:
         "data_cols": list(getattr(app_state, "data_cols", []) or []),
         "last_group_col": getattr(app_state, "last_group_col", None),
         "selection_tool": getattr(app_state, "selection_tool", None),
+        "point_size": int(getattr(app_state, "point_size", 60)),
+        "tooltip_columns": list(getattr(app_state, "tooltip_columns", []) or []),
+        "ui_theme": str(getattr(app_state, "ui_theme", "Modern Light")),
+        "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
         "available_groups": list(getattr(app_state, "available_groups", []) or []),
         "visible_groups": list(getattr(app_state, "visible_groups", []) or []) if getattr(app_state, "visible_groups", None) else None,
         "selected_2d_cols": list(getattr(app_state, "selected_2d_cols", []) or []),
@@ -41,6 +45,11 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
         }
     )
     state_gateway.set_render_mode(str(snapshot["render_mode"]))
+    state_gateway.set_algorithm(str(snapshot["algorithm"]))
+    state_gateway.set_point_size(int(snapshot["point_size"]))
+    state_gateway.set_tooltip_columns(snapshot["tooltip_columns"])
+    state_gateway.set_ui_theme(str(snapshot["ui_theme"]))
+    state_gateway.set_preserve_import_render_mode(bool(snapshot["preserve_import_render_mode"]))
     state_gateway.set_selection_mode(snapshot["selection_mode"])
     state_gateway.set_selection_tool(snapshot["selection_tool"])
     state_gateway.set_dataframe_and_source(
@@ -69,6 +78,32 @@ def test_state_store_set_render_mode_syncs_algorithm() -> None:
         assert app_state.algorithm == "PCA"
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["render_mode"] == "PCA"
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_session_preference_domains() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_render_mode("2D")
+        state_gateway.set_algorithm("RobustPCA")
+        state_gateway.set_point_size(88)
+        state_gateway.set_tooltip_columns(["Lab No.", "Period"])
+        state_gateway.set_ui_theme("Modern Light")
+        state_gateway.set_preserve_import_render_mode(True)
+
+        assert app_state.algorithm == "RobustPCA"
+        assert app_state.point_size == 88
+        assert app_state.tooltip_columns == ["Lab No.", "Period"]
+        assert app_state.ui_theme == "Modern Light"
+        assert app_state.preserve_import_render_mode is True
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["algorithm"] == "RobustPCA"
+        assert store_snapshot["point_size"] == 88
+        assert store_snapshot["tooltip_columns"] == ["Lab No.", "Period"]
+        assert store_snapshot["ui_theme"] == "Modern Light"
+        assert store_snapshot["preserve_import_render_mode"] is True
     finally:
         _restore_state(snapshot)
 

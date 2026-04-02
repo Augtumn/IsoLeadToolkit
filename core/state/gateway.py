@@ -27,8 +27,23 @@ class AppStateGateway:
 
     def set_attr(self, name: str, value: Any) -> None:
         """Set a single app_state attribute via gateway."""
+        if name == "algorithm":
+            self.set_algorithm(str(value))
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
+            return
+        if name == "point_size":
+            self.set_point_size(int(value))
+            return
+        if name == "tooltip_columns":
+            self.set_tooltip_columns(value)
+            return
+        if name == "ui_theme":
+            self.set_ui_theme(str(value))
+            return
+        if name == "preserve_import_render_mode":
+            self.set_preserve_import_render_mode(bool(value))
             return
         if name == "selected_indices":
             self.set_selected_indices(value)
@@ -54,6 +69,24 @@ class AppStateGateway:
 
     def set_render_mode(self, render_mode: str) -> None:
         self._dispatch("SET_RENDER_MODE", render_mode=render_mode)
+
+    def set_algorithm(self, algorithm: str) -> None:
+        self._dispatch("SET_ALGORITHM", algorithm=algorithm)
+
+    def set_point_size(self, point_size: int) -> None:
+        self._dispatch("SET_POINT_SIZE", point_size=int(point_size))
+
+    def set_tooltip_columns(self, columns: Any) -> None:
+        if columns is None:
+            col_list: list[Any] = []
+        elif isinstance(columns, (str, bytes)):
+            col_list = [columns]
+        else:
+            col_list = list(columns)
+        self._dispatch("SET_TOOLTIP_COLUMNS", columns=col_list)
+
+    def set_ui_theme(self, theme: str) -> None:
+        self._dispatch("SET_UI_THEME", theme=theme)
 
     def set_selected_indices(self, indices: Any) -> None:
         self._dispatch("SET_SELECTED_INDICES", indices=indices)
@@ -116,7 +149,7 @@ class AppStateGateway:
         self._state.draw_selection_ellipse = bool(enabled)
 
     def set_preserve_import_render_mode(self, preserve: bool) -> None:
-        self._state.preserve_import_render_mode = preserve
+        self._dispatch("SET_PRESERVE_IMPORT_RENDER_MODE", enabled=bool(preserve))
 
     def set_group_data_columns(self, group_cols: list[str], data_cols: list[str]) -> None:
         self._dispatch("SET_GROUP_DATA_COLUMNS", group_cols=list(group_cols), data_cols=list(data_cols))

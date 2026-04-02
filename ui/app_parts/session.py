@@ -33,12 +33,12 @@ class Qt5AppSessionMixin:
             logger.info("No session data, using default algorithm: UMAP")
             return
 
-        state_gateway.set_attr("algorithm", session_data.get("algorithm", "UMAP"))
+        state_gateway.set_algorithm(session_data.get("algorithm", "UMAP"))
         logger.info("Algorithm from session: %s", app_state.algorithm)
 
         app_state.umap_params.update(session_data.get("umap_params", {}))
         app_state.tsne_params.update(session_data.get("tsne_params", {}))
-        state_gateway.set_attr("point_size", session_data.get("point_size", app_state.point_size))
+        state_gateway.set_point_size(session_data.get("point_size", app_state.point_size))
 
         preserve_import_mode = bool(getattr(app_state, "preserve_import_render_mode", False))
         render_mode = session_data.get("render_mode")
@@ -52,7 +52,7 @@ class Qt5AppSessionMixin:
                 render_mode = app_state.algorithm
 
         if not preserve_import_mode:
-            state_gateway.set_attr("render_mode", render_mode or "UMAP")
+            state_gateway.set_render_mode(render_mode or "UMAP")
         else:
             logger.info("Preserving render mode selected during import: %s", app_state.render_mode)
 
@@ -61,12 +61,12 @@ class Qt5AppSessionMixin:
 
         saved_cols = session_data.get("tooltip_columns")
         if saved_cols is not None:
-            state_gateway.set_attr("tooltip_columns", saved_cols)
+            state_gateway.set_tooltip_columns(saved_cols)
             logger.debug("Restored tooltip columns from session: %s", saved_cols)
         else:
             logger.debug("No tooltip columns in session, using default: %s", app_state.tooltip_columns)
 
-        state_gateway.set_attr("ui_theme", session_data.get("ui_theme") or "Modern Light")
+        state_gateway.set_ui_theme(session_data.get("ui_theme") or "Modern Light")
         logger.info("Restored UI theme: %s", app_state.ui_theme)
 
         session_group_col = session_data.get("group_col")
@@ -117,4 +117,4 @@ class Qt5AppSessionMixin:
                     )
 
         if app_state.render_mode in ("UMAP", "tSNE"):
-            state_gateway.set_attr("algorithm", "UMAP" if app_state.render_mode == "UMAP" else "tSNE")
+            state_gateway.set_algorithm("UMAP" if app_state.render_mode == "UMAP" else "tSNE")

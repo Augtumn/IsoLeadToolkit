@@ -105,6 +105,10 @@
     - `selection_mode/selection_tool`
     - `AppStateGateway` 的 `clear_selection`、`disable_selection_mode`、`set_selection_tool` 已改为通过 StateStore action 分发。
     - `set_attr` 对 `selection_mode/selection_tool` 的兼容桥接已接入。
+- 第五批状态域继续迁移（会话偏好链路）：
+    - `algorithm/point_size/tooltip_columns/ui_theme/preserve_import_render_mode`
+    - `AppStateGateway` 新增显式写入入口：`set_algorithm`、`set_point_size`、`set_tooltip_columns`、`set_ui_theme`。
+    - `ui/app_parts/session.py` 会话恢复链路已改为优先调用显式 gateway 方法，减少 `set_attr` 隐式写入路径。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
