@@ -121,6 +121,11 @@
         - `show_equation_overlays`
         - `StateStore` 新增方程叠加开关 action，`AppStateGateway` 新增 `set_show_equation_overlays`。
         - 分析面板方程开关改为显式 gateway API；新增状态回归测试覆盖显式 API 与兼容 `set_attr` 桥接。
+    - 第八批状态域继续迁移（Tooltip 显示开关）：
+        - `show_tooltip`
+        - `StateStore` 新增 tooltip 显示开关 action，`AppStateGateway` 新增 `set_show_tooltip`。
+        - `ui/panels/analysis/selection.py` 与 `ui/panels/data/grouping.py` tooltip 开关改为显式 gateway API。
+        - `tests/test_state_store.py` 新增 tooltip 显示开关回归测试，覆盖显式 API 与兼容桥接。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

@@ -214,7 +214,7 @@ class DataPanelGroupingMixin:
 
     def _on_tooltip_change(self, state):
         """Handle tooltip visibility change."""
-        state_gateway.set_attr("show_tooltip", state == Qt.Checked)
+        state_gateway.set_show_tooltip(state == Qt.Checked)
         self._on_change()
 
     def _on_configure_tooltip(self):

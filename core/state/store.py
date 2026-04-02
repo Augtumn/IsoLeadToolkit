@@ -46,6 +46,7 @@ class StateStore:
             "selection_mode": bool(getattr(state, "selection_mode", False)),
             "selection_tool": getattr(state, "selection_tool", None),
             "point_size": int(getattr(state, "point_size", 60)),
+            "show_tooltip": bool(getattr(state, "show_tooltip", False)),
             "tooltip_columns": list(getattr(state, "tooltip_columns", []) or []),
             "ui_theme": str(getattr(state, "ui_theme", "Modern Light")),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
@@ -113,6 +114,9 @@ class StateStore:
 
         elif action_type == "SET_POINT_SIZE":
             self._snapshot["point_size"] = max(1, int(action.get("point_size", 60)))
+
+        elif action_type == "SET_SHOW_TOOLTIP":
+            self._snapshot["show_tooltip"] = bool(action.get("show", False))
 
         elif action_type == "SET_TOOLTIP_COLUMNS":
             self._snapshot["tooltip_columns"] = [str(col) for col in list(action.get("columns") or [])]
@@ -243,6 +247,7 @@ class StateStore:
             "selection_mode": bool(self._snapshot["selection_mode"]),
             "selection_tool": self._snapshot["selection_tool"],
             "point_size": int(self._snapshot["point_size"]),
+            "show_tooltip": bool(self._snapshot["show_tooltip"]),
             "tooltip_columns": list(self._snapshot["tooltip_columns"]),
             "ui_theme": str(self._snapshot["ui_theme"]),
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
@@ -287,6 +292,7 @@ class StateStore:
         self._state.selection_mode = bool(self._snapshot["selection_mode"])
         self._state.selection_tool = self._snapshot["selection_tool"]
         self._state.point_size = int(self._snapshot["point_size"])
+        self._state.show_tooltip = bool(self._snapshot["show_tooltip"])
         self._state.tooltip_columns = list(self._snapshot["tooltip_columns"])
         self._state.ui_theme = str(self._snapshot["ui_theme"])
         self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])

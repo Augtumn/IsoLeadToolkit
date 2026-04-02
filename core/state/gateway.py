@@ -66,6 +66,9 @@ class AppStateGateway:
         if name == "point_size":
             self.set_point_size(int(value))
             return
+        if name == "show_tooltip":
+            self.set_show_tooltip(bool(value))
+            return
         if name == "tooltip_columns":
             self.set_tooltip_columns(value)
             return
@@ -144,6 +147,9 @@ class AppStateGateway:
 
     def set_point_size(self, point_size: int) -> None:
         self._dispatch("SET_POINT_SIZE", point_size=int(point_size))
+
+    def set_show_tooltip(self, show: bool) -> None:
+        self._dispatch("SET_SHOW_TOOLTIP", show=bool(show))
 
     def set_tooltip_columns(self, columns: Any) -> None:
         if columns is None:

@@ -32,6 +32,7 @@ def _snapshot_state() -> dict[str, Any]:
         "last_group_col": getattr(app_state, "last_group_col", None),
         "selection_tool": getattr(app_state, "selection_tool", None),
         "point_size": int(getattr(app_state, "point_size", 60)),
+        "show_tooltip": bool(getattr(app_state, "show_tooltip", False)),
         "tooltip_columns": list(getattr(app_state, "tooltip_columns", []) or []),
         "ui_theme": str(getattr(app_state, "ui_theme", "Modern Light")),
         "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
@@ -57,6 +58,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_render_mode(str(snapshot["render_mode"]))
     state_gateway.set_algorithm(str(snapshot["algorithm"]))
     state_gateway.set_point_size(int(snapshot["point_size"]))
+    state_gateway.set_show_tooltip(bool(snapshot["show_tooltip"]))
     state_gateway.set_show_kde(bool(snapshot["show_kde"]))
     state_gateway.set_show_marginal_kde(bool(snapshot["show_marginal_kde"]))
     state_gateway.set_show_equation_overlays(bool(snapshot["show_equation_overlays"]))
@@ -180,6 +182,20 @@ def test_state_store_equation_overlay_domain() -> None:
         state_gateway.set_attr("show_equation_overlays", False)
         assert app_state.show_equation_overlays is False
         assert app_state.state_store.snapshot()["show_equation_overlays"] is False
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_tooltip_visibility_domain() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_show_tooltip(True)
+        assert app_state.show_tooltip is True
+        assert app_state.state_store.snapshot()["show_tooltip"] is True
+
+        state_gateway.set_attr("show_tooltip", False)
+        assert app_state.show_tooltip is False
+        assert app_state.state_store.snapshot()["show_tooltip"] is False
     finally:
         _restore_state(snapshot)
 
