@@ -377,7 +377,7 @@ class DataImportBuildMixin:
         if not code:
             return
         if set_language(code):
-            state_gateway.set_attr('language', code)
+            state_gateway.set_language_code(code)
             self._update_language_label(code)
             self._apply_translations()
 

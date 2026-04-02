@@ -96,6 +96,9 @@ class AppStateGateway:
         if name == "recent_files":
             self.set_recent_files(value)
             return
+        if name == "language":
+            self.set_language_code(str(value))
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -343,6 +346,9 @@ class AppStateGateway:
 
     def set_recent_files(self, files: Any) -> None:
         self._state.recent_files = list(files or [])
+
+    def set_language_code(self, code: str) -> None:
+        self._state.language = str(code)
 
     def set_marginal_axes(self, marginal_axes: Any) -> None:
         self._state.marginal_axes = marginal_axes
