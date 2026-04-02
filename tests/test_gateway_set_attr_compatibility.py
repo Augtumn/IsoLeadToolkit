@@ -136,6 +136,56 @@ def test_ui_theme_set_attr_conversion() -> None:
         state_gateway.set_ui_theme(original_theme)
 
 
+def test_language_set_attr_conversion() -> None:
+    original_language = str(getattr(app_state, "language", "zh"))
+
+    try:
+        state_gateway.set_attr("language", 123)
+        assert app_state.language == "123"
+        assert app_state.state_store.snapshot()["language"] == "123"
+    finally:
+        state_gateway.set_language_code(original_language)
+
+
+def test_legend_preferences_set_attr_compatibility() -> None:
+    original_color_scheme = str(getattr(app_state, "color_scheme", "vibrant"))
+    original_position = getattr(app_state, "legend_position", None)
+    original_location = getattr(app_state, "legend_location", "outside_left")
+    original_columns = int(getattr(app_state, "legend_columns", 0))
+    original_nudge_step = float(getattr(app_state, "legend_nudge_step", 0.02))
+    original_offset = tuple(getattr(app_state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0))
+
+    try:
+        state_gateway.set_attr("color_scheme", 777)
+        state_gateway.set_attr("legend_position", "upper left")
+        state_gateway.set_attr("legend_location", "outside_right")
+        state_gateway.set_attr("legend_columns", "4")
+        state_gateway.set_attr("legend_nudge_step", "0.125")
+        state_gateway.set_attr("legend_offset", [0.2, -0.1])
+
+        assert app_state.color_scheme == "777"
+        assert app_state.legend_position == "upper left"
+        assert app_state.legend_location == "outside_right"
+        assert app_state.legend_columns == 4
+        assert app_state.legend_nudge_step == 0.125
+        assert app_state.legend_offset == (0.2, -0.1)
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["color_scheme"] == "777"
+        assert store_snapshot["legend_position"] == "upper left"
+        assert store_snapshot["legend_location"] == "outside_right"
+        assert store_snapshot["legend_columns"] == 4
+        assert store_snapshot["legend_nudge_step"] == 0.125
+        assert store_snapshot["legend_offset"] == (0.2, -0.1)
+    finally:
+        state_gateway.set_color_scheme(original_color_scheme)
+        state_gateway.set_legend_position(original_position)
+        state_gateway.set_legend_location(original_location)
+        state_gateway.set_legend_columns(original_columns)
+        state_gateway.set_legend_nudge_step(original_nudge_step)
+        state_gateway.set_legend_offset(original_offset)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 

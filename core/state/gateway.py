@@ -418,7 +418,7 @@ class AppStateGateway:
         self._state.sheet_name = sheet_name
 
     def set_language_code(self, code: str) -> None:
-        self._state.language = str(code)
+        self._dispatch("SET_LANGUAGE_CODE", code=code)
 
     def set_line_styles(self, line_styles: Any) -> None:
         self._state.line_styles = dict(line_styles or {})
@@ -427,22 +427,22 @@ class AppStateGateway:
         self._state.saved_themes = dict(themes or {})
 
     def set_color_scheme(self, color_scheme: str) -> None:
-        self._state.color_scheme = str(color_scheme)
+        self._dispatch("SET_COLOR_SCHEME", color_scheme=color_scheme)
 
     def set_legend_position(self, position: Any) -> None:
-        self._state.legend_position = position
+        self._dispatch("SET_LEGEND_POSITION", position=position)
 
     def set_legend_location(self, location: Any) -> None:
-        self._state.legend_location = location
+        self._dispatch("SET_LEGEND_LOCATION", location=location)
 
     def set_legend_columns(self, columns: int) -> None:
-        self._state.legend_columns = int(columns)
+        self._dispatch("SET_LEGEND_COLUMNS", columns=columns)
 
     def set_legend_nudge_step(self, step: float) -> None:
-        self._state.legend_nudge_step = float(step)
+        self._dispatch("SET_LEGEND_NUDGE_STEP", step=step)
 
     def set_legend_offset(self, offset: Any) -> None:
-        self._state.legend_offset = tuple(offset) if offset is not None else (0.0, 0.0)
+        self._dispatch("SET_LEGEND_OFFSET", offset=offset)
 
     def set_legend_snapshot(self, title: Any, handles: Any, labels: Any) -> None:
         self._state.legend_last_title = title

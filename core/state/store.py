@@ -49,6 +49,13 @@ class StateStore:
             "show_tooltip": bool(getattr(state, "show_tooltip", False)),
             "tooltip_columns": list(getattr(state, "tooltip_columns", []) or []),
             "ui_theme": str(getattr(state, "ui_theme", "Modern Light")),
+            "language": str(getattr(state, "language", "zh")),
+            "color_scheme": str(getattr(state, "color_scheme", "vibrant")),
+            "legend_position": getattr(state, "legend_position", None),
+            "legend_location": getattr(state, "legend_location", "outside_left"),
+            "legend_columns": int(getattr(state, "legend_columns", 0)),
+            "legend_nudge_step": float(getattr(state, "legend_nudge_step", 0.02)),
+            "legend_offset": tuple(getattr(state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
@@ -123,6 +130,28 @@ class StateStore:
 
         elif action_type == "SET_UI_THEME":
             self._snapshot["ui_theme"] = str(action.get("theme", "Modern Light") or "Modern Light")
+
+        elif action_type == "SET_LANGUAGE_CODE":
+            self._snapshot["language"] = str(action.get("code"))
+
+        elif action_type == "SET_COLOR_SCHEME":
+            self._snapshot["color_scheme"] = str(action.get("color_scheme"))
+
+        elif action_type == "SET_LEGEND_POSITION":
+            self._snapshot["legend_position"] = action.get("position")
+
+        elif action_type == "SET_LEGEND_LOCATION":
+            self._snapshot["legend_location"] = action.get("location")
+
+        elif action_type == "SET_LEGEND_COLUMNS":
+            self._snapshot["legend_columns"] = int(action.get("columns", 0))
+
+        elif action_type == "SET_LEGEND_NUDGE_STEP":
+            self._snapshot["legend_nudge_step"] = float(action.get("step", 0.02))
+
+        elif action_type == "SET_LEGEND_OFFSET":
+            offset = action.get("offset")
+            self._snapshot["legend_offset"] = tuple(offset) if offset is not None else (0.0, 0.0)
 
         elif action_type == "SET_PRESERVE_IMPORT_RENDER_MODE":
             self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
@@ -250,6 +279,13 @@ class StateStore:
             "show_tooltip": bool(self._snapshot["show_tooltip"]),
             "tooltip_columns": list(self._snapshot["tooltip_columns"]),
             "ui_theme": str(self._snapshot["ui_theme"]),
+            "language": str(self._snapshot["language"]),
+            "color_scheme": str(self._snapshot["color_scheme"]),
+            "legend_position": self._snapshot["legend_position"],
+            "legend_location": self._snapshot["legend_location"],
+            "legend_columns": int(self._snapshot["legend_columns"]),
+            "legend_nudge_step": float(self._snapshot["legend_nudge_step"]),
+            "legend_offset": tuple(self._snapshot["legend_offset"]),
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
@@ -295,6 +331,13 @@ class StateStore:
         self._state.show_tooltip = bool(self._snapshot["show_tooltip"])
         self._state.tooltip_columns = list(self._snapshot["tooltip_columns"])
         self._state.ui_theme = str(self._snapshot["ui_theme"])
+        self._state.language = str(self._snapshot["language"])
+        self._state.color_scheme = str(self._snapshot["color_scheme"])
+        self._state.legend_position = self._snapshot["legend_position"]
+        self._state.legend_location = self._snapshot["legend_location"]
+        self._state.legend_columns = int(self._snapshot["legend_columns"])
+        self._state.legend_nudge_step = float(self._snapshot["legend_nudge_step"])
+        self._state.legend_offset = tuple(self._snapshot["legend_offset"])
         self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])

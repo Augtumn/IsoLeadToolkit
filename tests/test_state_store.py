@@ -35,6 +35,13 @@ def _snapshot_state() -> dict[str, Any]:
         "show_tooltip": bool(getattr(app_state, "show_tooltip", False)),
         "tooltip_columns": list(getattr(app_state, "tooltip_columns", []) or []),
         "ui_theme": str(getattr(app_state, "ui_theme", "Modern Light")),
+        "language": str(getattr(app_state, "language", "zh")),
+        "color_scheme": str(getattr(app_state, "color_scheme", "vibrant")),
+        "legend_position": getattr(app_state, "legend_position", None),
+        "legend_location": getattr(app_state, "legend_location", "outside_left"),
+        "legend_columns": int(getattr(app_state, "legend_columns", 0)),
+        "legend_nudge_step": float(getattr(app_state, "legend_nudge_step", 0.02)),
+        "legend_offset": tuple(getattr(app_state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
         "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
         "available_groups": list(getattr(app_state, "available_groups", []) or []),
         "visible_groups": list(getattr(app_state, "visible_groups", []) or []) if getattr(app_state, "visible_groups", None) else None,
@@ -70,6 +77,13 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     )
     state_gateway.set_tooltip_columns(snapshot["tooltip_columns"])
     state_gateway.set_ui_theme(str(snapshot["ui_theme"]))
+    state_gateway.set_language_code(str(snapshot["language"]))
+    state_gateway.set_color_scheme(str(snapshot["color_scheme"]))
+    state_gateway.set_legend_position(snapshot["legend_position"])
+    state_gateway.set_legend_location(snapshot["legend_location"])
+    state_gateway.set_legend_columns(int(snapshot["legend_columns"]))
+    state_gateway.set_legend_nudge_step(float(snapshot["legend_nudge_step"]))
+    state_gateway.set_legend_offset(snapshot["legend_offset"])
     state_gateway.set_preserve_import_render_mode(bool(snapshot["preserve_import_render_mode"]))
     state_gateway.set_selection_mode(snapshot["selection_mode"])
     state_gateway.set_selection_tool(snapshot["selection_tool"])
@@ -111,12 +125,26 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_point_size(88)
         state_gateway.set_tooltip_columns(["Lab No.", "Period"])
         state_gateway.set_ui_theme("Modern Light")
+        state_gateway.set_language_code("en")
+        state_gateway.set_color_scheme("vibrant")
+        state_gateway.set_legend_position("upper right")
+        state_gateway.set_legend_location("outside_right")
+        state_gateway.set_legend_columns(3)
+        state_gateway.set_legend_nudge_step(0.125)
+        state_gateway.set_legend_offset((0.2, -0.1))
         state_gateway.set_preserve_import_render_mode(True)
 
         assert app_state.algorithm == "RobustPCA"
         assert app_state.point_size == 88
         assert app_state.tooltip_columns == ["Lab No.", "Period"]
         assert app_state.ui_theme == "Modern Light"
+        assert app_state.language == "en"
+        assert app_state.color_scheme == "vibrant"
+        assert app_state.legend_position == "upper right"
+        assert app_state.legend_location == "outside_right"
+        assert app_state.legend_columns == 3
+        assert app_state.legend_nudge_step == 0.125
+        assert app_state.legend_offset == (0.2, -0.1)
         assert app_state.preserve_import_render_mode is True
 
         store_snapshot = app_state.state_store.snapshot()
@@ -124,6 +152,13 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["point_size"] == 88
         assert store_snapshot["tooltip_columns"] == ["Lab No.", "Period"]
         assert store_snapshot["ui_theme"] == "Modern Light"
+        assert store_snapshot["language"] == "en"
+        assert store_snapshot["color_scheme"] == "vibrant"
+        assert store_snapshot["legend_position"] == "upper right"
+        assert store_snapshot["legend_location"] == "outside_right"
+        assert store_snapshot["legend_columns"] == 3
+        assert store_snapshot["legend_nudge_step"] == 0.125
+        assert store_snapshot["legend_offset"] == (0.2, -0.1)
         assert store_snapshot["preserve_import_render_mode"] is True
     finally:
         _restore_state(snapshot)

@@ -312,6 +312,15 @@
                                                                 - 新增 `tests/test_source_scan_guard.py`，覆盖
                                                                     `scan_pattern_hits` 的计数与 allowlist 行为，
                                                                     以及 `print_scan_result` 的输出格式与排序稳定性。
+                                - 第五十三批迁移清理（图例与语言偏好纳入 StateStore）：
+                                                                - `core/state/store.py` 新增语言与图例偏好状态域：
+                                                                    `language`、`color_scheme`、`legend_position`、
+                                                                    `legend_location`、`legend_columns`、`legend_nudge_step`、`legend_offset`。
+                                                                - `core/state/gateway.py` 的对应显式 API
+                                                                    `set_language_code`、`set_color_scheme`、
+                                                                    `set_legend_*` 改为通过 StateStore action 分发。
+                                                                - 新增/扩展回归测试，覆盖显式 setter 与兼容
+                                                                    `set_attr` 写入后 Store 快照一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
