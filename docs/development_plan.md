@@ -353,6 +353,16 @@
                                                                     保证 Store 快照与运行态同步。
                                                                 - 扩展状态与兼容测试，覆盖显式 setter 与 `set_attr`
                                                                     在上述三域上的一致性。
+                                - 第五十七批迁移清理（KDE 样式与 ML 结果纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `kde_style`、`marginal_kde_style`、
+                                                                    `ml_last_result`、`ml_last_model_meta`。
+                                                                - `core/state/gateway.py` 的 `set_kde_style`、
+                                                                    `set_marginal_kde_style`、`set_ml_last_result`、
+                                                                    `set_ml_last_model_meta` 改为通过
+                                                                    StateStore action 分发。
+                                                                - 扩展状态与兼容测试，覆盖显式 setter 与 `set_attr`
+                                                                    在上述四域上的快照一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

@@ -65,6 +65,10 @@ class StateStore:
             "mixing_endmembers": dict(getattr(state, "mixing_endmembers", {}) or {}),
             "mixing_mixtures": dict(getattr(state, "mixing_mixtures", {}) or {}),
             "ternary_ranges": dict(getattr(state, "ternary_ranges", {}) or {}),
+            "kde_style": dict(getattr(state, "kde_style", {}) or {}),
+            "marginal_kde_style": dict(getattr(state, "marginal_kde_style", {}) or {}),
+            "ml_last_result": getattr(state, "ml_last_result", None),
+            "ml_last_model_meta": getattr(state, "ml_last_model_meta", None),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
@@ -188,6 +192,18 @@ class StateStore:
 
         elif action_type == "SET_TERNARY_RANGES":
             self._snapshot["ternary_ranges"] = dict(action.get("ranges") or {})
+
+        elif action_type == "SET_KDE_STYLE":
+            self._snapshot["kde_style"] = dict(action.get("style") or {})
+
+        elif action_type == "SET_MARGINAL_KDE_STYLE":
+            self._snapshot["marginal_kde_style"] = dict(action.get("style") or {})
+
+        elif action_type == "SET_ML_LAST_RESULT":
+            self._snapshot["ml_last_result"] = action.get("result")
+
+        elif action_type == "SET_ML_LAST_MODEL_META":
+            self._snapshot["ml_last_model_meta"] = action.get("meta")
 
         elif action_type == "SET_PRESERVE_IMPORT_RENDER_MODE":
             self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
@@ -331,6 +347,10 @@ class StateStore:
             "mixing_endmembers": dict(self._snapshot["mixing_endmembers"]),
             "mixing_mixtures": dict(self._snapshot["mixing_mixtures"]),
             "ternary_ranges": dict(self._snapshot["ternary_ranges"]),
+            "kde_style": dict(self._snapshot["kde_style"]),
+            "marginal_kde_style": dict(self._snapshot["marginal_kde_style"]),
+            "ml_last_result": self._snapshot["ml_last_result"],
+            "ml_last_model_meta": self._snapshot["ml_last_model_meta"],
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
@@ -392,6 +412,10 @@ class StateStore:
         self._state.mixing_endmembers = dict(self._snapshot["mixing_endmembers"])
         self._state.mixing_mixtures = dict(self._snapshot["mixing_mixtures"])
         self._state.ternary_ranges = dict(self._snapshot["ternary_ranges"])
+        self._state.kde_style = dict(self._snapshot["kde_style"])
+        self._state.marginal_kde_style = dict(self._snapshot["marginal_kde_style"])
+        self._state.ml_last_result = self._snapshot["ml_last_result"]
+        self._state.ml_last_model_meta = self._snapshot["ml_last_model_meta"]
         self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])

@@ -285,6 +285,61 @@ def test_ternary_ranges_set_attr_compatibility() -> None:
         state_gateway.set_ternary_ranges(original_ternary_ranges)
 
 
+def test_kde_style_set_attr_compatibility() -> None:
+    original_kde_style = dict(getattr(app_state, "kde_style", {}) or {})
+
+    try:
+        state_gateway.set_attr("kde_style", {"alpha": 0.55, "linewidth": 1.4, "fill": False, "levels": 9})
+        assert app_state.kde_style["alpha"] == 0.55
+        assert app_state.state_store.snapshot()["kde_style"]["levels"] == 9
+    finally:
+        state_gateway.set_kde_style(original_kde_style)
+
+
+def test_marginal_kde_style_set_attr_compatibility() -> None:
+    original_marginal_kde_style = dict(getattr(app_state, "marginal_kde_style", {}) or {})
+
+    try:
+        state_gateway.set_attr(
+            "marginal_kde_style",
+            {
+                "alpha": 0.2,
+                "linewidth": 1.1,
+                "fill": True,
+                "bw_adjust": 1.2,
+                "gridsize": 300,
+                "cut": 0.8,
+                "log_transform": True,
+            },
+        )
+        assert app_state.marginal_kde_style["gridsize"] == 300
+        assert app_state.state_store.snapshot()["marginal_kde_style"]["log_transform"] is True
+    finally:
+        state_gateway.set_marginal_kde_style(original_marginal_kde_style)
+
+
+def test_ml_last_result_set_attr_compatibility() -> None:
+    original_ml_last_result = getattr(app_state, "ml_last_result", None)
+
+    try:
+        state_gateway.set_attr("ml_last_result", {"status": "ok", "score": 0.91})
+        assert app_state.ml_last_result == {"status": "ok", "score": 0.91}
+        assert app_state.state_store.snapshot()["ml_last_result"] == {"status": "ok", "score": 0.91}
+    finally:
+        state_gateway.set_ml_last_result(original_ml_last_result)
+
+
+def test_ml_last_model_meta_set_attr_compatibility() -> None:
+    original_ml_last_model_meta = getattr(app_state, "ml_last_model_meta", None)
+
+    try:
+        state_gateway.set_attr("ml_last_model_meta", {"model": "xgb", "classes": 4})
+        assert app_state.ml_last_model_meta == {"model": "xgb", "classes": 4}
+        assert app_state.state_store.snapshot()["ml_last_model_meta"] == {"model": "xgb", "classes": 4}
+    finally:
+        state_gateway.set_ml_last_model_meta(original_ml_last_model_meta)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 

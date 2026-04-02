@@ -585,16 +585,16 @@ class AppStateGateway:
         self._state.isochron_rxy_value = float(rxy_value)
 
     def set_kde_style(self, style: Any) -> None:
-        self._state.kde_style = dict(style or {})
+        self._dispatch("SET_KDE_STYLE", style=dict(style or {}))
 
     def set_marginal_kde_style(self, style: Any) -> None:
-        self._state.marginal_kde_style = dict(style or {})
+        self._dispatch("SET_MARGINAL_KDE_STYLE", style=dict(style or {}))
 
     def set_ml_last_result(self, result: Any) -> None:
-        self._state.ml_last_result = result
+        self._dispatch("SET_ML_LAST_RESULT", result=result)
 
     def set_ml_last_model_meta(self, meta: Any) -> None:
-        self._state.ml_last_model_meta = meta
+        self._dispatch("SET_ML_LAST_MODEL_META", meta=meta)
 
     def set_equation_overlays(self, overlays: Any) -> None:
         self._state.equation_overlays = list(overlays or [])
