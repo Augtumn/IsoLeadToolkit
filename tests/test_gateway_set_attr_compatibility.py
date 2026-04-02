@@ -219,6 +219,39 @@ def test_saved_themes_set_attr_compatibility() -> None:
         state_gateway.set_saved_themes(original_saved_themes)
 
 
+def test_custom_palettes_set_attr_compatibility() -> None:
+    original_custom_palettes = dict(getattr(app_state, "custom_palettes", {}) or {})
+
+    try:
+        state_gateway.set_attr("custom_palettes", {"my_palette": ["#112233", "#445566"]})
+        assert app_state.custom_palettes["my_palette"] == ["#112233", "#445566"]
+        assert app_state.state_store.snapshot()["custom_palettes"]["my_palette"] == ["#112233", "#445566"]
+    finally:
+        state_gateway.set_custom_palettes(original_custom_palettes)
+
+
+def test_custom_shape_sets_set_attr_compatibility() -> None:
+    original_custom_shape_sets = dict(getattr(app_state, "custom_shape_sets", {}) or {})
+
+    try:
+        state_gateway.set_attr("custom_shape_sets", {"my_shapes": ["o", "s", "^"]})
+        assert app_state.custom_shape_sets["my_shapes"] == ["o", "s", "^"]
+        assert app_state.state_store.snapshot()["custom_shape_sets"]["my_shapes"] == ["o", "s", "^"]
+    finally:
+        state_gateway.set_custom_shape_sets(original_custom_shape_sets)
+
+
+def test_legend_item_order_set_attr_compatibility() -> None:
+    original_legend_item_order = list(getattr(app_state, "legend_item_order", []) or [])
+
+    try:
+        state_gateway.set_attr("legend_item_order", ["A", "B", "C"])
+        assert app_state.legend_item_order == ["A", "B", "C"]
+        assert app_state.state_store.snapshot()["legend_item_order"] == ["A", "B", "C"]
+    finally:
+        state_gateway.set_legend_item_order(original_legend_item_order)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 

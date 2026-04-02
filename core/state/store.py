@@ -59,6 +59,9 @@ class StateStore:
             "recent_files": list(getattr(state, "recent_files", []) or []),
             "line_styles": dict(getattr(state, "line_styles", {}) or {}),
             "saved_themes": dict(getattr(state, "saved_themes", {}) or {}),
+            "custom_palettes": dict(getattr(state, "custom_palettes", {}) or {}),
+            "custom_shape_sets": dict(getattr(state, "custom_shape_sets", {}) or {}),
+            "legend_item_order": list(getattr(state, "legend_item_order", []) or []),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
@@ -164,6 +167,15 @@ class StateStore:
 
         elif action_type == "SET_SAVED_THEMES":
             self._snapshot["saved_themes"] = dict(action.get("themes") or {})
+
+        elif action_type == "SET_CUSTOM_PALETTES":
+            self._snapshot["custom_palettes"] = dict(action.get("palettes") or {})
+
+        elif action_type == "SET_CUSTOM_SHAPE_SETS":
+            self._snapshot["custom_shape_sets"] = dict(action.get("shape_sets") or {})
+
+        elif action_type == "SET_LEGEND_ITEM_ORDER":
+            self._snapshot["legend_item_order"] = list(action.get("order") or [])
 
         elif action_type == "SET_PRESERVE_IMPORT_RENDER_MODE":
             self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
@@ -301,6 +313,9 @@ class StateStore:
             "recent_files": list(self._snapshot["recent_files"]),
             "line_styles": dict(self._snapshot["line_styles"]),
             "saved_themes": dict(self._snapshot["saved_themes"]),
+            "custom_palettes": dict(self._snapshot["custom_palettes"]),
+            "custom_shape_sets": dict(self._snapshot["custom_shape_sets"]),
+            "legend_item_order": list(self._snapshot["legend_item_order"]),
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
@@ -356,6 +371,9 @@ class StateStore:
         self._state.recent_files = list(self._snapshot["recent_files"])
         self._state.line_styles = dict(self._snapshot["line_styles"])
         self._state.saved_themes = dict(self._snapshot["saved_themes"])
+        self._state.custom_palettes = dict(self._snapshot["custom_palettes"])
+        self._state.custom_shape_sets = dict(self._snapshot["custom_shape_sets"])
+        self._state.legend_item_order = list(self._snapshot["legend_item_order"])
         self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])

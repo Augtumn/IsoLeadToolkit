@@ -45,6 +45,9 @@ def _snapshot_state() -> dict[str, Any]:
         "recent_files": list(getattr(app_state, "recent_files", []) or []),
         "line_styles": dict(getattr(app_state, "line_styles", {}) or {}),
         "saved_themes": dict(getattr(app_state, "saved_themes", {}) or {}),
+        "custom_palettes": dict(getattr(app_state, "custom_palettes", {}) or {}),
+        "custom_shape_sets": dict(getattr(app_state, "custom_shape_sets", {}) or {}),
+        "legend_item_order": list(getattr(app_state, "legend_item_order", []) or []),
         "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
         "available_groups": list(getattr(app_state, "available_groups", []) or []),
         "visible_groups": list(getattr(app_state, "visible_groups", []) or []) if getattr(app_state, "visible_groups", None) else None,
@@ -90,6 +93,9 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_recent_files(snapshot["recent_files"])
     state_gateway.set_line_styles(snapshot["line_styles"])
     state_gateway.set_saved_themes(snapshot["saved_themes"])
+    state_gateway.set_custom_palettes(snapshot["custom_palettes"])
+    state_gateway.set_custom_shape_sets(snapshot["custom_shape_sets"])
+    state_gateway.set_legend_item_order(snapshot["legend_item_order"])
     state_gateway.set_preserve_import_render_mode(bool(snapshot["preserve_import_render_mode"]))
     state_gateway.set_selection_mode(snapshot["selection_mode"])
     state_gateway.set_selection_tool(snapshot["selection_tool"])
@@ -141,6 +147,9 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_recent_files(["d:/tmp/a.xlsx", "d:/tmp/b.csv"])
         state_gateway.set_line_styles({"model_curve": {"linewidth": 2.2, "alpha": 0.5}})
         state_gateway.set_saved_themes({"my_theme": {"color_scheme": "vibrant"}})
+        state_gateway.set_custom_palettes({"my_palette": ["#112233", "#445566"]})
+        state_gateway.set_custom_shape_sets({"my_shapes": ["o", "s", "^"]})
+        state_gateway.set_legend_item_order(["A", "B", "C"])
         state_gateway.set_preserve_import_render_mode(True)
 
         assert app_state.algorithm == "RobustPCA"
@@ -157,6 +166,9 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.recent_files == ["d:/tmp/a.xlsx", "d:/tmp/b.csv"]
         assert app_state.line_styles["model_curve"]["linewidth"] == 2.2
         assert app_state.saved_themes["my_theme"]["color_scheme"] == "vibrant"
+        assert app_state.custom_palettes["my_palette"] == ["#112233", "#445566"]
+        assert app_state.custom_shape_sets["my_shapes"] == ["o", "s", "^"]
+        assert app_state.legend_item_order == ["A", "B", "C"]
         assert app_state.preserve_import_render_mode is True
 
         store_snapshot = app_state.state_store.snapshot()
@@ -174,6 +186,9 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["recent_files"] == ["d:/tmp/a.xlsx", "d:/tmp/b.csv"]
         assert store_snapshot["line_styles"]["model_curve"]["linewidth"] == 2.2
         assert store_snapshot["saved_themes"]["my_theme"]["color_scheme"] == "vibrant"
+        assert store_snapshot["custom_palettes"]["my_palette"] == ["#112233", "#445566"]
+        assert store_snapshot["custom_shape_sets"]["my_shapes"] == ["o", "s", "^"]
+        assert store_snapshot["legend_item_order"] == ["A", "B", "C"]
         assert store_snapshot["preserve_import_render_mode"] is True
     finally:
         _restore_state(snapshot)

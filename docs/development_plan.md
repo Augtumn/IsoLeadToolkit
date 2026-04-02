@@ -330,6 +330,16 @@
                                                                 - 扩展 `tests/test_state_store.py` 与
                                                                     `tests/test_gateway_set_attr_compatibility.py`，
                                                                     覆盖显式 setter 与兼容 `set_attr` 的 Store 一致性。
+                                - 第五十五批迁移清理（自定义样式配置纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `custom_palettes`、`custom_shape_sets`、`legend_item_order`。
+                                                                - `core/state/gateway.py` 的 `set_custom_palettes`、
+                                                                    `set_custom_shape_sets`、`set_legend_item_order` 改为
+                                                                    通过 StateStore action 分发。
+                                                                - `ui/panels/legend/editors.py` 自定义调色板/形状集
+                                                                    写入改为显式 gateway API，避免旁路 Store。
+                                                                - 扩展状态与兼容测试，覆盖显式 setter 与 `set_attr`
+                                                                    在上述三域上的快照一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

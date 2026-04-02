@@ -168,7 +168,9 @@ class LegendEditorsMixin:
 
         if not hasattr(app_state, 'custom_palettes'):
             state_gateway.set_custom_palettes({})
-        app_state.custom_palettes[name] = colors
+        custom_palettes = dict(getattr(app_state, 'custom_palettes', {}) or {})
+        custom_palettes[name] = list(colors)
+        state_gateway.set_custom_palettes(custom_palettes)
 
         try:
             from visualization.style_manager import style_manager_instance
@@ -296,7 +298,9 @@ class LegendEditorsMixin:
 
         if not hasattr(app_state, 'custom_shape_sets'):
             state_gateway.set_custom_shape_sets({})
-        app_state.custom_shape_sets[name] = shapes
+        custom_shape_sets = dict(getattr(app_state, 'custom_shape_sets', {}) or {})
+        custom_shape_sets[name] = list(shapes)
+        state_gateway.set_custom_shape_sets(custom_shape_sets)
         return name, shapes
 
     def _ensure_marker_shape_map(self):

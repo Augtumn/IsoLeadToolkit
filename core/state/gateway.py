@@ -561,13 +561,13 @@ class AppStateGateway:
         self._state.mixing_mixtures = dict(mapping or {})
 
     def set_custom_palettes(self, palettes: Any) -> None:
-        self._state.custom_palettes = dict(palettes or {})
+        self._dispatch("SET_CUSTOM_PALETTES", palettes=dict(palettes or {}))
 
     def set_custom_shape_sets(self, shape_sets: Any) -> None:
-        self._state.custom_shape_sets = dict(shape_sets or {})
+        self._dispatch("SET_CUSTOM_SHAPE_SETS", shape_sets=dict(shape_sets or {}))
 
     def set_legend_item_order(self, order: Any) -> None:
-        self._state.legend_item_order = list(order or [])
+        self._dispatch("SET_LEGEND_ITEM_ORDER", order=list(order or []))
 
     def set_ternary_ranges(self, ranges: Any) -> None:
         self._state.ternary_ranges = dict(ranges or {})
