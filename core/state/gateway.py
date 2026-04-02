@@ -33,6 +33,12 @@ class AppStateGateway:
         if name == "selected_indices":
             self.set_selected_indices(value)
             return
+        if name == "selection_mode":
+            self.set_selection_mode(bool(value))
+            return
+        if name == "selection_tool":
+            self.set_selection_tool(value)
+            return
         if name == "visible_groups":
             self.set_visible_groups(value)
             return
@@ -152,11 +158,13 @@ class AppStateGateway:
         logger.info("Data version updated: %s", self._state.data_version)
 
     def clear_selection(self) -> None:
-        self._dispatch("CLEAR_SELECTED_INDICES")
-        self._state.selection_mode = False
+        self._dispatch("CLEAR_SELECTION")
 
     def disable_selection_mode(self) -> None:
-        self._state.selection_mode = False
+        self.set_selection_mode(False)
+
+    def set_selection_mode(self, enabled: bool) -> None:
+        self._dispatch("SET_SELECTION_MODE", enabled=bool(enabled))
 
     def set_initial_render_done(self, done: bool) -> None:
         self._state.initial_render_done = done
@@ -192,8 +200,7 @@ class AppStateGateway:
         self._state.show_isochrons = bool(show)
 
     def set_selection_tool(self, tool: str | None) -> None:
-        self._state.selection_tool = tool
-        self._state.selection_mode = tool is not None
+        self._dispatch("SET_SELECTION_TOOL", tool=tool)
 
     def set_visible_groups(self, groups: list[str] | None) -> None:
         self._dispatch("SET_VISIBLE_GROUPS", groups=groups)

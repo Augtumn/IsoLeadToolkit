@@ -20,6 +20,7 @@ def _snapshot_state() -> dict[str, Any]:
         "group_cols": list(getattr(app_state, "group_cols", []) or []),
         "data_cols": list(getattr(app_state, "data_cols", []) or []),
         "last_group_col": getattr(app_state, "last_group_col", None),
+        "selection_tool": getattr(app_state, "selection_tool", None),
         "available_groups": list(getattr(app_state, "available_groups", []) or []),
         "visible_groups": list(getattr(app_state, "visible_groups", []) or []) if getattr(app_state, "visible_groups", None) else None,
         "selected_2d_cols": list(getattr(app_state, "selected_2d_cols", []) or []),
@@ -40,6 +41,8 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
         }
     )
     state_gateway.set_render_mode(str(snapshot["render_mode"]))
+    state_gateway.set_selection_mode(snapshot["selection_mode"])
+    state_gateway.set_selection_tool(snapshot["selection_tool"])
     state_gateway.set_dataframe_and_source(
         snapshot["df_global"],
         file_path=snapshot["file_path"],
@@ -82,6 +85,29 @@ def test_state_store_selected_indices_mutations() -> None:
 
         state_gateway.clear_selected_indices()
         assert app_state.selected_indices == set()
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_selection_tool_and_mode_domains() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_selection_mode(False)
+        assert app_state.selection_mode is False
+
+        state_gateway.set_selection_tool("lasso")
+        assert app_state.selection_tool == "lasso"
+        assert app_state.selection_mode is True
+
+        state_gateway.clear_selection()
+        assert app_state.selected_indices == set()
+        assert app_state.selection_mode is False
+        # Preserve existing behavior: clear_selection does not clear tool identity.
+        assert app_state.selection_tool == "lasso"
+
+        state_gateway.set_selection_tool(None)
+        assert app_state.selection_tool is None
+        assert app_state.selection_mode is False
     finally:
         _restore_state(snapshot)
 

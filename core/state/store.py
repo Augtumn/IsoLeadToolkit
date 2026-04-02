@@ -32,6 +32,8 @@ class StateStore:
             "group_cols": list(getattr(state, "group_cols", []) or []),
             "data_cols": list(getattr(state, "data_cols", []) or []),
             "last_group_col": getattr(state, "last_group_col", None),
+            "selection_mode": bool(getattr(state, "selection_mode", False)),
+            "selection_tool": getattr(state, "selection_tool", None),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
             "selected_2d_cols": list(getattr(state, "selected_2d_cols", []) or []),
@@ -69,6 +71,18 @@ class StateStore:
 
         elif action_type == "CLEAR_SELECTED_INDICES":
             self._snapshot["selected_indices"].clear()
+
+        elif action_type == "CLEAR_SELECTION":
+            self._snapshot["selected_indices"].clear()
+            self._snapshot["selection_mode"] = False
+
+        elif action_type == "SET_SELECTION_MODE":
+            self._snapshot["selection_mode"] = bool(action.get("enabled", False))
+
+        elif action_type == "SET_SELECTION_TOOL":
+            tool = action.get("tool")
+            self._snapshot["selection_tool"] = str(tool) if tool is not None else None
+            self._snapshot["selection_mode"] = tool is not None
 
         elif action_type == "SET_DATAFRAME_SOURCE":
             self._snapshot["df_global"] = action.get("df")
@@ -148,6 +162,8 @@ class StateStore:
             "group_cols": list(self._snapshot["group_cols"]),
             "data_cols": list(self._snapshot["data_cols"]),
             "last_group_col": self._snapshot["last_group_col"],
+            "selection_mode": bool(self._snapshot["selection_mode"]),
+            "selection_tool": self._snapshot["selection_tool"],
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
             "selected_2d_cols": list(self._snapshot["selected_2d_cols"]),
@@ -173,6 +189,8 @@ class StateStore:
         self._state.group_cols = list(self._snapshot["group_cols"])
         self._state.data_cols = list(self._snapshot["data_cols"])
         self._state.last_group_col = self._snapshot["last_group_col"]
+        self._state.selection_mode = bool(self._snapshot["selection_mode"])
+        self._state.selection_tool = self._snapshot["selection_tool"]
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])
         self._state.selected_2d_cols = list(self._snapshot["selected_2d_cols"])

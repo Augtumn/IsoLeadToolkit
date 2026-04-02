@@ -101,6 +101,10 @@
     - `group_cols/data_cols/last_group_col`
     - `data_version`（含 embedding cache 失效）
     - `AppStateGateway` 的 `set_dataframe_and_source`、`set_group_data_columns`、`set_last_group_col`、`bump_data_version` 已改为通过 StateStore action 分发。
+- 第四批状态域继续迁移（选择交互链路）：
+    - `selection_mode/selection_tool`
+    - `AppStateGateway` 的 `clear_selection`、`disable_selection_mode`、`set_selection_tool` 已改为通过 StateStore action 分发。
+    - `set_attr` 对 `selection_mode/selection_tool` 的兼容桥接已接入。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
