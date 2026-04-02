@@ -207,6 +207,10 @@
                     `set_paleoisochron_label_data`、`set_plumbotectonics_isoage_label_data`。
                 - `visualization/plotting/geochem/overlay_common.py`、`paleoisochron_overlays.py`、
                     `plumbotectonics_isoage.py` 对应写入改为显式 API。
+        - 第三十四批迁移清理（投影与三元参数写入）：
+                - `core/state/gateway.py` 新增 `standardize_data`、`pca_component_indices`、
+                    ternary limit/manual/stretch 相关显式 setter，并在 `set_attr` 中添加兼容分发。
+                - `ui/panels/data/projection.py` 将对应固定字段写入从 `set_attr` 迁移到显式 API。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

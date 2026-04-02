@@ -171,6 +171,36 @@ class AppStateGateway:
         if name == "plumbotectonics_isoage_label_data":
             self.set_plumbotectonics_isoage_label_data(value)
             return
+        if name == "standardize_data":
+            self.set_standardize_data(bool(value))
+            return
+        if name == "pca_component_indices":
+            self.set_pca_component_indices(value)
+            return
+        if name == "ternary_auto_zoom":
+            self.set_ternary_auto_zoom(bool(value))
+            return
+        if name == "ternary_limit_mode":
+            self.set_ternary_limit_mode(str(value))
+            return
+        if name == "ternary_limit_anchor":
+            self.set_ternary_limit_anchor(str(value))
+            return
+        if name == "ternary_boundary_percent":
+            self.set_ternary_boundary_percent(float(value))
+            return
+        if name == "ternary_manual_limits_enabled":
+            self.set_ternary_manual_limits_enabled(bool(value))
+            return
+        if name == "ternary_manual_limits":
+            self.set_ternary_manual_limits(value)
+            return
+        if name == "ternary_stretch_mode":
+            self.set_ternary_stretch_mode(str(value))
+            return
+        if name == "ternary_stretch":
+            self.set_ternary_stretch(bool(value))
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -493,6 +523,39 @@ class AppStateGateway:
 
     def set_plumbotectonics_isoage_label_data(self, data: Any) -> None:
         self._state.plumbotectonics_isoage_label_data = list(data or [])
+
+    def set_standardize_data(self, enabled: bool) -> None:
+        self._state.standardize_data = bool(enabled)
+
+    def set_pca_component_indices(self, indices: Any) -> None:
+        if indices is None:
+            self._state.pca_component_indices = []
+            return
+        self._state.pca_component_indices = list(indices)
+
+    def set_ternary_auto_zoom(self, enabled: bool) -> None:
+        self._state.ternary_auto_zoom = bool(enabled)
+
+    def set_ternary_limit_mode(self, mode: str) -> None:
+        self._state.ternary_limit_mode = str(mode)
+
+    def set_ternary_limit_anchor(self, anchor: str) -> None:
+        self._state.ternary_limit_anchor = str(anchor)
+
+    def set_ternary_boundary_percent(self, percent: float) -> None:
+        self._state.ternary_boundary_percent = float(percent)
+
+    def set_ternary_manual_limits_enabled(self, enabled: bool) -> None:
+        self._state.ternary_manual_limits_enabled = bool(enabled)
+
+    def set_ternary_manual_limits(self, limits: Any) -> None:
+        self._state.ternary_manual_limits = dict(limits or {})
+
+    def set_ternary_stretch_mode(self, mode: str) -> None:
+        self._state.ternary_stretch_mode = str(mode)
+
+    def set_ternary_stretch(self, enabled: bool) -> None:
+        self._state.ternary_stretch = bool(enabled)
 
     def set_marginal_axes(self, marginal_axes: Any) -> None:
         self._state.marginal_axes = marginal_axes

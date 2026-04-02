@@ -162,7 +162,7 @@ class DataPanelProjectionMixin:
 
     def _on_standardize_change(self, state):
         """Handle standardization checkbox changes."""
-        state_gateway.set_attr("standardize_data", state == Qt.Checked)
+        state_gateway.set_standardize_data(state == Qt.Checked)
         self._on_change()
 
     def _on_pca_dim_change(self):
@@ -181,7 +181,7 @@ class DataPanelProjectionMixin:
                 self.rpca_y_spin.setValue(y_idx + 1)
                 self.rpca_y_spin.blockSignals(False)
 
-            state_gateway.set_attr("pca_component_indices", [x_idx, y_idx])
+            state_gateway.set_pca_component_indices([x_idx, y_idx])
             logger.info("PCA dimensions changed to: PC%d vs PC%d", x_idx + 1, y_idx + 1)
 
             if app_state.render_mode in ["PCA", "RobustPCA"]:
@@ -220,7 +220,7 @@ class DataPanelProjectionMixin:
 
     def _on_ternary_zoom_change(self, state):
         """Handle ternary auto-zoom toggle."""
-        state_gateway.set_attr("ternary_auto_zoom", state == Qt.Checked)
+        state_gateway.set_ternary_auto_zoom(state == Qt.Checked)
         self._refresh_ternary_limit_controls_enabled()
         self._on_change()
 
@@ -247,9 +247,9 @@ class DataPanelProjectionMixin:
         if mode not in ("min", "max", "both"):
             mode = "min"
 
-        state_gateway.set_attr("ternary_limit_mode", mode)
+        state_gateway.set_ternary_limit_mode(mode)
         if mode in ("min", "max"):
-            state_gateway.set_attr("ternary_limit_anchor", mode)
+            state_gateway.set_ternary_limit_anchor(mode)
         self._on_change()
 
     def _on_ternary_boundary_percent_change(self, value):
@@ -259,13 +259,13 @@ class DataPanelProjectionMixin:
         except (TypeError, ValueError):
             percent = 5.0
         percent = max(0.0, min(30.0, percent))
-        state_gateway.set_attr("ternary_boundary_percent", percent)
+        state_gateway.set_ternary_boundary_percent(percent)
         self._on_change()
 
     def _on_ternary_manual_limits_change(self, state):
         """Toggle manual ternary min/max parameter mode."""
         enabled = state == Qt.Checked
-        state_gateway.set_attr("ternary_manual_limits_enabled", enabled)
+        state_gateway.set_ternary_manual_limits_enabled(enabled)
         self._refresh_ternary_limit_controls_enabled()
         self._on_change()
 
@@ -277,7 +277,7 @@ class DataPanelProjectionMixin:
         except (TypeError, ValueError):
             return
         manual[key] = max(0.0, min(1.0, val))
-        state_gateway.set_attr("ternary_manual_limits", manual)
+        state_gateway.set_ternary_manual_limits(manual)
 
         if bool(getattr(app_state, "ternary_manual_limits_enabled", False)):
             self._on_change()
@@ -300,13 +300,9 @@ class DataPanelProjectionMixin:
             optimized_mode = str(optimized.get("mode", mode)).strip().lower()
             limits = optimized.get("limits")
 
-            updates = {
-                "ternary_limit_mode": optimized_mode,
-            }
-            if optimized_mode in ("min", "max"):
-                updates["ternary_limit_anchor"] = optimized_mode
+            manual_limits: dict[str, float] = {}
             if isinstance(limits, (list, tuple)) and len(limits) == 6:
-                updates["ternary_manual_limits"] = {
+                manual_limits = {
                     "tmin": float(limits[0]),
                     "tmax": float(limits[1]),
                     "lmin": float(limits[2]),
@@ -315,14 +311,17 @@ class DataPanelProjectionMixin:
                     "rmax": float(limits[5]),
                 }
 
-            state_gateway.set_attrs(updates)
+            state_gateway.set_ternary_limit_mode(optimized_mode)
+            if optimized_mode in ("min", "max"):
+                state_gateway.set_ternary_limit_anchor(optimized_mode)
+            if manual_limits:
+                state_gateway.set_ternary_manual_limits(manual_limits)
 
             if getattr(self, "ternary_limit_mode_combo", None) is not None:
                 self.ternary_limit_mode_combo.blockSignals(True)
                 self._set_combo_value(self.ternary_limit_mode_combo, optimized_mode)
                 self.ternary_limit_mode_combo.blockSignals(False)
 
-            manual_limits = updates.get("ternary_manual_limits", {})
             for key, spin in (getattr(self, "ternary_limit_spins", None) or {}).items():
                 if key not in manual_limits:
                     continue
@@ -344,16 +343,16 @@ class DataPanelProjectionMixin:
         """Handle ternary stretch mode changes."""
         modes = ["power", "minmax", "hybrid"]
         if 0 <= index < len(modes):
-            state_gateway.set_attr("ternary_stretch_mode", modes[index])
+            state_gateway.set_ternary_stretch_mode(modes[index])
             self._on_change()
 
     def _on_ternary_scale_change(self, value):
         """Handle ternary stretch mode slider changes."""
         idx = max(0, min(2, int(value)))
         mode = self._ternary_stretch_modes[idx]
-        state_gateway.set_attr("ternary_stretch_mode", mode)
+        state_gateway.set_ternary_stretch_mode(mode)
         self._update_ternary_scale_label(mode)
-        state_gateway.set_attr("ternary_stretch", True)
+        state_gateway.set_ternary_stretch(True)
         if hasattr(self, "ternary_stretch_check"):
             self.ternary_stretch_check.blockSignals(True)
             self.ternary_stretch_check.setChecked(True)
@@ -362,7 +361,7 @@ class DataPanelProjectionMixin:
 
     def _on_ternary_stretch_change(self, state):
         """Handle ternary stretch toggle."""
-        state_gateway.set_attr("ternary_stretch", state == Qt.Checked)
+        state_gateway.set_ternary_stretch(state == Qt.Checked)
         self._on_change()
 
     def _update_ternary_scale_label(self, mode):
