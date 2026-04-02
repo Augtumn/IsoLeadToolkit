@@ -252,6 +252,39 @@ def test_legend_item_order_set_attr_compatibility() -> None:
         state_gateway.set_legend_item_order(original_legend_item_order)
 
 
+def test_mixing_endmembers_set_attr_compatibility() -> None:
+    original_mixing_endmembers = dict(getattr(app_state, "mixing_endmembers", {}) or {})
+
+    try:
+        state_gateway.set_attr("mixing_endmembers", {"EM1": [1, 2, 3]})
+        assert app_state.mixing_endmembers == {"EM1": [1, 2, 3]}
+        assert app_state.state_store.snapshot()["mixing_endmembers"] == {"EM1": [1, 2, 3]}
+    finally:
+        state_gateway.set_mixing_endmembers(original_mixing_endmembers)
+
+
+def test_mixing_mixtures_set_attr_compatibility() -> None:
+    original_mixing_mixtures = dict(getattr(app_state, "mixing_mixtures", {}) or {})
+
+    try:
+        state_gateway.set_attr("mixing_mixtures", {"M1": [4, 5]})
+        assert app_state.mixing_mixtures == {"M1": [4, 5]}
+        assert app_state.state_store.snapshot()["mixing_mixtures"] == {"M1": [4, 5]}
+    finally:
+        state_gateway.set_mixing_mixtures(original_mixing_mixtures)
+
+
+def test_ternary_ranges_set_attr_compatibility() -> None:
+    original_ternary_ranges = dict(getattr(app_state, "ternary_ranges", {}) or {})
+
+    try:
+        state_gateway.set_attr("ternary_ranges", {"tmin": 0.1, "tmax": 0.9})
+        assert app_state.ternary_ranges == {"tmin": 0.1, "tmax": 0.9}
+        assert app_state.state_store.snapshot()["ternary_ranges"] == {"tmin": 0.1, "tmax": 0.9}
+    finally:
+        state_gateway.set_ternary_ranges(original_ternary_ranges)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 

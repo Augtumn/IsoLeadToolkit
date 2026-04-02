@@ -340,6 +340,19 @@
                                                                     写入改为显式 gateway API，避免旁路 Store。
                                                                 - 扩展状态与兼容测试，覆盖显式 setter 与 `set_attr`
                                                                     在上述三域上的快照一致性。
+                                - 第五十六批迁移清理（混合组与三元范围纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `mixing_endmembers`、`mixing_mixtures`、`ternary_ranges`。
+                                                                - `core/state/gateway.py` 的 `set_mixing_endmembers`、
+                                                                    `set_mixing_mixtures`、`set_ternary_ranges` 改为
+                                                                    通过 StateStore action 分发。
+                                                                - `ui/panels/analysis/mixing.py` 设置端元/混合组改为
+                                                                    “拷贝-更新-gateway 写回”，避免字典原地修改旁路 Store。
+                                                                - `visualization/plotting/rendering/embedding/compute_ternary.py`
+                                                                    清理三元范围改为 `state_gateway.set_ternary_ranges({})`，
+                                                                    保证 Store 快照与运行态同步。
+                                                                - 扩展状态与兼容测试，覆盖显式 setter 与 `set_attr`
+                                                                    在上述三域上的一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

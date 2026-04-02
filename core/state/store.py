@@ -62,6 +62,9 @@ class StateStore:
             "custom_palettes": dict(getattr(state, "custom_palettes", {}) or {}),
             "custom_shape_sets": dict(getattr(state, "custom_shape_sets", {}) or {}),
             "legend_item_order": list(getattr(state, "legend_item_order", []) or []),
+            "mixing_endmembers": dict(getattr(state, "mixing_endmembers", {}) or {}),
+            "mixing_mixtures": dict(getattr(state, "mixing_mixtures", {}) or {}),
+            "ternary_ranges": dict(getattr(state, "ternary_ranges", {}) or {}),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
@@ -176,6 +179,15 @@ class StateStore:
 
         elif action_type == "SET_LEGEND_ITEM_ORDER":
             self._snapshot["legend_item_order"] = list(action.get("order") or [])
+
+        elif action_type == "SET_MIXING_ENDMEMBERS":
+            self._snapshot["mixing_endmembers"] = dict(action.get("mapping") or {})
+
+        elif action_type == "SET_MIXING_MIXTURES":
+            self._snapshot["mixing_mixtures"] = dict(action.get("mapping") or {})
+
+        elif action_type == "SET_TERNARY_RANGES":
+            self._snapshot["ternary_ranges"] = dict(action.get("ranges") or {})
 
         elif action_type == "SET_PRESERVE_IMPORT_RENDER_MODE":
             self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
@@ -316,6 +328,9 @@ class StateStore:
             "custom_palettes": dict(self._snapshot["custom_palettes"]),
             "custom_shape_sets": dict(self._snapshot["custom_shape_sets"]),
             "legend_item_order": list(self._snapshot["legend_item_order"]),
+            "mixing_endmembers": dict(self._snapshot["mixing_endmembers"]),
+            "mixing_mixtures": dict(self._snapshot["mixing_mixtures"]),
+            "ternary_ranges": dict(self._snapshot["ternary_ranges"]),
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
@@ -374,6 +389,9 @@ class StateStore:
         self._state.custom_palettes = dict(self._snapshot["custom_palettes"])
         self._state.custom_shape_sets = dict(self._snapshot["custom_shape_sets"])
         self._state.legend_item_order = list(self._snapshot["legend_item_order"])
+        self._state.mixing_endmembers = dict(self._snapshot["mixing_endmembers"])
+        self._state.mixing_mixtures = dict(self._snapshot["mixing_mixtures"])
+        self._state.ternary_ranges = dict(self._snapshot["ternary_ranges"])
         self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])

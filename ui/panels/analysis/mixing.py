@@ -37,7 +37,9 @@ class AnalysisPanelMixingMixin:
             state_gateway.set_mixing_mixtures({})
 
         selected_list = list(app_state.selected_indices)
-        app_state.mixing_endmembers[group_name] = selected_list
+        updated_endmembers = dict(getattr(app_state, 'mixing_endmembers', {}) or {})
+        updated_endmembers[group_name] = selected_list
+        state_gateway.set_mixing_endmembers(updated_endmembers)
         self._update_mixing_status()
         self._clear_selection_after_mixing()
         QMessageBox.information(
@@ -74,7 +76,9 @@ class AnalysisPanelMixingMixin:
             state_gateway.set_mixing_mixtures({})
 
         selected_list = list(app_state.selected_indices)
-        app_state.mixing_mixtures[group_name] = selected_list
+        updated_mixtures = dict(getattr(app_state, 'mixing_mixtures', {}) or {})
+        updated_mixtures[group_name] = selected_list
+        state_gateway.set_mixing_mixtures(updated_mixtures)
         self._update_mixing_status()
         self._clear_selection_after_mixing()
         QMessageBox.information(

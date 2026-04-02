@@ -48,6 +48,9 @@ def _snapshot_state() -> dict[str, Any]:
         "custom_palettes": dict(getattr(app_state, "custom_palettes", {}) or {}),
         "custom_shape_sets": dict(getattr(app_state, "custom_shape_sets", {}) or {}),
         "legend_item_order": list(getattr(app_state, "legend_item_order", []) or []),
+        "mixing_endmembers": dict(getattr(app_state, "mixing_endmembers", {}) or {}),
+        "mixing_mixtures": dict(getattr(app_state, "mixing_mixtures", {}) or {}),
+        "ternary_ranges": dict(getattr(app_state, "ternary_ranges", {}) or {}),
         "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
         "available_groups": list(getattr(app_state, "available_groups", []) or []),
         "visible_groups": list(getattr(app_state, "visible_groups", []) or []) if getattr(app_state, "visible_groups", None) else None,
@@ -96,6 +99,9 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_custom_palettes(snapshot["custom_palettes"])
     state_gateway.set_custom_shape_sets(snapshot["custom_shape_sets"])
     state_gateway.set_legend_item_order(snapshot["legend_item_order"])
+    state_gateway.set_mixing_endmembers(snapshot["mixing_endmembers"])
+    state_gateway.set_mixing_mixtures(snapshot["mixing_mixtures"])
+    state_gateway.set_ternary_ranges(snapshot["ternary_ranges"])
     state_gateway.set_preserve_import_render_mode(bool(snapshot["preserve_import_render_mode"]))
     state_gateway.set_selection_mode(snapshot["selection_mode"])
     state_gateway.set_selection_tool(snapshot["selection_tool"])
@@ -150,6 +156,9 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_custom_palettes({"my_palette": ["#112233", "#445566"]})
         state_gateway.set_custom_shape_sets({"my_shapes": ["o", "s", "^"]})
         state_gateway.set_legend_item_order(["A", "B", "C"])
+        state_gateway.set_mixing_endmembers({"EM1": [1, 2, 3]})
+        state_gateway.set_mixing_mixtures({"M1": [4, 5]})
+        state_gateway.set_ternary_ranges({"tmin": 0.1, "tmax": 0.9})
         state_gateway.set_preserve_import_render_mode(True)
 
         assert app_state.algorithm == "RobustPCA"
@@ -169,6 +178,9 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.custom_palettes["my_palette"] == ["#112233", "#445566"]
         assert app_state.custom_shape_sets["my_shapes"] == ["o", "s", "^"]
         assert app_state.legend_item_order == ["A", "B", "C"]
+        assert app_state.mixing_endmembers == {"EM1": [1, 2, 3]}
+        assert app_state.mixing_mixtures == {"M1": [4, 5]}
+        assert app_state.ternary_ranges == {"tmin": 0.1, "tmax": 0.9}
         assert app_state.preserve_import_render_mode is True
 
         store_snapshot = app_state.state_store.snapshot()
@@ -189,6 +201,9 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["custom_palettes"]["my_palette"] == ["#112233", "#445566"]
         assert store_snapshot["custom_shape_sets"]["my_shapes"] == ["o", "s", "^"]
         assert store_snapshot["legend_item_order"] == ["A", "B", "C"]
+        assert store_snapshot["mixing_endmembers"] == {"EM1": [1, 2, 3]}
+        assert store_snapshot["mixing_mixtures"] == {"M1": [4, 5]}
+        assert store_snapshot["ternary_ranges"] == {"tmin": 0.1, "tmax": 0.9}
         assert store_snapshot["preserve_import_render_mode"] is True
     finally:
         _restore_state(snapshot)

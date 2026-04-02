@@ -48,8 +48,7 @@ def compute_ternary_embedding() -> np.ndarray | None:
 
         if hasattr(app_state, 'ternary_manual_ranges'):
             del app_state.ternary_manual_ranges
-        if hasattr(app_state, 'ternary_ranges'):
-            del app_state.ternary_ranges
+        state_gateway.set_ternary_ranges({})
         return embedding
     except Exception as err:
         logger.error('Ternary calculation failed: %s', err)

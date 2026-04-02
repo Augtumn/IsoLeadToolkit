@@ -555,10 +555,10 @@ class AppStateGateway:
         self._state.isochron_label_options = dict(options or {})
 
     def set_mixing_endmembers(self, mapping: Any) -> None:
-        self._state.mixing_endmembers = dict(mapping or {})
+        self._dispatch("SET_MIXING_ENDMEMBERS", mapping=dict(mapping or {}))
 
     def set_mixing_mixtures(self, mapping: Any) -> None:
-        self._state.mixing_mixtures = dict(mapping or {})
+        self._dispatch("SET_MIXING_MIXTURES", mapping=dict(mapping or {}))
 
     def set_custom_palettes(self, palettes: Any) -> None:
         self._dispatch("SET_CUSTOM_PALETTES", palettes=dict(palettes or {}))
@@ -570,7 +570,7 @@ class AppStateGateway:
         self._dispatch("SET_LEGEND_ITEM_ORDER", order=list(order or []))
 
     def set_ternary_ranges(self, ranges: Any) -> None:
-        self._state.ternary_ranges = dict(ranges or {})
+        self._dispatch("SET_TERNARY_RANGES", ranges=dict(ranges or {}))
 
     def set_isochron_error_columns(self, sx_col: str, sy_col: str, rxy_col: str) -> None:
         self._state.isochron_error_mode = "columns"
