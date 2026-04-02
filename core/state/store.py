@@ -25,6 +25,13 @@ class StateStore:
         self._snapshot: dict[str, Any] = {
             "render_mode": str(getattr(state, "render_mode", "UMAP")),
             "selected_indices": set(getattr(state, "selected_indices", set()) or set()),
+            "df_global": getattr(state, "df_global", None),
+            "file_path": getattr(state, "file_path", None),
+            "sheet_name": getattr(state, "sheet_name", None),
+            "data_version": int(getattr(state, "data_version", 0)),
+            "group_cols": list(getattr(state, "group_cols", []) or []),
+            "data_cols": list(getattr(state, "data_cols", []) or []),
+            "last_group_col": getattr(state, "last_group_col", None),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
             "selected_2d_cols": list(getattr(state, "selected_2d_cols", []) or []),
@@ -62,6 +69,28 @@ class StateStore:
 
         elif action_type == "CLEAR_SELECTED_INDICES":
             self._snapshot["selected_indices"].clear()
+
+        elif action_type == "SET_DATAFRAME_SOURCE":
+            self._snapshot["df_global"] = action.get("df")
+            self._snapshot["file_path"] = action.get("file_path")
+            self._snapshot["sheet_name"] = action.get("sheet_name")
+
+        elif action_type == "BUMP_DATA_VERSION":
+            self._snapshot["data_version"] = int(self._snapshot.get("data_version", 0)) + 1
+            cache = getattr(self._state, "embedding_cache", None)
+            if cache is not None and hasattr(cache, "clear"):
+                try:
+                    cache.clear()
+                except Exception:
+                    pass
+
+        elif action_type == "SET_GROUP_DATA_COLUMNS":
+            self._snapshot["group_cols"] = [str(col) for col in list(action.get("group_cols") or [])]
+            self._snapshot["data_cols"] = [str(col) for col in list(action.get("data_cols") or [])]
+
+        elif action_type == "SET_LAST_GROUP_COL":
+            group_col = action.get("group_col")
+            self._snapshot["last_group_col"] = str(group_col) if group_col is not None else None
 
         elif action_type == "SET_SELECTED_2D_COLUMNS":
             self._snapshot["selected_2d_cols"] = list(action.get("columns") or [])
@@ -112,6 +141,13 @@ class StateStore:
         return {
             "render_mode": str(self._snapshot["render_mode"]),
             "selected_indices": set(self._snapshot["selected_indices"]),
+            "df_global": self._snapshot["df_global"],
+            "file_path": self._snapshot["file_path"],
+            "sheet_name": self._snapshot["sheet_name"],
+            "data_version": int(self._snapshot["data_version"]),
+            "group_cols": list(self._snapshot["group_cols"]),
+            "data_cols": list(self._snapshot["data_cols"]),
+            "last_group_col": self._snapshot["last_group_col"],
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
             "selected_2d_cols": list(self._snapshot["selected_2d_cols"]),
@@ -130,6 +166,13 @@ class StateStore:
             self._state.algorithm = render_mode
 
         self._state.selected_indices = set(self._snapshot["selected_indices"])
+        self._state.df_global = self._snapshot["df_global"]
+        self._state.file_path = self._snapshot["file_path"]
+        self._state.sheet_name = self._snapshot["sheet_name"]
+        self._state.data_version = int(self._snapshot["data_version"])
+        self._state.group_cols = list(self._snapshot["group_cols"])
+        self._state.data_cols = list(self._snapshot["data_cols"])
+        self._state.last_group_col = self._snapshot["last_group_col"]
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])
         self._state.selected_2d_cols = list(self._snapshot["selected_2d_cols"])

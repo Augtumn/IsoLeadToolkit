@@ -96,6 +96,11 @@
     - `selected_2d_confirmed/selected_3d_confirmed/selected_ternary_confirmed`
     - `available_groups/visible_groups`
     - `AppStateGateway` 的 `reset_column_selection`、`set_selected_*_columns`、`sync_available_and_visible_groups`、`set_visible_groups` 已改为通过 StateStore action 分发。
+- 第三批状态域继续迁移（数据加载链路）：
+    - `df_global/file_path/sheet_name`
+    - `group_cols/data_cols/last_group_col`
+    - `data_version`（含 embedding cache 失效）
+    - `AppStateGateway` 的 `set_dataframe_and_source`、`set_group_data_columns`、`set_last_group_col`、`bump_data_version` 已改为通过 StateStore action 分发。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

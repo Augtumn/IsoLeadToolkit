@@ -113,11 +113,10 @@ class AppStateGateway:
         self._state.preserve_import_render_mode = preserve
 
     def set_group_data_columns(self, group_cols: list[str], data_cols: list[str]) -> None:
-        self._state.group_cols = list(group_cols)
-        self._state.data_cols = list(data_cols)
+        self._dispatch("SET_GROUP_DATA_COLUMNS", group_cols=list(group_cols), data_cols=list(data_cols))
 
     def set_last_group_col(self, group_col: str | None) -> None:
-        self._state.last_group_col = group_col
+        self._dispatch("SET_LAST_GROUP_COL", group_col=group_col)
 
     def reset_column_selection(self) -> None:
         self._dispatch("RESET_COLUMN_SELECTION")
@@ -141,17 +140,16 @@ class AppStateGateway:
         file_path: str,
         sheet_name: str | None,
     ) -> None:
-        self._state.df_global = df
-        self._state.file_path = file_path
-        self._state.sheet_name = sheet_name
+        self._dispatch(
+            "SET_DATAFRAME_SOURCE",
+            df=df,
+            file_path=file_path,
+            sheet_name=sheet_name,
+        )
 
     def bump_data_version(self) -> None:
-        try:
-            self._state.data_version += 1
-            self._state.embedding_cache.clear()
-            logger.info("Data version updated: %s", self._state.data_version)
-        except Exception:
-            pass
+        self._dispatch("BUMP_DATA_VERSION")
+        logger.info("Data version updated: %s", self._state.data_version)
 
     def clear_selection(self) -> None:
         self._dispatch("CLEAR_SELECTED_INDICES")
