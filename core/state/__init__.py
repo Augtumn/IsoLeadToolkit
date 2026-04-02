@@ -19,6 +19,7 @@ from .app_state import (
     slider_s,
 )
 from .gateway import AppStateGateway, state_gateway
+from .store import StateStore
 
 __all__ = [
     'AlgorithmState',
@@ -28,6 +29,7 @@ __all__ = [
     'GeochemState',
     'InteractionState',
     'StyleState',
+    'StateStore',
     'VisualState',
     'app_state',
     'radio_g',

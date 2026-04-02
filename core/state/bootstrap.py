@@ -153,6 +153,16 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     # Common plot styling
     state.plot_figsize = config.get('figure_size', (13, 9))
     state.plot_dpi = config.get('figure_dpi', 130)
+    state.export_image_options = {
+        'preset_key': 'science_single',
+        'image_ext': 'png',
+        'dpi': config.get('savefig_dpi', 400),
+        'bbox_tight': True,
+        'pad_inches': 0.02,
+        'transparent': False,
+        'point_size': None,
+        'legend_size': None,
+    }
     state.plot_facecolor = '#ffffff'
     state.axes_facecolor = '#ffffff'
     state.grid_color = '#e2e8f0'

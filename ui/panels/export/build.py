@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from core import CONFIG, app_state, translate
+from core import CONFIG, app_state, state_gateway, translate
 
 
 class ExportPanelBuildMixin:
@@ -41,6 +41,8 @@ class ExportPanelBuildMixin:
         self._scienceplots_available = None
 
     def build(self) -> QWidget:
+        export_options = state_gateway.get_export_image_options()
+
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -100,6 +102,10 @@ class ExportPanelBuildMixin:
         self.image_preset_combo.addItem(translate("IEEE Single Column"), 'ieee_single')
         self.image_preset_combo.addItem(translate("Nature Double Column"), 'nature_double')
         self.image_preset_combo.addItem(translate("Presentation"), 'presentation')
+        preset_key = str(export_options.get('preset_key') or 'science_single')
+        preset_index = self.image_preset_combo.findData(preset_key)
+        if preset_index >= 0:
+            self.image_preset_combo.setCurrentIndex(preset_index)
         self.image_preset_combo.currentIndexChanged.connect(self._on_image_preset_changed)
         preset_row.addWidget(self.image_preset_combo)
         image_layout.addLayout(preset_row)
@@ -114,6 +120,10 @@ class ExportPanelBuildMixin:
         self.image_format_combo.addItem("PDF", "pdf")
         self.image_format_combo.addItem("SVG", "svg")
         self.image_format_combo.addItem("EPS", "eps")
+        image_ext = str(export_options.get('image_ext') or 'png')
+        format_index = self.image_format_combo.findData(image_ext)
+        if format_index >= 0:
+            self.image_format_combo.setCurrentIndex(format_index)
         format_row.addWidget(self.image_format_combo)
         image_layout.addLayout(format_row)
 
@@ -132,7 +142,7 @@ class ExportPanelBuildMixin:
         self.image_dpi_spin = QSpinBox()
         self.image_dpi_spin.setRange(72, 1200)
         self.image_dpi_spin.setSingleStep(25)
-        self.image_dpi_spin.setValue(int(CONFIG.get('savefig_dpi', 400)))
+        self.image_dpi_spin.setValue(int(export_options.get('dpi', CONFIG.get('savefig_dpi', 400))))
         dpi_row.addWidget(self.image_dpi_spin)
         image_layout.addLayout(dpi_row)
 
@@ -154,17 +164,18 @@ class ExportPanelBuildMixin:
         self.image_legend_size_spin = QSpinBox()
         self.image_legend_size_spin.setRange(1, 15)
         self.image_legend_size_spin.setSingleStep(1)
-        self.image_legend_size_spin.setValue(8)
+        legend_size = export_options.get('legend_size')
+        self.image_legend_size_spin.setValue(int(legend_size) if legend_size is not None else 8)
         legend_size_row.addWidget(self.image_legend_size_spin)
         image_layout.addLayout(legend_size_row)
 
         bbox_row = QHBoxLayout()
         self.image_tight_bbox_check = QCheckBox(translate("Tight Bounding Box"))
         self.image_tight_bbox_check.setProperty('translate_key', 'Tight Bounding Box')
-        self.image_tight_bbox_check.setChecked(True)
+        self.image_tight_bbox_check.setChecked(bool(export_options.get('bbox_tight', True)))
         self.image_transparent_check = QCheckBox(translate("Transparent Background"))
         self.image_transparent_check.setProperty('translate_key', 'Transparent Background')
-        self.image_transparent_check.setChecked(False)
+        self.image_transparent_check.setChecked(bool(export_options.get('transparent', False)))
         bbox_row.addWidget(self.image_tight_bbox_check)
         bbox_row.addWidget(self.image_transparent_check)
         image_layout.addLayout(bbox_row)
@@ -177,7 +188,7 @@ class ExportPanelBuildMixin:
         self.image_pad_inches_spin.setRange(0.0, 1.0)
         self.image_pad_inches_spin.setSingleStep(0.01)
         self.image_pad_inches_spin.setDecimals(2)
-        self.image_pad_inches_spin.setValue(0.02)
+        self.image_pad_inches_spin.setValue(float(export_options.get('pad_inches', 0.02)))
         pad_row.addWidget(self.image_pad_inches_spin)
         image_layout.addLayout(pad_row)
 
@@ -212,6 +223,14 @@ class ExportPanelBuildMixin:
         layout.addWidget(section_toolbox)
 
         self._on_image_preset_changed()
+        point_size = export_options.get('point_size')
+        if point_size is not None and self.image_point_size_spin is not None:
+            self.image_point_size_spin.setValue(int(point_size))
+        legend_size = export_options.get('legend_size')
+        if legend_size is not None and self.image_legend_size_spin is not None:
+            self.image_legend_size_spin.setValue(int(legend_size))
+        if self.image_dpi_spin is not None:
+            self.image_dpi_spin.setValue(int(export_options.get('dpi', self.image_dpi_spin.value())))
 
         layout.addStretch()
         return widget

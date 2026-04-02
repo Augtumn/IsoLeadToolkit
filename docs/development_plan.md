@@ -75,6 +75,23 @@
     - 双阶段保留完整参数显示
     - 应用参数时仅提交当前可见参数，避免无效参数写入。
 
+## 阶段进展（2026-04-02 · StateStore 首批状态域落地）
+
+- 新增 `core/state/store.py`，提供 `dispatch(action)` 与 `snapshot()`，首批托管状态域：
+    - `render_mode`
+    - `selected_indices`
+    - `export_image_options`
+- `AppState` 初始化接入 `state_store`，并补充 `export_image_options` 运行期默认值。
+- `AppStateGateway` 已接入 StateStore 分发：
+    - `set_render_mode`
+    - `set_selected_indices` / `add_selected_indices` / `remove_selected_indices` / `clear_selected_indices`
+    - `set_export_image_options` / `get_export_image_options`
+    - `set_attr/set_attrs` 对上述域做兼容桥接，保留旧调用入口。
+- 导出面板已接入导出选项状态桥接：
+    - 面板构建时读取 `export_image_options` 作为初始值
+    - 解析保存参数时同步回写到 StateStore
+- 新增测试 `tests/test_state_store.py` 覆盖首批状态域行为与归一化规则。
+
 ## 架构现代化改造方案（2026-03-31 新增）
 
 ### 0. 现状审计摘要（基于代码检查）

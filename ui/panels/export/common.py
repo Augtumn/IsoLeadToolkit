@@ -201,9 +201,25 @@ class ExportPanelCommonMixin:
         dpi_override = int(self.image_dpi_spin.value()) if self.image_dpi_spin is not None else None
         use_tight_bbox = bool(self.image_tight_bbox_check.isChecked()) if self.image_tight_bbox_check is not None else True
         transparent = bool(self.image_transparent_check.isChecked()) if self.image_transparent_check is not None else False
+        preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
+        image_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
+        point_size = int(self.image_point_size_spin.value()) if self.image_point_size_spin is not None else None
+        legend_size = int(self.image_legend_size_spin.value()) if self.image_legend_size_spin is not None else None
         pad_inches = 0.02
         if self.image_pad_inches_spin is not None:
             pad_inches = float(self.image_pad_inches_spin.value())
+
+        state_gateway.set_export_image_options(
+            preset_key=str(preset_key),
+            image_ext=str(image_ext),
+            dpi=dpi_override,
+            bbox_tight=use_tight_bbox,
+            pad_inches=pad_inches,
+            transparent=transparent,
+            point_size=point_size,
+            legend_size=legend_size,
+        )
+
         return resolve_image_save_options(
             profile=profile,
             dpi_override=dpi_override,

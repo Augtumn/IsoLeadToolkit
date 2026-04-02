@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from .app_state import app_state
+from .store import StateStore
 
 logger = logging.getLogger(__name__)
 
@@ -15,20 +16,67 @@ class AppStateGateway:
 
     def __init__(self, state: Any) -> None:
         self._state = state
+        store = getattr(state, "state_store", None)
+        if store is None:
+            store = StateStore(state)
+            setattr(state, "state_store", store)
+        self._store = store
+
+    def _dispatch(self, action_type: str, **payload: Any) -> dict[str, Any]:
+        return self._store.dispatch({"type": action_type, **payload})
 
     def set_attr(self, name: str, value: Any) -> None:
         """Set a single app_state attribute via gateway."""
+        if name == "render_mode":
+            self.set_render_mode(str(value))
+            return
+        if name == "selected_indices":
+            self.set_selected_indices(value)
+            return
+        if name == "export_image_options" and isinstance(value, dict):
+            self.set_export_image_options(**value)
+            return
         setattr(self._state, name, value)
 
     def set_attrs(self, values: dict[str, Any]) -> None:
         """Set multiple app_state attributes via gateway."""
         for name, value in values.items():
-            setattr(self._state, name, value)
+            self.set_attr(name, value)
 
     def set_render_mode(self, render_mode: str) -> None:
-        self._state.render_mode = render_mode
-        if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
-            self._state.algorithm = render_mode
+        self._dispatch("SET_RENDER_MODE", render_mode=render_mode)
+
+    def set_selected_indices(self, indices: Any) -> None:
+        self._dispatch("SET_SELECTED_INDICES", indices=indices)
+
+    def set_export_image_options(
+        self,
+        *,
+        preset_key: str | None = None,
+        image_ext: str | None = None,
+        dpi: int | None = None,
+        bbox_tight: bool | None = None,
+        pad_inches: float | None = None,
+        transparent: bool | None = None,
+        point_size: int | None = None,
+        legend_size: int | None = None,
+    ) -> None:
+        self._dispatch(
+            "SET_EXPORT_IMAGE_OPTIONS",
+            options={
+                "preset_key": preset_key,
+                "image_ext": image_ext,
+                "dpi": dpi,
+                "bbox_tight": bbox_tight,
+                "pad_inches": pad_inches,
+                "transparent": transparent,
+                "point_size": point_size,
+                "legend_size": legend_size,
+            },
+        )
+
+    def get_export_image_options(self) -> dict[str, Any]:
+        return dict(self._store.snapshot().get("export_image_options", {}))
 
     def set_figure_axes(self, fig: Any, ax: Any) -> None:
         self._state.fig = fig
@@ -115,7 +163,7 @@ class AppStateGateway:
             pass
 
     def clear_selection(self) -> None:
-        self._state.selected_indices.clear()
+        self._dispatch("CLEAR_SELECTED_INDICES")
         self._state.selection_mode = False
 
     def disable_selection_mode(self) -> None:
@@ -162,15 +210,13 @@ class AppStateGateway:
         self._state.visible_groups = list(groups) if groups is not None else None
 
     def clear_selected_indices(self) -> None:
-        self._state.selected_indices.clear()
+        self._dispatch("CLEAR_SELECTED_INDICES")
 
     def add_selected_indices(self, indices: list[int]) -> None:
-        for index in indices:
-            self._state.selected_indices.add(index)
+        self._dispatch("ADD_SELECTED_INDICES", indices=indices)
 
     def remove_selected_indices(self, indices: list[int]) -> None:
-        for index in indices:
-            self._state.selected_indices.discard(index)
+        self._dispatch("REMOVE_SELECTED_INDICES", indices=indices)
 
 
 state_gateway = AppStateGateway(app_state)

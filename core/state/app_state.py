@@ -12,6 +12,7 @@ from ..cache import EmbeddingCache
 from ..overlay_state import OverlayState
 from ..legend_state import LegendState
 from .bootstrap import init_runtime_defaults, sync_overlay_kde_styles
+from .store import StateStore
 
 
 @dataclass
@@ -262,6 +263,7 @@ class AppState:
 
         sync_overlay_kde_styles(self)
         init_runtime_defaults(self, CONFIG)
+        self.state_store = StateStore(self)
 
     def clear_plot_state(self) -> None:
         """Reset plot-specific state"""
