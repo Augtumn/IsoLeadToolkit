@@ -308,6 +308,10 @@
                                                                     并引入 `_compat_handler` 统一包装转换逻辑。
                                                                 - `tests/test_gateway_set_attr_compatibility.py` 增加
                                                                     `point_size/ui_theme/confidence_level` 转换路径回归测试。
+                                - 第五十二批迁移清理（守护扫描底座测试覆盖）：
+                                                                - 新增 `tests/test_source_scan_guard.py`，覆盖
+                                                                    `scan_pattern_hits` 的计数与 allowlist 行为，
+                                                                    以及 `print_scan_result` 的输出格式与排序稳定性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
