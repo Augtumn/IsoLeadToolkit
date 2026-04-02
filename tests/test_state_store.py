@@ -42,6 +42,9 @@ def _snapshot_state() -> dict[str, Any]:
         "legend_columns": int(getattr(app_state, "legend_columns", 0)),
         "legend_nudge_step": float(getattr(app_state, "legend_nudge_step", 0.02)),
         "legend_offset": tuple(getattr(app_state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
+        "recent_files": list(getattr(app_state, "recent_files", []) or []),
+        "line_styles": dict(getattr(app_state, "line_styles", {}) or {}),
+        "saved_themes": dict(getattr(app_state, "saved_themes", {}) or {}),
         "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
         "available_groups": list(getattr(app_state, "available_groups", []) or []),
         "visible_groups": list(getattr(app_state, "visible_groups", []) or []) if getattr(app_state, "visible_groups", None) else None,
@@ -84,6 +87,9 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_legend_columns(int(snapshot["legend_columns"]))
     state_gateway.set_legend_nudge_step(float(snapshot["legend_nudge_step"]))
     state_gateway.set_legend_offset(snapshot["legend_offset"])
+    state_gateway.set_recent_files(snapshot["recent_files"])
+    state_gateway.set_line_styles(snapshot["line_styles"])
+    state_gateway.set_saved_themes(snapshot["saved_themes"])
     state_gateway.set_preserve_import_render_mode(bool(snapshot["preserve_import_render_mode"]))
     state_gateway.set_selection_mode(snapshot["selection_mode"])
     state_gateway.set_selection_tool(snapshot["selection_tool"])
@@ -132,6 +138,9 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_legend_columns(3)
         state_gateway.set_legend_nudge_step(0.125)
         state_gateway.set_legend_offset((0.2, -0.1))
+        state_gateway.set_recent_files(["d:/tmp/a.xlsx", "d:/tmp/b.csv"])
+        state_gateway.set_line_styles({"model_curve": {"linewidth": 2.2, "alpha": 0.5}})
+        state_gateway.set_saved_themes({"my_theme": {"color_scheme": "vibrant"}})
         state_gateway.set_preserve_import_render_mode(True)
 
         assert app_state.algorithm == "RobustPCA"
@@ -145,6 +154,9 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.legend_columns == 3
         assert app_state.legend_nudge_step == 0.125
         assert app_state.legend_offset == (0.2, -0.1)
+        assert app_state.recent_files == ["d:/tmp/a.xlsx", "d:/tmp/b.csv"]
+        assert app_state.line_styles["model_curve"]["linewidth"] == 2.2
+        assert app_state.saved_themes["my_theme"]["color_scheme"] == "vibrant"
         assert app_state.preserve_import_render_mode is True
 
         store_snapshot = app_state.state_store.snapshot()
@@ -159,6 +171,9 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["legend_columns"] == 3
         assert store_snapshot["legend_nudge_step"] == 0.125
         assert store_snapshot["legend_offset"] == (0.2, -0.1)
+        assert store_snapshot["recent_files"] == ["d:/tmp/a.xlsx", "d:/tmp/b.csv"]
+        assert store_snapshot["line_styles"]["model_curve"]["linewidth"] == 2.2
+        assert store_snapshot["saved_themes"]["my_theme"]["color_scheme"] == "vibrant"
         assert store_snapshot["preserve_import_render_mode"] is True
     finally:
         _restore_state(snapshot)

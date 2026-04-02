@@ -56,6 +56,9 @@ class StateStore:
             "legend_columns": int(getattr(state, "legend_columns", 0)),
             "legend_nudge_step": float(getattr(state, "legend_nudge_step", 0.02)),
             "legend_offset": tuple(getattr(state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
+            "recent_files": list(getattr(state, "recent_files", []) or []),
+            "line_styles": dict(getattr(state, "line_styles", {}) or {}),
+            "saved_themes": dict(getattr(state, "saved_themes", {}) or {}),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
             "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
@@ -152,6 +155,15 @@ class StateStore:
         elif action_type == "SET_LEGEND_OFFSET":
             offset = action.get("offset")
             self._snapshot["legend_offset"] = tuple(offset) if offset is not None else (0.0, 0.0)
+
+        elif action_type == "SET_RECENT_FILES":
+            self._snapshot["recent_files"] = list(action.get("files") or [])
+
+        elif action_type == "SET_LINE_STYLES":
+            self._snapshot["line_styles"] = dict(action.get("line_styles") or {})
+
+        elif action_type == "SET_SAVED_THEMES":
+            self._snapshot["saved_themes"] = dict(action.get("themes") or {})
 
         elif action_type == "SET_PRESERVE_IMPORT_RENDER_MODE":
             self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
@@ -286,6 +298,9 @@ class StateStore:
             "legend_columns": int(self._snapshot["legend_columns"]),
             "legend_nudge_step": float(self._snapshot["legend_nudge_step"]),
             "legend_offset": tuple(self._snapshot["legend_offset"]),
+            "recent_files": list(self._snapshot["recent_files"]),
+            "line_styles": dict(self._snapshot["line_styles"]),
+            "saved_themes": dict(self._snapshot["saved_themes"]),
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
             "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
@@ -338,6 +353,9 @@ class StateStore:
         self._state.legend_columns = int(self._snapshot["legend_columns"])
         self._state.legend_nudge_step = float(self._snapshot["legend_nudge_step"])
         self._state.legend_offset = tuple(self._snapshot["legend_offset"])
+        self._state.recent_files = list(self._snapshot["recent_files"])
+        self._state.line_styles = dict(self._snapshot["line_styles"])
+        self._state.saved_themes = dict(self._snapshot["saved_themes"])
         self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
         self._state.available_groups = list(self._snapshot["available_groups"])
         self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])

@@ -409,7 +409,7 @@ class AppStateGateway:
         self._state.last_2d_cols = list(columns or []) if columns is not None else None
 
     def set_recent_files(self, files: Any) -> None:
-        self._state.recent_files = list(files or [])
+        self._dispatch("SET_RECENT_FILES", files=list(files or []))
 
     def set_file_path(self, file_path: str) -> None:
         self._state.file_path = str(file_path)
@@ -421,10 +421,10 @@ class AppStateGateway:
         self._dispatch("SET_LANGUAGE_CODE", code=code)
 
     def set_line_styles(self, line_styles: Any) -> None:
-        self._state.line_styles = dict(line_styles or {})
+        self._dispatch("SET_LINE_STYLES", line_styles=dict(line_styles or {}))
 
     def set_saved_themes(self, themes: Any) -> None:
-        self._state.saved_themes = dict(themes or {})
+        self._dispatch("SET_SAVED_THEMES", themes=dict(themes or {}))
 
     def set_color_scheme(self, color_scheme: str) -> None:
         self._dispatch("SET_COLOR_SCHEME", color_scheme=color_scheme)

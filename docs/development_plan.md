@@ -321,6 +321,15 @@
                                                                     `set_legend_*` 改为通过 StateStore action 分发。
                                                                 - 新增/扩展回归测试，覆盖显式 setter 与兼容
                                                                     `set_attr` 写入后 Store 快照一致性。
+                                - 第五十四批迁移清理（最近文件与主题样式纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `recent_files`、`line_styles`、`saved_themes`。
+                                                                - `core/state/gateway.py` 的 `set_recent_files`、
+                                                                    `set_line_styles`、`set_saved_themes` 改为
+                                                                    通过 StateStore action 分发。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter 与兼容 `set_attr` 的 Store 一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

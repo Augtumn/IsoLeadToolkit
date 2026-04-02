@@ -186,6 +186,39 @@ def test_legend_preferences_set_attr_compatibility() -> None:
         state_gateway.set_legend_offset(original_offset)
 
 
+def test_recent_files_set_attr_compatibility() -> None:
+    original_recent_files = list(getattr(app_state, "recent_files", []) or [])
+
+    try:
+        state_gateway.set_attr("recent_files", ["d:/tmp/a.xlsx", "d:/tmp/b.csv"])
+        assert app_state.recent_files == ["d:/tmp/a.xlsx", "d:/tmp/b.csv"]
+        assert app_state.state_store.snapshot()["recent_files"] == ["d:/tmp/a.xlsx", "d:/tmp/b.csv"]
+    finally:
+        state_gateway.set_recent_files(original_recent_files)
+
+
+def test_line_styles_set_attr_compatibility() -> None:
+    original_line_styles = dict(getattr(app_state, "line_styles", {}) or {})
+
+    try:
+        state_gateway.set_attr("line_styles", {"model_curve": {"linewidth": 2.4}})
+        assert app_state.line_styles["model_curve"]["linewidth"] == 2.4
+        assert app_state.state_store.snapshot()["line_styles"]["model_curve"]["linewidth"] == 2.4
+    finally:
+        state_gateway.set_line_styles(original_line_styles)
+
+
+def test_saved_themes_set_attr_compatibility() -> None:
+    original_saved_themes = dict(getattr(app_state, "saved_themes", {}) or {})
+
+    try:
+        state_gateway.set_attr("saved_themes", {"demo": {"color_scheme": "vibrant"}})
+        assert app_state.saved_themes["demo"]["color_scheme"] == "vibrant"
+        assert app_state.state_store.snapshot()["saved_themes"]["demo"]["color_scheme"] == "vibrant"
+    finally:
+        state_gateway.set_saved_themes(original_saved_themes)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 
