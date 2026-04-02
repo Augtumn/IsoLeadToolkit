@@ -290,6 +290,13 @@
                                                                     `tests/test_gateway_generic_mutation_guard.py`、
                                                                     `tests/test_gateway_generic_mutation_test_guard.py`
                                                                     改为复用共享 helper，移除重复 subprocess 模板代码。
+                                - 第四十九批迁移清理（守护扫描与用例参数化）：
+                                                                - 新增 `scripts/source_scan_guard.py` 作为通用源码扫描底座。
+                                                                - `scripts/check_state_mutations.py` 与
+                                                                    `scripts/gateway_mutation_guard.py` 复用该底座，
+                                                                    统一扫描与输出流程。
+                                                                - 新增参数化守护测试 `tests/test_guard_scripts.py`，
+                                                                    合并原 3 个独立守护测试文件并移除重复实现。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

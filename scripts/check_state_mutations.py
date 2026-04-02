@@ -6,11 +6,13 @@ import argparse
 import re
 from pathlib import Path
 
+from source_scan_guard import print_scan_result, scan_pattern_hits
+
 PATTERN = re.compile(r"app_state\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)")
 EXCLUDED_PARTS = {".venv", "reference", ".git"}
 
 
-def should_scan(path: Path) -> bool:
+def should_scan(path: Path, _repo_root: Path) -> bool:
     if path.suffix != ".py":
         return False
     return not any(part in EXCLUDED_PARTS for part in path.parts)
@@ -22,26 +24,9 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path.cwd()
-    counts: dict[str, int] = {}
-
-    for file_path in root.rglob("*.py"):
-        if not should_scan(file_path):
-            continue
-        try:
-            text = file_path.read_text(encoding="utf-8")
-        except Exception:
-            continue
-        hits = len(PATTERN.findall(text))
-        if hits > 0:
-            rel = file_path.relative_to(root).as_posix()
-            counts[rel] = hits
-
+    counts = scan_pattern_hits(root, pattern=PATTERN, include_file=should_scan)
     total = sum(counts.values())
-    print(f"TOTAL={total}")
-
-    if total > 0:
-        for rel, count in sorted(counts.items(), key=lambda item: item[1], reverse=True):
-            print(f"{count}\t{rel}")
+    print_scan_result(counts)
 
     if args.fail_on_hits and total > 0:
         return 1
