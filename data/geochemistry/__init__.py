@@ -204,7 +204,7 @@ def calculate_all_parameters(
     else:
         # 默认 V1V2 逻辑: 使用 T1=4.43Ga 计算出的单阶段年龄作为基准
         t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, params=params_calc, initial_age=params_calc.get('T2'))
-        if params_calc.get('v1v2_formula') == 'zhu1993':
+        if is_geokit or params_calc.get('v1v2_formula') == 'zhu1993':
             t_calc = np.maximum(t_calc, 0)
         d_alpha, d_beta, d_gamma = calculate_deltas(
             Pb206, Pb207, Pb208, t_calc, params=params_calc, use_two_stage=False, E1=E1_val, E2=E2_val
@@ -240,7 +240,7 @@ def calculate_all_parameters(
     results['nu'] = calculate_source_nu(mu_val, params=params_calc)
     results['omega'] = omega_val
 
-    # 5.2 模型参考参数 (始终使用 T1/a1/b1)
+    # 5.2 模型参考参数（按 age_model 自动选择参考参数）
     mu_model = calculate_model_mu(Pb206, Pb207, t_input, params=params_calc)
     kappa_model = calculate_model_kappa(Pb208, Pb206, t_input, params=params_calc)
     results['mu_model'] = mu_model

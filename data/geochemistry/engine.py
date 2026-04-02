@@ -81,11 +81,11 @@ PRESET_MODELS = {
         'T1': 4430e6,      # Age01
         'T2': 4570e6,      # Age02
         'Tsec': 3700e6,    # Age1
-        'a0': 9.307, 'b0': 10.294, 'c0': 29.476,
-        'a1': 11.152, 'b1': 12.998, 'c1': 31.23,
+        'a0': A0, 'b0': A0, 'c0': A0,
+        'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
         'mu_M': 7.8,
         'omega_M': 4.04 * 7.8,
-        'U_ratio': 1.0 / 137.88,
+        'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
         'E2': E2_DEFAULT,
         'v1v2_formula': 'default',
@@ -97,7 +97,7 @@ PRESET_MODELS = {
         'T2': T_EARTH_CANON,
         'Tsec': 0.0,
         'a0': A0, 'b0': B0, 'c0': C0,
-        'a1': A0, 'b1': B0, 'c1': C0,
+        'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
         'mu_M': 7.8,
         'omega_M': 7.8 * 4.04,
         'U_ratio': U_RATIO_NATURAL,
@@ -156,7 +156,7 @@ PRESET_MODELS = {
         'T2': 4498e6,
         'Tsec': 0.0,
         'a0': A0, 'b0': B0, 'c0': C0,
-        'a1': 9.345, 'b1': 10.37, 'c1': 29.51,
+        'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
         'mu_M': 8.63,
         'omega_M': 34.8,  # kappa~4.05 -> omega ~ 34.8
         'U_ratio': U_RATIO_NATURAL,

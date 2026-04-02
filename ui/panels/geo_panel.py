@@ -18,6 +18,8 @@ class GeoPanel(BasePanel):
     def reset_state(self):
         super().reset_state()
         self.geo_params = {}
+        self.geo_param_labels = {}
+        self.geo_section_labels = {}
         self.geo_model_combo = None
 
     def build(self) -> QWidget:
@@ -27,6 +29,8 @@ class GeoPanel(BasePanel):
         layout.setSpacing(10)
 
         self.geo_params = {}
+        self.geo_param_labels = {}
+        self.geo_section_labels = {}
 
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('geo_section_toolbox')
@@ -99,6 +103,7 @@ class GeoPanel(BasePanel):
         prim_label = QLabel(translate("Primordial (T1/T2):"))
         prim_label.setProperty('translate_key', 'Primordial (T1/T2):')
         prim_label.setStyleSheet("font-weight: bold;")
+        self.geo_section_labels['primordial'] = prim_label
         init_layout.addWidget(prim_label)
 
         prim_grid = QGridLayout()
@@ -110,6 +115,7 @@ class GeoPanel(BasePanel):
         sk_label = QLabel(translate("Stacey-Kramers 2nd Stage:"))
         sk_label.setProperty('translate_key', 'Stacey-Kramers 2nd Stage:')
         sk_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        self.geo_section_labels['second_stage'] = sk_label
         init_layout.addWidget(sk_label)
 
         sk_grid = QGridLayout()
@@ -160,6 +166,13 @@ class GeoPanel(BasePanel):
 
         layout.addWidget(section_toolbox)
 
+        try:
+            from data.geochemistry import engine
+
+            self._update_geo_param_visibility(self.geo_model_combo.currentText(), engine.get_parameters())
+        except Exception:
+            pass
+
         layout.addStretch()
         return widget
 
@@ -178,6 +191,44 @@ class GeoPanel(BasePanel):
 
         grid_layout.addWidget(spinbox, row, col + 1)
         self.geo_params[param_name] = spinbox
+        self.geo_param_labels[param_name] = label
+
+    def _set_geo_param_visible(self, param_name: str, visible: bool) -> None:
+        """Set visibility for parameter label and input control."""
+        spinbox = self.geo_params.get(param_name)
+        label = self.geo_param_labels.get(param_name)
+        if label is not None:
+            label.setVisible(visible)
+        if spinbox is not None:
+            spinbox.setVisible(visible)
+
+    def _update_geo_param_visibility(self, model_name: str, params: dict) -> None:
+        """Update parameter visibility according to model semantics."""
+        age_mode = str(params.get('age_model', '')).strip().lower().replace('_', '-')
+        is_two_stage = age_mode in ('two-stage', 'two stage', '2-stage', '2nd', 'second')
+        is_geokit = 'Geokit' in str(model_name)
+
+        if is_two_stage:
+            self._set_geo_param_visible('T1', True)
+            self._set_geo_param_visible('T2', True)
+            self._set_geo_param_visible('Tsec', True)
+            for key in ('a1', 'b1', 'c1'):
+                self._set_geo_param_visible(key, True)
+        else:
+            # Single-stage: only Geokit requires two age controls (T1/T2).
+            self._set_geo_param_visible('T1', is_geokit)
+            self._set_geo_param_visible('T2', True)
+            self._set_geo_param_visible('Tsec', False)
+            for key in ('a1', 'b1', 'c1'):
+                self._set_geo_param_visible(key, False)
+
+        # Primordial reference always relevant.
+        for key in ('a0', 'b0', 'c0'):
+            self._set_geo_param_visible(key, True)
+
+        second_stage_label = self.geo_section_labels.get('second_stage')
+        if second_stage_label is not None:
+            second_stage_label.setVisible(is_two_stage)
 
     # ------ 事件处理 ------
 
@@ -204,6 +255,8 @@ class GeoPanel(BasePanel):
                     if key in self.geo_params:
                         self.geo_params[key].setValue(current_params[key])
 
+                self._update_geo_param_visibility(model_name, current_params)
+
                 state_gateway.set_attr('geo_model_name', model_name)
                 logger.info("Loaded Geochemistry Model: %s", model_name)
 
@@ -226,15 +279,15 @@ class GeoPanel(BasePanel):
             params = {}
 
             for key in ('T1', 'T2', 'Tsec'):
-                if key in self.geo_params:
+                if key in self.geo_params and self.geo_params[key].isVisible():
                     params[key] = self.geo_params[key].value() * 1e6
 
             for key in ('lambda_238', 'lambda_235', 'lambda_232'):
-                if key in self.geo_params:
+                if key in self.geo_params and self.geo_params[key].isVisible():
                     params[key] = self.geo_params[key].value()
 
             for key in ('a0', 'b0', 'c0', 'a1', 'b1', 'c1', 'mu_M', 'omega_M', 'U_ratio'):
-                if key in self.geo_params:
+                if key in self.geo_params and self.geo_params[key].isVisible():
                     params[key] = self.geo_params[key].value()
 
             engine.update_parameters(params)

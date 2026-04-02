@@ -33,6 +33,33 @@ def _prepare_age(t_Ma: np.ndarray | float | None) -> np.ndarray:
     return np.maximum(t, 0) * 1e6
 
 
+def _is_two_stage_model(params: dict[str, Any]) -> bool:
+    """Return True when params indicate two-stage mode."""
+    mode = str(params.get('age_model', '')).strip().lower().replace('_', '-')
+    return mode in ('two-stage', 'two stage', '2-stage', '2nd', 'second')
+
+
+def _model_reference_params(params: dict[str, Any]) -> tuple[float, float, float, float]:
+    """Resolve reference (X, Y, Z, T) by model stage type.
+
+    Single-stage models use primordial reference (a0/b0/c0, T2).
+    Two-stage models use second-stage reference (a1/b1/c1, T1).
+    """
+    if _is_two_stage_model(params):
+        return (
+            params.get('a1', params.get('a0')),
+            params.get('b1', params.get('b0')),
+            params.get('c1', params.get('c0')),
+            params.get('T1', params.get('T2')),
+        )
+    return (
+        params.get('a0', params.get('a1')),
+        params.get('b0', params.get('b1')),
+        params.get('c0', params.get('c1')),
+        params.get('T2', params.get('T1')),
+    )
+
+
 def _invert_mu(
     x: np.ndarray | float,
     y: np.ndarray | float,
@@ -217,7 +244,7 @@ def calculate_source_nu(
 
 
 # =============================================================================
-# 公共 API — 模型参考 (a1/b1/c1, T1)
+# 公共 API — 模型参考（按 age_model 自动选择）
 # =============================================================================
 
 def calculate_model_mu(
@@ -229,7 +256,9 @@ def calculate_model_mu(
     """
     计算模型源区 Mu (对应 R 包 PbIso 中的 CalcMu) — 模型参考
 
-    使用当前模型的参考参数 (T1, a1, b1) 反演源区 238U/204Pb 比值。
+    根据 age_model 自动选择参考参数进行反演：
+    - two_stage: (T1, a1, b1)
+    - single_stage: (T2, a0, b0)
     适用于任何已配置的地球化学模型（SK、CR、MM 等）。
 
     Args:
@@ -241,8 +270,9 @@ def calculate_model_mu(
     """
     if params is None:
         params = engine.params
+    x_ref, y_ref, _, t_ref = _model_reference_params(params)
     return _invert_mu(Pb206_204_S, Pb207_204_S, t_Ma,
-                      params['a1'], params['b1'], params['T1'], params)
+                      x_ref, y_ref, t_ref, params)
 
 
 def calculate_model_kappa(
@@ -254,7 +284,9 @@ def calculate_model_kappa(
     """
     计算模型源区 Kappa (Th/U) (对应 R 包 PbIso 中的 CalcKa) — 模型参考
 
-    使用当前模型的参考参数 (T1, a1, c1) 反演源区 232Th/238U 比值。
+    根据 age_model 自动选择参考参数进行反演：
+    - two_stage: (T1, a1, c1)
+    - single_stage: (T2, a0, c0)
     适用于任何已配置的地球化学模型。
 
     Returns:
@@ -262,8 +294,9 @@ def calculate_model_kappa(
     """
     if params is None:
         params = engine.params
+    x_ref, _, z_ref, t_ref = _model_reference_params(params)
     return _invert_kappa(Pb206_204_S, Pb208_204_S, t_Ma,
-                         params['a1'], params['c1'], params['T1'], params)
+                         x_ref, z_ref, t_ref, params)
 
 
 # =============================================================================
@@ -282,10 +315,11 @@ def calculate_initial_ratio_64(
     if params is None:
         params = engine.params
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
+    x_ref, _, _, t_ref = _model_reference_params(params)
     t = np.asarray(t_Ma) * 1e6
-    e8T = np.exp(params['lambda_238'] * params['T1'])
+    e8T = np.exp(params['lambda_238'] * t_ref)
     e8t = np.exp(params['lambda_238'] * t)
-    return params['a1'] + mu * (e8T - e8t)
+    return x_ref + mu * (e8T - e8t)
 
 
 def calculate_initial_ratio_74(
@@ -300,11 +334,12 @@ def calculate_initial_ratio_74(
     if params is None:
         params = engine.params
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
+    _, y_ref, _, t_ref = _model_reference_params(params)
     t = np.asarray(t_Ma) * 1e6
     U8U5 = 1.0 / params['U_ratio']
-    e5T = np.exp(params['lambda_235'] * params['T1'])
+    e5T = np.exp(params['lambda_235'] * t_ref)
     e5t = np.exp(params['lambda_235'] * t)
-    return params['b1'] + (mu / U8U5) * (e5T - e5t)
+    return y_ref + (mu / U8U5) * (e5T - e5t)
 
 
 def calculate_initial_ratio_84(
@@ -322,10 +357,11 @@ def calculate_initial_ratio_84(
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
     kappa = calculate_model_kappa(Pb208_204_S, Pb206_204_S, t_Ma, params)
     omega = kappa * mu
+    _, _, z_ref, t_ref = _model_reference_params(params)
     t = np.asarray(t_Ma) * 1e6
-    e2T = np.exp(params['lambda_232'] * params['T1'])
+    e2T = np.exp(params['lambda_232'] * t_ref)
     e2t = np.exp(params['lambda_232'] * t)
-    return params['c1'] + omega * (e2T - e2t)
+    return z_ref + omega * (e2T - e2t)
 
 
 # Backward-compatible aliases (deprecated)
