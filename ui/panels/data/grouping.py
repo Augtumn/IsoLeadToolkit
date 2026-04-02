@@ -224,7 +224,7 @@ class DataPanelGroupingMixin:
 
             result = get_tooltip_configuration(self)
             if result:
-                state_gateway.set_attr("tooltip_columns", result)
+                state_gateway.set_tooltip_columns(result)
                 logger.info("Tooltip columns configured: %s", result)
                 self._on_change()
         except Exception as exc:
