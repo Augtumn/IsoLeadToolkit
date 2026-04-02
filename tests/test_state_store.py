@@ -83,7 +83,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
         file_path=snapshot["file_path"],
         sheet_name=snapshot["sheet_name"],
     )
-    state_gateway.set_attr("data_version", snapshot["data_version"])
+    state_gateway.set_data_version(snapshot["data_version"])
     state_gateway.set_group_data_columns(snapshot["group_cols"], snapshot["data_cols"])
     state_gateway.set_last_group_col(snapshot["last_group_col"])
     state_gateway.set_selected_indices(snapshot["selected_indices"])

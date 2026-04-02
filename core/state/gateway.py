@@ -96,6 +96,9 @@ class AppStateGateway:
         if name == "selection_tool":
             self.set_selection_tool(value)
             return
+        if name == "data_version":
+            self.set_data_version(int(value))
+            return
         if name == "visible_groups":
             self.set_visible_groups(value)
             return
@@ -287,6 +290,9 @@ class AppStateGateway:
     def bump_data_version(self) -> None:
         self._dispatch("BUMP_DATA_VERSION")
         logger.info("Data version updated: %s", self._state.data_version)
+
+    def set_data_version(self, version: int) -> None:
+        self._state.data_version = int(version)
 
     def clear_selection(self) -> None:
         self._dispatch("CLEAR_SELECTION")
