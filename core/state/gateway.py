@@ -99,6 +99,9 @@ class AppStateGateway:
         if name == "language":
             self.set_language_code(str(value))
             return
+        if name == "line_styles":
+            self.set_line_styles(value)
+            return
         if name == "render_mode":
             self.set_render_mode(str(value))
             return
@@ -349,6 +352,9 @@ class AppStateGateway:
 
     def set_language_code(self, code: str) -> None:
         self._state.language = str(code)
+
+    def set_line_styles(self, line_styles: Any) -> None:
+        self._state.line_styles = dict(line_styles or {})
 
     def set_marginal_axes(self, marginal_axes: Any) -> None:
         self._state.marginal_axes = marginal_axes

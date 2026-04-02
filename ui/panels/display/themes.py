@@ -227,7 +227,7 @@ class DisplayThemeMixin:
         if self.isochron_width_spin:
             self.isochron_width_spin.setValue(float(data.get('isochron_line_width', 1.5)))
         if 'line_styles' in data:
-            state_gateway.set_attr('line_styles', data.get('line_styles', {}))
+            state_gateway.set_line_styles(data.get('line_styles', {}))
         if self.label_color_edit:
             self._set_color_control_value(self.label_color_edit, data.get('label_color', '#1f2937'), '#1f2937')
         if self.label_weight_combo:

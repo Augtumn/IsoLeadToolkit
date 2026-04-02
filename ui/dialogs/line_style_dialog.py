@@ -203,7 +203,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
 
     def _apply():
         if not hasattr(app_state, 'line_styles'):
-            state_gateway.set_attr('line_styles', {})
+            state_gateway.set_line_styles({})
         style_ref = app_state.line_styles.setdefault(style_key, {})
         if auto_color_check.isChecked():
             style_ref['color'] = None
