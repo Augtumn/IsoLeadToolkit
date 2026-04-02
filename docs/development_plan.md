@@ -242,6 +242,9 @@
                     `set_equation_overlays`，并在 `set_attr` 中添加兼容分发。
                 - `ui/dialogs/provenance_ml/workflow.py` 与 `ui/panels/analysis/equations.py`
                     将固定字段 `set_attrs` 调用迁移到显式 API。
+        - 第四十批迁移清理（面板样式批量写入收口）：
+            - `core/state/gateway.py` 新增 `set_panel_style_updates(updates)` 专用入口。
+            - `ui/panels/base_panel.py` 将样式字典写入从 `set_attrs` 迁移到专用显式 API。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

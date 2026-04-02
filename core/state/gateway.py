@@ -336,6 +336,11 @@ class AppStateGateway:
         for name, value in values.items():
             self.set_attr(name, value)
 
+    def set_panel_style_updates(self, updates: dict[str, Any]) -> None:
+        """Apply style-control updates collected from panel widgets."""
+        for name, value in updates.items():
+            self.set_attr(name, value)
+
     def set_render_mode(self, render_mode: str) -> None:
         self._dispatch("SET_RENDER_MODE", render_mode=render_mode)
 

@@ -373,7 +373,7 @@ class BasePanel(QWidget):
             style_updates['legend_frame_edgecolor'] = legend_frame_edge_edit.text() or '#cbd5f5'
 
         if style_updates:
-            state_gateway.set_attrs(style_updates)
+            state_gateway.set_panel_style_updates(style_updates)
 
         if app_state.fig is not None:
             try:
