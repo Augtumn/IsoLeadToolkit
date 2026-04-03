@@ -16,6 +16,8 @@ def _snapshot_state() -> dict[str, Any]:
         "tsne_params": dict(getattr(app_state, "tsne_params", {}) or {}),
         "pca_params": dict(getattr(app_state, "pca_params", {}) or {}),
         "robust_pca_params": dict(getattr(app_state, "robust_pca_params", {}) or {}),
+        "ml_params": dict(getattr(app_state, "ml_params", {}) or {}),
+        "v1v2_params": dict(getattr(app_state, "v1v2_params", {}) or {}),
         "show_kde": bool(getattr(app_state, "show_kde", False)),
         "show_marginal_kde": bool(getattr(app_state, "show_marginal_kde", True)),
         "show_equation_overlays": bool(getattr(app_state, "show_equation_overlays", False)),
@@ -159,6 +161,8 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_tsne_params(snapshot["tsne_params"])
     state_gateway.set_pca_params(snapshot["pca_params"])
     state_gateway.set_robust_pca_params(snapshot["robust_pca_params"])
+    state_gateway.set_ml_params(snapshot["ml_params"])
+    state_gateway.set_v1v2_params(snapshot["v1v2_params"])
     state_gateway.set_selection_mode(bool(snapshot["selection_mode"]))
     state_gateway.set_render_mode(str(snapshot["render_mode"]))
     state_gateway.set_point_size(int(snapshot["point_size"]))
@@ -353,6 +357,16 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
             "random_state": 11,
             "support_fraction": 0.8,
         }
+        app_state.algorithm_state.ml_params = {
+            "xgb_params": {"n_estimators": 120, "max_depth": 4},
+            "smote_sampling_strategy": 0.9,
+        }
+        app_state.algorithm_state.v1v2_params = {
+            "a": 0.1,
+            "b": 2.1,
+            "c": -6.0,
+            "scale": 1.2,
+        }
         app_state.style_state.current_palette = {"G1": "#112233"}
         app_state.style_state.color_scheme = "vibrant"
         app_state.interaction_state.selection_tool = "lasso"
@@ -370,6 +384,16 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
             "random_state": 11,
             "support_fraction": 0.8,
         }
+        assert app_state.ml_params == {
+            "xgb_params": {"n_estimators": 120, "max_depth": 4},
+            "smote_sampling_strategy": 0.9,
+        }
+        assert app_state.v1v2_params == {
+            "a": 0.1,
+            "b": 2.1,
+            "c": -6.0,
+            "scale": 1.2,
+        }
         assert app_state.current_palette == {"G1": "#112233"}
         assert app_state.selection_tool == "lasso"
         assert app_state.selected_indices == {1, 4}
@@ -386,6 +410,16 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
             "n_components": 3,
             "random_state": 11,
             "support_fraction": 0.8,
+        }
+        assert store_snapshot["ml_params"] == {
+            "xgb_params": {"n_estimators": 120, "max_depth": 4},
+            "smote_sampling_strategy": 0.9,
+        }
+        assert store_snapshot["v1v2_params"] == {
+            "a": 0.1,
+            "b": 2.1,
+            "c": -6.0,
+            "scale": 1.2,
         }
         assert store_snapshot["current_palette"] == {"G1": "#112233"}
         assert store_snapshot["selection_tool"] == "lasso"

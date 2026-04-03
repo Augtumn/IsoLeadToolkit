@@ -37,6 +37,12 @@ class StateStore:
             "robust_pca_params": self._normalize_algorithm_params(
                 getattr(state, "robust_pca_params", None)
             ),
+            "ml_params": self._normalize_algorithm_params(
+                getattr(state, "ml_params", None)
+            ),
+            "v1v2_params": self._normalize_algorithm_params(
+                getattr(state, "v1v2_params", None)
+            ),
             "show_kde": bool(getattr(state, "show_kde", False)),
             "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
             "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
@@ -225,6 +231,12 @@ class StateStore:
             self._snapshot["robust_pca_params"] = self._normalize_algorithm_params(
                 action.get("params")
             )
+
+        elif action_type == "SET_ML_PARAMS":
+            self._snapshot["ml_params"] = self._normalize_algorithm_params(action.get("params"))
+
+        elif action_type == "SET_V1V2_PARAMS":
+            self._snapshot["v1v2_params"] = self._normalize_algorithm_params(action.get("params"))
 
         elif action_type == "SET_SHOW_KDE":
             self._snapshot["show_kde"] = bool(action.get("show", False))
@@ -656,6 +668,8 @@ class StateStore:
             "tsne_params": dict(self._snapshot["tsne_params"]),
             "pca_params": dict(self._snapshot["pca_params"]),
             "robust_pca_params": dict(self._snapshot["robust_pca_params"]),
+            "ml_params": dict(self._snapshot["ml_params"]),
+            "v1v2_params": dict(self._snapshot["v1v2_params"]),
             "show_kde": bool(self._snapshot["show_kde"]),
             "show_marginal_kde": bool(self._snapshot["show_marginal_kde"]),
             "show_equation_overlays": bool(self._snapshot["show_equation_overlays"]),
@@ -802,6 +816,8 @@ class StateStore:
         self._state.tsne_params = dict(self._snapshot["tsne_params"])
         self._state.pca_params = dict(self._snapshot["pca_params"])
         self._state.robust_pca_params = dict(self._snapshot["robust_pca_params"])
+        self._state.ml_params = dict(self._snapshot["ml_params"])
+        self._state.v1v2_params = dict(self._snapshot["v1v2_params"])
         self._state.show_kde = bool(self._snapshot["show_kde"])
         self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
         self._state.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])

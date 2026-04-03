@@ -2,6 +2,21 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-03 · StateStore 第八十三批）
+
+- 参数域纳入 StateStore 托管：
+    - `ml_params`
+    - `v1v2_params`
+- `core/state/store.py` 新增对应 action（`SET_ML_PARAMS`、`SET_V1V2_PARAMS`）、快照输出与 `_sync_state` 回写。
+- `core/state/gateway.py` 新增显式 API：`set_ml_params/get_ml_params`、`set_v1v2_params/get_v1v2_params`，并接入 `set_attr` 兼容转发。
+- `core/state/app_state.py` 的 `AlgorithmState` 兼容视图新增 `ml_params` 与 `v1v2_params` 的 dispatch 写路径。
+- 调用侧改造：
+    - `ui/dialogs/provenance_ml/dialog.py`、`ui/dialogs/provenance_ml/workflow.py` 改为通过 gateway 读取 `ml_params`。
+    - `visualization/plotting/rendering/embedding/compute_geochem.py` 改为通过 gateway 读取 `v1v2_params`。
+- 回归测试更新：
+    - `tests/test_state_store.py` 扩展参数域 snapshot/restore 与兼容视图断言。
+    - `tests/test_gateway_set_attr_compatibility.py` 扩展 `set_attr` 参数域兼容性用例。
+
 ## 阶段进展（2026-04-03 · StateStore 第八十二批）
 
 - 参数域纳入 StateStore 托管：

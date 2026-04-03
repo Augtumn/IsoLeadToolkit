@@ -47,7 +47,7 @@ def compute_v1v2_embedding() -> np.ndarray | None:
     pb208 = x_data[:, idx_208]
 
     try:
-        v1v2_params = getattr(app_state, 'v1v2_params', {})
+        v1v2_params = state_gateway.get_v1v2_params()
         results = calculate_all_parameters(
             pb206,
             pb207,

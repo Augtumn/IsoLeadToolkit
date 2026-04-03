@@ -234,6 +234,8 @@ class AppStateGateway:
             "tsne_params": "set_tsne_params",
             "pca_params": "set_pca_params",
             "robust_pca_params": "set_robust_pca_params",
+            "ml_params": "set_ml_params",
+            "v1v2_params": "set_v1v2_params",
             "group_cols": "_set_group_cols_compat",
             "data_cols": "_set_data_cols_compat",
             "export_image_options": "_set_export_image_options_compat",
@@ -407,6 +409,18 @@ class AppStateGateway:
 
     def set_robust_pca_params(self, params: Any) -> None:
         self._dispatch("SET_ROBUST_PCA_PARAMS", params=dict(params or {}))
+
+    def set_ml_params(self, params: Any) -> None:
+        self._dispatch("SET_ML_PARAMS", params=dict(params or {}))
+
+    def get_ml_params(self) -> dict[str, Any]:
+        return dict(self._store.snapshot().get("ml_params", {}))
+
+    def set_v1v2_params(self, params: Any) -> None:
+        self._dispatch("SET_V1V2_PARAMS", params=dict(params or {}))
+
+    def get_v1v2_params(self) -> dict[str, Any]:
+        return dict(self._store.snapshot().get("v1v2_params", {}))
 
     def set_show_kde(self, show: bool) -> None:
         self._dispatch("SET_SHOW_KDE", show=bool(show))

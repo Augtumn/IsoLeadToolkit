@@ -167,7 +167,7 @@ class ProvenanceMLWorkflowMixin:
             df_pred = app_state.df_global
             self._selected_original_indices = None
 
-        params = getattr(app_state, 'ml_params', self._ml_params) or {}
+        params = state_gateway.get_ml_params() or self._ml_params
         xgb_params = params.get('xgb_params', {})
         smote_sampling_strategy = params.get('smote_sampling_strategy', 1.0)
 

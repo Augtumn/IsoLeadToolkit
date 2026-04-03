@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from core import CONFIG, app_state
+from core import CONFIG, state_gateway
 
 
 class ProvenanceMLDialogBaseMixin:
@@ -17,7 +17,7 @@ class ProvenanceMLDialogBaseMixin:
         self._training_df = None
         self._result = None
         self._selected_original_indices = None
-        self._ml_params = getattr(app_state, 'ml_params', CONFIG.get('ml_params', {})).copy()
+        self._ml_params = state_gateway.get_ml_params() or CONFIG.get('ml_params', {}).copy()
         self._default_training_file = self._resolve_default_training_file()
 
         self._setup_ui()

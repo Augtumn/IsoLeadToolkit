@@ -159,6 +159,30 @@ class AlgorithmState:
             return
         setattr(self.app_state, 'robust_pca_params', value)
 
+    @property
+    def ml_params(self) -> Any:
+        return self.app_state.ml_params
+
+    @ml_params.setter
+    def ml_params(self, value: Any) -> None:
+        state_store = getattr(self.app_state, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_ML_PARAMS', 'params': dict(value or {})})
+            return
+        setattr(self.app_state, 'ml_params', value)
+
+    @property
+    def v1v2_params(self) -> Any:
+        return self.app_state.v1v2_params
+
+    @v1v2_params.setter
+    def v1v2_params(self, value: Any) -> None:
+        state_store = getattr(self.app_state, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_V1V2_PARAMS', 'params': dict(value or {})})
+            return
+        setattr(self.app_state, 'v1v2_params', value)
+
 
 @dataclass
 class VisualState:

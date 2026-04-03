@@ -311,9 +311,14 @@ def test_point_size_set_attr_conversion() -> None:
             "robust_pca_params",
             {"n_components": 3, "random_state": 42, "support_fraction": 0.8},
         ),
+        (
+            "ml_params",
+            {"xgb_params": {"n_estimators": 200, "max_depth": 5}, "smote_sampling_strategy": 1.0},
+        ),
+        ("v1v2_params", {"a": 0.0, "b": 2.0367, "c": -6.143, "scale": 1.0}),
     ],
 )
-def test_algorithm_params_set_attr_compatibility(attr: str, payload: dict[str, float | int]) -> None:
+def test_algorithm_params_set_attr_compatibility(attr: str, payload: dict[str, object]) -> None:
     original = dict(getattr(app_state, attr, {}) or {})
 
     try:
