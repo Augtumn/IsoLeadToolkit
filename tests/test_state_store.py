@@ -14,6 +14,7 @@ def _snapshot_state() -> dict[str, Any]:
         "show_kde": bool(getattr(app_state, "show_kde", False)),
         "show_marginal_kde": bool(getattr(app_state, "show_marginal_kde", True)),
         "show_equation_overlays": bool(getattr(app_state, "show_equation_overlays", False)),
+        "geo_model_name": str(getattr(app_state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
         "show_model_curves": bool(getattr(app_state, "show_model_curves", True)),
         "show_plumbotectonics_curves": bool(getattr(app_state, "show_plumbotectonics_curves", True)),
         "show_paleoisochrons": bool(getattr(app_state, "show_paleoisochrons", True)),
@@ -114,6 +115,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_show_kde(bool(snapshot["show_kde"]))
     state_gateway.set_show_marginal_kde(bool(snapshot["show_marginal_kde"]))
     state_gateway.set_show_equation_overlays(bool(snapshot["show_equation_overlays"]))
+    state_gateway.set_geo_model_name(str(snapshot["geo_model_name"]))
     state_gateway.set_show_model_curves(bool(snapshot["show_model_curves"]))
     state_gateway.set_show_plumbotectonics_curves(bool(snapshot["show_plumbotectonics_curves"]))
     state_gateway.set_show_paleoisochrons(bool(snapshot["show_paleoisochrons"]))
@@ -270,6 +272,7 @@ def test_state_store_session_preference_domains() -> None:
         )
         state_gateway.set_ml_last_result({"status": "ok", "score": 0.93})
         state_gateway.set_ml_last_model_meta({"model": "xgb", "classes": 4})
+        state_gateway.set_geo_model_name("V1V2 (Zhu 1993)")
         state_gateway.set_show_model_curves(False)
         state_gateway.set_show_plumbotectonics_curves(False)
         state_gateway.set_show_paleoisochrons(False)
@@ -336,6 +339,7 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.marginal_kde_style["gridsize"] == 320
         assert app_state.ml_last_result == {"status": "ok", "score": 0.93}
         assert app_state.ml_last_model_meta == {"model": "xgb", "classes": 4}
+        assert app_state.geo_model_name == "V1V2 (Zhu 1993)"
         assert app_state.show_model_curves is False
         assert app_state.show_plumbotectonics_curves is False
         assert app_state.show_paleoisochrons is False
@@ -393,6 +397,7 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["marginal_kde_style"]["gridsize"] == 320
         assert store_snapshot["ml_last_result"] == {"status": "ok", "score": 0.93}
         assert store_snapshot["ml_last_model_meta"] == {"model": "xgb", "classes": 4}
+        assert store_snapshot["geo_model_name"] == "V1V2 (Zhu 1993)"
         assert store_snapshot["show_model_curves"] is False
         assert store_snapshot["show_plumbotectonics_curves"] is False
         assert store_snapshot["show_paleoisochrons"] is False

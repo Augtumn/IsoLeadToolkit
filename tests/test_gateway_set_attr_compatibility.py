@@ -147,6 +147,17 @@ def test_language_set_attr_conversion() -> None:
         state_gateway.set_language_code(original_language)
 
 
+def test_geo_model_name_set_attr_conversion() -> None:
+    original_model_name = str(getattr(app_state, "geo_model_name", "Stacey & Kramers (2nd Stage)"))
+
+    try:
+        state_gateway.set_attr("geo_model_name", 123)
+        assert app_state.geo_model_name == "123"
+        assert app_state.state_store.snapshot()["geo_model_name"] == "123"
+    finally:
+        state_gateway.set_geo_model_name(original_model_name)
+
+
 def test_legend_preferences_set_attr_compatibility() -> None:
     original_color_scheme = str(getattr(app_state, "color_scheme", "vibrant"))
     original_position = getattr(app_state, "legend_position", None)

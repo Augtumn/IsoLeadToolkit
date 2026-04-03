@@ -312,7 +312,7 @@ class AppStateGateway:
         self._dispatch("SET_SHOW_EQUATION_OVERLAYS", show=bool(show))
 
     def set_geo_model_name(self, model_name: str) -> None:
-        self._state.geo_model_name = str(model_name)
+        self._dispatch("SET_GEO_MODEL_NAME", model_name=model_name)
 
     def set_marginal_kde_layout(
         self,

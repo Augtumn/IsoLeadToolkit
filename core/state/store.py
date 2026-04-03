@@ -28,6 +28,7 @@ class StateStore:
             "show_kde": bool(getattr(state, "show_kde", False)),
             "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
             "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
+            "geo_model_name": str(getattr(state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
             "show_model_curves": bool(getattr(state, "show_model_curves", True)),
             "show_plumbotectonics_curves": bool(
                 getattr(state, "show_plumbotectonics_curves", True)
@@ -165,6 +166,11 @@ class StateStore:
 
         elif action_type == "SET_SHOW_EQUATION_OVERLAYS":
             self._snapshot["show_equation_overlays"] = bool(action.get("show", False))
+
+        elif action_type == "SET_GEO_MODEL_NAME":
+            self._snapshot["geo_model_name"] = str(
+                action.get("model_name", "Stacey & Kramers (2nd Stage)")
+            )
 
         elif action_type == "SET_SHOW_MODEL_CURVES":
             self._snapshot["show_model_curves"] = bool(action.get("show", False))
@@ -484,6 +490,7 @@ class StateStore:
             "show_kde": bool(self._snapshot["show_kde"]),
             "show_marginal_kde": bool(self._snapshot["show_marginal_kde"]),
             "show_equation_overlays": bool(self._snapshot["show_equation_overlays"]),
+            "geo_model_name": str(self._snapshot["geo_model_name"]),
             "show_model_curves": bool(self._snapshot["show_model_curves"]),
             "show_plumbotectonics_curves": bool(self._snapshot["show_plumbotectonics_curves"]),
             "show_paleoisochrons": bool(self._snapshot["show_paleoisochrons"]),
@@ -585,6 +592,7 @@ class StateStore:
         self._state.show_kde = bool(self._snapshot["show_kde"])
         self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
         self._state.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])
+        self._state.geo_model_name = str(self._snapshot["geo_model_name"])
         self._state.show_model_curves = bool(self._snapshot["show_model_curves"])
         self._state.show_plumbotectonics_curves = bool(self._snapshot["show_plumbotectonics_curves"])
         self._state.show_paleoisochrons = bool(self._snapshot["show_paleoisochrons"])

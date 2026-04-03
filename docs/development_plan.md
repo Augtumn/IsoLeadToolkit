@@ -430,6 +430,14 @@
                                                                 - 扩展 `tests/test_state_store.py` 与
                                                                     `tests/test_gateway_set_attr_compatibility.py`，
                                                                     覆盖显式 setter 与 `set_attr` 在该域上的一致性。
+                                - 第六十三批迁移清理（地化模型名纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：`geo_model_name`，
+                                                                    并补充 `SET_GEO_MODEL_NAME` action 的 dispatch/snapshot/sync。
+                                                                - `core/state/gateway.py` 的 `set_geo_model_name`
+                                                                    改为 action dispatch，避免旁路 Store。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter 与 `set_attr` 在该域上的一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
