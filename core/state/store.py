@@ -36,6 +36,18 @@ class StateStore:
             "show_model_age_lines": bool(getattr(state, "show_model_age_lines", True)),
             "show_growth_curves": bool(getattr(state, "show_growth_curves", True)),
             "show_isochrons": bool(getattr(state, "show_isochrons", False)),
+            "isochron_error_mode": (
+                "columns"
+                if str(getattr(state, "isochron_error_mode", "fixed") or "fixed").strip().lower()
+                == "columns"
+                else "fixed"
+            ),
+            "isochron_sx_col": str(getattr(state, "isochron_sx_col", "") or ""),
+            "isochron_sy_col": str(getattr(state, "isochron_sy_col", "") or ""),
+            "isochron_rxy_col": str(getattr(state, "isochron_rxy_col", "") or ""),
+            "isochron_sx_value": float(getattr(state, "isochron_sx_value", 0.001)),
+            "isochron_sy_value": float(getattr(state, "isochron_sy_value", 0.001)),
+            "isochron_rxy_value": float(getattr(state, "isochron_rxy_value", 0.0)),
             "use_real_age_for_mu_kappa": bool(getattr(state, "use_real_age_for_mu_kappa", False)),
             "mu_kappa_age_col": getattr(state, "mu_kappa_age_col", None),
             "plumbotectonics_variant": str(getattr(state, "plumbotectonics_variant", "0")),
@@ -171,6 +183,18 @@ class StateStore:
 
         elif action_type == "SET_SHOW_ISOCHRONS":
             self._snapshot["show_isochrons"] = bool(action.get("show", False))
+
+        elif action_type == "SET_ISOCHRON_ERROR_COLUMNS":
+            self._snapshot["isochron_error_mode"] = "columns"
+            self._snapshot["isochron_sx_col"] = str(action.get("sx_col", "") or "")
+            self._snapshot["isochron_sy_col"] = str(action.get("sy_col", "") or "")
+            self._snapshot["isochron_rxy_col"] = str(action.get("rxy_col", "") or "")
+
+        elif action_type == "SET_ISOCHRON_ERROR_FIXED":
+            self._snapshot["isochron_error_mode"] = "fixed"
+            self._snapshot["isochron_sx_value"] = float(action.get("sx_value", 0.001))
+            self._snapshot["isochron_sy_value"] = float(action.get("sy_value", 0.001))
+            self._snapshot["isochron_rxy_value"] = float(action.get("rxy_value", 0.0))
 
         elif action_type == "SET_USE_REAL_AGE_FOR_MU_KAPPA":
             self._snapshot["use_real_age_for_mu_kappa"] = bool(action.get("enabled", False))
@@ -466,6 +490,13 @@ class StateStore:
             "show_model_age_lines": bool(self._snapshot["show_model_age_lines"]),
             "show_growth_curves": bool(self._snapshot["show_growth_curves"]),
             "show_isochrons": bool(self._snapshot["show_isochrons"]),
+            "isochron_error_mode": str(self._snapshot["isochron_error_mode"]),
+            "isochron_sx_col": str(self._snapshot["isochron_sx_col"]),
+            "isochron_sy_col": str(self._snapshot["isochron_sy_col"]),
+            "isochron_rxy_col": str(self._snapshot["isochron_rxy_col"]),
+            "isochron_sx_value": float(self._snapshot["isochron_sx_value"]),
+            "isochron_sy_value": float(self._snapshot["isochron_sy_value"]),
+            "isochron_rxy_value": float(self._snapshot["isochron_rxy_value"]),
             "use_real_age_for_mu_kappa": bool(self._snapshot["use_real_age_for_mu_kappa"]),
             "mu_kappa_age_col": self._snapshot["mu_kappa_age_col"],
             "plumbotectonics_variant": str(self._snapshot["plumbotectonics_variant"]),
@@ -560,6 +591,13 @@ class StateStore:
         self._state.show_model_age_lines = bool(self._snapshot["show_model_age_lines"])
         self._state.show_growth_curves = bool(self._snapshot["show_growth_curves"])
         self._state.show_isochrons = bool(self._snapshot["show_isochrons"])
+        self._state.isochron_error_mode = str(self._snapshot["isochron_error_mode"])
+        self._state.isochron_sx_col = str(self._snapshot["isochron_sx_col"])
+        self._state.isochron_sy_col = str(self._snapshot["isochron_sy_col"])
+        self._state.isochron_rxy_col = str(self._snapshot["isochron_rxy_col"])
+        self._state.isochron_sx_value = float(self._snapshot["isochron_sx_value"])
+        self._state.isochron_sy_value = float(self._snapshot["isochron_sy_value"])
+        self._state.isochron_rxy_value = float(self._snapshot["isochron_rxy_value"])
         self._state.use_real_age_for_mu_kappa = bool(self._snapshot["use_real_age_for_mu_kappa"])
         self._state.mu_kappa_age_col = self._snapshot["mu_kappa_age_col"]
         self._state.plumbotectonics_variant = str(self._snapshot["plumbotectonics_variant"])

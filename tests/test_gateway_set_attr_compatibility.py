@@ -526,6 +526,57 @@ def test_geochem_parameter_set_attr_compatibility() -> None:
         state_gateway.set_paleoisochron_ages(original_ages)
 
 
+def test_isochron_error_config_set_attr_compatibility() -> None:
+    original_mode = str(getattr(app_state, "isochron_error_mode", "fixed"))
+    original_sx_col = str(getattr(app_state, "isochron_sx_col", "") or "")
+    original_sy_col = str(getattr(app_state, "isochron_sy_col", "") or "")
+    original_rxy_col = str(getattr(app_state, "isochron_rxy_col", "") or "")
+    original_sx_value = float(getattr(app_state, "isochron_sx_value", 0.001))
+    original_sy_value = float(getattr(app_state, "isochron_sy_value", 0.001))
+    original_rxy_value = float(getattr(app_state, "isochron_rxy_value", 0.0))
+
+    try:
+        state_gateway.set_attr("isochron_error_mode", "columns")
+        state_gateway.set_attr("isochron_sx_col", "sx")
+        state_gateway.set_attr("isochron_sy_col", "sy")
+        state_gateway.set_attr("isochron_rxy_col", "rxy")
+
+        assert app_state.isochron_error_mode == "columns"
+        assert app_state.isochron_sx_col == "sx"
+        assert app_state.isochron_sy_col == "sy"
+        assert app_state.isochron_rxy_col == "rxy"
+
+        columns_snapshot = app_state.state_store.snapshot()
+        assert columns_snapshot["isochron_error_mode"] == "columns"
+        assert columns_snapshot["isochron_sx_col"] == "sx"
+        assert columns_snapshot["isochron_sy_col"] == "sy"
+        assert columns_snapshot["isochron_rxy_col"] == "rxy"
+
+        state_gateway.set_attr("isochron_error_mode", "fixed")
+        state_gateway.set_attr("isochron_sx_value", "0.01")
+        state_gateway.set_attr("isochron_sy_value", "0.02")
+        state_gateway.set_attr("isochron_rxy_value", "0.3")
+
+        assert app_state.isochron_error_mode == "fixed"
+        assert app_state.isochron_sx_value == 0.01
+        assert app_state.isochron_sy_value == 0.02
+        assert app_state.isochron_rxy_value == 0.3
+
+        fixed_snapshot = app_state.state_store.snapshot()
+        assert fixed_snapshot["isochron_error_mode"] == "fixed"
+        assert fixed_snapshot["isochron_sx_value"] == 0.01
+        assert fixed_snapshot["isochron_sy_value"] == 0.02
+        assert fixed_snapshot["isochron_rxy_value"] == 0.3
+    finally:
+        if original_mode == "columns":
+            state_gateway.set_isochron_error_columns(original_sx_col, original_sy_col, original_rxy_col)
+            state_gateway.set_isochron_error_fixed(original_sx_value, original_sy_value, original_rxy_value)
+            state_gateway.set_isochron_error_columns(original_sx_col, original_sy_col, original_rxy_col)
+        else:
+            state_gateway.set_isochron_error_columns(original_sx_col, original_sy_col, original_rxy_col)
+            state_gateway.set_isochron_error_fixed(original_sx_value, original_sy_value, original_rxy_value)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 

@@ -41,6 +41,63 @@ class AppStateGateway:
             return
         self._state.export_image_options = value
 
+    def _set_isochron_error_mode_compat(self, value: Any) -> None:
+        mode = str(value or "fixed").strip().lower()
+        if mode == "columns":
+            self.set_isochron_error_columns(
+                str(getattr(self._state, "isochron_sx_col", "") or ""),
+                str(getattr(self._state, "isochron_sy_col", "") or ""),
+                str(getattr(self._state, "isochron_rxy_col", "") or ""),
+            )
+            return
+        self.set_isochron_error_fixed(
+            float(getattr(self._state, "isochron_sx_value", 0.001) or 0.001),
+            float(getattr(self._state, "isochron_sy_value", 0.001) or 0.001),
+            float(getattr(self._state, "isochron_rxy_value", 0.0) or 0.0),
+        )
+
+    def _set_isochron_sx_col_compat(self, value: Any) -> None:
+        self.set_isochron_error_columns(
+            str(value or ""),
+            str(getattr(self._state, "isochron_sy_col", "") or ""),
+            str(getattr(self._state, "isochron_rxy_col", "") or ""),
+        )
+
+    def _set_isochron_sy_col_compat(self, value: Any) -> None:
+        self.set_isochron_error_columns(
+            str(getattr(self._state, "isochron_sx_col", "") or ""),
+            str(value or ""),
+            str(getattr(self._state, "isochron_rxy_col", "") or ""),
+        )
+
+    def _set_isochron_rxy_col_compat(self, value: Any) -> None:
+        self.set_isochron_error_columns(
+            str(getattr(self._state, "isochron_sx_col", "") or ""),
+            str(getattr(self._state, "isochron_sy_col", "") or ""),
+            str(value or ""),
+        )
+
+    def _set_isochron_sx_value_compat(self, value: Any) -> None:
+        self.set_isochron_error_fixed(
+            float(value),
+            float(getattr(self._state, "isochron_sy_value", 0.001) or 0.001),
+            float(getattr(self._state, "isochron_rxy_value", 0.0) or 0.0),
+        )
+
+    def _set_isochron_sy_value_compat(self, value: Any) -> None:
+        self.set_isochron_error_fixed(
+            float(getattr(self._state, "isochron_sx_value", 0.001) or 0.001),
+            float(value),
+            float(getattr(self._state, "isochron_rxy_value", 0.0) or 0.0),
+        )
+
+    def _set_isochron_rxy_value_compat(self, value: Any) -> None:
+        self.set_isochron_error_fixed(
+            float(getattr(self._state, "isochron_sx_value", 0.001) or 0.001),
+            float(getattr(self._state, "isochron_sy_value", 0.001) or 0.001),
+            float(value),
+        )
+
     def _compat_handler(
         self,
         setter_name: str,
@@ -100,6 +157,13 @@ class AppStateGateway:
             "group_cols": "_set_group_cols_compat",
             "data_cols": "_set_data_cols_compat",
             "export_image_options": "_set_export_image_options_compat",
+            "isochron_error_mode": "_set_isochron_error_mode_compat",
+            "isochron_sx_col": "_set_isochron_sx_col_compat",
+            "isochron_sy_col": "_set_isochron_sy_col_compat",
+            "isochron_rxy_col": "_set_isochron_rxy_col_compat",
+            "isochron_sx_value": "_set_isochron_sx_value_compat",
+            "isochron_sy_value": "_set_isochron_sy_value_compat",
+            "isochron_rxy_value": "_set_isochron_rxy_value_compat",
         }
         bool_map = {
             "show_kde": "set_show_kde",
@@ -571,16 +635,20 @@ class AppStateGateway:
         self._dispatch("SET_TERNARY_RANGES", ranges=dict(ranges or {}))
 
     def set_isochron_error_columns(self, sx_col: str, sy_col: str, rxy_col: str) -> None:
-        self._state.isochron_error_mode = "columns"
-        self._state.isochron_sx_col = str(sx_col)
-        self._state.isochron_sy_col = str(sy_col)
-        self._state.isochron_rxy_col = str(rxy_col)
+        self._dispatch(
+            "SET_ISOCHRON_ERROR_COLUMNS",
+            sx_col=str(sx_col),
+            sy_col=str(sy_col),
+            rxy_col=str(rxy_col),
+        )
 
     def set_isochron_error_fixed(self, sx_value: float, sy_value: float, rxy_value: float) -> None:
-        self._state.isochron_error_mode = "fixed"
-        self._state.isochron_sx_value = float(sx_value)
-        self._state.isochron_sy_value = float(sy_value)
-        self._state.isochron_rxy_value = float(rxy_value)
+        self._dispatch(
+            "SET_ISOCHRON_ERROR_FIXED",
+            sx_value=float(sx_value),
+            sy_value=float(sy_value),
+            rxy_value=float(rxy_value),
+        )
 
     def set_kde_style(self, style: Any) -> None:
         self._dispatch("SET_KDE_STYLE", style=dict(style or {}))

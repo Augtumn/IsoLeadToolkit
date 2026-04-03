@@ -20,6 +20,13 @@ def _snapshot_state() -> dict[str, Any]:
         "show_model_age_lines": bool(getattr(app_state, "show_model_age_lines", True)),
         "show_growth_curves": bool(getattr(app_state, "show_growth_curves", True)),
         "show_isochrons": bool(getattr(app_state, "show_isochrons", False)),
+        "isochron_error_mode": str(getattr(app_state, "isochron_error_mode", "fixed")),
+        "isochron_sx_col": str(getattr(app_state, "isochron_sx_col", "") or ""),
+        "isochron_sy_col": str(getattr(app_state, "isochron_sy_col", "") or ""),
+        "isochron_rxy_col": str(getattr(app_state, "isochron_rxy_col", "") or ""),
+        "isochron_sx_value": float(getattr(app_state, "isochron_sx_value", 0.001)),
+        "isochron_sy_value": float(getattr(app_state, "isochron_sy_value", 0.001)),
+        "isochron_rxy_value": float(getattr(app_state, "isochron_rxy_value", 0.0)),
         "use_real_age_for_mu_kappa": bool(getattr(app_state, "use_real_age_for_mu_kappa", False)),
         "mu_kappa_age_col": getattr(app_state, "mu_kappa_age_col", None),
         "plumbotectonics_variant": str(getattr(app_state, "plumbotectonics_variant", "0")),
@@ -113,6 +120,28 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_show_model_age_lines(bool(snapshot["show_model_age_lines"]))
     state_gateway.set_show_growth_curves(bool(snapshot["show_growth_curves"]))
     state_gateway.set_show_isochrons(bool(snapshot["show_isochrons"]))
+    state_gateway.set_isochron_error_columns(
+        str(snapshot["isochron_sx_col"]),
+        str(snapshot["isochron_sy_col"]),
+        str(snapshot["isochron_rxy_col"]),
+    )
+    state_gateway.set_isochron_error_fixed(
+        float(snapshot["isochron_sx_value"]),
+        float(snapshot["isochron_sy_value"]),
+        float(snapshot["isochron_rxy_value"]),
+    )
+    if str(snapshot["isochron_error_mode"]).strip().lower() == "columns":
+        state_gateway.set_isochron_error_columns(
+            str(snapshot["isochron_sx_col"]),
+            str(snapshot["isochron_sy_col"]),
+            str(snapshot["isochron_rxy_col"]),
+        )
+    else:
+        state_gateway.set_isochron_error_fixed(
+            float(snapshot["isochron_sx_value"]),
+            float(snapshot["isochron_sy_value"]),
+            float(snapshot["isochron_rxy_value"]),
+        )
     state_gateway.set_use_real_age_for_mu_kappa(bool(snapshot["use_real_age_for_mu_kappa"]))
     state_gateway.set_mu_kappa_age_col(snapshot["mu_kappa_age_col"])
     state_gateway.set_plumbotectonics_variant(str(snapshot["plumbotectonics_variant"]))
@@ -475,6 +504,38 @@ def test_state_store_geochem_overlay_visibility_domains() -> None:
         assert store_snapshot["show_model_age_lines"] is False
         assert store_snapshot["show_growth_curves"] is False
         assert store_snapshot["show_isochrons"] is True
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_isochron_error_config_domains() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_isochron_error_columns("sx", "sy", "rxy")
+
+        assert app_state.isochron_error_mode == "columns"
+        assert app_state.isochron_sx_col == "sx"
+        assert app_state.isochron_sy_col == "sy"
+        assert app_state.isochron_rxy_col == "rxy"
+
+        columns_snapshot = app_state.state_store.snapshot()
+        assert columns_snapshot["isochron_error_mode"] == "columns"
+        assert columns_snapshot["isochron_sx_col"] == "sx"
+        assert columns_snapshot["isochron_sy_col"] == "sy"
+        assert columns_snapshot["isochron_rxy_col"] == "rxy"
+
+        state_gateway.set_isochron_error_fixed(0.01, 0.02, 0.3)
+
+        assert app_state.isochron_error_mode == "fixed"
+        assert app_state.isochron_sx_value == 0.01
+        assert app_state.isochron_sy_value == 0.02
+        assert app_state.isochron_rxy_value == 0.3
+
+        fixed_snapshot = app_state.state_store.snapshot()
+        assert fixed_snapshot["isochron_error_mode"] == "fixed"
+        assert fixed_snapshot["isochron_sx_value"] == 0.01
+        assert fixed_snapshot["isochron_sy_value"] == 0.02
+        assert fixed_snapshot["isochron_rxy_value"] == 0.3
     finally:
         _restore_state(snapshot)
 
