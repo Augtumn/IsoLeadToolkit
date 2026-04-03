@@ -75,6 +75,14 @@ def _snapshot_state() -> dict[str, Any]:
         "ternary_stretch_mode": str(getattr(app_state, "ternary_stretch_mode", "power")),
         "ternary_stretch": bool(getattr(app_state, "ternary_stretch", False)),
         "ternary_factors": list(getattr(app_state, "ternary_factors", [1.0, 1.0, 1.0]) or [1.0, 1.0, 1.0]),
+        "model_curve_width": float(getattr(app_state, "model_curve_width", 1.2)),
+        "plumbotectonics_curve_width": float(getattr(app_state, "plumbotectonics_curve_width", 1.2)),
+        "paleoisochron_width": float(getattr(app_state, "paleoisochron_width", 0.9)),
+        "model_age_line_width": float(getattr(app_state, "model_age_line_width", 0.7)),
+        "isochron_line_width": float(getattr(app_state, "isochron_line_width", 1.5)),
+        "selected_isochron_line_width": float(getattr(app_state, "selected_isochron_line_width", 2.0)),
+        "isochron_label_options": dict(getattr(app_state, "isochron_label_options", {}) or {}),
+        "equation_overlays": list(getattr(app_state, "equation_overlays", []) or []),
         "export_image_options": dict(getattr(app_state, "export_image_options", {}) or {}),
     }
 
@@ -147,6 +155,14 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_ternary_stretch_mode(snapshot["ternary_stretch_mode"])
     state_gateway.set_ternary_stretch(snapshot["ternary_stretch"])
     state_gateway.set_ternary_factors(snapshot["ternary_factors"])
+    state_gateway.set_model_curve_width(snapshot["model_curve_width"])
+    state_gateway.set_plumbotectonics_curve_width(snapshot["plumbotectonics_curve_width"])
+    state_gateway.set_paleoisochron_width(snapshot["paleoisochron_width"])
+    state_gateway.set_model_age_line_width(snapshot["model_age_line_width"])
+    state_gateway.set_isochron_line_width(snapshot["isochron_line_width"])
+    state_gateway.set_selected_isochron_line_width(snapshot["selected_isochron_line_width"])
+    state_gateway.set_isochron_label_options(snapshot["isochron_label_options"])
+    state_gateway.set_equation_overlays(snapshot["equation_overlays"])
     state_gateway.sync_available_and_visible_groups(snapshot["available_groups"])
     state_gateway.set_visible_groups(snapshot["visible_groups"])
     state_gateway.set_export_image_options(**snapshot["export_image_options"])
@@ -214,6 +230,24 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_ternary_stretch_mode("hybrid")
         state_gateway.set_ternary_stretch(True)
         state_gateway.set_ternary_factors([1.1, 1.2, 0.9])
+        state_gateway.set_model_curve_width(2.4)
+        state_gateway.set_plumbotectonics_curve_width(2.2)
+        state_gateway.set_paleoisochron_width(1.1)
+        state_gateway.set_model_age_line_width(0.95)
+        state_gateway.set_isochron_line_width(2.0)
+        state_gateway.set_selected_isochron_line_width(2.8)
+        state_gateway.set_isochron_label_options({"show_age": True, "show_mswd": True, "show_r_squared": False})
+        state_gateway.set_equation_overlays(
+            [
+                {
+                    "id": "eq_custom_1",
+                    "label": "y=x",
+                    "latex": "y=x",
+                    "expression": "x",
+                    "enabled": True,
+                }
+            ]
+        )
         state_gateway.set_preserve_import_render_mode(True)
 
         assert app_state.algorithm == "RobustPCA"
@@ -251,6 +285,14 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.ternary_stretch_mode == "hybrid"
         assert app_state.ternary_stretch is True
         assert app_state.ternary_factors == [1.1, 1.2, 0.9]
+        assert app_state.model_curve_width == 2.4
+        assert app_state.plumbotectonics_curve_width == 2.2
+        assert app_state.paleoisochron_width == 1.1
+        assert app_state.model_age_line_width == 0.95
+        assert app_state.isochron_line_width == 2.0
+        assert app_state.selected_isochron_line_width == 2.8
+        assert app_state.isochron_label_options["show_mswd"] is True
+        assert app_state.equation_overlays and app_state.equation_overlays[0]["id"] == "eq_custom_1"
         assert app_state.preserve_import_render_mode is True
 
         store_snapshot = app_state.state_store.snapshot()
@@ -289,6 +331,14 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["ternary_stretch_mode"] == "hybrid"
         assert store_snapshot["ternary_stretch"] is True
         assert store_snapshot["ternary_factors"] == [1.1, 1.2, 0.9]
+        assert store_snapshot["model_curve_width"] == 2.4
+        assert store_snapshot["plumbotectonics_curve_width"] == 2.2
+        assert store_snapshot["paleoisochron_width"] == 1.1
+        assert store_snapshot["model_age_line_width"] == 0.95
+        assert store_snapshot["isochron_line_width"] == 2.0
+        assert store_snapshot["selected_isochron_line_width"] == 2.8
+        assert store_snapshot["isochron_label_options"]["show_mswd"] is True
+        assert store_snapshot["equation_overlays"] and store_snapshot["equation_overlays"][0]["id"] == "eq_custom_1"
         assert store_snapshot["preserve_import_render_mode"] is True
     finally:
         _restore_state(snapshot)

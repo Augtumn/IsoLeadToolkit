@@ -404,6 +404,72 @@ def test_projection_and_ternary_config_set_attr_compatibility() -> None:
         state_gateway.set_ternary_factors(original_ternary_factors)
 
 
+def test_isochron_style_set_attr_compatibility() -> None:
+    original_model_curve_width = float(getattr(app_state, "model_curve_width", 1.2))
+    original_plumbotectonics_curve_width = float(getattr(app_state, "plumbotectonics_curve_width", 1.2))
+    original_paleoisochron_width = float(getattr(app_state, "paleoisochron_width", 0.9))
+    original_model_age_line_width = float(getattr(app_state, "model_age_line_width", 0.7))
+    original_isochron_line_width = float(getattr(app_state, "isochron_line_width", 1.5))
+    original_selected_isochron_line_width = float(getattr(app_state, "selected_isochron_line_width", 2.0))
+    original_isochron_label_options = dict(getattr(app_state, "isochron_label_options", {}) or {})
+
+    try:
+        state_gateway.set_attr("model_curve_width", "2.4")
+        state_gateway.set_attr("plumbotectonics_curve_width", "2.2")
+        state_gateway.set_attr("paleoisochron_width", "1.1")
+        state_gateway.set_attr("model_age_line_width", "0.95")
+        state_gateway.set_attr("isochron_line_width", "2.0")
+        state_gateway.set_attr("selected_isochron_line_width", "2.8")
+        state_gateway.set_attr("isochron_label_options", {"show_age": True, "show_mswd": True})
+
+        assert app_state.model_curve_width == 2.4
+        assert app_state.plumbotectonics_curve_width == 2.2
+        assert app_state.paleoisochron_width == 1.1
+        assert app_state.model_age_line_width == 0.95
+        assert app_state.isochron_line_width == 2.0
+        assert app_state.selected_isochron_line_width == 2.8
+        assert app_state.isochron_label_options["show_mswd"] is True
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["model_curve_width"] == 2.4
+        assert snapshot["plumbotectonics_curve_width"] == 2.2
+        assert snapshot["paleoisochron_width"] == 1.1
+        assert snapshot["model_age_line_width"] == 0.95
+        assert snapshot["isochron_line_width"] == 2.0
+        assert snapshot["selected_isochron_line_width"] == 2.8
+        assert snapshot["isochron_label_options"]["show_mswd"] is True
+    finally:
+        state_gateway.set_model_curve_width(original_model_curve_width)
+        state_gateway.set_plumbotectonics_curve_width(original_plumbotectonics_curve_width)
+        state_gateway.set_paleoisochron_width(original_paleoisochron_width)
+        state_gateway.set_model_age_line_width(original_model_age_line_width)
+        state_gateway.set_isochron_line_width(original_isochron_line_width)
+        state_gateway.set_selected_isochron_line_width(original_selected_isochron_line_width)
+        state_gateway.set_isochron_label_options(original_isochron_label_options)
+
+
+def test_equation_overlays_set_attr_compatibility() -> None:
+    original_equation_overlays = list(getattr(app_state, "equation_overlays", []) or [])
+
+    try:
+        state_gateway.set_attr(
+            "equation_overlays",
+            [
+                {
+                    "id": "eq_custom_1",
+                    "label": "y=x",
+                    "latex": "y=x",
+                    "expression": "x",
+                    "enabled": True,
+                }
+            ],
+        )
+        assert app_state.equation_overlays and app_state.equation_overlays[0]["id"] == "eq_custom_1"
+        assert app_state.state_store.snapshot()["equation_overlays"][0]["id"] == "eq_custom_1"
+    finally:
+        state_gateway.set_equation_overlays(original_equation_overlays)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 

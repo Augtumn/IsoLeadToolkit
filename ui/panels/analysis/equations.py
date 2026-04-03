@@ -57,7 +57,22 @@ class AnalysisPanelEquationMixin:
 
     def _on_equation_overlay_toggle(self, overlay, state):
         """Handle single equation overlay toggle."""
-        overlay['enabled'] = state == Qt.Checked
+        target_id = overlay.get('id')
+        target_expr = overlay.get('expression')
+        enabled = state == Qt.Checked
+
+        current = list(getattr(app_state, 'equation_overlays', []) or [])
+        updated = []
+        for item in current:
+            item_copy = dict(item)
+            if (
+                (target_id is not None and item_copy.get('id') == target_id)
+                or (target_id is None and item_copy.get('expression') == target_expr)
+            ):
+                item_copy['enabled'] = enabled
+            updated.append(item_copy)
+
+        state_gateway.set_equation_overlays(updated)
         self._on_change()
 
     def _refresh_equation_overlays(self):

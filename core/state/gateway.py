@@ -531,25 +531,25 @@ class AppStateGateway:
         self._dispatch("SET_TERNARY_FACTORS", factors=factors)
 
     def set_model_curve_width(self, width: float) -> None:
-        self._state.model_curve_width = float(width)
+        self._dispatch("SET_MODEL_CURVE_WIDTH", width=width)
 
     def set_plumbotectonics_curve_width(self, width: float) -> None:
-        self._state.plumbotectonics_curve_width = float(width)
+        self._dispatch("SET_PLUMBOTECTONICS_CURVE_WIDTH", width=width)
 
     def set_paleoisochron_width(self, width: float) -> None:
-        self._state.paleoisochron_width = float(width)
+        self._dispatch("SET_PALEOISOCHRON_WIDTH", width=width)
 
     def set_model_age_line_width(self, width: float) -> None:
-        self._state.model_age_line_width = float(width)
+        self._dispatch("SET_MODEL_AGE_LINE_WIDTH", width=width)
 
     def set_isochron_line_width(self, width: float) -> None:
-        self._state.isochron_line_width = float(width)
+        self._dispatch("SET_ISOCHRON_LINE_WIDTH", width=width)
 
     def set_selected_isochron_line_width(self, width: float) -> None:
-        self._state.selected_isochron_line_width = float(width)
+        self._dispatch("SET_SELECTED_ISOCHRON_LINE_WIDTH", width=width)
 
     def set_isochron_label_options(self, options: Any) -> None:
-        self._state.isochron_label_options = dict(options or {})
+        self._dispatch("SET_ISOCHRON_LABEL_OPTIONS", options=dict(options or {}))
 
     def set_mixing_endmembers(self, mapping: Any) -> None:
         self._dispatch("SET_MIXING_ENDMEMBERS", mapping=dict(mapping or {}))
@@ -594,7 +594,7 @@ class AppStateGateway:
         self._dispatch("SET_ML_LAST_MODEL_META", meta=meta)
 
     def set_equation_overlays(self, overlays: Any) -> None:
-        self._state.equation_overlays = list(overlays or [])
+        self._dispatch("SET_EQUATION_OVERLAYS", overlays=list(overlays or []))
 
     def set_overlay_toggle(self, attr: str, checked: bool) -> None:
         handler = self._overlay_toggle_handlers.get(attr)

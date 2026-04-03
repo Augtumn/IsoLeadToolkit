@@ -227,10 +227,10 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         elif style_key == 'isochron':
             state_gateway.set_isochron_line_width(style_ref['linewidth'])
             if label_checks:
-                if not hasattr(app_state, 'isochron_label_options'):
-                    state_gateway.set_isochron_label_options({})
+                options = dict(getattr(app_state, 'isochron_label_options', {}) or {})
                 for key, chk in label_checks.items():
-                    app_state.isochron_label_options[key] = chk.isChecked()
+                    options[key] = chk.isChecked()
+                state_gateway.set_isochron_label_options(options)
         elif style_key == 'selected_isochron':
             state_gateway.set_selected_isochron_line_width(style_ref['linewidth'])
 

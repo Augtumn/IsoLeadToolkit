@@ -105,6 +105,14 @@ class StateStore:
             "ternary_factors": self._normalize_ternary_factors(
                 getattr(state, "ternary_factors", None)
             ),
+            "model_curve_width": float(getattr(state, "model_curve_width", 1.2)),
+            "plumbotectonics_curve_width": float(getattr(state, "plumbotectonics_curve_width", 1.2)),
+            "paleoisochron_width": float(getattr(state, "paleoisochron_width", 0.9)),
+            "model_age_line_width": float(getattr(state, "model_age_line_width", 0.7)),
+            "isochron_line_width": float(getattr(state, "isochron_line_width", 1.5)),
+            "selected_isochron_line_width": float(getattr(state, "selected_isochron_line_width", 2.0)),
+            "isochron_label_options": dict(getattr(state, "isochron_label_options", {}) or {}),
+            "equation_overlays": list(getattr(state, "equation_overlays", []) or []),
             "export_image_options": self._normalize_export_options(
                 getattr(state, "export_image_options", None)
             ),
@@ -342,6 +350,30 @@ class StateStore:
         elif action_type == "SET_TERNARY_FACTORS":
             self._snapshot["ternary_factors"] = self._normalize_ternary_factors(action.get("factors"))
 
+        elif action_type == "SET_MODEL_CURVE_WIDTH":
+            self._snapshot["model_curve_width"] = float(action.get("width", 1.2))
+
+        elif action_type == "SET_PLUMBOTECTONICS_CURVE_WIDTH":
+            self._snapshot["plumbotectonics_curve_width"] = float(action.get("width", 1.2))
+
+        elif action_type == "SET_PALEOISOCHRON_WIDTH":
+            self._snapshot["paleoisochron_width"] = float(action.get("width", 0.9))
+
+        elif action_type == "SET_MODEL_AGE_LINE_WIDTH":
+            self._snapshot["model_age_line_width"] = float(action.get("width", 0.7))
+
+        elif action_type == "SET_ISOCHRON_LINE_WIDTH":
+            self._snapshot["isochron_line_width"] = float(action.get("width", 1.5))
+
+        elif action_type == "SET_SELECTED_ISOCHRON_LINE_WIDTH":
+            self._snapshot["selected_isochron_line_width"] = float(action.get("width", 2.0))
+
+        elif action_type == "SET_ISOCHRON_LABEL_OPTIONS":
+            self._snapshot["isochron_label_options"] = dict(action.get("options") or {})
+
+        elif action_type == "SET_EQUATION_OVERLAYS":
+            self._snapshot["equation_overlays"] = list(action.get("overlays") or [])
+
         elif action_type == "RESET_COLUMN_SELECTION":
             self._snapshot["selected_2d_cols"] = []
             self._snapshot["selected_3d_cols"] = []
@@ -443,6 +475,14 @@ class StateStore:
             "ternary_stretch_mode": str(self._snapshot["ternary_stretch_mode"]),
             "ternary_stretch": bool(self._snapshot["ternary_stretch"]),
             "ternary_factors": list(self._snapshot["ternary_factors"]),
+            "model_curve_width": float(self._snapshot["model_curve_width"]),
+            "plumbotectonics_curve_width": float(self._snapshot["plumbotectonics_curve_width"]),
+            "paleoisochron_width": float(self._snapshot["paleoisochron_width"]),
+            "model_age_line_width": float(self._snapshot["model_age_line_width"]),
+            "isochron_line_width": float(self._snapshot["isochron_line_width"]),
+            "selected_isochron_line_width": float(self._snapshot["selected_isochron_line_width"]),
+            "isochron_label_options": dict(self._snapshot["isochron_label_options"]),
+            "equation_overlays": list(self._snapshot["equation_overlays"]),
             "export_image_options": dict(self._snapshot["export_image_options"]),
         }
 
@@ -519,6 +559,14 @@ class StateStore:
         self._state.ternary_stretch_mode = str(self._snapshot["ternary_stretch_mode"])
         self._state.ternary_stretch = bool(self._snapshot["ternary_stretch"])
         self._state.ternary_factors = list(self._snapshot["ternary_factors"])
+        self._state.model_curve_width = float(self._snapshot["model_curve_width"])
+        self._state.plumbotectonics_curve_width = float(self._snapshot["plumbotectonics_curve_width"])
+        self._state.paleoisochron_width = float(self._snapshot["paleoisochron_width"])
+        self._state.model_age_line_width = float(self._snapshot["model_age_line_width"])
+        self._state.isochron_line_width = float(self._snapshot["isochron_line_width"])
+        self._state.selected_isochron_line_width = float(self._snapshot["selected_isochron_line_width"])
+        self._state.isochron_label_options = dict(self._snapshot["isochron_label_options"])
+        self._state.equation_overlays = list(self._snapshot["equation_overlays"])
         self._state.export_image_options = dict(self._snapshot["export_image_options"])
 
     @classmethod

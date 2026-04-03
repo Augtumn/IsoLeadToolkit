@@ -377,6 +377,21 @@
                                                                     统一三元参数范围与 `ternary_factors` 列表语义。
                                                                 - 扩展状态与兼容测试，覆盖显式 setter 与 `set_attr`
                                                                     在上述域上的快照一致性。
+                                - 第五十九批迁移清理（方程与等时线样式配置纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `model_curve_width`、`plumbotectonics_curve_width`、
+                                                                    `paleoisochron_width`、`model_age_line_width`、
+                                                                    `isochron_line_width`、`selected_isochron_line_width`、
+                                                                    `isochron_label_options`、`equation_overlays`。
+                                                                - `core/state/gateway.py` 对应显式 API
+                                                                    `set_*_width`、`set_isochron_label_options`、
+                                                                    `set_equation_overlays` 改为 action dispatch。
+                                                                - `ui/dialogs/line_style_dialog.py` 的等时线标签选项
+                                                                    写入改为汇总后通过 gateway 一次回写，避免原地修改。
+                                                                - `ui/panels/analysis/equations.py` 的单条方程开关改为
+                                                                    复制列表后通过 gateway 回写，避免原地修改旁路 Store。
+                                                                - 扩展状态与兼容测试，覆盖上述域的显式 setter 与
+                                                                    `set_attr` 快照一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
