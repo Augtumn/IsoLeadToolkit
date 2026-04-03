@@ -24,6 +24,9 @@ def _snapshot_state() -> dict[str, Any]:
         "plumbotectonics_isoage_label_data": list(
             getattr(app_state, "plumbotectonics_isoage_label_data", []) or []
         ),
+        "last_pca_variance": getattr(app_state, "last_pca_variance", None),
+        "last_pca_components": getattr(app_state, "last_pca_components", None),
+        "current_feature_names": getattr(app_state, "current_feature_names", []),
         "adjust_text_in_progress": bool(getattr(app_state, "adjust_text_in_progress", False)),
         "confidence_level": float(getattr(app_state, "confidence_level", 0.95)),
         "current_palette": dict(getattr(app_state, "current_palette", {}) or {}),
@@ -85,6 +88,9 @@ def _snapshot_state() -> dict[str, Any]:
         "legend_columns": int(getattr(app_state, "legend_columns", 0)),
         "legend_nudge_step": float(getattr(app_state, "legend_nudge_step", 0.02)),
         "legend_offset": tuple(getattr(app_state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
+        "legend_last_title": getattr(app_state, "legend_last_title", None),
+        "legend_last_handles": getattr(app_state, "legend_last_handles", None),
+        "legend_last_labels": getattr(app_state, "legend_last_labels", None),
         "recent_files": list(getattr(app_state, "recent_files", []) or []),
         "line_styles": dict(getattr(app_state, "line_styles", {}) or {}),
         "saved_themes": dict(getattr(app_state, "saved_themes", {}) or {}),
@@ -147,6 +153,11 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_paleoisochron_label_data(snapshot["paleoisochron_label_data"])
     state_gateway.set_plumbotectonics_label_data(snapshot["plumbotectonics_label_data"])
     state_gateway.set_plumbotectonics_isoage_label_data(snapshot["plumbotectonics_isoage_label_data"])
+    state_gateway.set_pca_diagnostics(
+        last_pca_variance=snapshot["last_pca_variance"],
+        last_pca_components=snapshot["last_pca_components"],
+        current_feature_names=snapshot["current_feature_names"],
+    )
     state_gateway.set_adjust_text_in_progress(bool(snapshot["adjust_text_in_progress"]))
     state_gateway.set_confidence_level(float(snapshot["confidence_level"]))
     state_gateway.set_current_palette(snapshot["current_palette"])
@@ -209,6 +220,11 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_legend_columns(int(snapshot["legend_columns"]))
     state_gateway.set_legend_nudge_step(float(snapshot["legend_nudge_step"]))
     state_gateway.set_legend_offset(snapshot["legend_offset"])
+    state_gateway.set_legend_snapshot(
+        snapshot["legend_last_title"],
+        snapshot["legend_last_handles"],
+        snapshot["legend_last_labels"],
+    )
     state_gateway.set_recent_files(snapshot["recent_files"])
     state_gateway.set_line_styles(snapshot["line_styles"])
     state_gateway.set_saved_themes(snapshot["saved_themes"])
@@ -312,6 +328,34 @@ def test_state_store_overlay_label_domains() -> None:
         assert store_snapshot["paleoisochron_label_data"] == [{"text": "B"}]
         assert store_snapshot["plumbotectonics_label_data"] == [{"text": "C"}]
         assert store_snapshot["plumbotectonics_isoage_label_data"] == [{"text": "D"}]
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_pca_diagnostics_and_legend_snapshot_domains() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=[0.61, 0.39],
+            last_pca_components=[[1.0, 0.0], [0.0, 1.0]],
+            current_feature_names=["x", "y"],
+        )
+        state_gateway.set_legend_snapshot("Group", ["h1", "h2"], ["A", "B"])
+
+        assert app_state.last_pca_variance == [0.61, 0.39]
+        assert app_state.last_pca_components == [[1.0, 0.0], [0.0, 1.0]]
+        assert app_state.current_feature_names == ["x", "y"]
+        assert app_state.legend_last_title == "Group"
+        assert app_state.legend_last_handles == ["h1", "h2"]
+        assert app_state.legend_last_labels == ["A", "B"]
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["last_pca_variance"] == [0.61, 0.39]
+        assert store_snapshot["last_pca_components"] == [[1.0, 0.0], [0.0, 1.0]]
+        assert store_snapshot["current_feature_names"] == ["x", "y"]
+        assert store_snapshot["legend_last_title"] == "Group"
+        assert store_snapshot["legend_last_handles"] == ["h1", "h2"]
+        assert store_snapshot["legend_last_labels"] == ["A", "B"]
     finally:
         _restore_state(snapshot)
 

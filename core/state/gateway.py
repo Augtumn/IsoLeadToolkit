@@ -9,6 +9,7 @@ from .app_state import app_state
 from .store import StateStore
 
 logger = logging.getLogger(__name__)
+_UNSET = object()
 
 
 class AppStateGateway:
@@ -501,16 +502,19 @@ class AppStateGateway:
     def set_pca_diagnostics(
         self,
         *,
-        last_pca_variance: Any | None = None,
-        last_pca_components: Any | None = None,
-        current_feature_names: Any | None = None,
+        last_pca_variance: Any = _UNSET,
+        last_pca_components: Any = _UNSET,
+        current_feature_names: Any = _UNSET,
     ) -> None:
-        if last_pca_variance is not None:
-            self._state.last_pca_variance = last_pca_variance
-        if last_pca_components is not None:
-            self._state.last_pca_components = last_pca_components
-        if current_feature_names is not None:
-            self._state.current_feature_names = current_feature_names
+        payload: dict[str, Any] = {}
+        if last_pca_variance is not _UNSET:
+            payload["last_pca_variance"] = last_pca_variance
+        if last_pca_components is not _UNSET:
+            payload["last_pca_components"] = last_pca_components
+        if current_feature_names is not _UNSET:
+            payload["current_feature_names"] = current_feature_names
+        if payload:
+            self._dispatch("SET_PCA_DIAGNOSTICS", **payload)
 
     def set_overlay_label_flags(self, *, refreshing: bool, adjust_in_progress: bool) -> None:
         self.set_overlay_label_refreshing(refreshing)
@@ -604,9 +608,12 @@ class AppStateGateway:
         self._dispatch("SET_LEGEND_OFFSET", offset=offset)
 
     def set_legend_snapshot(self, title: Any, handles: Any, labels: Any) -> None:
-        self._state.legend_last_title = title
-        self._state.legend_last_handles = handles
-        self._state.legend_last_labels = labels
+        self._dispatch(
+            "SET_LEGEND_SNAPSHOT",
+            title=title,
+            handles=handles,
+            labels=labels,
+        )
 
     def set_isochron_results(self, results: Any) -> None:
         self._dispatch("SET_ISOCHRON_RESULTS", results=dict(results or {}))

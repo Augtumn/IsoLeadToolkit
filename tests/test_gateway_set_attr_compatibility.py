@@ -284,6 +284,32 @@ def test_point_size_set_attr_conversion() -> None:
         state_gateway.set_point_size(original_point_size)
 
 
+def test_pca_diagnostics_set_attr_compatibility() -> None:
+    original_variance = getattr(app_state, "last_pca_variance", None)
+    original_components = getattr(app_state, "last_pca_components", None)
+    original_features = getattr(app_state, "current_feature_names", None)
+
+    try:
+        state_gateway.set_attr("last_pca_variance", [0.7, 0.3])
+        state_gateway.set_attr("last_pca_components", [[1.0, 0.0], [0.0, 1.0]])
+        state_gateway.set_attr("current_feature_names", ["Si", "Pb"])
+
+        assert app_state.last_pca_variance == [0.7, 0.3]
+        assert app_state.last_pca_components == [[1.0, 0.0], [0.0, 1.0]]
+        assert app_state.current_feature_names == ["Si", "Pb"]
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["last_pca_variance"] == [0.7, 0.3]
+        assert snapshot["last_pca_components"] == [[1.0, 0.0], [0.0, 1.0]]
+        assert snapshot["current_feature_names"] == ["Si", "Pb"]
+    finally:
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=original_variance,
+            last_pca_components=original_components,
+            current_feature_names=original_features,
+        )
+
+
 def test_ui_theme_set_attr_conversion() -> None:
     original_theme = str(getattr(app_state, "ui_theme", "Modern Light"))
 

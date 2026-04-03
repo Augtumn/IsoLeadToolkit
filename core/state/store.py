@@ -39,6 +39,9 @@ class StateStore:
             "plumbotectonics_isoage_label_data": list(
                 getattr(state, "plumbotectonics_isoage_label_data", []) or []
             ),
+            "last_pca_variance": getattr(state, "last_pca_variance", None),
+            "last_pca_components": getattr(state, "last_pca_components", None),
+            "current_feature_names": getattr(state, "current_feature_names", []),
             "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
             "confidence_level": float(getattr(state, "confidence_level", 0.95)),
             "current_palette": dict(getattr(state, "current_palette", {}) or {}),
@@ -107,6 +110,9 @@ class StateStore:
             "legend_columns": int(getattr(state, "legend_columns", 0)),
             "legend_nudge_step": float(getattr(state, "legend_nudge_step", 0.02)),
             "legend_offset": tuple(getattr(state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
+            "legend_last_title": getattr(state, "legend_last_title", None),
+            "legend_last_handles": getattr(state, "legend_last_handles", None),
+            "legend_last_labels": getattr(state, "legend_last_labels", None),
             "recent_files": list(getattr(state, "recent_files", []) or []),
             "line_styles": dict(getattr(state, "line_styles", {}) or {}),
             "saved_themes": dict(getattr(state, "saved_themes", {}) or {}),
@@ -215,6 +221,14 @@ class StateStore:
 
         elif action_type == "SET_PLUMBOTECTONICS_ISOAGE_LABEL_DATA":
             self._snapshot["plumbotectonics_isoage_label_data"] = list(action.get("data") or [])
+
+        elif action_type == "SET_PCA_DIAGNOSTICS":
+            if "last_pca_variance" in action:
+                self._snapshot["last_pca_variance"] = action.get("last_pca_variance")
+            if "last_pca_components" in action:
+                self._snapshot["last_pca_components"] = action.get("last_pca_components")
+            if "current_feature_names" in action:
+                self._snapshot["current_feature_names"] = action.get("current_feature_names")
 
         elif action_type == "SET_ADJUST_TEXT_IN_PROGRESS":
             self._snapshot["adjust_text_in_progress"] = bool(action.get("in_progress", False))
@@ -350,6 +364,11 @@ class StateStore:
         elif action_type == "SET_LEGEND_OFFSET":
             offset = action.get("offset")
             self._snapshot["legend_offset"] = tuple(offset) if offset is not None else (0.0, 0.0)
+
+        elif action_type == "SET_LEGEND_SNAPSHOT":
+            self._snapshot["legend_last_title"] = action.get("title")
+            self._snapshot["legend_last_handles"] = action.get("handles")
+            self._snapshot["legend_last_labels"] = action.get("labels")
 
         elif action_type == "SET_RECENT_FILES":
             self._snapshot["recent_files"] = list(action.get("files") or [])
@@ -585,6 +604,9 @@ class StateStore:
             "plumbotectonics_isoage_label_data": list(
                 self._snapshot["plumbotectonics_isoage_label_data"]
             ),
+            "last_pca_variance": self._snapshot["last_pca_variance"],
+            "last_pca_components": self._snapshot["last_pca_components"],
+            "current_feature_names": self._snapshot["current_feature_names"],
             "adjust_text_in_progress": bool(self._snapshot["adjust_text_in_progress"]),
             "confidence_level": float(self._snapshot["confidence_level"]),
             "current_palette": dict(self._snapshot["current_palette"]),
@@ -646,6 +668,9 @@ class StateStore:
             "legend_columns": int(self._snapshot["legend_columns"]),
             "legend_nudge_step": float(self._snapshot["legend_nudge_step"]),
             "legend_offset": tuple(self._snapshot["legend_offset"]),
+            "legend_last_title": self._snapshot["legend_last_title"],
+            "legend_last_handles": self._snapshot["legend_last_handles"],
+            "legend_last_labels": self._snapshot["legend_last_labels"],
             "recent_files": list(self._snapshot["recent_files"]),
             "line_styles": dict(self._snapshot["line_styles"]),
             "saved_themes": dict(self._snapshot["saved_themes"]),
@@ -711,6 +736,9 @@ class StateStore:
         self._state.plumbotectonics_isoage_label_data = list(
             self._snapshot["plumbotectonics_isoage_label_data"]
         )
+        self._state.last_pca_variance = self._snapshot["last_pca_variance"]
+        self._state.last_pca_components = self._snapshot["last_pca_components"]
+        self._state.current_feature_names = self._snapshot["current_feature_names"]
         self._state.adjust_text_in_progress = bool(self._snapshot["adjust_text_in_progress"])
         self._state.confidence_level = float(self._snapshot["confidence_level"])
         self._state.current_palette = dict(self._snapshot["current_palette"])
@@ -773,6 +801,9 @@ class StateStore:
         self._state.legend_columns = int(self._snapshot["legend_columns"])
         self._state.legend_nudge_step = float(self._snapshot["legend_nudge_step"])
         self._state.legend_offset = tuple(self._snapshot["legend_offset"])
+        self._state.legend_last_title = self._snapshot["legend_last_title"]
+        self._state.legend_last_handles = self._snapshot["legend_last_handles"]
+        self._state.legend_last_labels = self._snapshot["legend_last_labels"]
         self._state.recent_files = list(self._snapshot["recent_files"])
         self._state.line_styles = dict(self._snapshot["line_styles"])
         self._state.saved_themes = dict(self._snapshot["saved_themes"])

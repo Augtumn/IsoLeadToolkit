@@ -588,6 +588,23 @@
                                                                 - `scripts/check_gateway_direct_state_assignments.py`
                                                                     直写白名单移除上述 4 个标签数据字段，
                                                                     防止后续回退为 gateway 直写。
+                                - 第七十六批迁移清理（PCA 诊断与图例快照纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `last_pca_variance`、`last_pca_components`、
+                                                                    `current_feature_names`、`legend_last_title`、
+                                                                    `legend_last_handles`、`legend_last_labels`，
+                                                                    并接入 dispatch/snapshot/sync。
+                                                                - `core/state/gateway.py` 的
+                                                                    `set_pca_diagnostics` 与 `set_legend_snapshot`
+                                                                    改为 action dispatch。
+                                                                - `set_pca_diagnostics` 支持显式清空字段
+                                                                    （可传 `None`），用于状态恢复场景。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter 与 `set_attr` 路径的
+                                                                    Store 快照一致性。
+                                                                - `scripts/check_gateway_direct_state_assignments.py`
+                                                                    白名单移除上述 6 个字段，持续防止直写回退。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
