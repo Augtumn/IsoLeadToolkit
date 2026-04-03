@@ -125,8 +125,24 @@ def test_palette_and_marker_map_setter_syncs_snapshot() -> None:
         assert app_state.current_palette == {"GroupA": "#112233"}
         assert app_state.group_marker_map == {"GroupA": "s"}
         assert app_state.state_store.snapshot()["current_palette"] == {"GroupA": "#112233"}
+        assert app_state.state_store.snapshot()["group_marker_map"] == {"GroupA": "s"}
     finally:
         state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
+
+
+def test_group_marker_map_set_attr_compatibility() -> None:
+    original_marker_map = dict(getattr(app_state, "group_marker_map", {}) or {})
+
+    try:
+        state_gateway.set_attr("group_marker_map", {"GroupA": "^", "GroupB": "D"})
+
+        assert app_state.group_marker_map == {"GroupA": "^", "GroupB": "D"}
+        assert app_state.state_store.snapshot()["group_marker_map"] == {
+            "GroupA": "^",
+            "GroupB": "D",
+        }
+    finally:
+        state_gateway.set_group_marker_map(original_marker_map)
 
 
 def test_point_size_set_attr_conversion() -> None:

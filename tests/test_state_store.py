@@ -20,6 +20,7 @@ def _snapshot_state() -> dict[str, Any]:
         "adjust_text_in_progress": bool(getattr(app_state, "adjust_text_in_progress", False)),
         "confidence_level": float(getattr(app_state, "confidence_level", 0.95)),
         "current_palette": dict(getattr(app_state, "current_palette", {}) or {}),
+        "group_marker_map": dict(getattr(app_state, "group_marker_map", {}) or {}),
         "current_plot_title": str(getattr(app_state, "current_plot_title", "")),
         "last_2d_cols": (
             list(getattr(app_state, "last_2d_cols", []) or [])
@@ -138,6 +139,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_adjust_text_in_progress(bool(snapshot["adjust_text_in_progress"]))
     state_gateway.set_confidence_level(float(snapshot["confidence_level"]))
     state_gateway.set_current_palette(snapshot["current_palette"])
+    state_gateway.set_group_marker_map(snapshot["group_marker_map"])
     state_gateway.set_current_plot_title(str(snapshot["current_plot_title"]))
     state_gateway.set_last_2d_cols(snapshot["last_2d_cols"])
     state_gateway.set_show_model_curves(bool(snapshot["show_model_curves"]))
@@ -306,6 +308,7 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_adjust_text_in_progress(True)
         state_gateway.set_confidence_level(0.91)
         state_gateway.set_current_palette({"A": "#112233", "B": "#445566"})
+        state_gateway.set_group_marker_map({"A": "o", "B": "s"})
         state_gateway.set_current_plot_title("Batch 64 demo")
         state_gateway.set_last_2d_cols(["x", "y"])
         state_gateway.set_show_model_curves(False)
@@ -384,6 +387,7 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.adjust_text_in_progress is True
         assert app_state.confidence_level == 0.91
         assert app_state.current_palette == {"A": "#112233", "B": "#445566"}
+        assert app_state.group_marker_map == {"A": "o", "B": "s"}
         assert app_state.current_plot_title == "Batch 64 demo"
         assert app_state.last_2d_cols == ["x", "y"]
         assert app_state.show_model_curves is False
@@ -453,6 +457,7 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["adjust_text_in_progress"] is True
         assert store_snapshot["confidence_level"] == 0.91
         assert store_snapshot["current_palette"] == {"A": "#112233", "B": "#445566"}
+        assert store_snapshot["group_marker_map"] == {"A": "o", "B": "s"}
         assert store_snapshot["current_plot_title"] == "Batch 64 demo"
         assert store_snapshot["last_2d_cols"] == ["x", "y"]
         assert store_snapshot["show_model_curves"] is False

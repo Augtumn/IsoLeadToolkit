@@ -488,6 +488,18 @@
                                                                     新增回归，验证 `set_palette_and_marker_map`
                                                                     同步更新 `app_state.current_palette` 与
                                                                     `state_store` 快照一致性。
+                                - 第六十九批迁移清理（group_marker_map 纳入 StateStore）：
+                                                                - `core/state/store.py` 新增
+                                                                    `group_marker_map` 状态域与
+                                                                    `SET_GROUP_MARKER_MAP` action，
+                                                                    并接入 snapshot/sync。
+                                                                - `core/state/gateway.py`
+                                                                    新增 `set_group_marker_map`，
+                                                                    `set_palette_and_marker_map` 改为
+                                                                    palette 与 marker map 双 dispatch。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter 与 `set_attr` 兼容路径。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

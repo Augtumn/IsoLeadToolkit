@@ -120,6 +120,7 @@ class AppStateGateway:
             "ax": "set_axis",
             "legend_ax": "set_legend_ax",
             "current_palette": "set_current_palette",
+            "group_marker_map": "set_group_marker_map",
             "annotation": "set_annotation",
             "last_2d_cols": "set_last_2d_cols",
             "recent_files": "set_recent_files",
@@ -458,10 +459,13 @@ class AppStateGateway:
 
     def set_palette_and_marker_map(self, palette: dict[str, Any], marker_map: dict[str, Any]) -> None:
         self._dispatch("SET_CURRENT_PALETTE", palette=dict(palette))
-        self._state.group_marker_map = dict(marker_map)
+        self._dispatch("SET_GROUP_MARKER_MAP", marker_map=dict(marker_map))
 
     def set_current_palette(self, palette: Any) -> None:
         self._dispatch("SET_CURRENT_PALETTE", palette=dict(palette or {}))
+
+    def set_group_marker_map(self, marker_map: Any) -> None:
+        self._dispatch("SET_GROUP_MARKER_MAP", marker_map=dict(marker_map or {}))
 
     def set_adjust_text_in_progress(self, in_progress: bool) -> None:
         self._dispatch("SET_ADJUST_TEXT_IN_PROGRESS", in_progress=bool(in_progress))

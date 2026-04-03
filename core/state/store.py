@@ -34,6 +34,7 @@ class StateStore:
             "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
             "confidence_level": float(getattr(state, "confidence_level", 0.95)),
             "current_palette": dict(getattr(state, "current_palette", {}) or {}),
+            "group_marker_map": dict(getattr(state, "group_marker_map", {}) or {}),
             "current_plot_title": str(getattr(state, "current_plot_title", "")),
             "last_2d_cols": (
                 list(getattr(state, "last_2d_cols", []) or [])
@@ -203,6 +204,9 @@ class StateStore:
 
         elif action_type == "SET_CURRENT_PALETTE":
             self._snapshot["current_palette"] = dict(action.get("palette") or {})
+
+        elif action_type == "SET_GROUP_MARKER_MAP":
+            self._snapshot["group_marker_map"] = dict(action.get("marker_map") or {})
 
         elif action_type == "SET_CURRENT_PLOT_TITLE":
             self._snapshot["current_plot_title"] = str(action.get("title", ""))
@@ -558,6 +562,7 @@ class StateStore:
             "adjust_text_in_progress": bool(self._snapshot["adjust_text_in_progress"]),
             "confidence_level": float(self._snapshot["confidence_level"]),
             "current_palette": dict(self._snapshot["current_palette"]),
+            "group_marker_map": dict(self._snapshot["group_marker_map"]),
             "current_plot_title": str(self._snapshot["current_plot_title"]),
             "last_2d_cols": (
                 list(self._snapshot["last_2d_cols"])
@@ -677,6 +682,7 @@ class StateStore:
         self._state.adjust_text_in_progress = bool(self._snapshot["adjust_text_in_progress"])
         self._state.confidence_level = float(self._snapshot["confidence_level"])
         self._state.current_palette = dict(self._snapshot["current_palette"])
+        self._state.group_marker_map = dict(self._snapshot["group_marker_map"])
         self._state.current_plot_title = str(self._snapshot["current_plot_title"])
         self._state.last_2d_cols = (
             list(self._snapshot["last_2d_cols"])
