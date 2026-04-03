@@ -472,19 +472,19 @@ class AppStateGateway:
         self._dispatch("SET_SHOW_GROWTH_CURVES", show=bool(show))
 
     def set_use_real_age_for_mu_kappa(self, enabled: bool) -> None:
-        self._state.use_real_age_for_mu_kappa = bool(enabled)
+        self._dispatch("SET_USE_REAL_AGE_FOR_MU_KAPPA", enabled=bool(enabled))
 
     def set_mu_kappa_age_col(self, column: Any) -> None:
-        self._state.mu_kappa_age_col = column
+        self._dispatch("SET_MU_KAPPA_AGE_COL", column=column)
 
     def set_plumbotectonics_variant(self, variant: str) -> None:
-        self._state.plumbotectonics_variant = str(variant)
+        self._dispatch("SET_PLUMBOTECTONICS_VARIANT", variant=variant)
 
     def set_paleoisochron_step(self, step: int) -> None:
-        self._state.paleoisochron_step = int(step)
+        self._dispatch("SET_PALEOISOCHRON_STEP", step=step)
 
     def set_paleoisochron_ages(self, ages: Any) -> None:
-        self._state.paleoisochron_ages = list(ages or [])
+        self._dispatch("SET_PALEOISOCHRON_AGES", ages=list(ages or []))
 
     def set_overlay_artists(self, artists: Any) -> None:
         self._state.overlay_artists = dict(artists or {})

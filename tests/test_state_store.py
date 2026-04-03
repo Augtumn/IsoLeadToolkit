@@ -20,6 +20,11 @@ def _snapshot_state() -> dict[str, Any]:
         "show_model_age_lines": bool(getattr(app_state, "show_model_age_lines", True)),
         "show_growth_curves": bool(getattr(app_state, "show_growth_curves", True)),
         "show_isochrons": bool(getattr(app_state, "show_isochrons", False)),
+        "use_real_age_for_mu_kappa": bool(getattr(app_state, "use_real_age_for_mu_kappa", False)),
+        "mu_kappa_age_col": getattr(app_state, "mu_kappa_age_col", None),
+        "plumbotectonics_variant": str(getattr(app_state, "plumbotectonics_variant", "0")),
+        "paleoisochron_step": int(getattr(app_state, "paleoisochron_step", 1000)),
+        "paleoisochron_ages": list(getattr(app_state, "paleoisochron_ages", []) or []),
         "marginal_kde_top_size": float(getattr(app_state, "marginal_kde_top_size", 15.0)),
         "marginal_kde_right_size": float(getattr(app_state, "marginal_kde_right_size", 15.0)),
         "marginal_kde_max_points": int(getattr(app_state, "marginal_kde_max_points", 5000)),
@@ -108,6 +113,11 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_show_model_age_lines(bool(snapshot["show_model_age_lines"]))
     state_gateway.set_show_growth_curves(bool(snapshot["show_growth_curves"]))
     state_gateway.set_show_isochrons(bool(snapshot["show_isochrons"]))
+    state_gateway.set_use_real_age_for_mu_kappa(bool(snapshot["use_real_age_for_mu_kappa"]))
+    state_gateway.set_mu_kappa_age_col(snapshot["mu_kappa_age_col"])
+    state_gateway.set_plumbotectonics_variant(str(snapshot["plumbotectonics_variant"]))
+    state_gateway.set_paleoisochron_step(int(snapshot["paleoisochron_step"]))
+    state_gateway.set_paleoisochron_ages(snapshot["paleoisochron_ages"])
     state_gateway.set_marginal_kde_layout(
         top_size=float(snapshot["marginal_kde_top_size"]),
         right_size=float(snapshot["marginal_kde_right_size"]),
@@ -237,6 +247,11 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_show_model_age_lines(False)
         state_gateway.set_show_growth_curves(False)
         state_gateway.set_show_isochrons(True)
+        state_gateway.set_use_real_age_for_mu_kappa(True)
+        state_gateway.set_mu_kappa_age_col("Age_Ma")
+        state_gateway.set_plumbotectonics_variant("2")
+        state_gateway.set_paleoisochron_step(250)
+        state_gateway.set_paleoisochron_ages([1000, 750, 500, 250])
         state_gateway.set_standardize_data(False)
         state_gateway.set_pca_component_indices([2, 4])
         state_gateway.set_ternary_auto_zoom(False)
@@ -298,6 +313,11 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.show_model_age_lines is False
         assert app_state.show_growth_curves is False
         assert app_state.show_isochrons is True
+        assert app_state.use_real_age_for_mu_kappa is True
+        assert app_state.mu_kappa_age_col == "Age_Ma"
+        assert app_state.plumbotectonics_variant == "2"
+        assert app_state.paleoisochron_step == 250
+        assert app_state.paleoisochron_ages == [1000, 750, 500, 250]
         assert app_state.standardize_data is False
         assert app_state.pca_component_indices == [2, 4]
         assert app_state.ternary_auto_zoom is False
@@ -350,6 +370,11 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["show_model_age_lines"] is False
         assert store_snapshot["show_growth_curves"] is False
         assert store_snapshot["show_isochrons"] is True
+        assert store_snapshot["use_real_age_for_mu_kappa"] is True
+        assert store_snapshot["mu_kappa_age_col"] == "Age_Ma"
+        assert store_snapshot["plumbotectonics_variant"] == "2"
+        assert store_snapshot["paleoisochron_step"] == 250
+        assert store_snapshot["paleoisochron_ages"] == [1000, 750, 500, 250]
         assert store_snapshot["standardize_data"] is False
         assert store_snapshot["pca_component_indices"] == [2, 4]
         assert store_snapshot["ternary_auto_zoom"] is False

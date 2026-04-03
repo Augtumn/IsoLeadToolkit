@@ -406,6 +406,18 @@
                                                                 - 扩展 `tests/test_state_store.py` 与
                                                                     `tests/test_gateway_set_attr_compatibility.py`，
                                                                     覆盖显式 setter 与 `set_attr` 在上述开关域上的一致性。
+                                - 第六十一批迁移清理（地化参数域纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `use_real_age_for_mu_kappa`、`mu_kappa_age_col`、
+                                                                    `plumbotectonics_variant`、`paleoisochron_step`、
+                                                                    `paleoisochron_ages`。
+                                                                - `core/state/gateway.py` 对应显式 API
+                                                                    `set_use_real_age_for_mu_kappa`、`set_mu_kappa_age_col`、
+                                                                    `set_plumbotectonics_variant`、`set_paleoisochron_step`、
+                                                                    `set_paleoisochron_ages` 改为 action dispatch。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter 与 `set_attr` 在上述参数域上的一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

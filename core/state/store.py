@@ -36,6 +36,11 @@ class StateStore:
             "show_model_age_lines": bool(getattr(state, "show_model_age_lines", True)),
             "show_growth_curves": bool(getattr(state, "show_growth_curves", True)),
             "show_isochrons": bool(getattr(state, "show_isochrons", False)),
+            "use_real_age_for_mu_kappa": bool(getattr(state, "use_real_age_for_mu_kappa", False)),
+            "mu_kappa_age_col": getattr(state, "mu_kappa_age_col", None),
+            "plumbotectonics_variant": str(getattr(state, "plumbotectonics_variant", "0")),
+            "paleoisochron_step": int(getattr(state, "paleoisochron_step", 1000)),
+            "paleoisochron_ages": list(getattr(state, "paleoisochron_ages", []) or []),
             "marginal_kde_top_size": float(getattr(state, "marginal_kde_top_size", 15.0)),
             "marginal_kde_right_size": float(getattr(state, "marginal_kde_right_size", 15.0)),
             "marginal_kde_max_points": int(getattr(state, "marginal_kde_max_points", 5000)),
@@ -166,6 +171,21 @@ class StateStore:
 
         elif action_type == "SET_SHOW_ISOCHRONS":
             self._snapshot["show_isochrons"] = bool(action.get("show", False))
+
+        elif action_type == "SET_USE_REAL_AGE_FOR_MU_KAPPA":
+            self._snapshot["use_real_age_for_mu_kappa"] = bool(action.get("enabled", False))
+
+        elif action_type == "SET_MU_KAPPA_AGE_COL":
+            self._snapshot["mu_kappa_age_col"] = action.get("column")
+
+        elif action_type == "SET_PLUMBOTECTONICS_VARIANT":
+            self._snapshot["plumbotectonics_variant"] = str(action.get("variant", "0"))
+
+        elif action_type == "SET_PALEOISOCHRON_STEP":
+            self._snapshot["paleoisochron_step"] = int(action.get("step", 1000))
+
+        elif action_type == "SET_PALEOISOCHRON_AGES":
+            self._snapshot["paleoisochron_ages"] = list(action.get("ages") or [])
 
         elif action_type == "SET_MARGINAL_KDE_LAYOUT":
             top_size = action.get("top_size")
@@ -446,6 +466,11 @@ class StateStore:
             "show_model_age_lines": bool(self._snapshot["show_model_age_lines"]),
             "show_growth_curves": bool(self._snapshot["show_growth_curves"]),
             "show_isochrons": bool(self._snapshot["show_isochrons"]),
+            "use_real_age_for_mu_kappa": bool(self._snapshot["use_real_age_for_mu_kappa"]),
+            "mu_kappa_age_col": self._snapshot["mu_kappa_age_col"],
+            "plumbotectonics_variant": str(self._snapshot["plumbotectonics_variant"]),
+            "paleoisochron_step": int(self._snapshot["paleoisochron_step"]),
+            "paleoisochron_ages": list(self._snapshot["paleoisochron_ages"]),
             "marginal_kde_top_size": float(self._snapshot["marginal_kde_top_size"]),
             "marginal_kde_right_size": float(self._snapshot["marginal_kde_right_size"]),
             "marginal_kde_max_points": int(self._snapshot["marginal_kde_max_points"]),
@@ -535,6 +560,11 @@ class StateStore:
         self._state.show_model_age_lines = bool(self._snapshot["show_model_age_lines"])
         self._state.show_growth_curves = bool(self._snapshot["show_growth_curves"])
         self._state.show_isochrons = bool(self._snapshot["show_isochrons"])
+        self._state.use_real_age_for_mu_kappa = bool(self._snapshot["use_real_age_for_mu_kappa"])
+        self._state.mu_kappa_age_col = self._snapshot["mu_kappa_age_col"]
+        self._state.plumbotectonics_variant = str(self._snapshot["plumbotectonics_variant"])
+        self._state.paleoisochron_step = int(self._snapshot["paleoisochron_step"])
+        self._state.paleoisochron_ages = list(self._snapshot["paleoisochron_ages"])
         self._state.marginal_kde_top_size = float(self._snapshot["marginal_kde_top_size"])
         self._state.marginal_kde_right_size = float(self._snapshot["marginal_kde_right_size"])
         self._state.marginal_kde_max_points = int(self._snapshot["marginal_kde_max_points"])

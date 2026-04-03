@@ -492,6 +492,40 @@ def test_geochem_overlay_visibility_set_attr_compatibility(attr: str) -> None:
         state_gateway.set_attr(attr, original_value)
 
 
+def test_geochem_parameter_set_attr_compatibility() -> None:
+    original_use_real_age = bool(getattr(app_state, "use_real_age_for_mu_kappa", False))
+    original_mu_kappa_age_col = getattr(app_state, "mu_kappa_age_col", None)
+    original_variant = str(getattr(app_state, "plumbotectonics_variant", "0"))
+    original_step = int(getattr(app_state, "paleoisochron_step", 1000))
+    original_ages = list(getattr(app_state, "paleoisochron_ages", []) or [])
+
+    try:
+        state_gateway.set_attr("use_real_age_for_mu_kappa", True)
+        state_gateway.set_attr("mu_kappa_age_col", "Age_Ma")
+        state_gateway.set_attr("plumbotectonics_variant", 2)
+        state_gateway.set_attr("paleoisochron_step", "250")
+        state_gateway.set_attr("paleoisochron_ages", [1000, 750, 500, 250])
+
+        assert app_state.use_real_age_for_mu_kappa is True
+        assert app_state.mu_kappa_age_col == "Age_Ma"
+        assert app_state.plumbotectonics_variant == "2"
+        assert app_state.paleoisochron_step == 250
+        assert app_state.paleoisochron_ages == [1000, 750, 500, 250]
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["use_real_age_for_mu_kappa"] is True
+        assert snapshot["mu_kappa_age_col"] == "Age_Ma"
+        assert snapshot["plumbotectonics_variant"] == "2"
+        assert snapshot["paleoisochron_step"] == 250
+        assert snapshot["paleoisochron_ages"] == [1000, 750, 500, 250]
+    finally:
+        state_gateway.set_use_real_age_for_mu_kappa(original_use_real_age)
+        state_gateway.set_mu_kappa_age_col(original_mu_kappa_age_col)
+        state_gateway.set_plumbotectonics_variant(original_variant)
+        state_gateway.set_paleoisochron_step(original_step)
+        state_gateway.set_paleoisochron_ages(original_ages)
+
+
 def test_confidence_level_set_attr_conversion() -> None:
     original_level = float(getattr(app_state, "confidence_level", 0.95))
 
