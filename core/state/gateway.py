@@ -223,6 +223,7 @@ class AppStateGateway:
             "ml_last_result": "set_ml_last_result",
             "ml_last_model_meta": "set_ml_last_model_meta",
             "equation_overlays": "set_equation_overlays",
+            "selected_isochron_data": "set_selected_isochron_data",
             "tooltip_columns": "set_tooltip_columns",
             "selected_indices": "set_selected_indices",
             "selection_tool": "set_selection_tool",
@@ -496,8 +497,11 @@ class AppStateGateway:
         self._state.legend_ax = legend_ax
 
     def set_last_embedding(self, embedding: Any, embedding_type: str) -> None:
-        self._state.last_embedding = embedding
-        self._state.last_embedding_type = str(embedding_type)
+        self._dispatch(
+            "SET_LAST_EMBEDDING",
+            embedding=embedding,
+            embedding_type=str(embedding_type),
+        )
 
     def set_pca_diagnostics(
         self,
@@ -867,7 +871,7 @@ class AppStateGateway:
         self._state.selection_ellipse = ellipse
 
     def set_selected_isochron_data(self, data: Any) -> None:
-        self._state.selected_isochron_data = data
+        self._dispatch("SET_SELECTED_ISOCHRON_DATA", data=data)
 
     def set_show_isochrons(self, show: bool) -> None:
         self._dispatch("SET_SHOW_ISOCHRONS", show=bool(show))

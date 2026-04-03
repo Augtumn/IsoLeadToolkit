@@ -24,6 +24,9 @@ def _snapshot_state() -> dict[str, Any]:
         "plumbotectonics_isoage_label_data": list(
             getattr(app_state, "plumbotectonics_isoage_label_data", []) or []
         ),
+        "last_embedding": getattr(app_state, "last_embedding", None),
+        "last_embedding_type": str(getattr(app_state, "last_embedding_type", "") or ""),
+        "selected_isochron_data": getattr(app_state, "selected_isochron_data", None),
         "last_pca_variance": getattr(app_state, "last_pca_variance", None),
         "last_pca_components": getattr(app_state, "last_pca_components", None),
         "current_feature_names": getattr(app_state, "current_feature_names", []),
@@ -153,6 +156,8 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_paleoisochron_label_data(snapshot["paleoisochron_label_data"])
     state_gateway.set_plumbotectonics_label_data(snapshot["plumbotectonics_label_data"])
     state_gateway.set_plumbotectonics_isoage_label_data(snapshot["plumbotectonics_isoage_label_data"])
+    state_gateway.set_last_embedding(snapshot["last_embedding"], snapshot["last_embedding_type"])
+    state_gateway.set_selected_isochron_data(snapshot["selected_isochron_data"])
     state_gateway.set_pca_diagnostics(
         last_pca_variance=snapshot["last_pca_variance"],
         last_pca_components=snapshot["last_pca_components"],
@@ -328,6 +333,24 @@ def test_state_store_overlay_label_domains() -> None:
         assert store_snapshot["paleoisochron_label_data"] == [{"text": "B"}]
         assert store_snapshot["plumbotectonics_label_data"] == [{"text": "C"}]
         assert store_snapshot["plumbotectonics_isoage_label_data"] == [{"text": "D"}]
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_embedding_and_selected_isochron_domains() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_last_embedding([[1.0, 2.0], [3.0, 4.0]], "PCA")
+        state_gateway.set_selected_isochron_data({"group": "A", "mswd": 1.2})
+
+        assert app_state.last_embedding == [[1.0, 2.0], [3.0, 4.0]]
+        assert app_state.last_embedding_type == "PCA"
+        assert app_state.selected_isochron_data == {"group": "A", "mswd": 1.2}
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["last_embedding"] == [[1.0, 2.0], [3.0, 4.0]]
+        assert store_snapshot["last_embedding_type"] == "PCA"
+        assert store_snapshot["selected_isochron_data"] == {"group": "A", "mswd": 1.2}
     finally:
         _restore_state(snapshot)
 

@@ -605,6 +605,25 @@
                                                                     Store 快照一致性。
                                                                 - `scripts/check_gateway_direct_state_assignments.py`
                                                                     白名单移除上述 6 个字段，持续防止直写回退。
+                                - 第七十七批迁移清理（嵌入快照与选中等时线数据纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `last_embedding`、`last_embedding_type`、
+                                                                    `selected_isochron_data`，并接入
+                                                                    dispatch/snapshot/sync。
+                                                                - `core/state/gateway.py` 的
+                                                                    `set_last_embedding` 与
+                                                                    `set_selected_isochron_data`
+                                                                    改为 action dispatch。
+                                                                - `set_attr` 兼容映射新增
+                                                                    `selected_isochron_data` 路由，
+                                                                    统一走显式 setter。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter 与兼容路径的
+                                                                    Store 快照一致性。
+                                                                - `scripts/check_gateway_direct_state_assignments.py`
+                                                                    白名单移除上述 3 个字段，
+                                                                    持续防止 gateway 直写回退。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 

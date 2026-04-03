@@ -310,6 +310,29 @@ def test_pca_diagnostics_set_attr_compatibility() -> None:
         )
 
 
+def test_last_embedding_and_selected_isochron_set_attr_compatibility() -> None:
+    original_embedding = getattr(app_state, "last_embedding", None)
+    original_embedding_type = str(getattr(app_state, "last_embedding_type", "") or "")
+    original_selected_isochron_data = getattr(app_state, "selected_isochron_data", None)
+
+    try:
+        state_gateway.set_attr("last_embedding_type", "TERNARY")
+        state_gateway.set_attr("last_embedding", [[0.1, 0.2], [0.3, 0.4]])
+        state_gateway.set_attr("selected_isochron_data", {"group": "B", "mswd": 1.7})
+
+        assert app_state.last_embedding_type == "TERNARY"
+        assert app_state.last_embedding == [[0.1, 0.2], [0.3, 0.4]]
+        assert app_state.selected_isochron_data == {"group": "B", "mswd": 1.7}
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["last_embedding_type"] == "TERNARY"
+        assert snapshot["last_embedding"] == [[0.1, 0.2], [0.3, 0.4]]
+        assert snapshot["selected_isochron_data"] == {"group": "B", "mswd": 1.7}
+    finally:
+        state_gateway.set_last_embedding(original_embedding, original_embedding_type)
+        state_gateway.set_selected_isochron_data(original_selected_isochron_data)
+
+
 def test_ui_theme_set_attr_conversion() -> None:
     original_theme = str(getattr(app_state, "ui_theme", "Modern Light"))
 

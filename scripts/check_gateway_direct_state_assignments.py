@@ -15,8 +15,6 @@ ALLOWED_DIRECT_FIELDS = {
     "ax",
     "canvas",
     "legend_ax",
-    "last_embedding",
-    "last_embedding_type",
     "control_panel_ref",
     "legend_update_callback",
     "group_marker_map",
@@ -30,7 +28,6 @@ ALLOWED_DIRECT_FIELDS = {
     "lasso_selector",
     "selection_overlay",
     "selection_ellipse",
-    "selected_isochron_data",
 }
 
 

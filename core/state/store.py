@@ -39,6 +39,9 @@ class StateStore:
             "plumbotectonics_isoage_label_data": list(
                 getattr(state, "plumbotectonics_isoage_label_data", []) or []
             ),
+            "last_embedding": getattr(state, "last_embedding", None),
+            "last_embedding_type": str(getattr(state, "last_embedding_type", "") or ""),
+            "selected_isochron_data": getattr(state, "selected_isochron_data", None),
             "last_pca_variance": getattr(state, "last_pca_variance", None),
             "last_pca_components": getattr(state, "last_pca_components", None),
             "current_feature_names": getattr(state, "current_feature_names", []),
@@ -221,6 +224,13 @@ class StateStore:
 
         elif action_type == "SET_PLUMBOTECTONICS_ISOAGE_LABEL_DATA":
             self._snapshot["plumbotectonics_isoage_label_data"] = list(action.get("data") or [])
+
+        elif action_type == "SET_LAST_EMBEDDING":
+            self._snapshot["last_embedding"] = action.get("embedding")
+            self._snapshot["last_embedding_type"] = str(action.get("embedding_type", "") or "")
+
+        elif action_type == "SET_SELECTED_ISOCHRON_DATA":
+            self._snapshot["selected_isochron_data"] = action.get("data")
 
         elif action_type == "SET_PCA_DIAGNOSTICS":
             if "last_pca_variance" in action:
@@ -604,6 +614,9 @@ class StateStore:
             "plumbotectonics_isoage_label_data": list(
                 self._snapshot["plumbotectonics_isoage_label_data"]
             ),
+            "last_embedding": self._snapshot["last_embedding"],
+            "last_embedding_type": str(self._snapshot["last_embedding_type"]),
+            "selected_isochron_data": self._snapshot["selected_isochron_data"],
             "last_pca_variance": self._snapshot["last_pca_variance"],
             "last_pca_components": self._snapshot["last_pca_components"],
             "current_feature_names": self._snapshot["current_feature_names"],
@@ -736,6 +749,9 @@ class StateStore:
         self._state.plumbotectonics_isoage_label_data = list(
             self._snapshot["plumbotectonics_isoage_label_data"]
         )
+        self._state.last_embedding = self._snapshot["last_embedding"]
+        self._state.last_embedding_type = str(self._snapshot["last_embedding_type"])
+        self._state.selected_isochron_data = self._snapshot["selected_isochron_data"]
         self._state.last_pca_variance = self._snapshot["last_pca_variance"]
         self._state.last_pca_components = self._snapshot["last_pca_components"]
         self._state.current_feature_names = self._snapshot["current_feature_names"]
