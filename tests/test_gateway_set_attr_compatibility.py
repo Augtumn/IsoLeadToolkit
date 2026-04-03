@@ -96,22 +96,37 @@ def test_overlay_toggle_known_attr_compatibility(attr: str) -> None:
         state_gateway.set_overlay_toggle(attr, original_value)
 
 
-def test_overlay_toggle_fallback_attr_assignment() -> None:
+def test_overlay_toggle_unknown_attr_ignored() -> None:
     fallback_attr = "_test_overlay_toggle_fallback"
     existed = hasattr(app_state, fallback_attr)
     original_value = bool(getattr(app_state, fallback_attr, False)) if existed else False
 
     try:
         state_gateway.set_overlay_toggle(fallback_attr, True)
-        assert getattr(app_state, fallback_attr) is True
-
         state_gateway.set_overlay_toggle(fallback_attr, False)
-        assert getattr(app_state, fallback_attr) is False
+        if existed:
+            assert getattr(app_state, fallback_attr) is original_value
+        else:
+            assert not hasattr(app_state, fallback_attr)
     finally:
         if existed:
             setattr(app_state, fallback_attr, original_value)
         elif hasattr(app_state, fallback_attr):
             delattr(app_state, fallback_attr)
+
+
+def test_palette_and_marker_map_setter_syncs_snapshot() -> None:
+    original_palette = dict(getattr(app_state, "current_palette", {}) or {})
+    original_marker_map = dict(getattr(app_state, "group_marker_map", {}) or {})
+
+    try:
+        state_gateway.set_palette_and_marker_map({"GroupA": "#112233"}, {"GroupA": "s"})
+
+        assert app_state.current_palette == {"GroupA": "#112233"}
+        assert app_state.group_marker_map == {"GroupA": "s"}
+        assert app_state.state_store.snapshot()["current_palette"] == {"GroupA": "#112233"}
+    finally:
+        state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
 
 
 def test_point_size_set_attr_conversion() -> None:

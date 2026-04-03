@@ -678,7 +678,7 @@ class AppStateGateway:
         if handler is not None:
             handler(bool(checked))
             return
-        setattr(self._state, attr, bool(checked))
+        logger.warning("Ignored unknown overlay toggle attr: %s", attr)
 
     def set_marginal_axes(self, marginal_axes: Any) -> None:
         self._state.marginal_axes = marginal_axes

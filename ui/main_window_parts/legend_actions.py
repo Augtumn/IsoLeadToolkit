@@ -172,7 +172,10 @@ class MainWindowLegendActionsMixin:
         color = QColorDialog.getColor(QColor(current_color), self, f"Color for {group}")
         if color.isValid():
             new_hex = color.name()
-            app_state.current_palette[group] = new_hex
+            updated_palette = dict(getattr(app_state, "current_palette", {}) or {})
+            updated_palette[group] = new_hex
+            marker_map = dict(getattr(app_state, "group_marker_map", {}) or {})
+            state_gateway.set_palette_and_marker_map(updated_palette, marker_map)
             self._update_marker_swatch(group, swatch)
 
             if hasattr(app_state, "group_to_scatter") and group in app_state.group_to_scatter:
@@ -189,7 +192,10 @@ class MainWindowLegendActionsMixin:
     def _set_group_shape_value(self, group, marker_value, swatch):
         self._ensure_marker_shape_map()
         marker = marker_value or getattr(app_state, "plot_marker_shape", "o")
-        app_state.group_marker_map[group] = marker
+        updated_marker_map = dict(getattr(app_state, "group_marker_map", {}) or {})
+        updated_marker_map[group] = marker
+        palette = dict(getattr(app_state, "current_palette", {}) or {})
+        state_gateway.set_palette_and_marker_map(palette, updated_marker_map)
         self._update_marker_swatch(group, swatch)
         self._sync_legend_panel_ui(refresh=True)
         self._refresh_plot()

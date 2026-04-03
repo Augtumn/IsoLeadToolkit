@@ -472,6 +472,22 @@
                                                                     从直写改为安全调用显式 setter，避免旁路 StateStore。
                                                                 - `tests/test_guard_scripts.py` 纳入新守护脚本，
                                                                     持续防止业务状态回退到 gateway 直写路径。
+                                - 第六十七批迁移清理（overlay toggle 未知键收口）：
+                                                                - `core/state/gateway.py` 的 `set_overlay_toggle`
+                                                                    移除未知 attr 的兜底直写路径，改为仅允许
+                                                                    `OVERLAY_TOGGLE_MAP` 映射内字段并记录告警。
+                                                                - `tests/test_gateway_set_attr_compatibility.py`
+                                                                    同步更新兼容预期：未知 overlay 键不再创建
+                                                                    动态状态字段，避免绕过托管写入口。
+                                - 第六十八批迁移清理（图例颜色/形状写入收口）：
+                                                                - `ui/main_window_parts/legend_actions.py`
+                                                                    将分组颜色与形状的字典就地修改改为
+                                                                    `state_gateway.set_palette_and_marker_map(...)`，
+                                                                    避免 UI 层绕过 gateway 直接改共享状态。
+                                                                - `tests/test_gateway_set_attr_compatibility.py`
+                                                                    新增回归，验证 `set_palette_and_marker_map`
+                                                                    同步更新 `app_state.current_palette` 与
+                                                                    `state_store` 快照一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
