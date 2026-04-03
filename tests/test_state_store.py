@@ -18,6 +18,12 @@ def _snapshot_state() -> dict[str, Any]:
         "geo_model_name": str(getattr(app_state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
         "paleo_label_refreshing": bool(getattr(app_state, "paleo_label_refreshing", False)),
         "overlay_label_refreshing": bool(getattr(app_state, "overlay_label_refreshing", False)),
+        "overlay_curve_label_data": list(getattr(app_state, "overlay_curve_label_data", []) or []),
+        "paleoisochron_label_data": list(getattr(app_state, "paleoisochron_label_data", []) or []),
+        "plumbotectonics_label_data": list(getattr(app_state, "plumbotectonics_label_data", []) or []),
+        "plumbotectonics_isoage_label_data": list(
+            getattr(app_state, "plumbotectonics_isoage_label_data", []) or []
+        ),
         "adjust_text_in_progress": bool(getattr(app_state, "adjust_text_in_progress", False)),
         "confidence_level": float(getattr(app_state, "confidence_level", 0.95)),
         "current_palette": dict(getattr(app_state, "current_palette", {}) or {}),
@@ -137,6 +143,10 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_geo_model_name(str(snapshot["geo_model_name"]))
     state_gateway.set_paleo_label_refreshing(bool(snapshot["paleo_label_refreshing"]))
     state_gateway.set_overlay_label_refreshing(bool(snapshot["overlay_label_refreshing"]))
+    state_gateway.set_overlay_curve_label_data(snapshot["overlay_curve_label_data"])
+    state_gateway.set_paleoisochron_label_data(snapshot["paleoisochron_label_data"])
+    state_gateway.set_plumbotectonics_label_data(snapshot["plumbotectonics_label_data"])
+    state_gateway.set_plumbotectonics_isoage_label_data(snapshot["plumbotectonics_isoage_label_data"])
     state_gateway.set_adjust_text_in_progress(bool(snapshot["adjust_text_in_progress"]))
     state_gateway.set_confidence_level(float(snapshot["confidence_level"]))
     state_gateway.set_current_palette(snapshot["current_palette"])
@@ -280,6 +290,28 @@ def test_build_group_palette_syncs_state_store_snapshot() -> None:
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["current_palette"].get("A") == palette["A"]
         assert store_snapshot["current_palette"].get("B") == palette["B"]
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_overlay_label_domains() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_overlay_curve_label_data([{"text": "A"}])
+        state_gateway.set_paleoisochron_label_data([{"text": "B"}])
+        state_gateway.set_plumbotectonics_label_data([{"text": "C"}])
+        state_gateway.set_plumbotectonics_isoage_label_data([{"text": "D"}])
+
+        assert app_state.overlay_curve_label_data == [{"text": "A"}]
+        assert app_state.paleoisochron_label_data == [{"text": "B"}]
+        assert app_state.plumbotectonics_label_data == [{"text": "C"}]
+        assert app_state.plumbotectonics_isoage_label_data == [{"text": "D"}]
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["overlay_curve_label_data"] == [{"text": "A"}]
+        assert store_snapshot["paleoisochron_label_data"] == [{"text": "B"}]
+        assert store_snapshot["plumbotectonics_label_data"] == [{"text": "C"}]
+        assert store_snapshot["plumbotectonics_isoage_label_data"] == [{"text": "D"}]
     finally:
         _restore_state(snapshot)
 

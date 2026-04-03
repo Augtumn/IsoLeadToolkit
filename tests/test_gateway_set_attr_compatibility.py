@@ -145,15 +145,25 @@ def test_group_marker_map_set_attr_compatibility() -> None:
         state_gateway.set_group_marker_map(original_marker_map)
 
 
-def test_plumbotectonics_label_data_set_attr_compatibility() -> None:
-    original = list(getattr(app_state, "plumbotectonics_label_data", []) or [])
+@pytest.mark.parametrize(
+    "attr,payload",
+    [
+        ("overlay_curve_label_data", [{"text": "A"}]),
+        ("paleoisochron_label_data", [{"text": "B"}]),
+        ("plumbotectonics_label_data", [{"text": "C"}]),
+        ("plumbotectonics_isoage_label_data", [{"text": "D"}]),
+    ],
+)
+def test_overlay_label_data_set_attr_compatibility(attr: str, payload: list[dict[str, str]]) -> None:
+    original = list(getattr(app_state, attr, []) or [])
 
     try:
-        state_gateway.set_attr("plumbotectonics_label_data", [{"text": "P1"}])
+        state_gateway.set_attr(attr, payload)
 
-        assert app_state.plumbotectonics_label_data == [{"text": "P1"}]
+        assert getattr(app_state, attr) == payload
+        assert app_state.state_store.snapshot()[attr] == payload
     finally:
-        state_gateway.set_plumbotectonics_label_data(original)
+        state_gateway.set_attr(attr, original)
 
 
 def test_set_attr_unknown_key_ignored() -> None:
@@ -227,6 +237,12 @@ def test_overlay_label_state_only_updates_known_keys() -> None:
         assert app_state.paleoisochron_label_data == [{"text": "B"}]
         assert app_state.plumbotectonics_label_data == [{"text": "C"}]
         assert app_state.plumbotectonics_isoage_label_data == [{"text": "D"}]
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["overlay_curve_label_data"] == [{"text": "A"}]
+        assert snapshot["paleoisochron_label_data"] == [{"text": "B"}]
+        assert snapshot["plumbotectonics_label_data"] == [{"text": "C"}]
+        assert snapshot["plumbotectonics_isoage_label_data"] == [{"text": "D"}]
     finally:
         state_gateway.set_overlay_label_state(
             {

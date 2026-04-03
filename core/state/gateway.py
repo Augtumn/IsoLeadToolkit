@@ -651,16 +651,16 @@ class AppStateGateway:
         self._state.overlay_artists = dict(artists or {})
 
     def set_overlay_curve_label_data(self, data: Any) -> None:
-        self._state.overlay_curve_label_data = list(data or [])
+        self._dispatch("SET_OVERLAY_CURVE_LABEL_DATA", data=list(data or []))
 
     def set_paleoisochron_label_data(self, data: Any) -> None:
-        self._state.paleoisochron_label_data = list(data or [])
+        self._dispatch("SET_PALEOISOCHRON_LABEL_DATA", data=list(data or []))
 
     def set_plumbotectonics_label_data(self, data: Any) -> None:
-        self._state.plumbotectonics_label_data = list(data or [])
+        self._dispatch("SET_PLUMBOTECTONICS_LABEL_DATA", data=list(data or []))
 
     def set_plumbotectonics_isoage_label_data(self, data: Any) -> None:
-        self._state.plumbotectonics_isoage_label_data = list(data or [])
+        self._dispatch("SET_PLUMBOTECTONICS_ISOAGE_LABEL_DATA", data=list(data or []))
 
     def set_standardize_data(self, enabled: bool) -> None:
         self._dispatch("SET_STANDARDIZE_DATA", enabled=bool(enabled))

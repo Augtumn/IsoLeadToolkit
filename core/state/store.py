@@ -31,6 +31,14 @@ class StateStore:
             "geo_model_name": str(getattr(state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
             "paleo_label_refreshing": bool(getattr(state, "paleo_label_refreshing", False)),
             "overlay_label_refreshing": bool(getattr(state, "overlay_label_refreshing", False)),
+            "overlay_curve_label_data": list(getattr(state, "overlay_curve_label_data", []) or []),
+            "paleoisochron_label_data": list(getattr(state, "paleoisochron_label_data", []) or []),
+            "plumbotectonics_label_data": list(
+                getattr(state, "plumbotectonics_label_data", []) or []
+            ),
+            "plumbotectonics_isoage_label_data": list(
+                getattr(state, "plumbotectonics_isoage_label_data", []) or []
+            ),
             "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
             "confidence_level": float(getattr(state, "confidence_level", 0.95)),
             "current_palette": dict(getattr(state, "current_palette", {}) or {}),
@@ -195,6 +203,18 @@ class StateStore:
 
         elif action_type == "SET_OVERLAY_LABEL_REFRESHING":
             self._snapshot["overlay_label_refreshing"] = bool(action.get("refreshing", False))
+
+        elif action_type == "SET_OVERLAY_CURVE_LABEL_DATA":
+            self._snapshot["overlay_curve_label_data"] = list(action.get("data") or [])
+
+        elif action_type == "SET_PALEOISOCHRON_LABEL_DATA":
+            self._snapshot["paleoisochron_label_data"] = list(action.get("data") or [])
+
+        elif action_type == "SET_PLUMBOTECTONICS_LABEL_DATA":
+            self._snapshot["plumbotectonics_label_data"] = list(action.get("data") or [])
+
+        elif action_type == "SET_PLUMBOTECTONICS_ISOAGE_LABEL_DATA":
+            self._snapshot["plumbotectonics_isoage_label_data"] = list(action.get("data") or [])
 
         elif action_type == "SET_ADJUST_TEXT_IN_PROGRESS":
             self._snapshot["adjust_text_in_progress"] = bool(action.get("in_progress", False))
@@ -559,6 +579,12 @@ class StateStore:
             "geo_model_name": str(self._snapshot["geo_model_name"]),
             "paleo_label_refreshing": bool(self._snapshot["paleo_label_refreshing"]),
             "overlay_label_refreshing": bool(self._snapshot["overlay_label_refreshing"]),
+            "overlay_curve_label_data": list(self._snapshot["overlay_curve_label_data"]),
+            "paleoisochron_label_data": list(self._snapshot["paleoisochron_label_data"]),
+            "plumbotectonics_label_data": list(self._snapshot["plumbotectonics_label_data"]),
+            "plumbotectonics_isoage_label_data": list(
+                self._snapshot["plumbotectonics_isoage_label_data"]
+            ),
             "adjust_text_in_progress": bool(self._snapshot["adjust_text_in_progress"]),
             "confidence_level": float(self._snapshot["confidence_level"]),
             "current_palette": dict(self._snapshot["current_palette"]),
@@ -679,6 +705,12 @@ class StateStore:
         self._state.geo_model_name = str(self._snapshot["geo_model_name"])
         self._state.paleo_label_refreshing = bool(self._snapshot["paleo_label_refreshing"])
         self._state.overlay_label_refreshing = bool(self._snapshot["overlay_label_refreshing"])
+        self._state.overlay_curve_label_data = list(self._snapshot["overlay_curve_label_data"])
+        self._state.paleoisochron_label_data = list(self._snapshot["paleoisochron_label_data"])
+        self._state.plumbotectonics_label_data = list(self._snapshot["plumbotectonics_label_data"])
+        self._state.plumbotectonics_isoage_label_data = list(
+            self._snapshot["plumbotectonics_isoage_label_data"]
+        )
         self._state.adjust_text_in_progress = bool(self._snapshot["adjust_text_in_progress"])
         self._state.confidence_level = float(self._snapshot["confidence_level"])
         self._state.current_palette = dict(self._snapshot["current_palette"])

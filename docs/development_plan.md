@@ -568,6 +568,26 @@
                                                                     校验 palette 运行态与 Store 快照同步。
                                                                 - 运行日志复核未再出现
                                                                     `Error plotting category` / `No data points plotted`。
+                                - 第七十五批迁移清理（overlay 标签数据域纳入 StateStore）：
+                                                                - `core/state/store.py` 新增状态域：
+                                                                    `overlay_curve_label_data`、
+                                                                    `paleoisochron_label_data`、
+                                                                    `plumbotectonics_label_data`、
+                                                                    `plumbotectonics_isoage_label_data`，
+                                                                    并接入 dispatch/snapshot/sync。
+                                                                - `core/state/gateway.py` 的
+                                                                    `set_overlay_curve_label_data`、
+                                                                    `set_paleoisochron_label_data`、
+                                                                    `set_plumbotectonics_label_data`、
+                                                                    `set_plumbotectonics_isoage_label_data`
+                                                                    改为 action dispatch，移除业务域直写。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖显式 setter、`set_attr` 兼容路径及
+                                                                    `set_overlay_label_state` 的 Store 快照一致性。
+                                                                - `scripts/check_gateway_direct_state_assignments.py`
+                                                                    直写白名单移除上述 4 个标签数据字段，
+                                                                    防止后续回退为 gateway 直写。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
