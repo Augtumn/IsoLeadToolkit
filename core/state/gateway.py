@@ -291,7 +291,7 @@ class AppStateGateway:
         if handler is not None:
             handler(value)
             return
-        setattr(self._state, name, value)
+        logger.warning("Ignored unknown set_attr key: %s", name)
 
     def set_attrs(self, values: dict[str, Any]) -> None:
         """Set multiple app_state attributes via gateway."""
@@ -301,7 +301,14 @@ class AppStateGateway:
     def set_panel_style_updates(self, updates: dict[str, Any]) -> None:
         """Apply style-control updates collected from panel widgets."""
         for name, value in updates.items():
-            self.set_attr(name, value)
+            handler = self._compat_attr_handlers.get(name)
+            if handler is not None:
+                handler(value)
+                continue
+            if hasattr(self._state, name):
+                setattr(self._state, name, value)
+                continue
+            logger.warning("Ignored unknown panel style update key: %s", name)
 
     def set_render_mode(self, render_mode: str) -> None:
         self._dispatch("SET_RENDER_MODE", render_mode=render_mode)

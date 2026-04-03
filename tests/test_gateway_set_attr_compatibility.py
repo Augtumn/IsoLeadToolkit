@@ -156,6 +156,53 @@ def test_plumbotectonics_label_data_set_attr_compatibility() -> None:
         state_gateway.set_plumbotectonics_label_data(original)
 
 
+def test_set_attr_unknown_key_ignored() -> None:
+    fallback_attr = "_test_set_attr_unknown"
+    existed = hasattr(app_state, fallback_attr)
+    original_value = getattr(app_state, fallback_attr, None) if existed else None
+
+    try:
+        state_gateway.set_attr(fallback_attr, 123)
+
+        if existed:
+            assert getattr(app_state, fallback_attr) == original_value
+        else:
+            assert not hasattr(app_state, fallback_attr)
+    finally:
+        if existed:
+            setattr(app_state, fallback_attr, original_value)
+        elif hasattr(app_state, fallback_attr):
+            delattr(app_state, fallback_attr)
+
+
+def test_panel_style_updates_known_key_and_unknown_key() -> None:
+    original_plot_style_grid = bool(getattr(app_state, "plot_style_grid", False))
+    fallback_attr = "_test_panel_style_unknown"
+    existed = hasattr(app_state, fallback_attr)
+    original_value = getattr(app_state, fallback_attr, None) if existed else None
+
+    try:
+        state_gateway.set_panel_style_updates(
+            {
+                "plot_style_grid": (not original_plot_style_grid),
+                fallback_attr: "ignored",
+            }
+        )
+
+        assert bool(getattr(app_state, "plot_style_grid", False)) is (not original_plot_style_grid)
+        if existed:
+            assert getattr(app_state, fallback_attr) == original_value
+        else:
+            assert not hasattr(app_state, fallback_attr)
+    finally:
+        if hasattr(app_state, "plot_style_grid"):
+            setattr(app_state, "plot_style_grid", original_plot_style_grid)
+        if existed:
+            setattr(app_state, fallback_attr, original_value)
+        elif hasattr(app_state, fallback_attr):
+            delattr(app_state, fallback_attr)
+
+
 def test_overlay_label_state_only_updates_known_keys() -> None:
     original_overlay_curve = list(getattr(app_state, "overlay_curve_label_data", []) or [])
     original_paleo = list(getattr(app_state, "paleoisochron_label_data", []) or [])

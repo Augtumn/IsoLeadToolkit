@@ -525,6 +525,18 @@
                                                                     白名单同步新增该字段。
                                                                 - `tests/test_gateway_set_attr_compatibility.py`
                                                                     新增该兼容路径回归测试。
+                                - 第七十二批迁移清理（set_attr 未知键彻底收口）：
+                                                                - `core/state/gateway.py` 的
+                                                                    `set_attr` 移除未知键直写旁路，
+                                                                    改为记录告警并忽略，避免
+                                                                    动态属性注入。
+                                                                - `set_panel_style_updates` 改为
+                                                                    受控更新：优先走兼容映射，
+                                                                    否则仅允许更新 `app_state`
+                                                                    已有字段，未知键忽略并告警。
+                                                                - `tests/test_gateway_set_attr_compatibility.py`
+                                                                    新增 `set_attr` 未知键忽略与
+                                                                    panel style update 受控更新回归。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
