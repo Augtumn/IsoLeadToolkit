@@ -100,6 +100,7 @@ def _snapshot_state() -> dict[str, Any]:
         "selected_3d_confirmed": bool(getattr(app_state, "selected_3d_confirmed", False)),
         "selected_ternary_confirmed": bool(getattr(app_state, "selected_ternary_confirmed", False)),
         "standardize_data": bool(getattr(app_state, "standardize_data", True)),
+        "initial_render_done": bool(getattr(app_state, "initial_render_done", False)),
         "pca_component_indices": list(getattr(app_state, "pca_component_indices", [0, 1]) or [0, 1]),
         "ternary_auto_zoom": bool(getattr(app_state, "ternary_auto_zoom", True)),
         "ternary_limit_mode": str(getattr(app_state, "ternary_limit_mode", "min")),
@@ -224,6 +225,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_selected_3d_columns(snapshot["selected_3d_cols"], confirmed=snapshot["selected_3d_confirmed"])
     state_gateway.set_selected_ternary_columns(snapshot["selected_ternary_cols"], confirmed=snapshot["selected_ternary_confirmed"])
     state_gateway.set_standardize_data(snapshot["standardize_data"])
+    state_gateway.set_initial_render_done(snapshot["initial_render_done"])
     state_gateway.set_pca_component_indices(snapshot["pca_component_indices"])
     state_gateway.set_ternary_auto_zoom(snapshot["ternary_auto_zoom"])
     state_gateway.set_ternary_limit_mode(snapshot["ternary_limit_mode"])
@@ -321,6 +323,7 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_paleoisochron_ages([1000, 750, 500, 250])
         state_gateway.set_draw_selection_ellipse(True)
         state_gateway.set_standardize_data(False)
+        state_gateway.set_initial_render_done(True)
         state_gateway.set_pca_component_indices([2, 4])
         state_gateway.set_ternary_auto_zoom(False)
         state_gateway.set_ternary_limit_mode("both")
@@ -398,6 +401,7 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.paleoisochron_ages == [1000, 750, 500, 250]
         assert app_state.draw_selection_ellipse is True
         assert app_state.standardize_data is False
+        assert app_state.initial_render_done is True
         assert app_state.pca_component_indices == [2, 4]
         assert app_state.ternary_auto_zoom is False
         assert app_state.ternary_limit_mode == "both"
@@ -466,6 +470,7 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["paleoisochron_ages"] == [1000, 750, 500, 250]
         assert store_snapshot["draw_selection_ellipse"] is True
         assert store_snapshot["standardize_data"] is False
+        assert store_snapshot["initial_render_done"] is True
         assert store_snapshot["pca_component_indices"] == [2, 4]
         assert store_snapshot["ternary_auto_zoom"] is False
         assert store_snapshot["ternary_limit_mode"] == "both"

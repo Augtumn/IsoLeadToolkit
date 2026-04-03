@@ -190,6 +190,7 @@ class AppStateGateway:
             "preserve_import_render_mode": "set_preserve_import_render_mode",
             "selection_mode": "set_selection_mode",
             "draw_selection_ellipse": "set_draw_selection_ellipse",
+            "initial_render_done": "set_initial_render_done",
         }
         int_map = {
             "legend_columns": "set_legend_columns",
@@ -739,7 +740,7 @@ class AppStateGateway:
         self._dispatch("SET_SELECTION_MODE", enabled=bool(enabled))
 
     def set_initial_render_done(self, done: bool) -> None:
-        self._state.initial_render_done = done
+        self._dispatch("SET_INITIAL_RENDER_DONE", done=bool(done))
 
     def set_embedding_worker(
         self,

@@ -121,6 +121,7 @@ class StateStore:
             "selected_3d_confirmed": bool(getattr(state, "selected_3d_confirmed", False)),
             "selected_ternary_confirmed": bool(getattr(state, "selected_ternary_confirmed", False)),
             "standardize_data": bool(getattr(state, "standardize_data", True)),
+            "initial_render_done": bool(getattr(state, "initial_render_done", False)),
             "pca_component_indices": self._normalize_pca_component_indices(
                 getattr(state, "pca_component_indices", None)
             ),
@@ -442,6 +443,9 @@ class StateStore:
         elif action_type == "SET_STANDARDIZE_DATA":
             self._snapshot["standardize_data"] = bool(action.get("enabled", False))
 
+        elif action_type == "SET_INITIAL_RENDER_DONE":
+            self._snapshot["initial_render_done"] = bool(action.get("done", False))
+
         elif action_type == "SET_PCA_COMPONENT_INDICES":
             self._snapshot["pca_component_indices"] = self._normalize_pca_component_indices(
                 action.get("indices")
@@ -634,6 +638,7 @@ class StateStore:
             "selected_3d_confirmed": bool(self._snapshot["selected_3d_confirmed"]),
             "selected_ternary_confirmed": bool(self._snapshot["selected_ternary_confirmed"]),
             "standardize_data": bool(self._snapshot["standardize_data"]),
+            "initial_render_done": bool(self._snapshot["initial_render_done"]),
             "pca_component_indices": list(self._snapshot["pca_component_indices"]),
             "ternary_auto_zoom": bool(self._snapshot["ternary_auto_zoom"]),
             "ternary_limit_mode": str(self._snapshot["ternary_limit_mode"]),
@@ -753,6 +758,7 @@ class StateStore:
         self._state.selected_3d_confirmed = bool(self._snapshot["selected_3d_confirmed"])
         self._state.selected_ternary_confirmed = bool(self._snapshot["selected_ternary_confirmed"])
         self._state.standardize_data = bool(self._snapshot["standardize_data"])
+        self._state.initial_render_done = bool(self._snapshot["initial_render_done"])
         self._state.pca_component_indices = list(self._snapshot["pca_component_indices"])
         self._state.ternary_auto_zoom = bool(self._snapshot["ternary_auto_zoom"])
         self._state.ternary_limit_mode = str(self._snapshot["ternary_limit_mode"])

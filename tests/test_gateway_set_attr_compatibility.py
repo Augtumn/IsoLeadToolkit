@@ -230,6 +230,17 @@ def test_draw_selection_ellipse_set_attr_compatibility() -> None:
         state_gateway.set_draw_selection_ellipse(original_value)
 
 
+def test_initial_render_done_set_attr_compatibility() -> None:
+    original_value = bool(getattr(app_state, "initial_render_done", False))
+
+    try:
+        state_gateway.set_attr("initial_render_done", True)
+        assert app_state.initial_render_done is True
+        assert app_state.state_store.snapshot()["initial_render_done"] is True
+    finally:
+        state_gateway.set_initial_render_done(original_value)
+
+
 def test_legend_preferences_set_attr_compatibility() -> None:
     original_color_scheme = str(getattr(app_state, "color_scheme", "vibrant"))
     original_position = getattr(app_state, "legend_position", None)

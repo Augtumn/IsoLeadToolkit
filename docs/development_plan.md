@@ -454,6 +454,16 @@
                                                                 - 扩展 `tests/test_state_store.py` 与
                                                                     `tests/test_gateway_set_attr_compatibility.py`，
                                                                     覆盖新增业务域的快照一致性与 `set_attr` 兼容路径。
+                                - 第六十五批迁移清理（initial_render_done 纳入 StateStore）：
+                                                                - `core/state/store.py` 新增 `initial_render_done`
+                                                                    状态域及 `SET_INITIAL_RENDER_DONE` action，
+                                                                    补齐 snapshot/sync。
+                                                                - `core/state/gateway.py` 的 `set_initial_render_done`
+                                                                    改为 action dispatch，并在 `set_attr` 兼容映射中
+                                                                    增加 `initial_render_done`。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖该域在显式 setter 与 `set_attr` 路径下的一致性。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
