@@ -129,6 +129,8 @@ class AppStateGateway:
             "legend_offset": "set_legend_offset",
             "isochron_results": "set_isochron_results",
             "plumbotectonics_group_visibility": "set_plumbotectonics_group_visibility",
+            "file_path": "set_file_path",
+            "sheet_name": "set_sheet_name",
             "mu_kappa_age_col": "set_mu_kappa_age_col",
             "paleoisochron_ages": "set_paleoisochron_ages",
             "overlay_artists": "set_overlay_artists",
@@ -187,6 +189,7 @@ class AppStateGateway:
             "show_tooltip": "set_show_tooltip",
             "preserve_import_render_mode": "set_preserve_import_render_mode",
             "selection_mode": "set_selection_mode",
+            "draw_selection_ellipse": "set_draw_selection_ellipse",
         }
         int_map = {
             "legend_columns": "set_legend_columns",
@@ -429,17 +432,17 @@ class AppStateGateway:
             self._state.current_feature_names = current_feature_names
 
     def set_overlay_label_flags(self, *, refreshing: bool, adjust_in_progress: bool) -> None:
-        self._state.overlay_label_refreshing = bool(refreshing)
-        self._state.adjust_text_in_progress = bool(adjust_in_progress)
+        self.set_overlay_label_refreshing(refreshing)
+        self.set_adjust_text_in_progress(adjust_in_progress)
 
     def set_paleo_label_refreshing(self, refreshing: bool) -> None:
-        self._state.paleo_label_refreshing = bool(refreshing)
+        self._dispatch("SET_PALEO_LABEL_REFRESHING", refreshing=bool(refreshing))
 
     def set_control_panel_ref(self, panel: Any) -> None:
         self._state.control_panel_ref = panel
 
     def set_confidence_level(self, level: float) -> None:
-        self._state.confidence_level = float(level)
+        self._dispatch("SET_CONFIDENCE_LEVEL", level=float(level))
 
     def set_legend_update_callback(self, callback: Any) -> None:
         self._state.legend_update_callback = callback
@@ -452,35 +455,35 @@ class AppStateGateway:
                 setattr(self._state, key, value)
 
     def set_palette_and_marker_map(self, palette: dict[str, Any], marker_map: dict[str, Any]) -> None:
-        self._state.current_palette = dict(palette)
+        self._dispatch("SET_CURRENT_PALETTE", palette=dict(palette))
         self._state.group_marker_map = dict(marker_map)
 
     def set_current_palette(self, palette: Any) -> None:
-        self._state.current_palette = dict(palette or {})
+        self._dispatch("SET_CURRENT_PALETTE", palette=dict(palette or {}))
 
     def set_adjust_text_in_progress(self, in_progress: bool) -> None:
-        self._state.adjust_text_in_progress = bool(in_progress)
+        self._dispatch("SET_ADJUST_TEXT_IN_PROGRESS", in_progress=bool(in_progress))
 
     def set_overlay_label_refreshing(self, refreshing: bool) -> None:
-        self._state.overlay_label_refreshing = bool(refreshing)
+        self._dispatch("SET_OVERLAY_LABEL_REFRESHING", refreshing=bool(refreshing))
 
     def set_current_plot_title(self, title: str) -> None:
-        self._state.current_plot_title = str(title)
+        self._dispatch("SET_CURRENT_PLOT_TITLE", title=str(title))
 
     def set_annotation(self, annotation: Any) -> None:
         self._state.annotation = annotation
 
     def set_last_2d_cols(self, columns: Any) -> None:
-        self._state.last_2d_cols = list(columns or []) if columns is not None else None
+        self._dispatch("SET_LAST_2D_COLS", columns=(list(columns or []) if columns is not None else None))
 
     def set_recent_files(self, files: Any) -> None:
         self._dispatch("SET_RECENT_FILES", files=list(files or []))
 
     def set_file_path(self, file_path: str) -> None:
-        self._state.file_path = str(file_path)
+        self._dispatch("SET_FILE_PATH", file_path=str(file_path))
 
     def set_sheet_name(self, sheet_name: Any) -> None:
-        self._state.sheet_name = sheet_name
+        self._dispatch("SET_SHEET_NAME", sheet_name=sheet_name)
 
     def set_language_code(self, code: str) -> None:
         self._dispatch("SET_LANGUAGE_CODE", code=code)
@@ -515,10 +518,13 @@ class AppStateGateway:
         self._state.legend_last_labels = labels
 
     def set_isochron_results(self, results: Any) -> None:
-        self._state.isochron_results = dict(results or {})
+        self._dispatch("SET_ISOCHRON_RESULTS", results=dict(results or {}))
 
     def set_plumbotectonics_group_visibility(self, visibility: Any) -> None:
-        self._state.plumbotectonics_group_visibility = dict(visibility or {})
+        self._dispatch(
+            "SET_PLUMBOTECTONICS_GROUP_VISIBILITY",
+            visibility=dict(visibility or {}),
+        )
 
     def set_show_model_curves(self, show: bool) -> None:
         self._dispatch("SET_SHOW_MODEL_CURVES", show=bool(show))
@@ -676,7 +682,7 @@ class AppStateGateway:
         self._state.marginal_axes = marginal_axes
 
     def set_draw_selection_ellipse(self, enabled: bool) -> None:
-        self._state.draw_selection_ellipse = bool(enabled)
+        self._dispatch("SET_DRAW_SELECTION_ELLIPSE", enabled=bool(enabled))
 
     def set_preserve_import_render_mode(self, preserve: bool) -> None:
         self._dispatch("SET_PRESERVE_IMPORT_RENDER_MODE", enabled=bool(preserve))
@@ -721,7 +727,7 @@ class AppStateGateway:
         logger.info("Data version updated: %s", self._state.data_version)
 
     def set_data_version(self, version: int) -> None:
-        self._state.data_version = int(version)
+        self._dispatch("SET_DATA_VERSION", version=int(version))
 
     def clear_selection(self) -> None:
         self._dispatch("CLEAR_SELECTION")

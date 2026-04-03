@@ -158,6 +158,78 @@ def test_geo_model_name_set_attr_conversion() -> None:
         state_gateway.set_geo_model_name(original_model_name)
 
 
+def test_file_and_sheet_set_attr_compatibility() -> None:
+    original_file_path = getattr(app_state, "file_path", None)
+    original_sheet_name = getattr(app_state, "sheet_name", None)
+
+    try:
+        state_gateway.set_attr("file_path", "d:/tmp/demo.xlsx")
+        state_gateway.set_attr("sheet_name", "SheetA")
+
+        assert app_state.file_path == "d:/tmp/demo.xlsx"
+        assert app_state.sheet_name == "SheetA"
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["file_path"] == "d:/tmp/demo.xlsx"
+        assert snapshot["sheet_name"] == "SheetA"
+    finally:
+        state_gateway.set_file_path(original_file_path)
+        state_gateway.set_sheet_name(original_sheet_name)
+
+
+def test_plot_title_and_last_2d_cols_set_attr_compatibility() -> None:
+    original_title = str(getattr(app_state, "current_plot_title", ""))
+    original_last_2d_cols = (
+        list(getattr(app_state, "last_2d_cols", []) or [])
+        if getattr(app_state, "last_2d_cols", None) is not None
+        else None
+    )
+
+    try:
+        state_gateway.set_attr("current_plot_title", 123)
+        state_gateway.set_attr("last_2d_cols", ["x", "y"])
+
+        assert app_state.current_plot_title == "123"
+        assert app_state.last_2d_cols == ["x", "y"]
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["current_plot_title"] == "123"
+        assert snapshot["last_2d_cols"] == ["x", "y"]
+    finally:
+        state_gateway.set_current_plot_title(original_title)
+        state_gateway.set_last_2d_cols(original_last_2d_cols)
+
+
+def test_isochron_results_and_visibility_set_attr_compatibility() -> None:
+    original_isochron_results = dict(getattr(app_state, "isochron_results", {}) or {})
+    original_visibility = dict(getattr(app_state, "plumbotectonics_group_visibility", {}) or {})
+
+    try:
+        state_gateway.set_attr("isochron_results", {"A": {"mswd": 1.2}})
+        state_gateway.set_attr("plumbotectonics_group_visibility", {"A": True, "B": False})
+
+        assert app_state.isochron_results == {"A": {"mswd": 1.2}}
+        assert app_state.plumbotectonics_group_visibility == {"A": True, "B": False}
+
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["isochron_results"] == {"A": {"mswd": 1.2}}
+        assert snapshot["plumbotectonics_group_visibility"] == {"A": True, "B": False}
+    finally:
+        state_gateway.set_isochron_results(original_isochron_results)
+        state_gateway.set_plumbotectonics_group_visibility(original_visibility)
+
+
+def test_draw_selection_ellipse_set_attr_compatibility() -> None:
+    original_value = bool(getattr(app_state, "draw_selection_ellipse", False))
+
+    try:
+        state_gateway.set_attr("draw_selection_ellipse", True)
+        assert app_state.draw_selection_ellipse is True
+        assert app_state.state_store.snapshot()["draw_selection_ellipse"] is True
+    finally:
+        state_gateway.set_draw_selection_ellipse(original_value)
+
+
 def test_legend_preferences_set_attr_compatibility() -> None:
     original_color_scheme = str(getattr(app_state, "color_scheme", "vibrant"))
     original_position = getattr(app_state, "legend_position", None)
@@ -594,5 +666,6 @@ def test_confidence_level_set_attr_conversion() -> None:
     try:
         state_gateway.set_attr("confidence_level", "0.91")
         assert app_state.confidence_level == 0.91
+        assert app_state.state_store.snapshot()["confidence_level"] == 0.91
     finally:
         state_gateway.set_confidence_level(original_level)

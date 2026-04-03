@@ -15,6 +15,17 @@ def _snapshot_state() -> dict[str, Any]:
         "show_marginal_kde": bool(getattr(app_state, "show_marginal_kde", True)),
         "show_equation_overlays": bool(getattr(app_state, "show_equation_overlays", False)),
         "geo_model_name": str(getattr(app_state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
+        "paleo_label_refreshing": bool(getattr(app_state, "paleo_label_refreshing", False)),
+        "overlay_label_refreshing": bool(getattr(app_state, "overlay_label_refreshing", False)),
+        "adjust_text_in_progress": bool(getattr(app_state, "adjust_text_in_progress", False)),
+        "confidence_level": float(getattr(app_state, "confidence_level", 0.95)),
+        "current_palette": dict(getattr(app_state, "current_palette", {}) or {}),
+        "current_plot_title": str(getattr(app_state, "current_plot_title", "")),
+        "last_2d_cols": (
+            list(getattr(app_state, "last_2d_cols", []) or [])
+            if getattr(app_state, "last_2d_cols", None) is not None
+            else None
+        ),
         "show_model_curves": bool(getattr(app_state, "show_model_curves", True)),
         "show_plumbotectonics_curves": bool(getattr(app_state, "show_plumbotectonics_curves", True)),
         "show_paleoisochrons": bool(getattr(app_state, "show_paleoisochrons", True)),
@@ -28,11 +39,16 @@ def _snapshot_state() -> dict[str, Any]:
         "isochron_sx_value": float(getattr(app_state, "isochron_sx_value", 0.001)),
         "isochron_sy_value": float(getattr(app_state, "isochron_sy_value", 0.001)),
         "isochron_rxy_value": float(getattr(app_state, "isochron_rxy_value", 0.0)),
+        "isochron_results": dict(getattr(app_state, "isochron_results", {}) or {}),
+        "plumbotectonics_group_visibility": dict(
+            getattr(app_state, "plumbotectonics_group_visibility", {}) or {}
+        ),
         "use_real_age_for_mu_kappa": bool(getattr(app_state, "use_real_age_for_mu_kappa", False)),
         "mu_kappa_age_col": getattr(app_state, "mu_kappa_age_col", None),
         "plumbotectonics_variant": str(getattr(app_state, "plumbotectonics_variant", "0")),
         "paleoisochron_step": int(getattr(app_state, "paleoisochron_step", 1000)),
         "paleoisochron_ages": list(getattr(app_state, "paleoisochron_ages", []) or []),
+        "draw_selection_ellipse": bool(getattr(app_state, "draw_selection_ellipse", False)),
         "marginal_kde_top_size": float(getattr(app_state, "marginal_kde_top_size", 15.0)),
         "marginal_kde_right_size": float(getattr(app_state, "marginal_kde_right_size", 15.0)),
         "marginal_kde_max_points": int(getattr(app_state, "marginal_kde_max_points", 5000)),
@@ -116,6 +132,13 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_show_marginal_kde(bool(snapshot["show_marginal_kde"]))
     state_gateway.set_show_equation_overlays(bool(snapshot["show_equation_overlays"]))
     state_gateway.set_geo_model_name(str(snapshot["geo_model_name"]))
+    state_gateway.set_paleo_label_refreshing(bool(snapshot["paleo_label_refreshing"]))
+    state_gateway.set_overlay_label_refreshing(bool(snapshot["overlay_label_refreshing"]))
+    state_gateway.set_adjust_text_in_progress(bool(snapshot["adjust_text_in_progress"]))
+    state_gateway.set_confidence_level(float(snapshot["confidence_level"]))
+    state_gateway.set_current_palette(snapshot["current_palette"])
+    state_gateway.set_current_plot_title(str(snapshot["current_plot_title"]))
+    state_gateway.set_last_2d_cols(snapshot["last_2d_cols"])
     state_gateway.set_show_model_curves(bool(snapshot["show_model_curves"]))
     state_gateway.set_show_plumbotectonics_curves(bool(snapshot["show_plumbotectonics_curves"]))
     state_gateway.set_show_paleoisochrons(bool(snapshot["show_paleoisochrons"]))
@@ -144,11 +167,14 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
             float(snapshot["isochron_sy_value"]),
             float(snapshot["isochron_rxy_value"]),
         )
+    state_gateway.set_isochron_results(snapshot["isochron_results"])
+    state_gateway.set_plumbotectonics_group_visibility(snapshot["plumbotectonics_group_visibility"])
     state_gateway.set_use_real_age_for_mu_kappa(bool(snapshot["use_real_age_for_mu_kappa"]))
     state_gateway.set_mu_kappa_age_col(snapshot["mu_kappa_age_col"])
     state_gateway.set_plumbotectonics_variant(str(snapshot["plumbotectonics_variant"]))
     state_gateway.set_paleoisochron_step(int(snapshot["paleoisochron_step"]))
     state_gateway.set_paleoisochron_ages(snapshot["paleoisochron_ages"])
+    state_gateway.set_draw_selection_ellipse(bool(snapshot["draw_selection_ellipse"]))
     state_gateway.set_marginal_kde_layout(
         top_size=float(snapshot["marginal_kde_top_size"]),
         right_size=float(snapshot["marginal_kde_right_size"]),
@@ -273,17 +299,27 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_ml_last_result({"status": "ok", "score": 0.93})
         state_gateway.set_ml_last_model_meta({"model": "xgb", "classes": 4})
         state_gateway.set_geo_model_name("V1V2 (Zhu 1993)")
+        state_gateway.set_paleo_label_refreshing(True)
+        state_gateway.set_overlay_label_refreshing(True)
+        state_gateway.set_adjust_text_in_progress(True)
+        state_gateway.set_confidence_level(0.91)
+        state_gateway.set_current_palette({"A": "#112233", "B": "#445566"})
+        state_gateway.set_current_plot_title("Batch 64 demo")
+        state_gateway.set_last_2d_cols(["x", "y"])
         state_gateway.set_show_model_curves(False)
         state_gateway.set_show_plumbotectonics_curves(False)
         state_gateway.set_show_paleoisochrons(False)
         state_gateway.set_show_model_age_lines(False)
         state_gateway.set_show_growth_curves(False)
         state_gateway.set_show_isochrons(True)
+        state_gateway.set_isochron_results({"A": {"mswd": 1.2}})
+        state_gateway.set_plumbotectonics_group_visibility({"A": True, "B": False})
         state_gateway.set_use_real_age_for_mu_kappa(True)
         state_gateway.set_mu_kappa_age_col("Age_Ma")
         state_gateway.set_plumbotectonics_variant("2")
         state_gateway.set_paleoisochron_step(250)
         state_gateway.set_paleoisochron_ages([1000, 750, 500, 250])
+        state_gateway.set_draw_selection_ellipse(True)
         state_gateway.set_standardize_data(False)
         state_gateway.set_pca_component_indices([2, 4])
         state_gateway.set_ternary_auto_zoom(False)
@@ -340,17 +376,27 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.ml_last_result == {"status": "ok", "score": 0.93}
         assert app_state.ml_last_model_meta == {"model": "xgb", "classes": 4}
         assert app_state.geo_model_name == "V1V2 (Zhu 1993)"
+        assert app_state.paleo_label_refreshing is True
+        assert app_state.overlay_label_refreshing is True
+        assert app_state.adjust_text_in_progress is True
+        assert app_state.confidence_level == 0.91
+        assert app_state.current_palette == {"A": "#112233", "B": "#445566"}
+        assert app_state.current_plot_title == "Batch 64 demo"
+        assert app_state.last_2d_cols == ["x", "y"]
         assert app_state.show_model_curves is False
         assert app_state.show_plumbotectonics_curves is False
         assert app_state.show_paleoisochrons is False
         assert app_state.show_model_age_lines is False
         assert app_state.show_growth_curves is False
         assert app_state.show_isochrons is True
+        assert app_state.isochron_results == {"A": {"mswd": 1.2}}
+        assert app_state.plumbotectonics_group_visibility == {"A": True, "B": False}
         assert app_state.use_real_age_for_mu_kappa is True
         assert app_state.mu_kappa_age_col == "Age_Ma"
         assert app_state.plumbotectonics_variant == "2"
         assert app_state.paleoisochron_step == 250
         assert app_state.paleoisochron_ages == [1000, 750, 500, 250]
+        assert app_state.draw_selection_ellipse is True
         assert app_state.standardize_data is False
         assert app_state.pca_component_indices == [2, 4]
         assert app_state.ternary_auto_zoom is False
@@ -398,17 +444,27 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["ml_last_result"] == {"status": "ok", "score": 0.93}
         assert store_snapshot["ml_last_model_meta"] == {"model": "xgb", "classes": 4}
         assert store_snapshot["geo_model_name"] == "V1V2 (Zhu 1993)"
+        assert store_snapshot["paleo_label_refreshing"] is True
+        assert store_snapshot["overlay_label_refreshing"] is True
+        assert store_snapshot["adjust_text_in_progress"] is True
+        assert store_snapshot["confidence_level"] == 0.91
+        assert store_snapshot["current_palette"] == {"A": "#112233", "B": "#445566"}
+        assert store_snapshot["current_plot_title"] == "Batch 64 demo"
+        assert store_snapshot["last_2d_cols"] == ["x", "y"]
         assert store_snapshot["show_model_curves"] is False
         assert store_snapshot["show_plumbotectonics_curves"] is False
         assert store_snapshot["show_paleoisochrons"] is False
         assert store_snapshot["show_model_age_lines"] is False
         assert store_snapshot["show_growth_curves"] is False
         assert store_snapshot["show_isochrons"] is True
+        assert store_snapshot["isochron_results"] == {"A": {"mswd": 1.2}}
+        assert store_snapshot["plumbotectonics_group_visibility"] == {"A": True, "B": False}
         assert store_snapshot["use_real_age_for_mu_kappa"] is True
         assert store_snapshot["mu_kappa_age_col"] == "Age_Ma"
         assert store_snapshot["plumbotectonics_variant"] == "2"
         assert store_snapshot["paleoisochron_step"] == 250
         assert store_snapshot["paleoisochron_ages"] == [1000, 750, 500, 250]
+        assert store_snapshot["draw_selection_ellipse"] is True
         assert store_snapshot["standardize_data"] is False
         assert store_snapshot["pca_component_indices"] == [2, 4]
         assert store_snapshot["ternary_auto_zoom"] is False

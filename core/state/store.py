@@ -29,6 +29,17 @@ class StateStore:
             "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
             "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
             "geo_model_name": str(getattr(state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
+            "paleo_label_refreshing": bool(getattr(state, "paleo_label_refreshing", False)),
+            "overlay_label_refreshing": bool(getattr(state, "overlay_label_refreshing", False)),
+            "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
+            "confidence_level": float(getattr(state, "confidence_level", 0.95)),
+            "current_palette": dict(getattr(state, "current_palette", {}) or {}),
+            "current_plot_title": str(getattr(state, "current_plot_title", "")),
+            "last_2d_cols": (
+                list(getattr(state, "last_2d_cols", []) or [])
+                if getattr(state, "last_2d_cols", None) is not None
+                else None
+            ),
             "show_model_curves": bool(getattr(state, "show_model_curves", True)),
             "show_plumbotectonics_curves": bool(
                 getattr(state, "show_plumbotectonics_curves", True)
@@ -49,11 +60,16 @@ class StateStore:
             "isochron_sx_value": float(getattr(state, "isochron_sx_value", 0.001)),
             "isochron_sy_value": float(getattr(state, "isochron_sy_value", 0.001)),
             "isochron_rxy_value": float(getattr(state, "isochron_rxy_value", 0.0)),
+            "isochron_results": dict(getattr(state, "isochron_results", {}) or {}),
+            "plumbotectonics_group_visibility": dict(
+                getattr(state, "plumbotectonics_group_visibility", {}) or {}
+            ),
             "use_real_age_for_mu_kappa": bool(getattr(state, "use_real_age_for_mu_kappa", False)),
             "mu_kappa_age_col": getattr(state, "mu_kappa_age_col", None),
             "plumbotectonics_variant": str(getattr(state, "plumbotectonics_variant", "0")),
             "paleoisochron_step": int(getattr(state, "paleoisochron_step", 1000)),
             "paleoisochron_ages": list(getattr(state, "paleoisochron_ages", []) or []),
+            "draw_selection_ellipse": bool(getattr(state, "draw_selection_ellipse", False)),
             "marginal_kde_top_size": float(getattr(state, "marginal_kde_top_size", 15.0)),
             "marginal_kde_right_size": float(getattr(state, "marginal_kde_right_size", 15.0)),
             "marginal_kde_max_points": int(getattr(state, "marginal_kde_max_points", 5000)),
@@ -172,6 +188,28 @@ class StateStore:
                 action.get("model_name", "Stacey & Kramers (2nd Stage)")
             )
 
+        elif action_type == "SET_PALEO_LABEL_REFRESHING":
+            self._snapshot["paleo_label_refreshing"] = bool(action.get("refreshing", False))
+
+        elif action_type == "SET_OVERLAY_LABEL_REFRESHING":
+            self._snapshot["overlay_label_refreshing"] = bool(action.get("refreshing", False))
+
+        elif action_type == "SET_ADJUST_TEXT_IN_PROGRESS":
+            self._snapshot["adjust_text_in_progress"] = bool(action.get("in_progress", False))
+
+        elif action_type == "SET_CONFIDENCE_LEVEL":
+            self._snapshot["confidence_level"] = float(action.get("level", 0.95))
+
+        elif action_type == "SET_CURRENT_PALETTE":
+            self._snapshot["current_palette"] = dict(action.get("palette") or {})
+
+        elif action_type == "SET_CURRENT_PLOT_TITLE":
+            self._snapshot["current_plot_title"] = str(action.get("title", ""))
+
+        elif action_type == "SET_LAST_2D_COLS":
+            columns = action.get("columns")
+            self._snapshot["last_2d_cols"] = list(columns or []) if columns is not None else None
+
         elif action_type == "SET_SHOW_MODEL_CURVES":
             self._snapshot["show_model_curves"] = bool(action.get("show", False))
 
@@ -202,6 +240,14 @@ class StateStore:
             self._snapshot["isochron_sy_value"] = float(action.get("sy_value", 0.001))
             self._snapshot["isochron_rxy_value"] = float(action.get("rxy_value", 0.0))
 
+        elif action_type == "SET_ISOCHRON_RESULTS":
+            self._snapshot["isochron_results"] = dict(action.get("results") or {})
+
+        elif action_type == "SET_PLUMBOTECTONICS_GROUP_VISIBILITY":
+            self._snapshot["plumbotectonics_group_visibility"] = dict(
+                action.get("visibility") or {}
+            )
+
         elif action_type == "SET_USE_REAL_AGE_FOR_MU_KAPPA":
             self._snapshot["use_real_age_for_mu_kappa"] = bool(action.get("enabled", False))
 
@@ -216,6 +262,9 @@ class StateStore:
 
         elif action_type == "SET_PALEOISOCHRON_AGES":
             self._snapshot["paleoisochron_ages"] = list(action.get("ages") or [])
+
+        elif action_type == "SET_DRAW_SELECTION_ELLIPSE":
+            self._snapshot["draw_selection_ellipse"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_MARGINAL_KDE_LAYOUT":
             top_size = action.get("top_size")
@@ -352,6 +401,12 @@ class StateStore:
             self._snapshot["file_path"] = action.get("file_path")
             self._snapshot["sheet_name"] = action.get("sheet_name")
 
+        elif action_type == "SET_FILE_PATH":
+            self._snapshot["file_path"] = str(action.get("file_path"))
+
+        elif action_type == "SET_SHEET_NAME":
+            self._snapshot["sheet_name"] = action.get("sheet_name")
+
         elif action_type == "BUMP_DATA_VERSION":
             self._snapshot["data_version"] = int(self._snapshot.get("data_version", 0)) + 1
             cache = getattr(self._state, "embedding_cache", None)
@@ -360,6 +415,9 @@ class StateStore:
                     cache.clear()
                 except Exception:
                     pass
+
+        elif action_type == "SET_DATA_VERSION":
+            self._snapshot["data_version"] = int(action.get("version", 0))
 
         elif action_type == "SET_GROUP_DATA_COLUMNS":
             self._snapshot["group_cols"] = [str(col) for col in list(action.get("group_cols") or [])]
@@ -491,6 +549,17 @@ class StateStore:
             "show_marginal_kde": bool(self._snapshot["show_marginal_kde"]),
             "show_equation_overlays": bool(self._snapshot["show_equation_overlays"]),
             "geo_model_name": str(self._snapshot["geo_model_name"]),
+            "paleo_label_refreshing": bool(self._snapshot["paleo_label_refreshing"]),
+            "overlay_label_refreshing": bool(self._snapshot["overlay_label_refreshing"]),
+            "adjust_text_in_progress": bool(self._snapshot["adjust_text_in_progress"]),
+            "confidence_level": float(self._snapshot["confidence_level"]),
+            "current_palette": dict(self._snapshot["current_palette"]),
+            "current_plot_title": str(self._snapshot["current_plot_title"]),
+            "last_2d_cols": (
+                list(self._snapshot["last_2d_cols"])
+                if self._snapshot["last_2d_cols"] is not None
+                else None
+            ),
             "show_model_curves": bool(self._snapshot["show_model_curves"]),
             "show_plumbotectonics_curves": bool(self._snapshot["show_plumbotectonics_curves"]),
             "show_paleoisochrons": bool(self._snapshot["show_paleoisochrons"]),
@@ -504,11 +573,16 @@ class StateStore:
             "isochron_sx_value": float(self._snapshot["isochron_sx_value"]),
             "isochron_sy_value": float(self._snapshot["isochron_sy_value"]),
             "isochron_rxy_value": float(self._snapshot["isochron_rxy_value"]),
+            "isochron_results": dict(self._snapshot["isochron_results"]),
+            "plumbotectonics_group_visibility": dict(
+                self._snapshot["plumbotectonics_group_visibility"]
+            ),
             "use_real_age_for_mu_kappa": bool(self._snapshot["use_real_age_for_mu_kappa"]),
             "mu_kappa_age_col": self._snapshot["mu_kappa_age_col"],
             "plumbotectonics_variant": str(self._snapshot["plumbotectonics_variant"]),
             "paleoisochron_step": int(self._snapshot["paleoisochron_step"]),
             "paleoisochron_ages": list(self._snapshot["paleoisochron_ages"]),
+            "draw_selection_ellipse": bool(self._snapshot["draw_selection_ellipse"]),
             "marginal_kde_top_size": float(self._snapshot["marginal_kde_top_size"]),
             "marginal_kde_right_size": float(self._snapshot["marginal_kde_right_size"]),
             "marginal_kde_max_points": int(self._snapshot["marginal_kde_max_points"]),
@@ -593,6 +667,17 @@ class StateStore:
         self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
         self._state.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])
         self._state.geo_model_name = str(self._snapshot["geo_model_name"])
+        self._state.paleo_label_refreshing = bool(self._snapshot["paleo_label_refreshing"])
+        self._state.overlay_label_refreshing = bool(self._snapshot["overlay_label_refreshing"])
+        self._state.adjust_text_in_progress = bool(self._snapshot["adjust_text_in_progress"])
+        self._state.confidence_level = float(self._snapshot["confidence_level"])
+        self._state.current_palette = dict(self._snapshot["current_palette"])
+        self._state.current_plot_title = str(self._snapshot["current_plot_title"])
+        self._state.last_2d_cols = (
+            list(self._snapshot["last_2d_cols"])
+            if self._snapshot["last_2d_cols"] is not None
+            else None
+        )
         self._state.show_model_curves = bool(self._snapshot["show_model_curves"])
         self._state.show_plumbotectonics_curves = bool(self._snapshot["show_plumbotectonics_curves"])
         self._state.show_paleoisochrons = bool(self._snapshot["show_paleoisochrons"])
@@ -606,11 +691,16 @@ class StateStore:
         self._state.isochron_sx_value = float(self._snapshot["isochron_sx_value"])
         self._state.isochron_sy_value = float(self._snapshot["isochron_sy_value"])
         self._state.isochron_rxy_value = float(self._snapshot["isochron_rxy_value"])
+        self._state.isochron_results = dict(self._snapshot["isochron_results"])
+        self._state.plumbotectonics_group_visibility = dict(
+            self._snapshot["plumbotectonics_group_visibility"]
+        )
         self._state.use_real_age_for_mu_kappa = bool(self._snapshot["use_real_age_for_mu_kappa"])
         self._state.mu_kappa_age_col = self._snapshot["mu_kappa_age_col"]
         self._state.plumbotectonics_variant = str(self._snapshot["plumbotectonics_variant"])
         self._state.paleoisochron_step = int(self._snapshot["paleoisochron_step"])
         self._state.paleoisochron_ages = list(self._snapshot["paleoisochron_ages"])
+        self._state.draw_selection_ellipse = bool(self._snapshot["draw_selection_ellipse"])
         self._state.marginal_kde_top_size = float(self._snapshot["marginal_kde_top_size"])
         self._state.marginal_kde_right_size = float(self._snapshot["marginal_kde_right_size"])
         self._state.marginal_kde_max_points = int(self._snapshot["marginal_kde_max_points"])

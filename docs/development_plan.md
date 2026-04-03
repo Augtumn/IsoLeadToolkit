@@ -438,6 +438,22 @@
                                                                 - 扩展 `tests/test_state_store.py` 与
                                                                     `tests/test_gateway_set_attr_compatibility.py`，
                                                                     覆盖显式 setter 与 `set_attr` 在该域上的一致性。
+                                - 第六十四批迁移清理（门控业务域收口到 dispatch）：
+                                                                - `core/state/store.py` 新增状态域并接入 action/snapshot/sync：
+                                                                    `paleo_label_refreshing`、`overlay_label_refreshing`、
+                                                                    `adjust_text_in_progress`、`confidence_level`、
+                                                                    `current_palette`、`current_plot_title`、`last_2d_cols`、
+                                                                    `isochron_results`、`plumbotectonics_group_visibility`、
+                                                                    `draw_selection_ellipse`。
+                                                                - 新增 action：`SET_FILE_PATH`、`SET_SHEET_NAME`、`SET_DATA_VERSION`，
+                                                                    对应 `set_file_path`/`set_sheet_name`/`set_data_version`
+                                                                    改为 dispatch，避免 bypass 已托管域。
+                                                                - `core/state/gateway.py` 将上述业务 setter
+                                                                    全部迁移到 dispatch，仅保留运行期对象引用类字段直写
+                                                                    （如 fig/canvas/selector/worker 等）。
+                                                                - 扩展 `tests/test_state_store.py` 与
+                                                                    `tests/test_gateway_set_attr_compatibility.py`，
+                                                                    覆盖新增业务域的快照一致性与 `set_attr` 兼容路径。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
