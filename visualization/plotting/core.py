@@ -300,8 +300,7 @@ def get_embedding(
 
 def _build_group_palette(unique_cats):
     """Build or reuse a stable group -> color mapping."""
-    if not hasattr(app_state, 'current_palette'):
-        state_gateway.set_current_palette({})
+    palette = dict(getattr(app_state, 'current_palette', {}) or {})
 
     prop_cycle = plt.rcParams.get('axes.prop_cycle', None)
     cycle_colors = []
@@ -312,12 +311,18 @@ def _build_group_palette(unique_cats):
             cycle_colors = []
 
     color_cycle = itertools.cycle(cycle_colors if cycle_colors else ['#333333'])
+    changed = False
 
     for cat in unique_cats:
-        if cat not in app_state.current_palette or not app_state.current_palette.get(cat):
-            app_state.current_palette[cat] = next(color_cycle)
+        if cat not in palette or not palette.get(cat):
+            palette[cat] = next(color_cycle)
+            changed = True
 
-    return {cat: app_state.current_palette[cat] for cat in unique_cats}
+    # Keep StateStore snapshot and runtime palette in sync.
+    if changed or not isinstance(getattr(app_state, 'current_palette', None), dict):
+        state_gateway.set_current_palette(palette)
+
+    return {cat: palette.get(cat, '#333333') for cat in unique_cats}
 
 def _get_subset_dataframe():
     """Return the active subset of the dataframe and its indices."""

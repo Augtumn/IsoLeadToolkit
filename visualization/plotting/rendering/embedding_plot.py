@@ -150,7 +150,14 @@ def plot_embedding(
 
         _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_palette)
 
-        scatters = _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, size)
+        scatters = _render_scatter_groups(
+            actual_algorithm,
+            df_plot,
+            group_col,
+            unique_cats,
+            size,
+            palette=new_palette,
+        )
         show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
         if scatters is None:
             return False

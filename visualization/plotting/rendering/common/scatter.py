@@ -12,12 +12,13 @@ from ...ternary import prepare_ternary_components
 logger = logging.getLogger(__name__)
 
 
-def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, size):
+def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, size, palette=None):
     scatters = []
     is_kde_mode = getattr(app_state, 'show_kde', False)
     show_edge = bool(getattr(app_state, 'scatter_show_edge', True))
     edge_color = getattr(app_state, 'scatter_edgecolor', '#1e293b') if show_edge else 'none'
     edge_width = getattr(app_state, 'scatter_edgewidth', 0.4) if show_edge else 0.0
+    palette_map = dict(palette or getattr(app_state, 'current_palette', {}) or {})
 
     for cat in unique_cats:
         if is_kde_mode:
@@ -46,7 +47,7 @@ def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, si
                 marker_size = getattr(app_state, 'plot_marker_size', size)
                 marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
                 marker_shape = app_state.group_marker_map.get(cat, getattr(app_state, 'plot_marker_shape', 'o'))
-                color = app_state.current_palette[cat]
+                color = palette_map.get(cat, '#333333')
 
                 sc = app_state.ax.scatter(
                     t_norm,
@@ -93,7 +94,7 @@ def _render_scatter_groups(actual_algorithm, df_plot, group_col, unique_cats, si
                 marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
                 marker_shape = app_state.group_marker_map.get(cat, getattr(app_state, 'plot_marker_shape', 'o'))
 
-                color = app_state.current_palette[cat]
+                color = palette_map.get(cat, '#333333')
                 sc = app_state.ax.scatter(
                     xs,
                     ys,

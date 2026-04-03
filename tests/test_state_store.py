@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from core import app_state, state_gateway
+from visualization.plotting.core import _build_group_palette
 
 
 def _snapshot_state() -> dict[str, Any]:
@@ -260,6 +261,25 @@ def test_state_store_set_render_mode_syncs_algorithm() -> None:
         assert app_state.algorithm == "PCA"
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["render_mode"] == "PCA"
+    finally:
+        _restore_state(snapshot)
+
+
+def test_build_group_palette_syncs_state_store_snapshot() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_current_palette({})
+
+        palette = _build_group_palette(["A", "B"])
+
+        assert "A" in palette
+        assert "B" in palette
+        assert app_state.current_palette.get("A") == palette["A"]
+        assert app_state.current_palette.get("B") == palette["B"]
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["current_palette"].get("A") == palette["A"]
+        assert store_snapshot["current_palette"].get("B") == palette["B"]
     finally:
         _restore_state(snapshot)
 

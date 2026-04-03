@@ -551,6 +551,23 @@
                                                                 - `tests/test_gateway_set_attr_compatibility.py`
                                                                     扩展回归：验证已有但非样式字段
                                                                     不会通过 panel style 路径被修改。
+                                - 第七十四批迁移清理（三元分类散点颜色容错与调色板同步）：
+                                                                - `visualization/plotting/core.py`
+                                                                    `_build_group_palette` 改为本地构建后
+                                                                    通过 `state_gateway.set_current_palette` 回写，
+                                                                    避免运行态调色板与 StateStore 快照失步。
+                                                                - `visualization/plotting/rendering/common/scatter.py`
+                                                                    分类散点取色从直接索引改为安全回退，
+                                                                    并支持显式传入本轮渲染 palette，
+                                                                    避免分类键缺失触发异常导致整类点丢失。
+                                                                - `visualization/plotting/rendering/embedding_plot.py`
+                                                                    调用散点渲染时显式传入 `new_palette`，
+                                                                    保证同一轮渲染使用一致调色板视图。
+                                                                - `tests/test_state_store.py`
+                                                                    新增 `_build_group_palette` 回归测试，
+                                                                    校验 palette 运行态与 Store 快照同步。
+                                                                - 运行日志复核未再出现
+                                                                    `Error plotting category` / `No data points plotted`。
 
 ## 架构现代化改造方案（2026-03-31 新增）
 
