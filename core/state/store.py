@@ -173,6 +173,30 @@ class StateStore:
                 getattr(state, "legend_frame_edgecolor", "#cbd5f5"),
                 "#cbd5f5",
             ),
+            "adjust_text_force_text": self._normalize_adjust_text_pair(
+                getattr(state, "adjust_text_force_text", (0.8, 1.0)),
+                default=(0.8, 1.0),
+                min_value=0.0,
+                max_value=3.0,
+            ),
+            "adjust_text_force_static": self._normalize_adjust_text_pair(
+                getattr(state, "adjust_text_force_static", (0.4, 0.6)),
+                default=(0.4, 0.6),
+                min_value=0.0,
+                max_value=3.0,
+            ),
+            "adjust_text_expand": self._normalize_adjust_text_pair(
+                getattr(state, "adjust_text_expand", (1.08, 1.20)),
+                default=(1.08, 1.20),
+                min_value=1.0,
+                max_value=2.5,
+            ),
+            "adjust_text_iter_lim": self._normalize_adjust_text_iter_lim(
+                getattr(state, "adjust_text_iter_lim", 120)
+            ),
+            "adjust_text_time_lim": self._normalize_adjust_text_time_lim(
+                getattr(state, "adjust_text_time_lim", 0.25)
+            ),
             "show_kde": bool(getattr(state, "show_kde", False)),
             "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
             "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
@@ -576,6 +600,40 @@ class StateStore:
             self._snapshot["legend_frame_edgecolor"] = self._normalize_color(
                 action.get("color", "#cbd5f5"),
                 "#cbd5f5",
+            )
+
+        elif action_type == "SET_ADJUST_TEXT_FORCE_TEXT":
+            self._snapshot["adjust_text_force_text"] = self._normalize_adjust_text_pair(
+                action.get("force", (0.8, 1.0)),
+                default=(0.8, 1.0),
+                min_value=0.0,
+                max_value=3.0,
+            )
+
+        elif action_type == "SET_ADJUST_TEXT_FORCE_STATIC":
+            self._snapshot["adjust_text_force_static"] = self._normalize_adjust_text_pair(
+                action.get("force", (0.4, 0.6)),
+                default=(0.4, 0.6),
+                min_value=0.0,
+                max_value=3.0,
+            )
+
+        elif action_type == "SET_ADJUST_TEXT_EXPAND":
+            self._snapshot["adjust_text_expand"] = self._normalize_adjust_text_pair(
+                action.get("expand", (1.08, 1.20)),
+                default=(1.08, 1.20),
+                min_value=1.0,
+                max_value=2.5,
+            )
+
+        elif action_type == "SET_ADJUST_TEXT_ITER_LIM":
+            self._snapshot["adjust_text_iter_lim"] = self._normalize_adjust_text_iter_lim(
+                action.get("iter_lim", 120)
+            )
+
+        elif action_type == "SET_ADJUST_TEXT_TIME_LIM":
+            self._snapshot["adjust_text_time_lim"] = self._normalize_adjust_text_time_lim(
+                action.get("time_lim", 0.25)
             )
 
         elif action_type == "SET_SHOW_KDE":
@@ -1050,6 +1108,11 @@ class StateStore:
             "legend_frame_alpha": float(self._snapshot["legend_frame_alpha"]),
             "legend_frame_facecolor": str(self._snapshot["legend_frame_facecolor"]),
             "legend_frame_edgecolor": str(self._snapshot["legend_frame_edgecolor"]),
+            "adjust_text_force_text": tuple(self._snapshot["adjust_text_force_text"]),
+            "adjust_text_force_static": tuple(self._snapshot["adjust_text_force_static"]),
+            "adjust_text_expand": tuple(self._snapshot["adjust_text_expand"]),
+            "adjust_text_iter_lim": int(self._snapshot["adjust_text_iter_lim"]),
+            "adjust_text_time_lim": float(self._snapshot["adjust_text_time_lim"]),
             "show_kde": bool(self._snapshot["show_kde"]),
             "show_marginal_kde": bool(self._snapshot["show_marginal_kde"]),
             "show_equation_overlays": bool(self._snapshot["show_equation_overlays"]),
@@ -1238,6 +1301,11 @@ class StateStore:
         self._state.legend_frame_alpha = float(self._snapshot["legend_frame_alpha"])
         self._state.legend_frame_facecolor = str(self._snapshot["legend_frame_facecolor"])
         self._state.legend_frame_edgecolor = str(self._snapshot["legend_frame_edgecolor"])
+        self._state.adjust_text_force_text = tuple(self._snapshot["adjust_text_force_text"])
+        self._state.adjust_text_force_static = tuple(self._snapshot["adjust_text_force_static"])
+        self._state.adjust_text_expand = tuple(self._snapshot["adjust_text_expand"])
+        self._state.adjust_text_iter_lim = int(self._snapshot["adjust_text_iter_lim"])
+        self._state.adjust_text_time_lim = float(self._snapshot["adjust_text_time_lim"])
         self._state.show_kde = bool(self._snapshot["show_kde"])
         self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
         self._state.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])
@@ -1477,6 +1545,40 @@ class StateStore:
     @staticmethod
     def _normalize_text_pad(value: Any, *, default: float, max_value: float) -> float:
         return max(0.0, min(float(value if value is not None else default), max_value))
+
+    @staticmethod
+    def _normalize_adjust_text_pair(
+        value: Any,
+        *,
+        default: tuple[float, float],
+        min_value: float,
+        max_value: float,
+    ) -> tuple[float, float]:
+        values: list[float] = []
+        if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
+            for item in value:
+                try:
+                    values.append(float(item))
+                except Exception:
+                    values.append(0.0)
+                if len(values) >= 2:
+                    break
+        if not values:
+            values = [default[0], default[1]]
+        elif len(values) == 1:
+            values = [values[0], default[1]]
+        return (
+            max(min_value, min(values[0], max_value)),
+            max(min_value, min(values[1], max_value)),
+        )
+
+    @staticmethod
+    def _normalize_adjust_text_iter_lim(value: Any) -> int:
+        return max(10, min(int(value), 1000))
+
+    @staticmethod
+    def _normalize_adjust_text_time_lim(value: Any) -> float:
+        return max(0.05, min(float(value), 2.0))
 
     @staticmethod
     def _normalize_marginal_size(value: Any) -> float:

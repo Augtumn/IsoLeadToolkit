@@ -135,6 +135,11 @@ def _snapshot_state() -> dict[str, Any]:
         "legend_frame_alpha": float(getattr(app_state, "legend_frame_alpha", 0.95)),
         "legend_frame_facecolor": str(getattr(app_state, "legend_frame_facecolor", "#ffffff")),
         "legend_frame_edgecolor": str(getattr(app_state, "legend_frame_edgecolor", "#cbd5f5")),
+        "adjust_text_force_text": tuple(getattr(app_state, "adjust_text_force_text", (0.8, 1.0)) or (0.8, 1.0)),
+        "adjust_text_force_static": tuple(getattr(app_state, "adjust_text_force_static", (0.4, 0.6)) or (0.4, 0.6)),
+        "adjust_text_expand": tuple(getattr(app_state, "adjust_text_expand", (1.08, 1.20)) or (1.08, 1.20)),
+        "adjust_text_iter_lim": int(getattr(app_state, "adjust_text_iter_lim", 120)),
+        "adjust_text_time_lim": float(getattr(app_state, "adjust_text_time_lim", 0.25)),
         "point_size": int(getattr(app_state, "point_size", 60)),
         "show_tooltip": bool(getattr(app_state, "show_tooltip", False)),
         "tooltip_columns": list(getattr(app_state, "tooltip_columns", []) or []),
@@ -245,6 +250,11 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_legend_frame_alpha(float(snapshot["legend_frame_alpha"]))
     state_gateway.set_legend_frame_facecolor(str(snapshot["legend_frame_facecolor"]))
     state_gateway.set_legend_frame_edgecolor(str(snapshot["legend_frame_edgecolor"]))
+    state_gateway.set_adjust_text_force_text(snapshot["adjust_text_force_text"])
+    state_gateway.set_adjust_text_force_static(snapshot["adjust_text_force_static"])
+    state_gateway.set_adjust_text_expand(snapshot["adjust_text_expand"])
+    state_gateway.set_adjust_text_iter_lim(int(snapshot["adjust_text_iter_lim"]))
+    state_gateway.set_adjust_text_time_lim(float(snapshot["adjust_text_time_lim"]))
     state_gateway.set_point_size(int(snapshot["point_size"]))
     state_gateway.set_show_tooltip(bool(snapshot["show_tooltip"]))
     state_gateway.set_show_kde(bool(snapshot["show_kde"]))
@@ -445,6 +455,11 @@ def test_state_store_plot_style_domains() -> None:
         state_gateway.set_legend_frame_alpha(0.7)
         state_gateway.set_legend_frame_facecolor("#f8fafc")
         state_gateway.set_legend_frame_edgecolor("#94a3b8")
+        state_gateway.set_adjust_text_force_text((1.2, 1.4))
+        state_gateway.set_adjust_text_force_static((0.7, 0.9))
+        state_gateway.set_adjust_text_expand((1.3, 1.5))
+        state_gateway.set_adjust_text_iter_lim(240)
+        state_gateway.set_adjust_text_time_lim(0.75)
 
         assert app_state.plot_style_grid is True
         assert app_state.plot_marker_size == 88
@@ -486,6 +501,11 @@ def test_state_store_plot_style_domains() -> None:
         assert app_state.legend_frame_alpha == 0.7
         assert app_state.legend_frame_facecolor == "#f8fafc"
         assert app_state.legend_frame_edgecolor == "#94a3b8"
+        assert app_state.adjust_text_force_text == (1.2, 1.4)
+        assert app_state.adjust_text_force_static == (0.7, 0.9)
+        assert app_state.adjust_text_expand == (1.3, 1.5)
+        assert app_state.adjust_text_iter_lim == 240
+        assert app_state.adjust_text_time_lim == 0.75
 
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["plot_style_grid"] is True
@@ -528,6 +548,11 @@ def test_state_store_plot_style_domains() -> None:
         assert store_snapshot["legend_frame_alpha"] == 0.7
         assert store_snapshot["legend_frame_facecolor"] == "#f8fafc"
         assert store_snapshot["legend_frame_edgecolor"] == "#94a3b8"
+        assert store_snapshot["adjust_text_force_text"] == (1.2, 1.4)
+        assert store_snapshot["adjust_text_force_static"] == (0.7, 0.9)
+        assert store_snapshot["adjust_text_expand"] == (1.3, 1.5)
+        assert store_snapshot["adjust_text_iter_lim"] == 240
+        assert store_snapshot["adjust_text_time_lim"] == 0.75
     finally:
         _restore_state(snapshot)
 

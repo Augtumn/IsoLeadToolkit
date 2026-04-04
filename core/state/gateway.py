@@ -71,6 +71,11 @@ class AppStateGateway:
                 "legend_frame_alpha",
                 "legend_frame_facecolor",
                 "legend_frame_edgecolor",
+                "adjust_text_force_text",
+                "adjust_text_force_static",
+                "adjust_text_expand",
+                "adjust_text_iter_lim",
+                "adjust_text_time_lim",
                 "color_scheme",
                 "model_curve_width",
                 "paleoisochron_width",
@@ -85,11 +90,6 @@ class AppStateGateway:
             "custom_primary_font",
             "custom_cjk_font",
             "plot_font_sizes",
-            "adjust_text_force_text",
-            "adjust_text_force_static",
-            "adjust_text_expand",
-            "adjust_text_iter_lim",
-            "adjust_text_time_lim",
         }
 
     def _dispatch(self, action_type: str, **payload: Any) -> dict[str, Any]:
@@ -236,6 +236,9 @@ class AppStateGateway:
             "robust_pca_params": "set_robust_pca_params",
             "ml_params": "set_ml_params",
             "v1v2_params": "set_v1v2_params",
+            "adjust_text_force_text": "set_adjust_text_force_text",
+            "adjust_text_force_static": "set_adjust_text_force_static",
+            "adjust_text_expand": "set_adjust_text_expand",
             "group_cols": "_set_group_cols_compat",
             "data_cols": "_set_data_cols_compat",
             "export_image_options": "_set_export_image_options_compat",
@@ -288,6 +291,7 @@ class AppStateGateway:
             "paleoisochron_step": "set_paleoisochron_step",
             "marginal_kde_max_points": "set_marginal_kde_compute_options",
             "marginal_kde_gridsize": "set_marginal_kde_compute_options",
+            "adjust_text_iter_lim": "set_adjust_text_iter_lim",
             "point_size": "set_point_size",
             "data_version": "set_data_version",
             "embedding_task_token": "set_embedding_task_token",
@@ -320,6 +324,7 @@ class AppStateGateway:
             "marginal_kde_right_size": "set_marginal_kde_layout",
             "marginal_kde_bw_adjust": "set_marginal_kde_compute_options",
             "marginal_kde_cut": "set_marginal_kde_compute_options",
+            "adjust_text_time_lim": "set_adjust_text_time_lim",
         }
         str_map = {
             "algorithm": "set_algorithm",
@@ -581,6 +586,21 @@ class AppStateGateway:
 
     def set_legend_frame_edgecolor(self, color: str) -> None:
         self._dispatch("SET_LEGEND_FRAME_EDGECOLOR", color=str(color))
+
+    def set_adjust_text_force_text(self, force: Any) -> None:
+        self._dispatch("SET_ADJUST_TEXT_FORCE_TEXT", force=force)
+
+    def set_adjust_text_force_static(self, force: Any) -> None:
+        self._dispatch("SET_ADJUST_TEXT_FORCE_STATIC", force=force)
+
+    def set_adjust_text_expand(self, expand: Any) -> None:
+        self._dispatch("SET_ADJUST_TEXT_EXPAND", expand=expand)
+
+    def set_adjust_text_iter_lim(self, iter_lim: int) -> None:
+        self._dispatch("SET_ADJUST_TEXT_ITER_LIM", iter_lim=int(iter_lim))
+
+    def set_adjust_text_time_lim(self, time_lim: float) -> None:
+        self._dispatch("SET_ADJUST_TEXT_TIME_LIM", time_lim=float(time_lim))
 
     def set_show_kde(self, show: bool) -> None:
         self._dispatch("SET_SHOW_KDE", show=bool(show))
