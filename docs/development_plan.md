@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第九十九批）
+
+- 批次决策落地：运行时对象域保持非托管（不纳入 StateStore 快照），避免将不可序列化/仅会话内有效对象写入状态仓。
+    - 代表字段：`legend_to_scatter`、`legend_update_callback`（以及同类 artist/callback 引用）
+- 约束收敛：继续仅迁移“可归一化、可快照、可回放”的配置与参数域；运行时对象仍通过 gateway 显式 API 维护。
+- 守护校验：`check_gateway_direct_state_assignments.py` 与 `check_state_mutations.py` 均为 `TOTAL=0`。
+
 ## 阶段进展（2026-04-04 · StateStore 第九十八批）
 
 - 新增 Legend 参数域 StateStore 托管：
