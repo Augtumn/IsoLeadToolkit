@@ -2,6 +2,24 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第八十五批）
+
+- 样式参数域纳入 StateStore 托管（网格与坐标轴核心）：
+    - `plot_facecolor`、`axes_facecolor`
+    - `grid_color`、`grid_linewidth`、`grid_alpha`、`grid_linestyle`
+    - `tick_direction`、`tick_color`、`tick_length`、`tick_width`
+    - `axis_linewidth`、`axis_line_color`
+- `core/state/store.py` 新增对应 action、快照输出与 `_sync_state` 回写，并补充颜色/线宽/透明度/方向归一化。
+- `core/state/gateway.py` 新增显式 API：
+    - `set_plot_facecolor`、`set_axes_facecolor`
+    - `set_grid_color`、`set_grid_linewidth`、`set_grid_alpha`、`set_grid_linestyle`
+    - `set_tick_direction`、`set_tick_color`、`set_tick_length`、`set_tick_width`
+    - `set_axis_linewidth`、`set_axis_line_color`
+- 面板样式写入收口：上述托管字段已从 fallback 直写键集合移除，改为通过兼容映射分发到显式 setter。
+- 回归测试更新：
+    - `tests/test_state_store.py` 扩展 snapshot/restore 与样式域托管断言。
+    - `tests/test_gateway_set_attr_compatibility.py` 扩展 `set_panel_style_updates` 与 `set_attr` 兼容断言。
+
 ## 阶段进展（2026-04-03 · StateStore 第八十四批）
 
 - 样式参数域纳入 StateStore 托管：

@@ -208,6 +208,18 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
     original_plot_marker_alpha = float(getattr(app_state, "plot_marker_alpha", 0.8))
     original_show_plot_title = bool(getattr(app_state, "show_plot_title", False))
     original_plot_dpi = int(getattr(app_state, "plot_dpi", 130))
+    original_plot_facecolor = str(getattr(app_state, "plot_facecolor", "#ffffff"))
+    original_axes_facecolor = str(getattr(app_state, "axes_facecolor", "#ffffff"))
+    original_grid_color = str(getattr(app_state, "grid_color", "#e2e8f0"))
+    original_grid_linewidth = float(getattr(app_state, "grid_linewidth", 0.6))
+    original_grid_alpha = float(getattr(app_state, "grid_alpha", 0.7))
+    original_grid_linestyle = str(getattr(app_state, "grid_linestyle", "--"))
+    original_tick_direction = str(getattr(app_state, "tick_direction", "out"))
+    original_tick_color = str(getattr(app_state, "tick_color", "#1f2937"))
+    original_tick_length = float(getattr(app_state, "tick_length", 4.0))
+    original_tick_width = float(getattr(app_state, "tick_width", 0.8))
+    original_axis_linewidth = float(getattr(app_state, "axis_linewidth", 1.0))
+    original_axis_line_color = str(getattr(app_state, "axis_line_color", "#1f2937"))
     fallback_attr = "_test_panel_style_unknown"
     existed = hasattr(app_state, fallback_attr)
     original_value = getattr(app_state, fallback_attr, None) if existed else None
@@ -221,6 +233,18 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
                 "plot_marker_alpha": 0.62,
                 "show_plot_title": (not original_show_plot_title),
                 "plot_dpi": 170,
+                "plot_facecolor": "#fefce8",
+                "axes_facecolor": "#f8fafc",
+                "grid_color": "#334155",
+                "grid_linewidth": 1.1,
+                "grid_alpha": 0.66,
+                "grid_linestyle": ":",
+                "tick_direction": "in",
+                "tick_color": "#0f172a",
+                "tick_length": 5.2,
+                "tick_width": 1.0,
+                "axis_linewidth": 1.3,
+                "axis_line_color": "#111827",
                 fallback_attr: "ignored",
                 "selection_mode": (not original_selection_mode),
             }
@@ -231,6 +255,18 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         assert float(getattr(app_state, "plot_marker_alpha", 0.0)) == 0.62
         assert bool(getattr(app_state, "show_plot_title", False)) is (not original_show_plot_title)
         assert int(getattr(app_state, "plot_dpi", 0)) == 170
+        assert str(getattr(app_state, "plot_facecolor", "")) == "#fefce8"
+        assert str(getattr(app_state, "axes_facecolor", "")) == "#f8fafc"
+        assert str(getattr(app_state, "grid_color", "")) == "#334155"
+        assert float(getattr(app_state, "grid_linewidth", 0.0)) == 1.1
+        assert float(getattr(app_state, "grid_alpha", 0.0)) == 0.66
+        assert str(getattr(app_state, "grid_linestyle", "")) == ":"
+        assert str(getattr(app_state, "tick_direction", "")) == "in"
+        assert str(getattr(app_state, "tick_color", "")) == "#0f172a"
+        assert float(getattr(app_state, "tick_length", 0.0)) == 5.2
+        assert float(getattr(app_state, "tick_width", 0.0)) == 1.0
+        assert float(getattr(app_state, "axis_linewidth", 0.0)) == 1.3
+        assert str(getattr(app_state, "axis_line_color", "")) == "#111827"
         assert bool(getattr(app_state, "selection_mode", False)) is original_selection_mode
 
         snapshot = app_state.state_store.snapshot()
@@ -239,6 +275,18 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         assert snapshot["plot_marker_alpha"] == 0.62
         assert snapshot["show_plot_title"] is (not original_show_plot_title)
         assert snapshot["plot_dpi"] == 170
+        assert snapshot["plot_facecolor"] == "#fefce8"
+        assert snapshot["axes_facecolor"] == "#f8fafc"
+        assert snapshot["grid_color"] == "#334155"
+        assert snapshot["grid_linewidth"] == 1.1
+        assert snapshot["grid_alpha"] == 0.66
+        assert snapshot["grid_linestyle"] == ":"
+        assert snapshot["tick_direction"] == "in"
+        assert snapshot["tick_color"] == "#0f172a"
+        assert snapshot["tick_length"] == 5.2
+        assert snapshot["tick_width"] == 1.0
+        assert snapshot["axis_linewidth"] == 1.3
+        assert snapshot["axis_line_color"] == "#111827"
 
         if existed:
             assert getattr(app_state, fallback_attr) == original_value
@@ -250,6 +298,18 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         state_gateway.set_plot_marker_alpha(original_plot_marker_alpha)
         state_gateway.set_show_plot_title(original_show_plot_title)
         state_gateway.set_plot_dpi(original_plot_dpi)
+        state_gateway.set_plot_facecolor(original_plot_facecolor)
+        state_gateway.set_axes_facecolor(original_axes_facecolor)
+        state_gateway.set_grid_color(original_grid_color)
+        state_gateway.set_grid_linewidth(original_grid_linewidth)
+        state_gateway.set_grid_alpha(original_grid_alpha)
+        state_gateway.set_grid_linestyle(original_grid_linestyle)
+        state_gateway.set_tick_direction(original_tick_direction)
+        state_gateway.set_tick_color(original_tick_color)
+        state_gateway.set_tick_length(original_tick_length)
+        state_gateway.set_tick_width(original_tick_width)
+        state_gateway.set_axis_linewidth(original_axis_linewidth)
+        state_gateway.set_axis_line_color(original_axis_line_color)
         state_gateway.set_selection_mode(original_selection_mode)
         if existed:
             setattr(app_state, fallback_attr, original_value)
@@ -265,6 +325,18 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         ("plot_marker_alpha", 0.45),
         ("show_plot_title", True),
         ("plot_dpi", 160),
+        ("plot_facecolor", "#ffffff"),
+        ("axes_facecolor", "#f8fafc"),
+        ("grid_color", "#334155"),
+        ("grid_linewidth", 1.25),
+        ("grid_alpha", 0.61),
+        ("grid_linestyle", "--"),
+        ("tick_direction", "in"),
+        ("tick_color", "#0f172a"),
+        ("tick_length", 5.0),
+        ("tick_width", 1.05),
+        ("axis_linewidth", 1.2),
+        ("axis_line_color", "#111827"),
     ],
 )
 def test_style_fields_set_attr_compatibility(attr: str, payload: object) -> None:

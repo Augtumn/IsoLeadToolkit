@@ -52,6 +52,52 @@ class StateStore:
             ),
             "show_plot_title": bool(getattr(state, "show_plot_title", False)),
             "plot_dpi": self._normalize_plot_dpi(getattr(state, "plot_dpi", 130)),
+            "plot_facecolor": self._normalize_color(
+                getattr(state, "plot_facecolor", "#ffffff"),
+                "#ffffff",
+            ),
+            "axes_facecolor": self._normalize_color(
+                getattr(state, "axes_facecolor", "#ffffff"),
+                "#ffffff",
+            ),
+            "grid_color": self._normalize_color(
+                getattr(state, "grid_color", "#e2e8f0"),
+                "#e2e8f0",
+            ),
+            "grid_linewidth": self._normalize_style_linewidth(
+                getattr(state, "grid_linewidth", 0.6),
+                default=0.6,
+            ),
+            "grid_alpha": self._normalize_unit_interval(
+                getattr(state, "grid_alpha", 0.7),
+                default=0.7,
+            ),
+            "grid_linestyle": self._normalize_grid_linestyle(
+                getattr(state, "grid_linestyle", "--")
+            ),
+            "tick_direction": self._normalize_tick_direction(
+                getattr(state, "tick_direction", "out")
+            ),
+            "tick_color": self._normalize_color(
+                getattr(state, "tick_color", "#1f2937"),
+                "#1f2937",
+            ),
+            "tick_length": self._normalize_tick_length(
+                getattr(state, "tick_length", 4.0),
+                default=4.0,
+            ),
+            "tick_width": self._normalize_style_linewidth(
+                getattr(state, "tick_width", 0.8),
+                default=0.8,
+            ),
+            "axis_linewidth": self._normalize_style_linewidth(
+                getattr(state, "axis_linewidth", 1.0),
+                default=1.0,
+            ),
+            "axis_line_color": self._normalize_color(
+                getattr(state, "axis_line_color", "#1f2937"),
+                "#1f2937",
+            ),
             "show_kde": bool(getattr(state, "show_kde", False)),
             "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
             "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
@@ -265,6 +311,76 @@ class StateStore:
 
         elif action_type == "SET_PLOT_DPI":
             self._snapshot["plot_dpi"] = self._normalize_plot_dpi(action.get("dpi", 130))
+
+        elif action_type == "SET_PLOT_FACECOLOR":
+            self._snapshot["plot_facecolor"] = self._normalize_color(
+                action.get("color", "#ffffff"),
+                "#ffffff",
+            )
+
+        elif action_type == "SET_AXES_FACECOLOR":
+            self._snapshot["axes_facecolor"] = self._normalize_color(
+                action.get("color", "#ffffff"),
+                "#ffffff",
+            )
+
+        elif action_type == "SET_GRID_COLOR":
+            self._snapshot["grid_color"] = self._normalize_color(
+                action.get("color", "#e2e8f0"),
+                "#e2e8f0",
+            )
+
+        elif action_type == "SET_GRID_LINEWIDTH":
+            self._snapshot["grid_linewidth"] = self._normalize_style_linewidth(
+                action.get("width", 0.6),
+                default=0.6,
+            )
+
+        elif action_type == "SET_GRID_ALPHA":
+            self._snapshot["grid_alpha"] = self._normalize_unit_interval(
+                action.get("alpha", 0.7),
+                default=0.7,
+            )
+
+        elif action_type == "SET_GRID_LINESTYLE":
+            self._snapshot["grid_linestyle"] = self._normalize_grid_linestyle(
+                action.get("linestyle", "--")
+            )
+
+        elif action_type == "SET_TICK_DIRECTION":
+            self._snapshot["tick_direction"] = self._normalize_tick_direction(
+                action.get("direction", "out")
+            )
+
+        elif action_type == "SET_TICK_COLOR":
+            self._snapshot["tick_color"] = self._normalize_color(
+                action.get("color", "#1f2937"),
+                "#1f2937",
+            )
+
+        elif action_type == "SET_TICK_LENGTH":
+            self._snapshot["tick_length"] = self._normalize_tick_length(
+                action.get("length", 4.0),
+                default=4.0,
+            )
+
+        elif action_type == "SET_TICK_WIDTH":
+            self._snapshot["tick_width"] = self._normalize_style_linewidth(
+                action.get("width", 0.8),
+                default=0.8,
+            )
+
+        elif action_type == "SET_AXIS_LINEWIDTH":
+            self._snapshot["axis_linewidth"] = self._normalize_style_linewidth(
+                action.get("width", 1.0),
+                default=1.0,
+            )
+
+        elif action_type == "SET_AXIS_LINE_COLOR":
+            self._snapshot["axis_line_color"] = self._normalize_color(
+                action.get("color", "#1f2937"),
+                "#1f2937",
+            )
 
         elif action_type == "SET_SHOW_KDE":
             self._snapshot["show_kde"] = bool(action.get("show", False))
@@ -703,6 +819,18 @@ class StateStore:
             "plot_marker_alpha": float(self._snapshot["plot_marker_alpha"]),
             "show_plot_title": bool(self._snapshot["show_plot_title"]),
             "plot_dpi": int(self._snapshot["plot_dpi"]),
+            "plot_facecolor": str(self._snapshot["plot_facecolor"]),
+            "axes_facecolor": str(self._snapshot["axes_facecolor"]),
+            "grid_color": str(self._snapshot["grid_color"]),
+            "grid_linewidth": float(self._snapshot["grid_linewidth"]),
+            "grid_alpha": float(self._snapshot["grid_alpha"]),
+            "grid_linestyle": str(self._snapshot["grid_linestyle"]),
+            "tick_direction": str(self._snapshot["tick_direction"]),
+            "tick_color": str(self._snapshot["tick_color"]),
+            "tick_length": float(self._snapshot["tick_length"]),
+            "tick_width": float(self._snapshot["tick_width"]),
+            "axis_linewidth": float(self._snapshot["axis_linewidth"]),
+            "axis_line_color": str(self._snapshot["axis_line_color"]),
             "show_kde": bool(self._snapshot["show_kde"]),
             "show_marginal_kde": bool(self._snapshot["show_marginal_kde"]),
             "show_equation_overlays": bool(self._snapshot["show_equation_overlays"]),
@@ -856,6 +984,18 @@ class StateStore:
         self._state.plot_marker_alpha = float(self._snapshot["plot_marker_alpha"])
         self._state.show_plot_title = bool(self._snapshot["show_plot_title"])
         self._state.plot_dpi = int(self._snapshot["plot_dpi"])
+        self._state.plot_facecolor = str(self._snapshot["plot_facecolor"])
+        self._state.axes_facecolor = str(self._snapshot["axes_facecolor"])
+        self._state.grid_color = str(self._snapshot["grid_color"])
+        self._state.grid_linewidth = float(self._snapshot["grid_linewidth"])
+        self._state.grid_alpha = float(self._snapshot["grid_alpha"])
+        self._state.grid_linestyle = str(self._snapshot["grid_linestyle"])
+        self._state.tick_direction = str(self._snapshot["tick_direction"])
+        self._state.tick_color = str(self._snapshot["tick_color"])
+        self._state.tick_length = float(self._snapshot["tick_length"])
+        self._state.tick_width = float(self._snapshot["tick_width"])
+        self._state.axis_linewidth = float(self._snapshot["axis_linewidth"])
+        self._state.axis_line_color = str(self._snapshot["axis_line_color"])
         self._state.show_kde = bool(self._snapshot["show_kde"])
         self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
         self._state.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])
@@ -1059,6 +1199,33 @@ class StateStore:
     @staticmethod
     def _normalize_plot_dpi(value: Any) -> int:
         return max(72, min(int(value), 1200))
+
+    @staticmethod
+    def _normalize_color(value: Any, default: str) -> str:
+        text = str(value or "").strip()
+        return text if text else default
+
+    @staticmethod
+    def _normalize_style_linewidth(value: Any, *, default: float) -> float:
+        return max(0.0, min(float(value if value is not None else default), 10.0))
+
+    @staticmethod
+    def _normalize_unit_interval(value: Any, *, default: float) -> float:
+        return max(0.0, min(float(value if value is not None else default), 1.0))
+
+    @staticmethod
+    def _normalize_grid_linestyle(value: Any) -> str:
+        text = str(value or "--").strip()
+        return text if text in ("-", "--", "-.", ":") else "--"
+
+    @staticmethod
+    def _normalize_tick_direction(value: Any) -> str:
+        text = str(value or "out").strip().lower()
+        return text if text in ("in", "out", "inout") else "out"
+
+    @staticmethod
+    def _normalize_tick_length(value: Any, *, default: float) -> float:
+        return max(0.0, min(float(value if value is not None else default), 20.0))
 
     @staticmethod
     def _normalize_marginal_size(value: Any) -> float:

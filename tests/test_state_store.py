@@ -100,6 +100,18 @@ def _snapshot_state() -> dict[str, Any]:
         "plot_marker_alpha": float(getattr(app_state, "plot_marker_alpha", 0.8)),
         "show_plot_title": bool(getattr(app_state, "show_plot_title", False)),
         "plot_dpi": int(getattr(app_state, "plot_dpi", 130)),
+        "plot_facecolor": str(getattr(app_state, "plot_facecolor", "#ffffff")),
+        "axes_facecolor": str(getattr(app_state, "axes_facecolor", "#ffffff")),
+        "grid_color": str(getattr(app_state, "grid_color", "#e2e8f0")),
+        "grid_linewidth": float(getattr(app_state, "grid_linewidth", 0.6)),
+        "grid_alpha": float(getattr(app_state, "grid_alpha", 0.7)),
+        "grid_linestyle": str(getattr(app_state, "grid_linestyle", "--")),
+        "tick_direction": str(getattr(app_state, "tick_direction", "out")),
+        "tick_color": str(getattr(app_state, "tick_color", "#1f2937")),
+        "tick_length": float(getattr(app_state, "tick_length", 4.0)),
+        "tick_width": float(getattr(app_state, "tick_width", 0.8)),
+        "axis_linewidth": float(getattr(app_state, "axis_linewidth", 1.0)),
+        "axis_line_color": str(getattr(app_state, "axis_line_color", "#1f2937")),
         "point_size": int(getattr(app_state, "point_size", 60)),
         "show_tooltip": bool(getattr(app_state, "show_tooltip", False)),
         "tooltip_columns": list(getattr(app_state, "tooltip_columns", []) or []),
@@ -175,6 +187,18 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_plot_marker_alpha(float(snapshot["plot_marker_alpha"]))
     state_gateway.set_show_plot_title(bool(snapshot["show_plot_title"]))
     state_gateway.set_plot_dpi(int(snapshot["plot_dpi"]))
+    state_gateway.set_plot_facecolor(str(snapshot["plot_facecolor"]))
+    state_gateway.set_axes_facecolor(str(snapshot["axes_facecolor"]))
+    state_gateway.set_grid_color(str(snapshot["grid_color"]))
+    state_gateway.set_grid_linewidth(float(snapshot["grid_linewidth"]))
+    state_gateway.set_grid_alpha(float(snapshot["grid_alpha"]))
+    state_gateway.set_grid_linestyle(str(snapshot["grid_linestyle"]))
+    state_gateway.set_tick_direction(str(snapshot["tick_direction"]))
+    state_gateway.set_tick_color(str(snapshot["tick_color"]))
+    state_gateway.set_tick_length(float(snapshot["tick_length"]))
+    state_gateway.set_tick_width(float(snapshot["tick_width"]))
+    state_gateway.set_axis_linewidth(float(snapshot["axis_linewidth"]))
+    state_gateway.set_axis_line_color(str(snapshot["axis_line_color"]))
     state_gateway.set_point_size(int(snapshot["point_size"]))
     state_gateway.set_show_tooltip(bool(snapshot["show_tooltip"]))
     state_gateway.set_show_kde(bool(snapshot["show_kde"]))
@@ -340,12 +364,36 @@ def test_state_store_plot_style_domains() -> None:
         state_gateway.set_plot_marker_alpha(0.57)
         state_gateway.set_show_plot_title(True)
         state_gateway.set_plot_dpi(180)
+        state_gateway.set_plot_facecolor("#fdf6e3")
+        state_gateway.set_axes_facecolor("#f8fafc")
+        state_gateway.set_grid_color("#334155")
+        state_gateway.set_grid_linewidth(1.2)
+        state_gateway.set_grid_alpha(0.65)
+        state_gateway.set_grid_linestyle(":")
+        state_gateway.set_tick_direction("in")
+        state_gateway.set_tick_color("#0f172a")
+        state_gateway.set_tick_length(5.5)
+        state_gateway.set_tick_width(1.1)
+        state_gateway.set_axis_linewidth(1.4)
+        state_gateway.set_axis_line_color("#111827")
 
         assert app_state.plot_style_grid is True
         assert app_state.plot_marker_size == 88
         assert app_state.plot_marker_alpha == 0.57
         assert app_state.show_plot_title is True
         assert app_state.plot_dpi == 180
+        assert app_state.plot_facecolor == "#fdf6e3"
+        assert app_state.axes_facecolor == "#f8fafc"
+        assert app_state.grid_color == "#334155"
+        assert app_state.grid_linewidth == 1.2
+        assert app_state.grid_alpha == 0.65
+        assert app_state.grid_linestyle == ":"
+        assert app_state.tick_direction == "in"
+        assert app_state.tick_color == "#0f172a"
+        assert app_state.tick_length == 5.5
+        assert app_state.tick_width == 1.1
+        assert app_state.axis_linewidth == 1.4
+        assert app_state.axis_line_color == "#111827"
 
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["plot_style_grid"] is True
@@ -353,6 +401,18 @@ def test_state_store_plot_style_domains() -> None:
         assert store_snapshot["plot_marker_alpha"] == 0.57
         assert store_snapshot["show_plot_title"] is True
         assert store_snapshot["plot_dpi"] == 180
+        assert store_snapshot["plot_facecolor"] == "#fdf6e3"
+        assert store_snapshot["axes_facecolor"] == "#f8fafc"
+        assert store_snapshot["grid_color"] == "#334155"
+        assert store_snapshot["grid_linewidth"] == 1.2
+        assert store_snapshot["grid_alpha"] == 0.65
+        assert store_snapshot["grid_linestyle"] == ":"
+        assert store_snapshot["tick_direction"] == "in"
+        assert store_snapshot["tick_color"] == "#0f172a"
+        assert store_snapshot["tick_length"] == 5.5
+        assert store_snapshot["tick_width"] == 1.1
+        assert store_snapshot["axis_linewidth"] == 1.4
+        assert store_snapshot["axis_line_color"] == "#111827"
     finally:
         _restore_state(snapshot)
 

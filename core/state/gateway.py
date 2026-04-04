@@ -36,6 +36,18 @@ class AppStateGateway:
                 "plot_marker_alpha",
                 "show_plot_title",
                 "plot_dpi",
+                "plot_facecolor",
+                "axes_facecolor",
+                "grid_color",
+                "grid_linewidth",
+                "grid_alpha",
+                "grid_linestyle",
+                "tick_direction",
+                "tick_color",
+                "tick_length",
+                "tick_width",
+                "axis_linewidth",
+                "axis_line_color",
                 "color_scheme",
                 "model_curve_width",
                 "paleoisochron_width",
@@ -50,21 +62,9 @@ class AppStateGateway:
             "custom_primary_font",
             "custom_cjk_font",
             "plot_font_sizes",
-            "plot_facecolor",
-            "axes_facecolor",
-            "grid_color",
-            "grid_linewidth",
-            "grid_alpha",
-            "grid_linestyle",
-            "tick_direction",
-            "tick_color",
-            "tick_length",
-            "tick_width",
             "minor_ticks",
             "minor_tick_length",
             "minor_tick_width",
-            "axis_linewidth",
-            "axis_line_color",
             "show_top_spine",
             "show_right_spine",
             "minor_grid",
@@ -288,6 +288,11 @@ class AppStateGateway:
         }
         float_map = {
             "plot_marker_alpha": "set_plot_marker_alpha",
+            "grid_linewidth": "set_grid_linewidth",
+            "grid_alpha": "set_grid_alpha",
+            "tick_length": "set_tick_length",
+            "tick_width": "set_tick_width",
+            "axis_linewidth": "set_axis_linewidth",
             "confidence_level": "set_confidence_level",
             "legend_nudge_step": "set_legend_nudge_step",
             "ternary_boundary_percent": "set_ternary_boundary_percent",
@@ -304,6 +309,13 @@ class AppStateGateway:
         }
         str_map = {
             "algorithm": "set_algorithm",
+            "plot_facecolor": "set_plot_facecolor",
+            "axes_facecolor": "set_axes_facecolor",
+            "grid_color": "set_grid_color",
+            "grid_linestyle": "set_grid_linestyle",
+            "tick_direction": "set_tick_direction",
+            "tick_color": "set_tick_color",
+            "axis_line_color": "set_axis_line_color",
             "geo_model_name": "set_geo_model_name",
             "current_plot_title": "set_current_plot_title",
             "language": "set_language_code",
@@ -441,6 +453,42 @@ class AppStateGateway:
 
     def set_plot_dpi(self, dpi: int) -> None:
         self._dispatch("SET_PLOT_DPI", dpi=int(dpi))
+
+    def set_plot_facecolor(self, color: str) -> None:
+        self._dispatch("SET_PLOT_FACECOLOR", color=str(color))
+
+    def set_axes_facecolor(self, color: str) -> None:
+        self._dispatch("SET_AXES_FACECOLOR", color=str(color))
+
+    def set_grid_color(self, color: str) -> None:
+        self._dispatch("SET_GRID_COLOR", color=str(color))
+
+    def set_grid_linewidth(self, width: float) -> None:
+        self._dispatch("SET_GRID_LINEWIDTH", width=float(width))
+
+    def set_grid_alpha(self, alpha: float) -> None:
+        self._dispatch("SET_GRID_ALPHA", alpha=float(alpha))
+
+    def set_grid_linestyle(self, linestyle: str) -> None:
+        self._dispatch("SET_GRID_LINESTYLE", linestyle=str(linestyle))
+
+    def set_tick_direction(self, direction: str) -> None:
+        self._dispatch("SET_TICK_DIRECTION", direction=str(direction))
+
+    def set_tick_color(self, color: str) -> None:
+        self._dispatch("SET_TICK_COLOR", color=str(color))
+
+    def set_tick_length(self, length: float) -> None:
+        self._dispatch("SET_TICK_LENGTH", length=float(length))
+
+    def set_tick_width(self, width: float) -> None:
+        self._dispatch("SET_TICK_WIDTH", width=float(width))
+
+    def set_axis_linewidth(self, width: float) -> None:
+        self._dispatch("SET_AXIS_LINEWIDTH", width=float(width))
+
+    def set_axis_line_color(self, color: str) -> None:
+        self._dispatch("SET_AXIS_LINE_COLOR", color=str(color))
 
     def set_show_kde(self, show: bool) -> None:
         self._dispatch("SET_SHOW_KDE", show=bool(show))
