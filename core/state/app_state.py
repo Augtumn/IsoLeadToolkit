@@ -659,6 +659,28 @@ class AppState:
 
     @isochron_error_mode.setter
     def isochron_error_mode(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            mode = str(value or 'fixed').strip().lower()
+            if mode == 'columns':
+                state_store.dispatch(
+                    {
+                        'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                        'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
+                        'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
+                        'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
+                    }
+                )
+            else:
+                state_store.dispatch(
+                    {
+                        'type': 'SET_ISOCHRON_ERROR_FIXED',
+                        'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
+                        'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
+                        'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
+                    }
+                )
+            return
         self.overlay.isochron_error_mode = value
 
     @property
@@ -667,6 +689,17 @@ class AppState:
 
     @isochron_sx_col.setter
     def isochron_sx_col(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                    'sx_col': str(value or ''),
+                    'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
+                    'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
+                }
+            )
+            return
         self.overlay.isochron_sx_col = value
 
     @property
@@ -675,6 +708,17 @@ class AppState:
 
     @isochron_sy_col.setter
     def isochron_sy_col(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                    'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
+                    'sy_col': str(value or ''),
+                    'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
+                }
+            )
+            return
         self.overlay.isochron_sy_col = value
 
     @property
@@ -683,6 +727,17 @@ class AppState:
 
     @isochron_rxy_col.setter
     def isochron_rxy_col(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                    'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
+                    'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
+                    'rxy_col': str(value or ''),
+                }
+            )
+            return
         self.overlay.isochron_rxy_col = value
 
     @property
@@ -691,6 +746,17 @@ class AppState:
 
     @isochron_sx_value.setter
     def isochron_sx_value(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_ISOCHRON_ERROR_FIXED',
+                    'sx_value': float(value),
+                    'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
+                    'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
+                }
+            )
+            return
         self.overlay.isochron_sx_value = value
 
     @property
@@ -699,6 +765,17 @@ class AppState:
 
     @isochron_sy_value.setter
     def isochron_sy_value(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_ISOCHRON_ERROR_FIXED',
+                    'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
+                    'sy_value': float(value),
+                    'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
+                }
+            )
+            return
         self.overlay.isochron_sy_value = value
 
     @property
@@ -707,6 +784,17 @@ class AppState:
 
     @isochron_rxy_value.setter
     def isochron_rxy_value(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_ISOCHRON_ERROR_FIXED',
+                    'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
+                    'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
+                    'rxy_value': float(value),
+                }
+            )
+            return
         self.overlay.isochron_rxy_value = value
 
     @property

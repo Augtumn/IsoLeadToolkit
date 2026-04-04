@@ -846,6 +846,52 @@ def test_app_state_overlay_detail_property_setters_dispatch_to_state_store() -> 
         _restore_state(snapshot)
 
 
+def test_app_state_isochron_error_property_setters_dispatch_to_state_store() -> None:
+    snapshot = _snapshot_state()
+    try:
+        setattr(app_state, "isochron_sx_col", "sx_col")
+        setattr(app_state, "isochron_sy_col", "sy_col")
+        setattr(app_state, "isochron_rxy_col", "rxy_col")
+
+        assert app_state.isochron_error_mode == "columns"
+        assert app_state.isochron_sx_col == "sx_col"
+        assert app_state.isochron_sy_col == "sy_col"
+        assert app_state.isochron_rxy_col == "rxy_col"
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["isochron_error_mode"] == "columns"
+        assert store_snapshot["isochron_sx_col"] == "sx_col"
+        assert store_snapshot["isochron_sy_col"] == "sy_col"
+        assert store_snapshot["isochron_rxy_col"] == "rxy_col"
+
+        setattr(app_state, "isochron_sx_value", 0.01)
+        setattr(app_state, "isochron_sy_value", 0.02)
+        setattr(app_state, "isochron_rxy_value", -0.15)
+
+        assert app_state.isochron_error_mode == "fixed"
+        assert app_state.isochron_sx_value == 0.01
+        assert app_state.isochron_sy_value == 0.02
+        assert app_state.isochron_rxy_value == -0.15
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["isochron_error_mode"] == "fixed"
+        assert store_snapshot["isochron_sx_value"] == 0.01
+        assert store_snapshot["isochron_sy_value"] == 0.02
+        assert store_snapshot["isochron_rxy_value"] == -0.15
+
+        setattr(app_state, "isochron_error_mode", "columns")
+        assert app_state.isochron_error_mode == "columns"
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["isochron_error_mode"] == "columns"
+
+        setattr(app_state, "isochron_error_mode", "fixed")
+        assert app_state.isochron_error_mode == "fixed"
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["isochron_error_mode"] == "fixed"
+    finally:
+        _restore_state(snapshot)
+
+
 def test_build_group_palette_syncs_state_store_snapshot() -> None:
     snapshot = _snapshot_state()
     try:

@@ -2,6 +2,17 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第九十五批）
+
+- `core/state/app_state.py` 的同位素误差兼容属性 setter 收口到 StateStore：
+    - `isochron_error_mode`
+    - `isochron_sx_col`、`isochron_sy_col`、`isochron_rxy_col`
+    - `isochron_sx_value`、`isochron_sy_value`、`isochron_rxy_value`
+- 实现方式：复用既有 `SET_ISOCHRON_ERROR_COLUMNS` / `SET_ISOCHRON_ERROR_FIXED` action，兼容属性写入改为组合分发并保留无 store 回退。
+- 同步机制修正：`core/state/store.py` `_sync_state` 对误差字段改为直接回写 `overlay` 子状态，避免通过兼容 setter 触发递归分发。
+- 回归测试更新：
+    - `tests/test_state_store.py` 新增 `test_app_state_isochron_error_property_setters_dispatch_to_state_store`，覆盖列误差与固定误差两种写入路径。
+
 ## 阶段进展（2026-04-04 · StateStore 第九十四批）
 
 - `core/state/app_state.py` 顶层 Overlay 兼容属性 setter 继续收口到 StateStore（action 已覆盖域）：
