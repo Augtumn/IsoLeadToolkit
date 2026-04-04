@@ -61,6 +61,16 @@ class AppStateGateway:
                 "scatter_show_edge",
                 "scatter_edgecolor",
                 "scatter_edgewidth",
+                "label_color",
+                "label_weight",
+                "label_pad",
+                "title_color",
+                "title_weight",
+                "title_pad",
+                "legend_frame_on",
+                "legend_frame_alpha",
+                "legend_frame_facecolor",
+                "legend_frame_edgecolor",
                 "color_scheme",
                 "model_curve_width",
                 "paleoisochron_width",
@@ -75,21 +85,11 @@ class AppStateGateway:
             "custom_primary_font",
             "custom_cjk_font",
             "plot_font_sizes",
-            "label_color",
-            "label_weight",
-            "label_pad",
-            "title_color",
-            "title_weight",
-            "title_pad",
             "adjust_text_force_text",
             "adjust_text_force_static",
             "adjust_text_expand",
             "adjust_text_iter_lim",
             "adjust_text_time_lim",
-            "legend_frame_on",
-            "legend_frame_alpha",
-            "legend_frame_facecolor",
-            "legend_frame_edgecolor",
         }
 
     def _dispatch(self, action_type: str, **payload: Any) -> dict[str, Any]:
@@ -255,6 +255,7 @@ class AppStateGateway:
             "show_right_spine": "set_show_right_spine",
             "minor_grid": "set_minor_grid",
             "scatter_show_edge": "set_scatter_show_edge",
+            "legend_frame_on": "set_legend_frame_on",
             "show_kde": "set_show_kde",
             "show_marginal_kde": "set_show_marginal_kde",
             "show_equation_overlays": "set_show_equation_overlays",
@@ -303,6 +304,9 @@ class AppStateGateway:
             "minor_grid_linewidth": "set_minor_grid_linewidth",
             "minor_grid_alpha": "set_minor_grid_alpha",
             "scatter_edgewidth": "set_scatter_edgewidth",
+            "label_pad": "set_label_pad",
+            "title_pad": "set_title_pad",
+            "legend_frame_alpha": "set_legend_frame_alpha",
             "confidence_level": "set_confidence_level",
             "legend_nudge_step": "set_legend_nudge_step",
             "ternary_boundary_percent": "set_ternary_boundary_percent",
@@ -329,6 +333,12 @@ class AppStateGateway:
             "minor_grid_color": "set_minor_grid_color",
             "minor_grid_linestyle": "set_minor_grid_linestyle",
             "scatter_edgecolor": "set_scatter_edgecolor",
+            "label_color": "set_label_color",
+            "label_weight": "set_label_weight",
+            "title_color": "set_title_color",
+            "title_weight": "set_title_weight",
+            "legend_frame_facecolor": "set_legend_frame_facecolor",
+            "legend_frame_edgecolor": "set_legend_frame_edgecolor",
             "geo_model_name": "set_geo_model_name",
             "current_plot_title": "set_current_plot_title",
             "language": "set_language_code",
@@ -541,6 +551,36 @@ class AppStateGateway:
 
     def set_scatter_edgewidth(self, width: float) -> None:
         self._dispatch("SET_SCATTER_EDGEWIDTH", width=float(width))
+
+    def set_label_color(self, color: str) -> None:
+        self._dispatch("SET_LABEL_COLOR", color=str(color))
+
+    def set_label_weight(self, weight: str) -> None:
+        self._dispatch("SET_LABEL_WEIGHT", weight=str(weight))
+
+    def set_label_pad(self, pad: float) -> None:
+        self._dispatch("SET_LABEL_PAD", pad=float(pad))
+
+    def set_title_color(self, color: str) -> None:
+        self._dispatch("SET_TITLE_COLOR", color=str(color))
+
+    def set_title_weight(self, weight: str) -> None:
+        self._dispatch("SET_TITLE_WEIGHT", weight=str(weight))
+
+    def set_title_pad(self, pad: float) -> None:
+        self._dispatch("SET_TITLE_PAD", pad=float(pad))
+
+    def set_legend_frame_on(self, enabled: bool) -> None:
+        self._dispatch("SET_LEGEND_FRAME_ON", enabled=bool(enabled))
+
+    def set_legend_frame_alpha(self, alpha: float) -> None:
+        self._dispatch("SET_LEGEND_FRAME_ALPHA", alpha=float(alpha))
+
+    def set_legend_frame_facecolor(self, color: str) -> None:
+        self._dispatch("SET_LEGEND_FRAME_FACECOLOR", color=str(color))
+
+    def set_legend_frame_edgecolor(self, color: str) -> None:
+        self._dispatch("SET_LEGEND_FRAME_EDGECOLOR", color=str(color))
 
     def set_show_kde(self, show: bool) -> None:
         self._dispatch("SET_SHOW_KDE", show=bool(show))

@@ -125,6 +125,16 @@ def _snapshot_state() -> dict[str, Any]:
         "scatter_show_edge": bool(getattr(app_state, "scatter_show_edge", True)),
         "scatter_edgecolor": str(getattr(app_state, "scatter_edgecolor", "#1e293b")),
         "scatter_edgewidth": float(getattr(app_state, "scatter_edgewidth", 0.4)),
+        "label_color": str(getattr(app_state, "label_color", "#1f2937")),
+        "label_weight": str(getattr(app_state, "label_weight", "normal")),
+        "label_pad": float(getattr(app_state, "label_pad", 6.0)),
+        "title_color": str(getattr(app_state, "title_color", "#111827")),
+        "title_weight": str(getattr(app_state, "title_weight", "bold")),
+        "title_pad": float(getattr(app_state, "title_pad", 20.0)),
+        "legend_frame_on": bool(getattr(app_state, "legend_frame_on", True)),
+        "legend_frame_alpha": float(getattr(app_state, "legend_frame_alpha", 0.95)),
+        "legend_frame_facecolor": str(getattr(app_state, "legend_frame_facecolor", "#ffffff")),
+        "legend_frame_edgecolor": str(getattr(app_state, "legend_frame_edgecolor", "#cbd5f5")),
         "point_size": int(getattr(app_state, "point_size", 60)),
         "show_tooltip": bool(getattr(app_state, "show_tooltip", False)),
         "tooltip_columns": list(getattr(app_state, "tooltip_columns", []) or []),
@@ -225,6 +235,16 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_scatter_show_edge(bool(snapshot["scatter_show_edge"]))
     state_gateway.set_scatter_edgecolor(str(snapshot["scatter_edgecolor"]))
     state_gateway.set_scatter_edgewidth(float(snapshot["scatter_edgewidth"]))
+    state_gateway.set_label_color(str(snapshot["label_color"]))
+    state_gateway.set_label_weight(str(snapshot["label_weight"]))
+    state_gateway.set_label_pad(float(snapshot["label_pad"]))
+    state_gateway.set_title_color(str(snapshot["title_color"]))
+    state_gateway.set_title_weight(str(snapshot["title_weight"]))
+    state_gateway.set_title_pad(float(snapshot["title_pad"]))
+    state_gateway.set_legend_frame_on(bool(snapshot["legend_frame_on"]))
+    state_gateway.set_legend_frame_alpha(float(snapshot["legend_frame_alpha"]))
+    state_gateway.set_legend_frame_facecolor(str(snapshot["legend_frame_facecolor"]))
+    state_gateway.set_legend_frame_edgecolor(str(snapshot["legend_frame_edgecolor"]))
     state_gateway.set_point_size(int(snapshot["point_size"]))
     state_gateway.set_show_tooltip(bool(snapshot["show_tooltip"]))
     state_gateway.set_show_kde(bool(snapshot["show_kde"]))
@@ -415,6 +435,16 @@ def test_state_store_plot_style_domains() -> None:
         state_gateway.set_scatter_show_edge(False)
         state_gateway.set_scatter_edgecolor("#334155")
         state_gateway.set_scatter_edgewidth(0.7)
+        state_gateway.set_label_color("#1e293b")
+        state_gateway.set_label_weight("bold")
+        state_gateway.set_label_pad(10.0)
+        state_gateway.set_title_color("#0f172a")
+        state_gateway.set_title_weight("normal")
+        state_gateway.set_title_pad(24.0)
+        state_gateway.set_legend_frame_on(False)
+        state_gateway.set_legend_frame_alpha(0.7)
+        state_gateway.set_legend_frame_facecolor("#f8fafc")
+        state_gateway.set_legend_frame_edgecolor("#94a3b8")
 
         assert app_state.plot_style_grid is True
         assert app_state.plot_marker_size == 88
@@ -446,6 +476,16 @@ def test_state_store_plot_style_domains() -> None:
         assert app_state.scatter_show_edge is False
         assert app_state.scatter_edgecolor == "#334155"
         assert app_state.scatter_edgewidth == 0.7
+        assert app_state.label_color == "#1e293b"
+        assert app_state.label_weight == "bold"
+        assert app_state.label_pad == 10.0
+        assert app_state.title_color == "#0f172a"
+        assert app_state.title_weight == "normal"
+        assert app_state.title_pad == 24.0
+        assert app_state.legend_frame_on is False
+        assert app_state.legend_frame_alpha == 0.7
+        assert app_state.legend_frame_facecolor == "#f8fafc"
+        assert app_state.legend_frame_edgecolor == "#94a3b8"
 
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["plot_style_grid"] is True
@@ -478,6 +518,16 @@ def test_state_store_plot_style_domains() -> None:
         assert store_snapshot["scatter_show_edge"] is False
         assert store_snapshot["scatter_edgecolor"] == "#334155"
         assert store_snapshot["scatter_edgewidth"] == 0.7
+        assert store_snapshot["label_color"] == "#1e293b"
+        assert store_snapshot["label_weight"] == "bold"
+        assert store_snapshot["label_pad"] == 10.0
+        assert store_snapshot["title_color"] == "#0f172a"
+        assert store_snapshot["title_weight"] == "normal"
+        assert store_snapshot["title_pad"] == 24.0
+        assert store_snapshot["legend_frame_on"] is False
+        assert store_snapshot["legend_frame_alpha"] == 0.7
+        assert store_snapshot["legend_frame_facecolor"] == "#f8fafc"
+        assert store_snapshot["legend_frame_edgecolor"] == "#94a3b8"
     finally:
         _restore_state(snapshot)
 

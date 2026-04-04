@@ -134,6 +134,45 @@ class StateStore:
                 getattr(state, "scatter_edgewidth", 0.4),
                 default=0.4,
             ),
+            "label_color": self._normalize_color(
+                getattr(state, "label_color", "#1f2937"),
+                "#1f2937",
+            ),
+            "label_weight": self._normalize_text_weight(
+                getattr(state, "label_weight", "normal"),
+                default="normal",
+            ),
+            "label_pad": self._normalize_text_pad(
+                getattr(state, "label_pad", 6.0),
+                default=6.0,
+                max_value=60.0,
+            ),
+            "title_color": self._normalize_color(
+                getattr(state, "title_color", "#111827"),
+                "#111827",
+            ),
+            "title_weight": self._normalize_text_weight(
+                getattr(state, "title_weight", "bold"),
+                default="bold",
+            ),
+            "title_pad": self._normalize_text_pad(
+                getattr(state, "title_pad", 20.0),
+                default=20.0,
+                max_value=80.0,
+            ),
+            "legend_frame_on": bool(getattr(state, "legend_frame_on", True)),
+            "legend_frame_alpha": self._normalize_unit_interval(
+                getattr(state, "legend_frame_alpha", 0.95),
+                default=0.95,
+            ),
+            "legend_frame_facecolor": self._normalize_color(
+                getattr(state, "legend_frame_facecolor", "#ffffff"),
+                "#ffffff",
+            ),
+            "legend_frame_edgecolor": self._normalize_color(
+                getattr(state, "legend_frame_edgecolor", "#cbd5f5"),
+                "#cbd5f5",
+            ),
             "show_kde": bool(getattr(state, "show_kde", False)),
             "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
             "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
@@ -478,6 +517,65 @@ class StateStore:
             self._snapshot["scatter_edgewidth"] = self._normalize_style_linewidth(
                 action.get("width", 0.4),
                 default=0.4,
+            )
+
+        elif action_type == "SET_LABEL_COLOR":
+            self._snapshot["label_color"] = self._normalize_color(
+                action.get("color", "#1f2937"),
+                "#1f2937",
+            )
+
+        elif action_type == "SET_LABEL_WEIGHT":
+            self._snapshot["label_weight"] = self._normalize_text_weight(
+                action.get("weight", "normal"),
+                default="normal",
+            )
+
+        elif action_type == "SET_LABEL_PAD":
+            self._snapshot["label_pad"] = self._normalize_text_pad(
+                action.get("pad", 6.0),
+                default=6.0,
+                max_value=60.0,
+            )
+
+        elif action_type == "SET_TITLE_COLOR":
+            self._snapshot["title_color"] = self._normalize_color(
+                action.get("color", "#111827"),
+                "#111827",
+            )
+
+        elif action_type == "SET_TITLE_WEIGHT":
+            self._snapshot["title_weight"] = self._normalize_text_weight(
+                action.get("weight", "bold"),
+                default="bold",
+            )
+
+        elif action_type == "SET_TITLE_PAD":
+            self._snapshot["title_pad"] = self._normalize_text_pad(
+                action.get("pad", 20.0),
+                default=20.0,
+                max_value=80.0,
+            )
+
+        elif action_type == "SET_LEGEND_FRAME_ON":
+            self._snapshot["legend_frame_on"] = bool(action.get("enabled", True))
+
+        elif action_type == "SET_LEGEND_FRAME_ALPHA":
+            self._snapshot["legend_frame_alpha"] = self._normalize_unit_interval(
+                action.get("alpha", 0.95),
+                default=0.95,
+            )
+
+        elif action_type == "SET_LEGEND_FRAME_FACECOLOR":
+            self._snapshot["legend_frame_facecolor"] = self._normalize_color(
+                action.get("color", "#ffffff"),
+                "#ffffff",
+            )
+
+        elif action_type == "SET_LEGEND_FRAME_EDGECOLOR":
+            self._snapshot["legend_frame_edgecolor"] = self._normalize_color(
+                action.get("color", "#cbd5f5"),
+                "#cbd5f5",
             )
 
         elif action_type == "SET_SHOW_KDE":
@@ -942,6 +1040,16 @@ class StateStore:
             "scatter_show_edge": bool(self._snapshot["scatter_show_edge"]),
             "scatter_edgecolor": str(self._snapshot["scatter_edgecolor"]),
             "scatter_edgewidth": float(self._snapshot["scatter_edgewidth"]),
+            "label_color": str(self._snapshot["label_color"]),
+            "label_weight": str(self._snapshot["label_weight"]),
+            "label_pad": float(self._snapshot["label_pad"]),
+            "title_color": str(self._snapshot["title_color"]),
+            "title_weight": str(self._snapshot["title_weight"]),
+            "title_pad": float(self._snapshot["title_pad"]),
+            "legend_frame_on": bool(self._snapshot["legend_frame_on"]),
+            "legend_frame_alpha": float(self._snapshot["legend_frame_alpha"]),
+            "legend_frame_facecolor": str(self._snapshot["legend_frame_facecolor"]),
+            "legend_frame_edgecolor": str(self._snapshot["legend_frame_edgecolor"]),
             "show_kde": bool(self._snapshot["show_kde"]),
             "show_marginal_kde": bool(self._snapshot["show_marginal_kde"]),
             "show_equation_overlays": bool(self._snapshot["show_equation_overlays"]),
@@ -1120,6 +1228,16 @@ class StateStore:
         self._state.scatter_show_edge = bool(self._snapshot["scatter_show_edge"])
         self._state.scatter_edgecolor = str(self._snapshot["scatter_edgecolor"])
         self._state.scatter_edgewidth = float(self._snapshot["scatter_edgewidth"])
+        self._state.label_color = str(self._snapshot["label_color"])
+        self._state.label_weight = str(self._snapshot["label_weight"])
+        self._state.label_pad = float(self._snapshot["label_pad"])
+        self._state.title_color = str(self._snapshot["title_color"])
+        self._state.title_weight = str(self._snapshot["title_weight"])
+        self._state.title_pad = float(self._snapshot["title_pad"])
+        self._state.legend_frame_on = bool(self._snapshot["legend_frame_on"])
+        self._state.legend_frame_alpha = float(self._snapshot["legend_frame_alpha"])
+        self._state.legend_frame_facecolor = str(self._snapshot["legend_frame_facecolor"])
+        self._state.legend_frame_edgecolor = str(self._snapshot["legend_frame_edgecolor"])
         self._state.show_kde = bool(self._snapshot["show_kde"])
         self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
         self._state.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])
@@ -1350,6 +1468,15 @@ class StateStore:
     @staticmethod
     def _normalize_tick_length(value: Any, *, default: float) -> float:
         return max(0.0, min(float(value if value is not None else default), 20.0))
+
+    @staticmethod
+    def _normalize_text_weight(value: Any, *, default: str) -> str:
+        text = str(value or default).strip().lower()
+        return text if text in ("normal", "bold") else default
+
+    @staticmethod
+    def _normalize_text_pad(value: Any, *, default: float, max_value: float) -> float:
+        return max(0.0, min(float(value if value is not None else default), max_value))
 
     @staticmethod
     def _normalize_marginal_size(value: Any) -> float:

@@ -233,6 +233,16 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
     original_scatter_show_edge = bool(getattr(app_state, "scatter_show_edge", True))
     original_scatter_edgecolor = str(getattr(app_state, "scatter_edgecolor", "#1e293b"))
     original_scatter_edgewidth = float(getattr(app_state, "scatter_edgewidth", 0.4))
+    original_label_color = str(getattr(app_state, "label_color", "#1f2937"))
+    original_label_weight = str(getattr(app_state, "label_weight", "normal"))
+    original_label_pad = float(getattr(app_state, "label_pad", 6.0))
+    original_title_color = str(getattr(app_state, "title_color", "#111827"))
+    original_title_weight = str(getattr(app_state, "title_weight", "bold"))
+    original_title_pad = float(getattr(app_state, "title_pad", 20.0))
+    original_legend_frame_on = bool(getattr(app_state, "legend_frame_on", True))
+    original_legend_frame_alpha = float(getattr(app_state, "legend_frame_alpha", 0.95))
+    original_legend_frame_facecolor = str(getattr(app_state, "legend_frame_facecolor", "#ffffff"))
+    original_legend_frame_edgecolor = str(getattr(app_state, "legend_frame_edgecolor", "#cbd5f5"))
     fallback_attr = "_test_panel_style_unknown"
     existed = hasattr(app_state, fallback_attr)
     original_value = getattr(app_state, fallback_attr, None) if existed else None
@@ -271,6 +281,16 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
                 "scatter_show_edge": False,
                 "scatter_edgecolor": "#334155",
                 "scatter_edgewidth": 0.7,
+                "label_color": "#1e293b",
+                "label_weight": "bold",
+                "label_pad": 10.0,
+                "title_color": "#0f172a",
+                "title_weight": "normal",
+                "title_pad": 24.0,
+                "legend_frame_on": False,
+                "legend_frame_alpha": 0.7,
+                "legend_frame_facecolor": "#f8fafc",
+                "legend_frame_edgecolor": "#94a3b8",
                 fallback_attr: "ignored",
                 "selection_mode": (not original_selection_mode),
             }
@@ -306,6 +326,16 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         assert bool(getattr(app_state, "scatter_show_edge", True)) is False
         assert str(getattr(app_state, "scatter_edgecolor", "")) == "#334155"
         assert float(getattr(app_state, "scatter_edgewidth", 0.0)) == 0.7
+        assert str(getattr(app_state, "label_color", "")) == "#1e293b"
+        assert str(getattr(app_state, "label_weight", "")) == "bold"
+        assert float(getattr(app_state, "label_pad", 0.0)) == 10.0
+        assert str(getattr(app_state, "title_color", "")) == "#0f172a"
+        assert str(getattr(app_state, "title_weight", "")) == "normal"
+        assert float(getattr(app_state, "title_pad", 0.0)) == 24.0
+        assert bool(getattr(app_state, "legend_frame_on", True)) is False
+        assert float(getattr(app_state, "legend_frame_alpha", 0.0)) == 0.7
+        assert str(getattr(app_state, "legend_frame_facecolor", "")) == "#f8fafc"
+        assert str(getattr(app_state, "legend_frame_edgecolor", "")) == "#94a3b8"
         assert bool(getattr(app_state, "selection_mode", False)) is original_selection_mode
 
         snapshot = app_state.state_store.snapshot()
@@ -339,6 +369,16 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         assert snapshot["scatter_show_edge"] is False
         assert snapshot["scatter_edgecolor"] == "#334155"
         assert snapshot["scatter_edgewidth"] == 0.7
+        assert snapshot["label_color"] == "#1e293b"
+        assert snapshot["label_weight"] == "bold"
+        assert snapshot["label_pad"] == 10.0
+        assert snapshot["title_color"] == "#0f172a"
+        assert snapshot["title_weight"] == "normal"
+        assert snapshot["title_pad"] == 24.0
+        assert snapshot["legend_frame_on"] is False
+        assert snapshot["legend_frame_alpha"] == 0.7
+        assert snapshot["legend_frame_facecolor"] == "#f8fafc"
+        assert snapshot["legend_frame_edgecolor"] == "#94a3b8"
 
         if existed:
             assert getattr(app_state, fallback_attr) == original_value
@@ -375,6 +415,16 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         state_gateway.set_scatter_show_edge(original_scatter_show_edge)
         state_gateway.set_scatter_edgecolor(original_scatter_edgecolor)
         state_gateway.set_scatter_edgewidth(original_scatter_edgewidth)
+        state_gateway.set_label_color(original_label_color)
+        state_gateway.set_label_weight(original_label_weight)
+        state_gateway.set_label_pad(original_label_pad)
+        state_gateway.set_title_color(original_title_color)
+        state_gateway.set_title_weight(original_title_weight)
+        state_gateway.set_title_pad(original_title_pad)
+        state_gateway.set_legend_frame_on(original_legend_frame_on)
+        state_gateway.set_legend_frame_alpha(original_legend_frame_alpha)
+        state_gateway.set_legend_frame_facecolor(original_legend_frame_facecolor)
+        state_gateway.set_legend_frame_edgecolor(original_legend_frame_edgecolor)
         state_gateway.set_selection_mode(original_selection_mode)
         if existed:
             setattr(app_state, fallback_attr, original_value)
@@ -415,6 +465,16 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         ("scatter_show_edge", False),
         ("scatter_edgecolor", "#334155"),
         ("scatter_edgewidth", 0.7),
+        ("label_color", "#1e293b"),
+        ("label_weight", "bold"),
+        ("label_pad", 10.0),
+        ("title_color", "#0f172a"),
+        ("title_weight", "normal"),
+        ("title_pad", 24.0),
+        ("legend_frame_on", False),
+        ("legend_frame_alpha", 0.7),
+        ("legend_frame_facecolor", "#f8fafc"),
+        ("legend_frame_edgecolor", "#94a3b8"),
     ],
 )
 def test_style_fields_set_attr_compatibility(attr: str, payload: object) -> None:

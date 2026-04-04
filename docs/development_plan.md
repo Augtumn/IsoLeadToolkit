@@ -2,6 +2,22 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第八十七批）
+
+- 样式参数域纳入 StateStore 托管（文本与图例边框）：
+    - `label_color`、`label_weight`、`label_pad`
+    - `title_color`、`title_weight`、`title_pad`
+    - `legend_frame_on`、`legend_frame_alpha`、`legend_frame_facecolor`、`legend_frame_edgecolor`
+- `core/state/store.py` 新增对应 action、快照输出与 `_sync_state` 回写，并补充文本权重/间距归一化。
+- `core/state/gateway.py` 新增显式 API：
+    - `set_label_color`、`set_label_weight`、`set_label_pad`
+    - `set_title_color`、`set_title_weight`、`set_title_pad`
+    - `set_legend_frame_on`、`set_legend_frame_alpha`、`set_legend_frame_facecolor`、`set_legend_frame_edgecolor`
+- 面板样式写入收口：上述字段已从 fallback 直写集合移除，改为通过兼容映射分发到显式 setter。
+- 回归测试更新：
+    - `tests/test_state_store.py` 扩展 snapshot/restore 与样式托管断言。
+    - `tests/test_gateway_set_attr_compatibility.py` 扩展 `set_panel_style_updates` 与 `set_attr` 兼容断言。
+
 ## 阶段进展（2026-04-04 · StateStore 第八十六批）
 
 - 样式参数域纳入 StateStore 托管（次级网格/刻度/边框）：
