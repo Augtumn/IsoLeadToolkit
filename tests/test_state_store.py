@@ -712,6 +712,33 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
         _restore_state(snapshot)
 
 
+def test_app_state_legend_property_setters_dispatch_to_state_store() -> None:
+    snapshot = _snapshot_state()
+    try:
+        setattr(app_state, "legend_position", "upper left")
+        setattr(app_state, "legend_columns", 2)
+        setattr(app_state, "legend_offset", (0.1, -0.05))
+        setattr(app_state, "legend_nudge_step", 0.03)
+        setattr(app_state, "legend_location", "outside_right")
+        setattr(app_state, "legend_frame_on", False)
+        setattr(app_state, "legend_frame_alpha", 0.66)
+        setattr(app_state, "legend_frame_facecolor", "#f8fafc")
+        setattr(app_state, "legend_frame_edgecolor", "#94a3b8")
+
+        store_snapshot = app_state.state_store.snapshot()
+        assert store_snapshot["legend_position"] == "upper left"
+        assert store_snapshot["legend_columns"] == 2
+        assert store_snapshot["legend_offset"] == (0.1, -0.05)
+        assert store_snapshot["legend_nudge_step"] == 0.03
+        assert store_snapshot["legend_location"] == "outside_right"
+        assert store_snapshot["legend_frame_on"] is False
+        assert store_snapshot["legend_frame_alpha"] == 0.66
+        assert store_snapshot["legend_frame_facecolor"] == "#f8fafc"
+        assert store_snapshot["legend_frame_edgecolor"] == "#94a3b8"
+    finally:
+        _restore_state(snapshot)
+
+
 def test_build_group_palette_syncs_state_store_snapshot() -> None:
     snapshot = _snapshot_state()
     try:

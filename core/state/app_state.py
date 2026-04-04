@@ -745,6 +745,10 @@ class AppState:
 
     @legend_position.setter
     def legend_position(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_POSITION', 'position': value})
+            return
         self.legend.legend_position = value
 
     @property
@@ -753,6 +757,10 @@ class AppState:
 
     @legend_columns.setter
     def legend_columns(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_COLUMNS', 'columns': int(value)})
+            return
         self.legend.legend_columns = value
 
     @property
@@ -761,6 +769,10 @@ class AppState:
 
     @legend_offset.setter
     def legend_offset(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_OFFSET', 'offset': value})
+            return
         self.legend.legend_offset = value
 
     @property
@@ -769,6 +781,10 @@ class AppState:
 
     @legend_nudge_step.setter
     def legend_nudge_step(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_NUDGE_STEP', 'step': float(value)})
+            return
         self.legend.legend_nudge_step = value
 
     @property
@@ -777,6 +793,10 @@ class AppState:
 
     @legend_location.setter
     def legend_location(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_LOCATION', 'location': value})
+            return
         self.legend.legend_location = value
 
     @property
@@ -793,6 +813,10 @@ class AppState:
 
     @legend_frame_on.setter
     def legend_frame_on(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_FRAME_ON', 'enabled': bool(value)})
+            return
         self.legend.legend_frame_on = value
 
     @property
@@ -801,6 +825,10 @@ class AppState:
 
     @legend_frame_alpha.setter
     def legend_frame_alpha(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_FRAME_ALPHA', 'alpha': float(value)})
+            return
         self.legend.legend_frame_alpha = value
 
     @property
@@ -809,6 +837,10 @@ class AppState:
 
     @legend_frame_facecolor.setter
     def legend_frame_facecolor(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_FRAME_FACECOLOR', 'color': str(value)})
+            return
         self.legend.legend_frame_facecolor = value
 
     @property
@@ -817,6 +849,10 @@ class AppState:
 
     @legend_frame_edgecolor.setter
     def legend_frame_edgecolor(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_LEGEND_FRAME_EDGECOLOR', 'color': str(value)})
+            return
         self.legend.legend_frame_edgecolor = value
 
     @property

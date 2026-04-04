@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第九十二批）
+
+- `core/state/app_state.py` 的 LegendState 兼容属性 setter 收口到 StateStore：
+    - `legend_position`、`legend_columns`、`legend_offset`、`legend_nudge_step`、`legend_location`
+    - `legend_frame_on`、`legend_frame_alpha`、`legend_frame_facecolor`、`legend_frame_edgecolor`
+- 行为调整：在 `state_store` 可用时，以上属性写入通过对应 `SET_*` action 分发，避免直接写 `legend` 子状态导致快照不同步。
+- 回归测试更新：
+    - `tests/test_state_store.py` 新增 `test_app_state_legend_property_setters_dispatch_to_state_store`，锁定兼容属性写入与 store 快照一致性。
+
 ## 阶段进展（2026-04-04 · StateStore 第九十一批）
 
 - `core/state/app_state.py` 的 `StyleState` 兼容视图补齐字体域写入分发：
