@@ -19,6 +19,12 @@ class StateStore:
         "point_size": None,
         "legend_size": None,
     }
+    DEFAULT_PLOT_FONT_SIZES = {
+        "title": 14,
+        "label": 12,
+        "tick": 10,
+        "legend": 10,
+    }
 
     def __init__(self, state: Any) -> None:
         self._state = state
@@ -52,6 +58,15 @@ class StateStore:
             ),
             "show_plot_title": bool(getattr(state, "show_plot_title", False)),
             "plot_dpi": self._normalize_plot_dpi(getattr(state, "plot_dpi", 130)),
+            "custom_primary_font": self._normalize_font_name(
+                getattr(state, "custom_primary_font", "")
+            ),
+            "custom_cjk_font": self._normalize_font_name(
+                getattr(state, "custom_cjk_font", "")
+            ),
+            "plot_font_sizes": self._normalize_plot_font_sizes(
+                getattr(state, "plot_font_sizes", None)
+            ),
             "plot_facecolor": self._normalize_color(
                 getattr(state, "plot_facecolor", "#ffffff"),
                 "#ffffff",
@@ -410,6 +425,21 @@ class StateStore:
 
         elif action_type == "SET_PLOT_DPI":
             self._snapshot["plot_dpi"] = self._normalize_plot_dpi(action.get("dpi", 130))
+
+        elif action_type == "SET_CUSTOM_PRIMARY_FONT":
+            self._snapshot["custom_primary_font"] = self._normalize_font_name(
+                action.get("font_name", "")
+            )
+
+        elif action_type == "SET_CUSTOM_CJK_FONT":
+            self._snapshot["custom_cjk_font"] = self._normalize_font_name(
+                action.get("font_name", "")
+            )
+
+        elif action_type == "SET_PLOT_FONT_SIZES":
+            self._snapshot["plot_font_sizes"] = self._normalize_plot_font_sizes(
+                action.get("sizes")
+            )
 
         elif action_type == "SET_PLOT_FACECOLOR":
             self._snapshot["plot_facecolor"] = self._normalize_color(
@@ -1073,6 +1103,9 @@ class StateStore:
             "plot_marker_alpha": float(self._snapshot["plot_marker_alpha"]),
             "show_plot_title": bool(self._snapshot["show_plot_title"]),
             "plot_dpi": int(self._snapshot["plot_dpi"]),
+            "custom_primary_font": str(self._snapshot["custom_primary_font"]),
+            "custom_cjk_font": str(self._snapshot["custom_cjk_font"]),
+            "plot_font_sizes": dict(self._snapshot["plot_font_sizes"]),
             "plot_facecolor": str(self._snapshot["plot_facecolor"]),
             "axes_facecolor": str(self._snapshot["axes_facecolor"]),
             "grid_color": str(self._snapshot["grid_color"]),
@@ -1266,6 +1299,9 @@ class StateStore:
         self._state.plot_marker_alpha = float(self._snapshot["plot_marker_alpha"])
         self._state.show_plot_title = bool(self._snapshot["show_plot_title"])
         self._state.plot_dpi = int(self._snapshot["plot_dpi"])
+        self._state.custom_primary_font = str(self._snapshot["custom_primary_font"])
+        self._state.custom_cjk_font = str(self._snapshot["custom_cjk_font"])
+        self._state.plot_font_sizes = dict(self._snapshot["plot_font_sizes"])
         self._state.plot_facecolor = str(self._snapshot["plot_facecolor"])
         self._state.axes_facecolor = str(self._snapshot["axes_facecolor"])
         self._state.grid_color = str(self._snapshot["grid_color"])
@@ -1509,6 +1545,20 @@ class StateStore:
     @staticmethod
     def _normalize_plot_dpi(value: Any) -> int:
         return max(72, min(int(value), 1200))
+
+    @staticmethod
+    def _normalize_font_name(value: Any) -> str:
+        return str(value or "").strip()
+
+    @classmethod
+    def _normalize_plot_font_sizes(cls, sizes: Any) -> dict[str, int]:
+        merged = dict(cls.DEFAULT_PLOT_FONT_SIZES)
+        if isinstance(sizes, dict):
+            for key in merged:
+                if key not in sizes or sizes.get(key) is None:
+                    continue
+                merged[key] = max(6, min(int(sizes[key]), 72))
+        return merged
 
     @staticmethod
     def _normalize_color(value: Any, default: str) -> str:

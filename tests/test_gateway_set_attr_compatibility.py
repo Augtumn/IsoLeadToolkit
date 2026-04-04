@@ -208,6 +208,9 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
     original_plot_marker_alpha = float(getattr(app_state, "plot_marker_alpha", 0.8))
     original_show_plot_title = bool(getattr(app_state, "show_plot_title", False))
     original_plot_dpi = int(getattr(app_state, "plot_dpi", 130))
+    original_custom_primary_font = str(getattr(app_state, "custom_primary_font", ""))
+    original_custom_cjk_font = str(getattr(app_state, "custom_cjk_font", ""))
+    original_plot_font_sizes = dict(getattr(app_state, "plot_font_sizes", {}) or {})
     original_plot_facecolor = str(getattr(app_state, "plot_facecolor", "#ffffff"))
     original_axes_facecolor = str(getattr(app_state, "axes_facecolor", "#ffffff"))
     original_grid_color = str(getattr(app_state, "grid_color", "#e2e8f0"))
@@ -267,6 +270,9 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
                 "plot_marker_alpha": 0.62,
                 "show_plot_title": (not original_show_plot_title),
                 "plot_dpi": 170,
+                "custom_primary_font": "Calibri",
+                "custom_cjk_font": "SimHei",
+                "plot_font_sizes": {"title": 18, "label": 13, "tick": 11, "legend": 12},
                 "plot_facecolor": "#fefce8",
                 "axes_facecolor": "#f8fafc",
                 "grid_color": "#334155",
@@ -317,6 +323,14 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         assert float(getattr(app_state, "plot_marker_alpha", 0.0)) == 0.62
         assert bool(getattr(app_state, "show_plot_title", False)) is (not original_show_plot_title)
         assert int(getattr(app_state, "plot_dpi", 0)) == 170
+        assert str(getattr(app_state, "custom_primary_font", "")) == "Calibri"
+        assert str(getattr(app_state, "custom_cjk_font", "")) == "SimHei"
+        assert dict(getattr(app_state, "plot_font_sizes", {}) or {}) == {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         assert str(getattr(app_state, "plot_facecolor", "")) == "#fefce8"
         assert str(getattr(app_state, "axes_facecolor", "")) == "#f8fafc"
         assert str(getattr(app_state, "grid_color", "")) == "#334155"
@@ -365,6 +379,14 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         assert snapshot["plot_marker_alpha"] == 0.62
         assert snapshot["show_plot_title"] is (not original_show_plot_title)
         assert snapshot["plot_dpi"] == 170
+        assert snapshot["custom_primary_font"] == "Calibri"
+        assert snapshot["custom_cjk_font"] == "SimHei"
+        assert snapshot["plot_font_sizes"] == {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         assert snapshot["plot_facecolor"] == "#fefce8"
         assert snapshot["axes_facecolor"] == "#f8fafc"
         assert snapshot["grid_color"] == "#334155"
@@ -416,6 +438,9 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         state_gateway.set_plot_marker_alpha(original_plot_marker_alpha)
         state_gateway.set_show_plot_title(original_show_plot_title)
         state_gateway.set_plot_dpi(original_plot_dpi)
+        state_gateway.set_custom_primary_font(original_custom_primary_font)
+        state_gateway.set_custom_cjk_font(original_custom_cjk_font)
+        state_gateway.set_plot_font_sizes(original_plot_font_sizes)
         state_gateway.set_plot_facecolor(original_plot_facecolor)
         state_gateway.set_axes_facecolor(original_axes_facecolor)
         state_gateway.set_grid_color(original_grid_color)
@@ -471,6 +496,9 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
         ("plot_marker_alpha", 0.45),
         ("show_plot_title", True),
         ("plot_dpi", 160),
+        ("custom_primary_font", "Calibri"),
+        ("custom_cjk_font", "SimHei"),
+        ("plot_font_sizes", {"title": 18, "label": 13, "tick": 11, "legend": 12}),
         ("plot_facecolor", "#ffffff"),
         ("axes_facecolor", "#f8fafc"),
         ("grid_color", "#334155"),

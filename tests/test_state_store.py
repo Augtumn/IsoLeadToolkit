@@ -100,6 +100,9 @@ def _snapshot_state() -> dict[str, Any]:
         "plot_marker_alpha": float(getattr(app_state, "plot_marker_alpha", 0.8)),
         "show_plot_title": bool(getattr(app_state, "show_plot_title", False)),
         "plot_dpi": int(getattr(app_state, "plot_dpi", 130)),
+        "custom_primary_font": str(getattr(app_state, "custom_primary_font", "")),
+        "custom_cjk_font": str(getattr(app_state, "custom_cjk_font", "")),
+        "plot_font_sizes": dict(getattr(app_state, "plot_font_sizes", {}) or {}),
         "plot_facecolor": str(getattr(app_state, "plot_facecolor", "#ffffff")),
         "axes_facecolor": str(getattr(app_state, "axes_facecolor", "#ffffff")),
         "grid_color": str(getattr(app_state, "grid_color", "#e2e8f0")),
@@ -215,6 +218,9 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_plot_marker_alpha(float(snapshot["plot_marker_alpha"]))
     state_gateway.set_show_plot_title(bool(snapshot["show_plot_title"]))
     state_gateway.set_plot_dpi(int(snapshot["plot_dpi"]))
+    state_gateway.set_custom_primary_font(str(snapshot["custom_primary_font"]))
+    state_gateway.set_custom_cjk_font(str(snapshot["custom_cjk_font"]))
+    state_gateway.set_plot_font_sizes(snapshot["plot_font_sizes"])
     state_gateway.set_plot_facecolor(str(snapshot["plot_facecolor"]))
     state_gateway.set_axes_facecolor(str(snapshot["axes_facecolor"]))
     state_gateway.set_grid_color(str(snapshot["grid_color"]))
@@ -420,6 +426,9 @@ def test_state_store_plot_style_domains() -> None:
         state_gateway.set_plot_marker_alpha(0.57)
         state_gateway.set_show_plot_title(True)
         state_gateway.set_plot_dpi(180)
+        state_gateway.set_custom_primary_font("Calibri")
+        state_gateway.set_custom_cjk_font("SimHei")
+        state_gateway.set_plot_font_sizes({"title": 18, "label": 13, "tick": 11, "legend": 12})
         state_gateway.set_plot_facecolor("#fdf6e3")
         state_gateway.set_axes_facecolor("#f8fafc")
         state_gateway.set_grid_color("#334155")
@@ -466,6 +475,14 @@ def test_state_store_plot_style_domains() -> None:
         assert app_state.plot_marker_alpha == 0.57
         assert app_state.show_plot_title is True
         assert app_state.plot_dpi == 180
+        assert app_state.custom_primary_font == "Calibri"
+        assert app_state.custom_cjk_font == "SimHei"
+        assert app_state.plot_font_sizes == {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         assert app_state.plot_facecolor == "#fdf6e3"
         assert app_state.axes_facecolor == "#f8fafc"
         assert app_state.grid_color == "#334155"
@@ -513,6 +530,14 @@ def test_state_store_plot_style_domains() -> None:
         assert store_snapshot["plot_marker_alpha"] == 0.57
         assert store_snapshot["show_plot_title"] is True
         assert store_snapshot["plot_dpi"] == 180
+        assert store_snapshot["custom_primary_font"] == "Calibri"
+        assert store_snapshot["custom_cjk_font"] == "SimHei"
+        assert store_snapshot["plot_font_sizes"] == {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         assert store_snapshot["plot_facecolor"] == "#fdf6e3"
         assert store_snapshot["axes_facecolor"] == "#f8fafc"
         assert store_snapshot["grid_color"] == "#334155"

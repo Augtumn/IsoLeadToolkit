@@ -2,6 +2,22 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第八十九批）
+
+- 样式参数域纳入 StateStore 托管（字体）：
+    - `custom_primary_font`
+    - `custom_cjk_font`
+    - `plot_font_sizes`
+- `core/state/store.py` 新增对应 action、快照输出与 `_sync_state` 回写，并补充字体名/字体大小映射归一化。
+- `core/state/gateway.py` 新增显式 API：
+    - `set_custom_primary_font`
+    - `set_custom_cjk_font`
+    - `set_plot_font_sizes`
+- 面板样式写入收口：上述字段已从 fallback 直写集合移除，改为通过兼容映射分发到显式 setter。
+- 回归测试更新：
+    - `tests/test_state_store.py` 扩展 snapshot/restore 与样式托管断言。
+    - `tests/test_gateway_set_attr_compatibility.py` 扩展 `set_panel_style_updates` 与 `set_attr` 兼容断言。
+
 ## 阶段进展（2026-04-04 · StateStore 第八十八批）
 
 - 样式参数域纳入 StateStore 托管（adjustText 布局）：

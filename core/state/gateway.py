@@ -36,6 +36,9 @@ class AppStateGateway:
                 "plot_marker_alpha",
                 "show_plot_title",
                 "plot_dpi",
+                "custom_primary_font",
+                "custom_cjk_font",
+                "plot_font_sizes",
                 "plot_facecolor",
                 "axes_facecolor",
                 "grid_color",
@@ -86,11 +89,7 @@ class AppStateGateway:
 
     def _build_panel_style_fallback_keys(self) -> set[str]:
         """Keys allowed for direct panel style fallback updates."""
-        return {
-            "custom_primary_font",
-            "custom_cjk_font",
-            "plot_font_sizes",
-        }
+        return set()
 
     def _dispatch(self, action_type: str, **payload: Any) -> dict[str, Any]:
         return self._store.dispatch({"type": action_type, **payload})
@@ -230,6 +229,9 @@ class AppStateGateway:
             "active_subset_indices": "set_active_subset_indices",
             "selection_tool": "set_selection_tool",
             "visible_groups": "set_visible_groups",
+            "custom_primary_font": "set_custom_primary_font",
+            "custom_cjk_font": "set_custom_cjk_font",
+            "plot_font_sizes": "set_plot_font_sizes",
             "umap_params": "set_umap_params",
             "tsne_params": "set_tsne_params",
             "pca_params": "set_pca_params",
@@ -481,6 +483,15 @@ class AppStateGateway:
 
     def set_plot_dpi(self, dpi: int) -> None:
         self._dispatch("SET_PLOT_DPI", dpi=int(dpi))
+
+    def set_custom_primary_font(self, font_name: str) -> None:
+        self._dispatch("SET_CUSTOM_PRIMARY_FONT", font_name=str(font_name))
+
+    def set_custom_cjk_font(self, font_name: str) -> None:
+        self._dispatch("SET_CUSTOM_CJK_FONT", font_name=str(font_name))
+
+    def set_plot_font_sizes(self, sizes: Any) -> None:
+        self._dispatch("SET_PLOT_FONT_SIZES", sizes=dict(sizes or {}))
 
     def set_plot_facecolor(self, color: str) -> None:
         self._dispatch("SET_PLOT_FACECOLOR", color=str(color))
