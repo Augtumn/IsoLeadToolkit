@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第九十六批）
+
+- `core/state/app_state.py` 的 Legend 快照兼容属性 setter 收口到 StateStore：
+    - `legend_last_title`
+    - `legend_last_handles`
+    - `legend_last_labels`
+- 实现方式：复用既有 `SET_LEGEND_SNAPSHOT` action，按“单字段更新 + 其余字段沿用当前值”组合分发。
+- 回归测试更新：
+    - `tests/test_state_store.py` 的 `test_app_state_legend_property_setters_dispatch_to_state_store` 增补 legend 快照三字段断言。
+
 ## 阶段进展（2026-04-04 · StateStore 第九十五批）
 
 - `core/state/app_state.py` 的同位素误差兼容属性 setter 收口到 StateStore：

@@ -1093,6 +1093,17 @@ class AppState:
 
     @legend_last_title.setter
     def legend_last_title(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_LEGEND_SNAPSHOT',
+                    'title': value,
+                    'handles': getattr(self.legend, 'legend_last_handles', None),
+                    'labels': getattr(self.legend, 'legend_last_labels', None),
+                }
+            )
+            return
         self.legend.legend_last_title = value
 
     @property
@@ -1101,6 +1112,17 @@ class AppState:
 
     @legend_last_handles.setter
     def legend_last_handles(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_LEGEND_SNAPSHOT',
+                    'title': getattr(self.legend, 'legend_last_title', None),
+                    'handles': value,
+                    'labels': getattr(self.legend, 'legend_last_labels', None),
+                }
+            )
+            return
         self.legend.legend_last_handles = value
 
     @property
@@ -1109,6 +1131,17 @@ class AppState:
 
     @legend_last_labels.setter
     def legend_last_labels(self, value):
+        state_store = getattr(self, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch(
+                {
+                    'type': 'SET_LEGEND_SNAPSHOT',
+                    'title': getattr(self.legend, 'legend_last_title', None),
+                    'handles': getattr(self.legend, 'legend_last_handles', None),
+                    'labels': value,
+                }
+            )
+            return
         self.legend.legend_last_labels = value
 
 

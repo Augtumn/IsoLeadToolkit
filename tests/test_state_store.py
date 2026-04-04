@@ -724,6 +724,9 @@ def test_app_state_legend_property_setters_dispatch_to_state_store() -> None:
         setattr(app_state, "legend_frame_alpha", 0.66)
         setattr(app_state, "legend_frame_facecolor", "#f8fafc")
         setattr(app_state, "legend_frame_edgecolor", "#94a3b8")
+        setattr(app_state, "legend_last_title", "My Legend")
+        setattr(app_state, "legend_last_handles", ["h1", "h2"])
+        setattr(app_state, "legend_last_labels", ["A", "B"])
 
         store_snapshot = app_state.state_store.snapshot()
         assert store_snapshot["legend_position"] == "upper left"
@@ -735,6 +738,9 @@ def test_app_state_legend_property_setters_dispatch_to_state_store() -> None:
         assert store_snapshot["legend_frame_alpha"] == 0.66
         assert store_snapshot["legend_frame_facecolor"] == "#f8fafc"
         assert store_snapshot["legend_frame_edgecolor"] == "#94a3b8"
+        assert store_snapshot["legend_last_title"] == "My Legend"
+        assert store_snapshot["legend_last_handles"] == ["h1", "h2"]
+        assert store_snapshot["legend_last_labels"] == ["A", "B"]
     finally:
         _restore_state(snapshot)
 
