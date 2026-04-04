@@ -629,6 +629,14 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
         }
         app_state.style_state.current_palette = {"G1": "#112233"}
         app_state.style_state.color_scheme = "vibrant"
+        app_state.style_state.custom_primary_font = "Calibri"
+        app_state.style_state.custom_cjk_font = "SimHei"
+        app_state.style_state.plot_font_sizes = {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         app_state.interaction_state.selection_tool = "lasso"
         app_state.interaction_state.selected_indices = {1, 4}
 
@@ -655,6 +663,14 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
             "scale": 1.2,
         }
         assert app_state.current_palette == {"G1": "#112233"}
+        assert app_state.custom_primary_font == "Calibri"
+        assert app_state.custom_cjk_font == "SimHei"
+        assert app_state.plot_font_sizes == {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         assert app_state.selection_tool == "lasso"
         assert app_state.selected_indices == {1, 4}
 
@@ -682,6 +698,14 @@ def test_compatibility_views_dispatch_to_state_store() -> None:
             "scale": 1.2,
         }
         assert store_snapshot["current_palette"] == {"G1": "#112233"}
+        assert store_snapshot["custom_primary_font"] == "Calibri"
+        assert store_snapshot["custom_cjk_font"] == "SimHei"
+        assert store_snapshot["plot_font_sizes"] == {
+            "title": 18,
+            "label": 13,
+            "tick": 11,
+            "legend": 12,
+        }
         assert store_snapshot["selection_tool"] == "lasso"
         assert store_snapshot["selected_indices"] == {1, 4}
     finally:

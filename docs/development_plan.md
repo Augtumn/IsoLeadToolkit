@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-04 · StateStore 第九十一批）
+
+- `core/state/app_state.py` 的 `StyleState` 兼容视图补齐字体域写入分发：
+    - 新增 `custom_primary_font` setter（dispatch `SET_CUSTOM_PRIMARY_FONT`）
+    - 新增 `custom_cjk_font` setter（dispatch `SET_CUSTOM_CJK_FONT`）
+    - 新增 `plot_font_sizes` property + setter（dispatch `SET_PLOT_FONT_SIZES`）
+- 兼容视图回归增强：
+    - `tests/test_state_store.py` 的 `test_compatibility_views_dispatch_to_state_store` 新增字体域断言，验证通过 `style_state` 写入后 state/store 保持一致。
+
 ## 阶段进展（2026-04-04 · StateStore 第九十批）
 
 - 网关样式写入机制清理：

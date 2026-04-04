@@ -260,9 +260,37 @@ class StyleState:
     def custom_primary_font(self) -> Any:
         return self.app_state.custom_primary_font
 
+    @custom_primary_font.setter
+    def custom_primary_font(self, value: Any) -> None:
+        state_store = getattr(self.app_state, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_CUSTOM_PRIMARY_FONT', 'font_name': str(value or '')})
+            return
+        setattr(self.app_state, 'custom_primary_font', value)
+
     @property
     def custom_cjk_font(self) -> Any:
         return self.app_state.custom_cjk_font
+
+    @custom_cjk_font.setter
+    def custom_cjk_font(self, value: Any) -> None:
+        state_store = getattr(self.app_state, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_CUSTOM_CJK_FONT', 'font_name': str(value or '')})
+            return
+        setattr(self.app_state, 'custom_cjk_font', value)
+
+    @property
+    def plot_font_sizes(self) -> Any:
+        return self.app_state.plot_font_sizes
+
+    @plot_font_sizes.setter
+    def plot_font_sizes(self, value: Any) -> None:
+        state_store = getattr(self.app_state, 'state_store', None)
+        if state_store is not None:
+            state_store.dispatch({'type': 'SET_PLOT_FONT_SIZES', 'sizes': dict(value or {})})
+            return
+        setattr(self.app_state, 'plot_font_sizes', value)
 
 
 @dataclass
