@@ -15,7 +15,7 @@ from .shared import (
 )
 
 
-def _resolve_sample_index(event):
+def _resolve_sample_index(event: object) -> int | None:
     """Attempt to map a Matplotlib event to a sample index."""
     try:
         for sc in app_state.scatter_collections:

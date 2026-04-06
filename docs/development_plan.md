@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十一批）
+
+- P2-1（类型注解补齐）推进事件处理 helper：
+    - `visualization/event_handlers/pointer_events.py` 的 `_resolve_sample_index` 增加显式类型注解。
+- 回归测试新增：
+    - `tests/test_pointer_events_helpers.py` 新增 3 个测试，覆盖：
+        - 散点命中映射优先；
+        - 最近点查找回退路径；
+        - 缺失坐标时返回 `None`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十批）
 
 - P2-1（类型注解补齐）推进 plotting isochron 辅助模块：
