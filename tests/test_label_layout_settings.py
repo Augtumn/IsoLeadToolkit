@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
+import pytest
+
 from core import app_state, state_gateway
 from visualization.plotting import label_layout
 
@@ -58,3 +61,34 @@ def test_resolve_adjust_text_settings_clamps_limits() -> None:
         assert time_lim == 2.0
     finally:
         _restore_adjust_text_state(snapshot)
+
+
+def test_slope_angle_deg_fallback_without_axis_transform() -> None:
+    angle = label_layout._slope_angle_deg(object(), 0.0, 0.0, 1.0, 1.0)
+
+    assert angle == pytest.approx(45.0, rel=0.0, abs=1e-12)
+
+
+def test_pick_anchor_on_line_respects_position_mode_and_visibility() -> None:
+    fig, ax = plt.subplots()
+    try:
+        ax.set_xlim(0.0, 10.0)
+        ax.set_ylim(0.0, 10.0)
+
+        x_vals = [0.0, 5.0, 10.0]
+        y_vals = [0.0, 5.0, 10.0]
+
+        start = label_layout._pick_anchor_on_line(ax, x_vals, y_vals, "start")
+        center = label_layout._pick_anchor_on_line(ax, x_vals, y_vals, "center")
+        end = label_layout._pick_anchor_on_line(ax, x_vals, y_vals, "end")
+
+        assert start is not None
+        assert center is not None
+        assert end is not None
+        assert start[0:2] == pytest.approx((0.0, 0.0), rel=0.0, abs=1e-12)
+        assert center[0:2] == pytest.approx((5.0, 5.0), rel=0.0, abs=1e-12)
+        assert end[0:2] == pytest.approx((10.0, 10.0), rel=0.0, abs=1e-12)
+
+        assert label_layout._pick_anchor_on_line(ax, [20.0, 21.0], [20.0, 21.0], "auto") is None
+    finally:
+        plt.close(fig)

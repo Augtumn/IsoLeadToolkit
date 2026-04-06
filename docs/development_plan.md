@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十八批）
+
+- P2-1（类型注解补齐）继续推进 label layout 几何 helper：
+    - `visualization/plotting/label_layout.py` 的 `_slope_angle_deg`、`_pick_anchor_on_line`、`apply_adjust_text_to_labels` 补齐显式类型注解。
+- 回归测试增强：
+    - `tests/test_label_layout_settings.py` 扩展 2 个测试，覆盖：
+        - 无 `transData` 时角度计算回退；
+        - 曲线锚点在 start/center/end 模式下的选点与不可见曲线返回 `None`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十七批）
 
 - P2-1（类型注解补齐）推进 label layout 参数归一化模块：

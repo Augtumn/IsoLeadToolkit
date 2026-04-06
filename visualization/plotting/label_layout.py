@@ -113,7 +113,7 @@ def _line_visible_in_axes(ax, x_vals, y_vals) -> bool:
     return bool(np.any(visible))
 
 
-def _slope_angle_deg(ax, x0, y0, x1, y1):
+def _slope_angle_deg(ax: Any, x0: float, y0: float, x1: float, y1: float) -> float:
     """Compute text rotation angle from local line segment in display coords."""
     try:
         p0 = ax.transData.transform((x0, y0))
@@ -126,7 +126,12 @@ def _slope_angle_deg(ax, x0, y0, x1, y1):
         return float(np.degrees(np.arctan((y1 - y0) / dx)))
 
 
-def _pick_anchor_on_line(ax, x_vals, y_vals, position_mode: str):
+def _pick_anchor_on_line(
+    ax: Any,
+    x_vals: Any,
+    y_vals: Any,
+    position_mode: str,
+) -> tuple[float, float, float] | None:
     """Pick initial anchor and orientation from a visible part of a polyline."""
     x_arr = np.asarray(x_vals, dtype=float)
     y_arr = np.asarray(y_vals, dtype=float)
@@ -226,7 +231,7 @@ def position_curve_label(
         text_artist.set_text(f" {age:.0f} Ma")
 
 
-def apply_adjust_text_to_labels(ax, text_artists):
+def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None:
     """Apply adjustText globally for all visible overlay labels."""
     adjust_text = _lazy_import_adjust_text()
     if adjust_text is None or ax is None:
