@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十二批）
+
+- P2-1（类型注解补齐）推进 embedding 算法调度工具：
+    - `visualization/plotting/rendering/embedding/algorithm.py` 的 `resolve_target_dimensions` 增加显式返回类型注解。
+- 回归测试新增：
+    - `tests/test_embedding_algorithm_helpers.py` 新增 3 个测试，覆盖：
+        - legacy 算法别名规范化；
+        - ternary 与默认二维维度解析；
+        - embedding 参数默认补全与显式参数透传。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十一批）
 
 - P2-1（类型注解补齐）推进事件处理 helper：

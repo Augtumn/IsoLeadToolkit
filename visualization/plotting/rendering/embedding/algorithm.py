@@ -26,7 +26,7 @@ def normalize_algorithm(algorithm: str) -> str:
     return actual_algorithm
 
 
-def resolve_target_dimensions(actual_algorithm: str):
+def resolve_target_dimensions(actual_algorithm: str) -> int | str:
     """Return target axes dimensionality for the algorithm."""
     return 'ternary' if actual_algorithm == 'TERNARY' else 2
 
