@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import numpy as np
 
@@ -28,7 +29,11 @@ from .plumbotectonics_metadata import (
 logger = logging.getLogger(__name__)
 
 
-def _fit_plumbotectonics_curve(x_vals, y_vals, n_points=200):
+def _fit_plumbotectonics_curve(
+    x_vals: Any,
+    y_vals: Any,
+    n_points: int = 200,
+) -> tuple[np.ndarray, np.ndarray]:
     x_arr = np.asarray(x_vals, dtype=float)
     y_arr = np.asarray(y_vals, dtype=float)
     valid = np.isfinite(x_arr) & np.isfinite(y_arr)
@@ -65,7 +70,7 @@ def _fit_plumbotectonics_curve(x_vals, y_vals, n_points=200):
     return x_fit, y_fit
 
 
-def _draw_plumbotectonics_curves(ax, actual_algorithm):
+def _draw_plumbotectonics_curves(ax: Any, actual_algorithm: str) -> None:
     """Draw Plumbotectonics model curves using fitted data points."""
     sections = _load_plumbotectonics_data()
     section = _select_plumbotectonics_section(sections)
