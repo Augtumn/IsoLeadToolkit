@@ -77,3 +77,17 @@ def test_ensure_line_style_custom_state_avoids_gateway(monkeypatch) -> None:
 
     assert custom_state.line_styles["isochron"]["linewidth"] == 2.0
     assert resolved["alpha"] == 0.9
+
+
+def test_resolve_line_style_ignores_empty_color_override() -> None:
+    state = SimpleNamespace(line_styles={"model_curve": {"color": "", "linewidth": 2.4}})
+
+    resolved = line_styles.resolve_line_style(
+        state,
+        "model_curve",
+        {"color": "#ef4444", "linewidth": 1.0, "linestyle": "--"},
+    )
+
+    assert resolved["color"] == "#ef4444"
+    assert resolved["linewidth"] == 2.4
+    assert resolved["linestyle"] == "--"

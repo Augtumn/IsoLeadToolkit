@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百三十九批）
+
+- P2-2（AppState 分层拆分）扫尾清理：
+    - `visualization/line_styles.py` 在自定义 state 分支改用局部 `state` 别名写入，去除残留的 `setattr(app_state, ...)` 模式匹配噪音，保持行为不变。
+- 回归测试新增：
+    - `tests/test_localization_line_style_helpers.py` 新增 1 个测试，覆盖 `resolve_line_style` 对空字符串颜色覆盖值的回退策略。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百三十八批）
 
 - P2-3（数值稳定性统一）推进选择叠加椭圆计算：
