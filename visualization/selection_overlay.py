@@ -22,13 +22,22 @@ def draw_confidence_ellipse(
     **kwargs,
 ) -> Ellipse | None:
     """Create covariance confidence ellipse patch for x/y points."""
-    if x.size < 2 or y.size < 2:
+    x_arr = np.asarray(x, dtype=float).ravel()
+    y_arr = np.asarray(y, dtype=float).ravel()
+    if x_arr.size != y_arr.size:
         return None
+
+    finite_mask = np.isfinite(x_arr) & np.isfinite(y_arr)
+    if np.count_nonzero(finite_mask) < 2:
+        return None
+
+    x_valid = x_arr[finite_mask]
+    y_valid = y_arr[finite_mask]
 
     chi2_val = scipy.stats.chi2.ppf(confidence, df=2)
     n_std = np.sqrt(chi2_val)
 
-    cov = np.cov(x, y)
+    cov = np.cov(x_valid, y_valid)
     if not np.all(np.isfinite(cov)):
         return None
 
@@ -37,7 +46,11 @@ def draw_confidence_ellipse(
     if var_x <= 0 or var_y <= 0:
         return None
 
-    pearson = cov[0, 1] / np.sqrt(var_x * var_y)
+    denom = np.sqrt(var_x * var_y)
+    if not np.isfinite(denom) or denom <= np.finfo(float).tiny:
+        return None
+
+    pearson = cov[0, 1] / denom
     pearson = float(np.clip(pearson, -1.0, 1.0))
 
     ell_radius_x = np.sqrt(1 + pearson)
@@ -52,9 +65,9 @@ def draw_confidence_ellipse(
     )
 
     scale_x = np.sqrt(var_x) * n_std
-    mean_x = np.mean(x)
+    mean_x = np.mean(x_valid)
     scale_y = np.sqrt(var_y) * n_std
-    mean_y = np.mean(y)
+    mean_y = np.mean(y_valid)
 
     theta = 0.5 * np.arctan2(2 * cov[0, 1], var_x - var_y)
     transf = (

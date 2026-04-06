@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百三十八批）
+
+- P2-3（数值稳定性统一）推进选择叠加椭圆计算：
+    - `visualization/selection_overlay.py` 的 `draw_confidence_ellipse` 新增有限值筛选、输入长度一致性检查与协方差分母下界保护，避免 NaN/Inf 点导致整批失败。
+- 回归测试新增：
+    - `tests/test_selection_overlay_helpers.py` 新增 3 个测试，覆盖：
+        - 非有限点过滤后仍可绘制椭圆；
+        - 长度不一致输入返回 `None`；
+        - 零方差退化场景返回 `None`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百三十七批）
 
 - P2-2（AppState 分层拆分）继续清理剩余 `setattr(app_state, ...)` 旁路写入：
