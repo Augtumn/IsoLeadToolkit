@@ -257,3 +257,55 @@ def test_solve_age_scipy_applies_upper_endpoint_margin(monkeypatch) -> None:
 def test_safe_scalar_denominator_applies_epsilon_floor() -> None:
     assert age_module._safe_scalar_denominator(0.0) == age_module.EPSILON
     assert age_module._safe_scalar_denominator(age_module.EPSILON * 2.0) == pytest.approx(age_module.EPSILON * 2.0)
+
+
+def test_single_stage_age_uses_named_solver_bounds(monkeypatch) -> None:
+    captured: dict[str, tuple[float, float]] = {}
+
+    def _fake_solver(func, bounds, search_points=200):
+        _ = func, search_points
+        captured["bounds"] = tuple(float(v) for v in bounds)
+        return 1_000_000.0
+
+    monkeypatch.setattr(age_module, "_solve_age_scipy", _fake_solver)
+
+    params = {
+        **engine.get_parameters(),
+        "a0": 10.0,
+        "b0": 11.0,
+    }
+
+    age = age_module.calculate_single_stage_age(
+        Pb206_204_S=18.0,
+        Pb207_204_S=15.0,
+        params=params,
+    )
+
+    assert age == pytest.approx(1.0, rel=0.0, abs=1e-12)
+    assert captured["bounds"] == age_module._AGE_SOLVER_BOUNDS
+
+
+def test_two_stage_age_uses_named_solver_bounds(monkeypatch) -> None:
+    captured: dict[str, tuple[float, float]] = {}
+
+    def _fake_solver(func, bounds, search_points=200):
+        _ = func, search_points
+        captured["bounds"] = tuple(float(v) for v in bounds)
+        return 1_000_000.0
+
+    monkeypatch.setattr(age_module, "_solve_age_scipy", _fake_solver)
+
+    params = {
+        **engine.get_parameters(),
+        "a1": 12.0,
+        "b1": 13.0,
+    }
+
+    age = age_module.calculate_two_stage_age(
+        Pb206_204_S=16.0,
+        Pb207_204_S=14.0,
+        params=params,
+    )
+
+    assert age == pytest.approx(1.0, rel=0.0, abs=1e-12)
+    assert captured["bounds"] == age_module._AGE_SOLVER_BOUNDS

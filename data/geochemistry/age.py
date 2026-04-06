@@ -23,6 +23,7 @@ _RATIO_DIFF_FLOOR = 1e-10
 _SOLVER_GUARD_VALUE = 1e10
 _AGE_SOLVER_XTOL = 1e-6
 _AGE_SOLVER_ENDPOINT_MARGIN = 1.0
+_AGE_SOLVER_BOUNDS = (-4700e6, 4700e6)
 
 
 def _safe_scalar_denominator(value: float) -> float:
@@ -134,7 +135,7 @@ def calculate_single_stage_age(
             R = (S207 - b0_val) / (S206 - a0_val)
             return R - u_ratio * num / denom
         
-        t_result = _solve_age_scipy(f, bounds=(-4700e6, 4700e6))
+        t_result = _solve_age_scipy(f, bounds=_AGE_SOLVER_BOUNDS)
         return t_result / 1e6 if t_result is not None else None
     
     # 数组处理
@@ -155,7 +156,7 @@ def calculate_single_stage_age(
             R = (s207 - b0_val) / (s206 - a0_val)
             return R - u_ratio * num / denom
 
-        t_res = _solve_age_scipy(f_scalar, bounds=(-4700e6, 4700e6))
+        t_res = _solve_age_scipy(f_scalar, bounds=_AGE_SOLVER_BOUNDS)
         results.append(t_res / 1e6 if t_res is not None else np.nan)
         
     return np.array(results).reshape(S206.shape)
@@ -202,7 +203,7 @@ def calculate_two_stage_age(
             R = (S207 - b1_val) / (S206 - a1_val)
             return R - u_ratio * num / denom
         
-        t_result = _solve_age_scipy(f, bounds=(-4700e6, 4700e6))
+        t_result = _solve_age_scipy(f, bounds=_AGE_SOLVER_BOUNDS)
         return t_result / 1e6 if t_result is not None else None
     
     # 数组处理
@@ -223,7 +224,7 @@ def calculate_two_stage_age(
             R = (s207 - b1_val) / (s206 - a1_val)
             return R - u_ratio * num / denom
         
-        t_res = _solve_age_scipy(f_scalar, bounds=(-4700e6, 4700e6))
+        t_res = _solve_age_scipy(f_scalar, bounds=_AGE_SOLVER_BOUNDS)
         results.append(t_res / 1e6 if t_res is not None else np.nan)
 
     return np.array(results).reshape(S206.shape)
