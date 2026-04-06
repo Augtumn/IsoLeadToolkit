@@ -194,3 +194,40 @@ def test_york_regression_rejects_non_positive_uncertainties() -> None:
 
     with pytest.raises(ValueError):
         york_regression(x, sx, y, sy)
+
+
+def test_solve_age_scipy_uses_named_xtol_on_endpoint_sign_change(monkeypatch) -> None:
+    calls: list[float] = []
+
+    def _fake_brentq(func, left, right, xtol):
+        _ = func, left, right
+        calls.append(float(xtol))
+        return 12.34
+
+    monkeypatch.setattr(age_module.optimize, "brentq", _fake_brentq)
+
+    result = age_module._solve_age_scipy(lambda t: t, bounds=(-10.0, 10.0))
+
+    assert result == pytest.approx(12.34, rel=0.0, abs=1e-12)
+    assert calls == [age_module._AGE_SOLVER_XTOL]
+
+
+def test_solve_age_scipy_uses_named_xtol_on_scanned_sign_change(monkeypatch) -> None:
+    calls: list[tuple[float, float, float]] = []
+
+    def _fake_brentq(func, left, right, xtol):
+        _ = func
+        calls.append((float(left), float(right), float(xtol)))
+        return 2.5
+
+    monkeypatch.setattr(age_module.optimize, "brentq", _fake_brentq)
+
+    result = age_module._solve_age_scipy(
+        lambda t: (t - 2.5) * (t - 7.3),
+        bounds=(0.0, 10.0),
+    )
+
+    assert result == pytest.approx(2.5, rel=0.0, abs=1e-12)
+    assert len(calls) == 1
+    _left, _right, xtol = calls[0]
+    assert xtol == age_module._AGE_SOLVER_XTOL

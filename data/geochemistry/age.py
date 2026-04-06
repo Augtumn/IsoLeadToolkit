@@ -21,6 +21,7 @@ from .engine import (
 
 _RATIO_DIFF_FLOOR = 1e-10
 _SOLVER_GUARD_VALUE = 1e10
+_AGE_SOLVER_XTOL = 1e-6
 
 
 def _solve_age_scipy(
@@ -58,7 +59,7 @@ def _solve_age_scipy(
 
         # 如果端点满足异号，直接求解
         if np.isfinite(f_min) and np.isfinite(f_max) and f_min * f_max <= 0:
-            return optimize.brentq(f, t_min, t_max_safe, xtol=1e-6)
+            return optimize.brentq(f, t_min, t_max_safe, xtol=_AGE_SOLVER_XTOL)
 
         # 类似 R 的 extendInt：在区间内扫描寻找变号区间
         t_samples = np.linspace(t_min, t_max_safe, search_points)
@@ -71,7 +72,7 @@ def _solve_age_scipy(
             if f1 == 0:
                 return t_samples[i]
             if f1 * f2 < 0:
-                return optimize.brentq(f, t_samples[i], t_samples[i + 1], xtol=1e-6)
+                return optimize.brentq(f, t_samples[i], t_samples[i + 1], xtol=_AGE_SOLVER_XTOL)
 
         return None
     except Exception:
