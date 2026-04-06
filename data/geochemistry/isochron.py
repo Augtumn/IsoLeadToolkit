@@ -34,6 +34,9 @@ from .engine import (
 from .age import _solve_age_scipy
 
 
+_SOURCE_DEN_FLOOR = max(EPSILON, 1e-15)
+
+
 def calculate_paleoisochron_line(
     age_ma: float,
     params: dict[str, Any] | None = None,
@@ -367,7 +370,7 @@ def calculate_source_mu_from_isochron(
     num = slope * params['a1'] + intercept - params['b1']
     den = C2 - slope * C1
 
-    return num / den if abs(den) > 1e-15 else 0.0
+    return num / den if abs(den) > _SOURCE_DEN_FLOOR else 0.0
 
 def calculate_source_kappa_from_slope(
     slope_208_206: float,
@@ -384,4 +387,4 @@ def calculate_source_kappa_from_slope(
     num = np.exp(params['lambda_238'] * T) - np.exp(params['lambda_238'] * t)
     den = np.exp(params['lambda_232'] * T) - np.exp(params['lambda_232'] * t)
     
-    return slope_208_206 * (num / den) if abs(den) > 1e-15 else 0.0
+    return slope_208_206 * (num / den) if abs(den) > _SOURCE_DEN_FLOOR else 0.0

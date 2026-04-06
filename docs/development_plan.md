@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百四十批）
+
+- P2-3（数值稳定性统一）推进 isochron 反演分母保护统一：
+    - `data/geochemistry/isochron.py` 新增 `_SOURCE_DEN_FLOOR = max(EPSILON, 1e-15)`，并将源区 `Mu/Kappa` 反演中的硬编码分母阈值统一为该常量。
+- 回归测试新增：
+    - `tests/test_geochemistry_age_isochron.py` 新增 2 个测试，覆盖：
+        - `calculate_source_mu_from_isochron` 在退化分母场景返回 `0.0`；
+        - `calculate_source_kappa_from_slope` 在退化分母场景返回 `0.0`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百三十九批）
 
 - P2-2（AppState 分层拆分）扫尾清理：

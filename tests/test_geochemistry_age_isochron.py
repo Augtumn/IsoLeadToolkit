@@ -9,6 +9,8 @@ from data.geochemistry import engine
 from data.geochemistry.isochron import (
     calculate_isochron_age_from_slope,
     calculate_pbpb_age_from_ratio,
+    calculate_source_kappa_from_slope,
+    calculate_source_mu_from_isochron,
 )
 
 
@@ -45,3 +47,36 @@ def test_calculate_isochron_age_from_slope_matches_pbpb_solver() -> None:
     age_ma = calculate_isochron_age_from_slope(ratio)
 
     assert age_ma == pytest.approx(expected_age_ma, rel=0.0, abs=1e-6)
+
+
+def test_calculate_source_mu_from_isochron_returns_zero_on_degenerate_denominator() -> None:
+    params = {
+        **engine.get_parameters(),
+        "T1": 1_000_000.0,
+        "a1": 11.0,
+        "b1": 12.0,
+    }
+
+    mu = calculate_source_mu_from_isochron(
+        slope=0.3,
+        intercept=11.5,
+        age_ma=1.0,
+        params=params,
+    )
+
+    assert mu == 0.0
+
+
+def test_calculate_source_kappa_from_slope_returns_zero_on_degenerate_denominator() -> None:
+    params = {
+        **engine.get_parameters(),
+        "T1": 1_000_000.0,
+    }
+
+    kappa = calculate_source_kappa_from_slope(
+        slope_208_206=0.25,
+        age_ma=1.0,
+        params=params,
+    )
+
+    assert kappa == 0.0
