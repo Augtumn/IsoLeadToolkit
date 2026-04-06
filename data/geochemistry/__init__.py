@@ -4,6 +4,7 @@ import logging
 import numpy as np
 
 logger = logging.getLogger(__name__)
+_AGE_MODEL_PARAM_DELTA_FLOOR = 1e-6
 
 from .engine import (
     PRESET_MODELS,
@@ -112,7 +113,7 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
         a0, b0, c0 = params.get('a0'), params.get('b0'), params.get('c0')
         a1, b1, c1 = params.get('a1'), params.get('b1'), params.get('c1')
         if all(np.isfinite([a0, b0, c0, a1, b1, c1])):
-            if max(abs(a1 - a0), abs(b1 - b0), abs(c1 - c0)) < 1e-6:
+            if max(abs(a1 - a0), abs(b1 - b0), abs(c1 - c0)) < _AGE_MODEL_PARAM_DELTA_FLOOR:
                 return 'single_stage'
     except Exception:
         pass

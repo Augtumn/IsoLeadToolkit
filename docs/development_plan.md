@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百四十八批）
+
+- P2-3（数值稳定性统一）推进 geochemistry facade 的年龄模型判别阈值收敛：
+    - `data/geochemistry/__init__.py` 将 `resolve_age_model` 中参数差异阈值 `1e-6` 提炼为 `_AGE_MODEL_PARAM_DELTA_FLOOR`。
+- 回归测试新增：
+    - `tests/test_geochemistry_init_helpers.py` 新增 3 个测试，覆盖：
+        - 显式 `age_model` 标志优先；
+        - 参数差异低于阈值回退 `single_stage`；
+        - 参数差异高于阈值保持 `two_stage`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百四十七批）
 
 - P2-3（数值稳定性统一）继续收敛 ternary helper 的数值护栏常量：
