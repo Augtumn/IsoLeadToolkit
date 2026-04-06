@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百四十五批）
+
+- P2-3（数值稳定性统一）继续收敛 York 回归容差常量：
+    - `data/geochemistry/isochron.py` 将 `york_regression` 的默认容差 `1e-15` 提炼为 `_YORK_TOL_DEFAULT`。
+- 回归测试新增：
+    - `tests/test_geochemistry_age_isochron.py` 新增 2 个测试，覆盖：
+        - 简单线性样本的 York 回归参数回收；
+        - 非正不确定度输入触发 `ValueError`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百四十四批）
 
 - P2-3（数值稳定性统一）继续收敛 KDE 退化判定阈值：

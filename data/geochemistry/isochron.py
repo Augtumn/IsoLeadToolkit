@@ -35,6 +35,7 @@ from .age import _solve_age_scipy
 
 
 _SOURCE_DEN_FLOOR = max(EPSILON, 1e-15)
+_YORK_TOL_DEFAULT = 1e-15
 
 
 def calculate_paleoisochron_line(
@@ -208,7 +209,7 @@ def york_regression(
     sy: np.ndarray,
     rxy: np.ndarray | None = None,
     max_iter: int = 50,
-    tol: float = 1e-15,
+    tol: float = _YORK_TOL_DEFAULT,
 ) -> dict[str, Any]:
     """York (2004) regression with correlated errors.
 

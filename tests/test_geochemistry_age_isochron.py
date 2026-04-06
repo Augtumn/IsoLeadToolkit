@@ -13,6 +13,7 @@ from data.geochemistry.isochron import (
     calculate_pbpb_age_from_ratio,
     calculate_source_kappa_from_slope,
     calculate_source_mu_from_isochron,
+    york_regression,
 )
 
 
@@ -171,3 +172,25 @@ def test_two_stage_age_guard_produces_nan_for_array_element(monkeypatch) -> None
     assert isinstance(ages, np.ndarray)
     assert np.isnan(ages[0])
     assert ages[1] == pytest.approx(1.0, rel=0.0, abs=1e-12)
+
+
+def test_york_regression_recovers_simple_linear_trend() -> None:
+    x = np.array([1.0, 2.0, 3.0, 4.0], dtype=float)
+    y = (2.0 * x) + 1.0
+    sx = np.full_like(x, 0.1)
+    sy = np.full_like(x, 0.1)
+
+    result = york_regression(x, sx, y, sy)
+
+    assert result["b"] == pytest.approx(2.0, rel=0.0, abs=1e-6)
+    assert result["a"] == pytest.approx(1.0, rel=0.0, abs=1e-6)
+
+
+def test_york_regression_rejects_non_positive_uncertainties() -> None:
+    x = np.array([1.0, 2.0], dtype=float)
+    y = np.array([3.0, 5.0], dtype=float)
+    sx = np.array([0.0, 0.1], dtype=float)
+    sy = np.array([0.1, 0.1], dtype=float)
+
+    with pytest.raises(ValueError):
+        york_regression(x, sx, y, sy)
