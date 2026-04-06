@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百二十一批）
+
+- P2-1（类型注解补齐）推进 plotting core 轴与懒加载辅助函数：
+    - `visualization/plotting/core.py` 的 `_lazy_import_umap`、`_lazy_import_mplot3d`、`_lazy_import_ellipse`、`_lazy_import_mpltern` 与 `_ensure_axes` 补齐显式类型注解。
+- 回归测试新增：
+    - `tests/test_plotting_core_axes_helpers.py` 新增 2 个测试，覆盖：
+        - `fig` 缺失时 `_ensure_axes` 返回 `None`；
+        - `_ensure_axes` 在 2D/3D 间切换并重置 `legend_ax`。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百二十批）
 
 - P2-1（类型注解补齐）推进 overlay 样式刷新模块：

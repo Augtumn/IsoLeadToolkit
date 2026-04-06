@@ -44,31 +44,31 @@ def _build_subset_key() -> str | int:
     return hash(tuple(sorted(list(subset_indices))))
 
 
-def _lazy_import_umap():
+def _lazy_import_umap() -> None:
     global umap
     if umap is None:
         import umap as _umap
         umap = _umap
 
-def _lazy_import_mplot3d():
+def _lazy_import_mplot3d() -> None:
     global Axes3D
     if Axes3D is None:
         from mpl_toolkits.mplot3d import Axes3D as _Axes3D  # noqa: F401
         Axes3D = _Axes3D
 
-def _lazy_import_ellipse():
+def _lazy_import_ellipse() -> None:
     global Ellipse
     if Ellipse is None:
         from matplotlib.patches import Ellipse as _Ellipse
         Ellipse = _Ellipse
 
-def _lazy_import_mpltern():
+def _lazy_import_mpltern() -> None:
     global mpltern
     if mpltern is None:
         import mpltern as _mpltern
         mpltern = _mpltern
 
-def _ensure_axes(dimensions=2):
+def _ensure_axes(dimensions: int | str = 2) -> Any | None:
     """Ensure the figure has the correct axes dimensionality."""
     if app_state.fig is None:
         return None
@@ -101,6 +101,8 @@ def _ensure_axes(dimensions=2):
     state_gateway.set_legend_ax(None)
 
     return app_state.ax
+
+
 def get_umap_embedding(params: dict) -> np.ndarray | None:
     """Get or compute UMAP embedding with caching."""
     try:
