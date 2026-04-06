@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百四十九批）
+
+- P2-3（数值稳定性统一）推进 export legend 锚点判定阈值收敛：
+    - `ui/panels/export/common.py` 将 legend `bbox_to_anchor` 点锚判定阈值 `1e-9` 提炼为 `_LEGEND_BBOX_POINT_EPSILON`。
+- 回归测试新增：
+    - `tests/test_export_panel_common_helpers.py` 新增 2 个测试，覆盖：
+        - 近点锚 bbox 归一化为二元锚点；
+        - 区域锚 bbox 保持四元锚点范围。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百四十八批）
 
 - P2-3（数值稳定性统一）推进 geochemistry facade 的年龄模型判别阈值收敛：

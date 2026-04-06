@@ -16,6 +16,7 @@ from application import (
 from core import CONFIG, app_state, state_gateway
 
 logger = logging.getLogger(__name__)
+_LEGEND_BBOX_POINT_EPSILON = 1e-9
 
 
 class ExportPanelCommonMixin:
@@ -412,7 +413,7 @@ class ExportPanelCommonMixin:
                         points_axes = ax.transAxes.inverted().transform(points)
                         x0, y0 = points_axes[0]
                         x1, y1 = points_axes[1]
-                        if abs(x1 - x0) < 1e-9 and abs(y1 - y0) < 1e-9:
+                        if abs(x1 - x0) < _LEGEND_BBOX_POINT_EPSILON and abs(y1 - y0) < _LEGEND_BBOX_POINT_EPSILON:
                             bbox_anchor = (float(x0), float(y0))
                         else:
                             bbox_anchor = (float(x0), float(y0), float(x1 - x0), float(y1 - y0))
