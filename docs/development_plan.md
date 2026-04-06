@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十四批）
+
+- P2-1（类型注解补齐）推进事件编排模块：
+    - `visualization/events.py` 的 `_sync_render_mode` 增加显式参数与返回类型注解。
+- 回归测试新增：
+    - `tests/test_events_render_mode_sync.py` 新增 2 个测试，覆盖：
+        - render_mode 变化时状态与控制面板变量同步；
+        - render_mode 不变时的 no-op 行为。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十三批）
 
 - P2-1（类型注解补齐）推进 plotting 数据辅助模块：

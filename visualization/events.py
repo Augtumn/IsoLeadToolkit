@@ -40,7 +40,7 @@ def _group_cols() -> list[str]:
     return getattr(_data_state(), 'group_cols', app_state.group_cols)
 
 
-def _sync_render_mode(render_mode):
+def _sync_render_mode(render_mode: str) -> None:
     """Update app_state and control panel if render_mode changed."""
     if render_mode == app_state.render_mode:
         return
