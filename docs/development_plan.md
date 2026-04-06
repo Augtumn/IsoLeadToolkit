@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百零九批）
+
+- P2-1（类型注解补齐）推进 legend 样式工具：
+    - `visualization/plotting/styling/legend.py` 的 `_legend_layout_config`、`_legend_columns_for_layout`、`_style_legend` 补齐显式类型注解。
+- 回归测试新增：
+    - `tests/test_legend_styling_helpers.py` 新增 3 个测试，覆盖：
+        - in-plot 图例位置偏移到 bbox 的映射；
+        - outside 位置的布局短路规则；
+        - 列数自动决策规则。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百零八批）
 
 - P2-1（类型注解补齐）继续推进 geochem overlay 公共工具：

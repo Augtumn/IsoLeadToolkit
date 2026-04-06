@@ -1,10 +1,16 @@
 """Legend layout and styling helpers for plotting."""
 from __future__ import annotations
 
+from typing import Any, Sequence
+
 from core import app_state
 
 
-def _legend_layout_config(ax=None, show_marginal_kde=False, location_key=None):
+def _legend_layout_config(
+    ax: Any | None = None,
+    show_marginal_kde: bool = False,
+    location_key: str | None = None,
+) -> tuple[Any, tuple[float, float] | None, None, None]:
     """Resolve in-plot legend location, bbox, and layout options."""
     loc = location_key if location_key else getattr(app_state, 'legend_position', None)
     if not loc:
@@ -37,7 +43,11 @@ def _legend_layout_config(ax=None, show_marginal_kde=False, location_key=None):
     return loc, bbox, None, None
 
 
-def _legend_columns_for_layout(labels, ax, location_key):
+def _legend_columns_for_layout(
+    labels: Sequence[Any] | None,
+    ax: Any,
+    location_key: str | None,
+) -> int | None:
     """Compute legend columns for auto layouts."""
     if not labels:
         return 1
@@ -46,7 +56,11 @@ def _legend_columns_for_layout(labels, ax, location_key):
     return None
 
 
-def _style_legend(legend, show_marginal_kde=False, location_key=None):
+def _style_legend(
+    legend: Any,
+    show_marginal_kde: bool = False,
+    location_key: str | None = None,
+) -> None:
     """Apply legend styling from app_state."""
     if legend is None:
         return
