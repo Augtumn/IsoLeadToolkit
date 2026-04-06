@@ -1,11 +1,13 @@
 """Overlay and geochemistry visualization state."""
 from __future__ import annotations
 
+from typing import Any
+
 
 class OverlayState:
     """Groups all overlay toggle, style, and label tracking fields."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Visibility toggles
         self.show_model_curves = True
         self.show_paleoisochrons = True
@@ -17,10 +19,10 @@ class OverlayState:
 
         # Mu/Kappa age
         self.use_real_age_for_mu_kappa = False
-        self.mu_kappa_age_col = None
+        self.mu_kappa_age_col: str | None = None
 
         # Isochron label display options
-        self.isochron_label_options = {
+        self.isochron_label_options: dict[str, bool] = {
             'show_age': True,
             'show_mswd': False,
             'show_r_squared': False,
@@ -33,7 +35,7 @@ class OverlayState:
         self.geo_model_name = "Stacey & Kramers (2nd Stage)"
 
         # Equation overlays
-        self.equation_overlays: list[dict] = [
+        self.equation_overlays: list[dict[str, Any]] = [
             {
                 'id': 'eq_206_208',
                 'label': 'y=1.0049x+20.259',
@@ -63,7 +65,7 @@ class OverlayState:
         ]
 
         # Line styles for all overlay types
-        self.line_styles: dict[str, dict] = {
+        self.line_styles: dict[str, dict[str, Any]] = {
             'model_curve': {
                 'color': None,
                 'linewidth': 1.2,
@@ -137,7 +139,7 @@ class OverlayState:
 
         # Plumbotectonics
         self.plumbotectonics_variant = '0'
-        self.model_curve_models = None  # None means all preset models
+        self.model_curve_models: list[str] | None = None  # None means all preset models
         self.plumbotectonics_group_visibility: dict[str, bool] = {}
 
         # Isochron regression error configuration
@@ -148,8 +150,8 @@ class OverlayState:
         self.isochron_sx_value = 0.001
         self.isochron_sy_value = 0.001
         self.isochron_rxy_value = 0.0
-        self.selected_isochron_data = None
-        self.isochron_results: dict = {}
+        self.selected_isochron_data: Any | None = None
+        self.isochron_results: dict[str, Any] = {}
 
         # Line width shortcuts (kept for backward compat with display panel)
         self.model_curve_width = 1.2
@@ -159,13 +161,13 @@ class OverlayState:
         self.isochron_line_width = 1.5
 
         # Runtime artist tracking (not persisted)
-        self.overlay_artists: dict[str, list] = {}
-        self.overlay_curve_label_data: list[dict] = []
-        self.paleoisochron_label_data: list[dict] = []
-        self.plumbotectonics_label_data: list[dict] = []
-        self.plumbotectonics_isoage_label_data: list[dict] = []
+        self.overlay_artists: dict[str, list[Any]] = {}
+        self.overlay_curve_label_data: list[dict[str, Any]] = []
+        self.paleoisochron_label_data: list[dict[str, Any]] = []
+        self.plumbotectonics_label_data: list[dict[str, Any]] = []
+        self.plumbotectonics_isoage_label_data: list[dict[str, Any]] = []
 
-    def _init_equation_styles(self):
+    def _init_equation_styles(self) -> None:
         """Ensure each equation overlay has a style entry in line_styles."""
         for overlay in self.equation_overlays:
             style_key = overlay.get('style_key')
@@ -181,7 +183,7 @@ class OverlayState:
                 'alpha': overlay.get('alpha', 0.85),
             })
 
-    def clear_artists(self):
+    def clear_artists(self) -> None:
         """Reset runtime artist tracking state."""
         self.overlay_artists = {}
         self.overlay_curve_label_data = []

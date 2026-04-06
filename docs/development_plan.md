@@ -2,6 +2,21 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百零一批）
+
+- P2-1（类型注解补齐）启动首批落地，覆盖 core 轻量状态对象：
+    - `core/overlay_state.py`
+    - `core/legend_state.py`
+- 改造内容：
+    - 为构造函数补充 `-> None`。
+    - 为关键字段补充显式类型注解（含运行时容器字段与可空字段）。
+    - 为 `OverlayState` 的 `_init_equation_styles`、`clear_artists` 补充返回类型注解。
+- 回归测试新增：
+    - `tests/test_overlay_legend_state.py`，覆盖：
+        - `OverlayState.clear_artists` 运行时容器清理行为。
+        - `OverlayState._init_equation_styles` style_key 与样式条目生成。
+        - `LegendState` 默认值稳定性。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百批）
 
 - 收口边界测试新增：
