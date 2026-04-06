@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百三十三批）
+
+- P2-1（类型注解补齐）收敛 `visualization` 模块级兼容导出函数：
+    - `visualization/style_manager.py` 的 `apply_custom_style` 补齐显式参数与返回类型注解。
+- 回归测试新增：
+    - `tests/test_style_manager_exports.py` 新增 1 个测试，覆盖 `apply_custom_style` 对 `style_manager_instance.apply_style` 的参数透传行为。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百三十二批）
 
 - P2-1（类型注解补齐）继续收敛 geochem overlay helper：
