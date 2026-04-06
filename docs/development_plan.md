@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十九批）
+
+- P2-1（类型注解补齐）推进 geochem 标签模块：
+    - `visualization/plotting/geochem/isochron_labels.py` 的 `_build_isochron_label` 与 `refresh_paleoisochron_labels` 补齐显式类型注解。
+- 回归测试新增：
+    - `tests/test_isochron_labels_helpers.py` 新增 2 个测试，覆盖：
+        - 默认标签策略（age + n_points）；
+        - 扩展开关组合下的 MSWD/R²/slope/intercept 文本拼接。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十八批）
 
 - P2-1（类型注解补齐）继续推进 label layout 几何 helper：

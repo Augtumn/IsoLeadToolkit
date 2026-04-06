@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from core import app_state, state_gateway
 from ..label_layout import position_curve_label, apply_adjust_text_to_labels
@@ -9,7 +10,7 @@ from .overlay_helpers import _is_overlay_label_style_visible
 
 logger = logging.getLogger(__name__)
 
-def _build_isochron_label(result_dict):
+def _build_isochron_label(result_dict: dict[str, Any]) -> str:
     """根据 isochron_label_options 动态构建等时线标注文本。"""
     opts = getattr(app_state, 'isochron_label_options', {})
     parts = []
@@ -30,7 +31,7 @@ def _build_isochron_label(result_dict):
         parts.append(f"b={result_dict['intercept']:.4f}")
     return ", ".join(parts) if parts else ""
 
-def refresh_paleoisochron_labels():
+def refresh_paleoisochron_labels() -> None:
     """Refresh paleoisochron label positions after zoom/pan."""
     ax = getattr(app_state, 'ax', None)
     if ax is None:
