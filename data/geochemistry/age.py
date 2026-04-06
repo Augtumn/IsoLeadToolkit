@@ -25,6 +25,11 @@ _AGE_SOLVER_XTOL = 1e-6
 _AGE_SOLVER_ENDPOINT_MARGIN = 1.0
 
 
+def _safe_scalar_denominator(value: float) -> float:
+    """Apply shared scalar denominator floor to avoid division singularity."""
+    return EPSILON if abs(value) < EPSILON else float(value)
+
+
 def _solve_age_scipy(
     f: Callable[[float], float],
     bounds: tuple[float, float],
@@ -120,7 +125,7 @@ def calculate_single_stage_age(
     if S206.ndim == 0:
         def f(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < EPSILON: denom = EPSILON
+            denom = _safe_scalar_denominator(float(denom))
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(S206 - a0_val) < _RATIO_DIFF_FLOOR:
@@ -141,7 +146,7 @@ def calculate_single_stage_age(
 
         def f_scalar(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < EPSILON: denom = EPSILON
+            denom = _safe_scalar_denominator(float(denom))
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(s206 - a0_val) < _RATIO_DIFF_FLOOR:  # 避免除零
@@ -188,7 +193,7 @@ def calculate_two_stage_age(
     if S206.ndim == 0:
         def f(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < EPSILON: denom = EPSILON
+            denom = _safe_scalar_denominator(float(denom))
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(S206 - a1_val) < _RATIO_DIFF_FLOOR:
@@ -209,7 +214,7 @@ def calculate_two_stage_age(
             
         def f_scalar(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
-            if abs(denom) < EPSILON: denom = EPSILON
+            denom = _safe_scalar_denominator(float(denom))
             num = np.exp(l235 * T) - np.exp(l235 * t)
             
             if abs(s206 - a1_val) < _RATIO_DIFF_FLOOR:

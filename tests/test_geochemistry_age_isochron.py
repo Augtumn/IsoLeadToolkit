@@ -252,3 +252,8 @@ def test_solve_age_scipy_applies_upper_endpoint_margin(monkeypatch) -> None:
             10.0 - age_module._AGE_SOLVER_ENDPOINT_MARGIN,
         )
     ]
+
+
+def test_safe_scalar_denominator_applies_epsilon_floor() -> None:
+    assert age_module._safe_scalar_denominator(0.0) == age_module.EPSILON
+    assert age_module._safe_scalar_denominator(age_module.EPSILON * 2.0) == pytest.approx(age_module.EPSILON * 2.0)

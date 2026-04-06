@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百五十五批）
+
+- P2-3（数值稳定性统一）继续收敛 age 模块标量分母保护：
+    - `data/geochemistry/age.py` 新增 `_safe_scalar_denominator`，统一替换 `calculate_single_stage_age` 与 `calculate_two_stage_age` 中重复的 `if abs(denom) < EPSILON: denom = EPSILON` 逻辑。
+- 回归测试新增：
+    - `tests/test_geochemistry_age_isochron.py` 新增 1 个测试，覆盖 `_safe_scalar_denominator` 的 EPSILON 下界保护行为。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百五十四批）
 
 - P2-3（数值稳定性统一）继续收敛 source 反演分母保护逻辑：
