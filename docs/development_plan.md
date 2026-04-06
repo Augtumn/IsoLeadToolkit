@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百三十六批）
+
+- P2-2（AppState 分层拆分）继续迁移 ternary helper 的状态写入路径：
+    - `visualization/plotting/ternary.py` 将 `configure_ternary_axis`、`calculate_auto_ternary_factors` 中 `app_state` 直写改为显式 `state_gateway` API（`set_ternary_limit_mode`、`set_ternary_boundary_percent`、`set_ternary_factors`）。
+- 回归测试新增：
+    - `tests/test_plotting_ternary_helpers.py` 新增 4 个测试，覆盖：
+        - ternary 归一化对无效行的回退；
+        - 轴配置 helper 的 gateway 写入路径；
+        - 自动因子计算的 gateway 写入与无数据失败分支。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百三十五批）
 
 - P2-1（类型注解补齐）收敛 UI 顶层 helper 签名：

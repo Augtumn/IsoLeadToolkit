@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import gmean
 
-from core import app_state
+from core import app_state, state_gateway
 
 logger = logging.getLogger(__name__)
 _FULL_TERNARY_LIMITS = (0.0, 1.0, 0.0, 1.0, 0.0, 1.0)
@@ -378,8 +378,8 @@ def configure_ternary_axis(
 
     mode = resolve_ternary_limit_mode(getattr(app_state, 'ternary_limit_mode', None))
     boundary_percent = _sanitize_boundary_percent(getattr(app_state, 'ternary_boundary_percent', 5.0))
-    setattr(app_state, 'ternary_limit_mode', mode)
-    setattr(app_state, 'ternary_boundary_percent', boundary_percent)
+    state_gateway.set_ternary_limit_mode(mode)
+    state_gateway.set_ternary_boundary_percent(boundary_percent)
 
     limits = _FULL_TERNARY_LIMITS
     if auto_zoom:
@@ -436,8 +436,9 @@ def calculate_auto_ternary_factors() -> bool:
         if min_f > 0:
             factors = factors / min_f
 
-        setattr(app_state, 'ternary_factors', factors.tolist())
-        logger.info("Auto-Calculated Factors: %s", app_state.ternary_factors)
+        factors_list = factors.tolist()
+        state_gateway.set_ternary_factors(factors_list)
+        logger.info("Auto-Calculated Factors: %s", factors_list)
         return True
 
     except Exception as e:
