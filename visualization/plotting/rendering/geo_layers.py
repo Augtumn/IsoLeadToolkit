@@ -1,6 +1,8 @@
 """Geo overlay rendering helpers for embedding plots."""
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 from core import app_state
@@ -20,7 +22,13 @@ from ..geo import (
 )
 
 
-def _render_geo_overlays(actual_algorithm, prev_ax, prev_embedding_type, prev_xlim, prev_ylim):
+def _render_geo_overlays(
+    actual_algorithm: str,
+    prev_ax: Any,
+    prev_embedding_type: str | None,
+    prev_xlim: tuple[float, float] | None,
+    prev_ylim: tuple[float, float] | None,
+) -> None:
     if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
         geochemistry, _ = _lazy_import_geochemistry()
         params = geochemistry.engine.get_parameters() if geochemistry else {}

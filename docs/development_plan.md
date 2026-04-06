@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百二十八批）
+
+- P2-1（类型注解补齐）推进地化叠加调度模块：
+    - `visualization/plotting/rendering/geo_layers.py` 的 `_render_geo_overlays` 补齐显式类型注解。
+- 回归测试新增：
+    - `tests/test_rendering_geo_layers_helpers.py` 新增 2 个测试，覆盖：
+        - Plumbotectonics 分支的 isoage/curve/equation 调度顺序；
+        - Mu-Age 分支的 paleoisochron 与 equation 调度。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百二十七批）
 
 - P2-1（类型注解补齐）推进 plotting KDE 模块：
