@@ -2,6 +2,17 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百零五批）
+
+- P2-1（类型注解补齐）继续推进 data/geochemistry 求解辅助函数：
+    - `data/geochemistry/age.py` 中 `_solve_age_scipy` 的 `_eval`，以及单/双阶段年龄求解内部 `f`、`f_scalar` 增加显式参数与返回类型注解。
+    - `data/geochemistry/isochron.py` 中 Pb-Pb 年龄反解内部函数 `f` 增加显式类型注解。
+- 回归测试新增：
+    - `tests/test_geochemistry_age_isochron.py` 新增 3 个测试，覆盖：
+        - Pb-Pb 反解年龄可回收构造输入年龄；
+        - 非正比值短路返回；
+        - 等时线斜率年龄计算与 Pb-Pb 反解一致。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百零四批）
 
 - P2-1（类型注解补齐）扩展至 data 层：

@@ -37,7 +37,7 @@ def _solve_age_scipy(
     t_min, t_max = bounds
     t_max_safe = t_max - 1.0 # 避免端点奇点
 
-    def _eval(val):
+    def _eval(val: float) -> float:
         try:
             out = f(val)
             return out if np.isfinite(out) else np.nan
@@ -112,7 +112,7 @@ def calculate_single_stage_age(
     
     # 标量处理优化
     if S206.ndim == 0:
-        def f(t):
+        def f(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
             if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
@@ -132,7 +132,7 @@ def calculate_single_stage_age(
             results.append(np.nan)
             continue
 
-        def f_scalar(t):
+        def f_scalar(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
             if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
@@ -178,7 +178,7 @@ def calculate_two_stage_age(
 
     # 标量处理
     if S206.ndim == 0:
-        def f(t):
+        def f(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
             if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)
@@ -198,7 +198,7 @@ def calculate_two_stage_age(
             results.append(np.nan)
             continue
             
-        def f_scalar(t):
+        def f_scalar(t: float) -> float:
             denom = np.exp(l238 * T) - np.exp(l238 * t)
             if abs(denom) < EPSILON: denom = EPSILON
             num = np.exp(l235 * T) - np.exp(l235 * t)

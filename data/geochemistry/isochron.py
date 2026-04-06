@@ -299,7 +299,7 @@ def calculate_pbpb_age_from_ratio(
     l235 = params['lambda_235']
     u_ratio = params['U_ratio']
 
-    def f(t):
+    def f(t: float) -> float:
         if t <= 0:
             return -r76
         num = np.exp(l235 * t) - 1.0
