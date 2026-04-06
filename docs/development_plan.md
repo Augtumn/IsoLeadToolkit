@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十七批）
+
+- P2-1（类型注解补齐）推进 label layout 参数归一化模块：
+    - `visualization/plotting/label_layout.py` 的 `_float_pair`、`_resolve_adjust_text_settings`、`_lazy_import_adjust_text` 补齐显式类型注解。
+- 回归测试新增：
+    - `tests/test_label_layout_settings.py` 新增 2 个测试，覆盖：
+        - adjustText pair 参数归一化（序列/标量/回退）；
+        - `iter_lim` 与 `time_lim` 的上下界夹逼规则。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十六批）
 
 - P2-1（类型注解补齐）推进 embedding dataframe 对齐模块：

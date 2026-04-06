@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, Callable
 
 import numpy as np
 
@@ -39,7 +40,7 @@ def _normalize_position_mode(position_mode: str | None) -> str:
     return value
 
 
-def _float_pair(value, fallback):
+def _float_pair(value: Any, fallback: tuple[float, float]) -> tuple[float, float]:
     """Normalize runtime setting to a 2-float tuple."""
     if isinstance(value, (list, tuple)) and len(value) >= 2:
         try:
@@ -52,7 +53,7 @@ def _float_pair(value, fallback):
     return fallback
 
 
-def _resolve_adjust_text_settings():
+def _resolve_adjust_text_settings() -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], int, float]:
     """Resolve adjustText parameters from app_state with safe defaults."""
     force_text = _float_pair(getattr(app_state, 'adjust_text_force_text', (0.8, 1.0)), (0.8, 1.0))
     force_static = _float_pair(getattr(app_state, 'adjust_text_force_static', (0.4, 0.6)), (0.4, 0.6))
@@ -73,7 +74,7 @@ def _resolve_adjust_text_settings():
     return force_text, force_static, expand, iter_lim, time_lim
 
 
-def _lazy_import_adjust_text():
+def _lazy_import_adjust_text() -> Callable[..., Any] | None:
     """Lazy import adjustText.adjust_text."""
     global _adjust_text_fn, _adjust_text_checked
     if _adjust_text_checked:
