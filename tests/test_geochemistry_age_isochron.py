@@ -231,3 +231,24 @@ def test_solve_age_scipy_uses_named_xtol_on_scanned_sign_change(monkeypatch) -> 
     assert len(calls) == 1
     _left, _right, xtol = calls[0]
     assert xtol == age_module._AGE_SOLVER_XTOL
+
+
+def test_solve_age_scipy_applies_upper_endpoint_margin(monkeypatch) -> None:
+    calls: list[tuple[float, float]] = []
+
+    def _fake_brentq(func, left, right, xtol):
+        _ = func, xtol
+        calls.append((float(left), float(right)))
+        return 0.0
+
+    monkeypatch.setattr(age_module.optimize, "brentq", _fake_brentq)
+
+    result = age_module._solve_age_scipy(lambda t: t, bounds=(-10.0, 10.0))
+
+    assert result == pytest.approx(0.0, rel=0.0, abs=1e-12)
+    assert calls == [
+        (
+            -10.0,
+            10.0 - age_module._AGE_SOLVER_ENDPOINT_MARGIN,
+        )
+    ]

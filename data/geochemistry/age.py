@@ -22,6 +22,7 @@ from .engine import (
 _RATIO_DIFF_FLOOR = 1e-10
 _SOLVER_GUARD_VALUE = 1e10
 _AGE_SOLVER_XTOL = 1e-6
+_AGE_SOLVER_ENDPOINT_MARGIN = 1.0
 
 
 def _solve_age_scipy(
@@ -40,7 +41,7 @@ def _solve_age_scipy(
         float or None: 求解得到的年龄 (年)，若失败返回 None
     """
     t_min, t_max = bounds
-    t_max_safe = t_max - 1.0 # 避免端点奇点
+    t_max_safe = t_max - _AGE_SOLVER_ENDPOINT_MARGIN  # 避免端点奇点
 
     def _eval(val: float) -> float:
         try:
