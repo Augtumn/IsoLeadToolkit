@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百一十六批）
+
+- P2-1（类型注解补齐）推进 embedding dataframe 对齐模块：
+    - `visualization/plotting/rendering/embedding/dataframe.py` 的 `_reset_plot_dataframe` 与 `prepare_plot_dataframe` 补齐显式 DataFrame 类型签名。
+- 回归测试新增：
+    - `tests/test_embedding_dataframe_helpers.py` 新增 2 个测试，覆盖：
+        - 可见组过滤命中时的筛选行为；
+        - 可见组过滤失配时自动回退并重置过滤状态。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百一十五批）
 
 - P2-1（类型注解补齐）推进 plotting core helper：

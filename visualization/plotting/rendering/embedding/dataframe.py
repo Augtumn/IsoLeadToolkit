@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 
 import numpy as np
+import pandas as pd
 
 from core import app_state, state_gateway
 
@@ -12,7 +13,12 @@ from ..common.state_access import _active_subset_indices, _df_global
 logger = logging.getLogger(__name__)
 
 
-def _reset_plot_dataframe(df_source, embedding: np.ndarray, actual_algorithm: str, group_col: str):
+def _reset_plot_dataframe(
+    df_source: pd.DataFrame,
+    embedding: np.ndarray,
+    actual_algorithm: str,
+    group_col: str,
+) -> pd.DataFrame | None:
     base = df_source
     if group_col not in base.columns:
         return None
@@ -47,7 +53,11 @@ def _reset_plot_dataframe(df_source, embedding: np.ndarray, actual_algorithm: st
     return base
 
 
-def prepare_plot_dataframe(group_col: str, actual_algorithm: str, embedding: np.ndarray):
+def prepare_plot_dataframe(
+    group_col: str,
+    actual_algorithm: str,
+    embedding: np.ndarray,
+) -> tuple[pd.DataFrame, list[str]] | None:
     """Prepare plotting dataframe and apply visibility filters."""
     df_global = _df_global()
     if df_global is None:
