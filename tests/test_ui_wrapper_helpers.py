@@ -299,3 +299,29 @@ def test_clear_widget_styles_skips_keep_style_children(monkeypatch) -> None:
     assert root.styleSheet() == ""
     assert child_cleared.styleSheet() == ""
     assert child_kept.styleSheet() == "keep"
+
+
+def test_display_theme_auto_layout_delegates_to_layout_helper(monkeypatch) -> None:
+    from ui.panels.display import themes
+
+    calls: dict[str, object] = {"fig": None, "draw_called": False}
+
+    class _Canvas:
+        def draw_idle(self) -> None:
+            calls["draw_called"] = True
+
+    fake_fig = SimpleNamespace(canvas=_Canvas())
+    monkeypatch.setattr(themes, "app_state", SimpleNamespace(fig=fake_fig))
+    monkeypatch.setattr(
+        themes,
+        "configure_constrained_layout",
+        lambda fig: calls.__setitem__("fig", fig),
+    )
+
+    class _Panel(themes.DisplayThemeMixin):
+        pass
+
+    _Panel()._apply_auto_layout()
+
+    assert calls["fig"] is fake_fig
+    assert calls["draw_called"] is True

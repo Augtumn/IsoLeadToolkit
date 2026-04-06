@@ -2,6 +2,18 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百四十六批）
+
+- P2-3（数值稳定性统一）推进 Matplotlib 布局API兼容收敛：
+    - `visualization/plotting/style.py` 新增 `configure_constrained_layout`，优先使用 `set_layout_engine('constrained')` 与 layout engine `set(...)` 参数配置，并在异常/缺失时回退旧版 `set_constrained_layout*` 接口。
+    - `visualization/plotting/kde.py`、`ui/app_parts/plotting.py`、`ui/panels/display/themes.py` 统一改为调用该辅助函数，移除分散的弃用接口直接调用。
+- 回归测试新增/增强：
+    - `tests/test_plotting_style_helpers.py` 新增 2 个测试，覆盖：
+        - layout engine 新API路径参数配置；
+        - 新API不可用时 legacy API 回退路径。
+    - `tests/test_plotting_kde_helpers.py` 新增 1 个测试，覆盖边际 KDE 渲染对布局辅助函数的委托调用。
+    - `tests/test_ui_wrapper_helpers.py` 新增 1 个测试，覆盖显示主题自动布局对布局辅助函数的委托调用。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百四十五批）
 
 - P2-3（数值稳定性统一）继续收敛 York 回归容差常量：

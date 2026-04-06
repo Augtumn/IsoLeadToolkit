@@ -6,6 +6,7 @@ import logging
 from PyQt5.QtWidgets import QMessageBox
 
 from core import CONFIG, app_state, state_gateway, translate
+from visualization.plotting.style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
 
@@ -340,10 +341,7 @@ class DisplayThemeMixin:
         if app_state.fig is None:
             return
         try:
-            app_state.fig.set_constrained_layout(True)
-            app_state.fig.set_constrained_layout_pads(
-                w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02
-            )
+            configure_constrained_layout(app_state.fig)
             if app_state.fig.canvas:
                 app_state.fig.canvas.draw_idle()
         except Exception:

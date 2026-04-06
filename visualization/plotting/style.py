@@ -1,11 +1,57 @@
 """Style helpers for plotting (facade)."""
 from __future__ import annotations
 
+from typing import Any
+
 from core import app_state
 from .event_bridge import refresh_selection_overlay_safe
 from .styling.core import _apply_current_style, _apply_axis_text_style, _enforce_plot_style
 from .styling.legend import _legend_columns_for_layout, _legend_layout_config, _style_legend
 from .styling.overlays import refresh_overlay_styles, refresh_overlay_visibility
+
+
+def configure_constrained_layout(
+    fig: Any,
+    *,
+    w_pad: float = 0.02,
+    h_pad: float = 0.02,
+    wspace: float = 0.02,
+    hspace: float = 0.02,
+) -> None:
+    """Configure constrained layout using modern engine API with fallback."""
+    if fig is None:
+        return
+
+    try:
+        set_layout_engine = getattr(fig, 'set_layout_engine', None)
+        get_layout_engine = getattr(fig, 'get_layout_engine', None)
+        if callable(set_layout_engine):
+            set_layout_engine('constrained')
+            if callable(get_layout_engine):
+                layout_engine = get_layout_engine()
+                if layout_engine is not None:
+                    engine_set = getattr(layout_engine, 'set', None)
+                    if callable(engine_set):
+                        engine_set(
+                            w_pad=w_pad,
+                            h_pad=h_pad,
+                            wspace=wspace,
+                            hspace=hspace,
+                        )
+            return
+    except Exception:
+        pass
+
+    try:
+        fig.set_constrained_layout(True)
+        fig.set_constrained_layout_pads(
+            w_pad=w_pad,
+            h_pad=h_pad,
+            wspace=wspace,
+            hspace=hspace,
+        )
+    except Exception:
+        pass
 
 
 def refresh_plot_style() -> None:

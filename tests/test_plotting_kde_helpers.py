@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from core import app_state, state_gateway
+from visualization.plotting import kde as kde_helpers
 from visualization.plotting.kde import _estimate_density_curve, clear_marginal_axes, draw_marginal_kde
 
 
@@ -43,6 +44,41 @@ def test_draw_marginal_kde_creates_and_registers_axes() -> None:
         marginal_axes = getattr(app_state, "marginal_axes", None)
         assert marginal_axes is not None
         assert len(marginal_axes) == 2
+    finally:
+        clear_marginal_axes()
+        plt.close(fig)
+        _restore_marginal_axes_state(snapshot)
+
+
+def test_draw_marginal_kde_uses_layout_helper(monkeypatch) -> None:
+    snapshot = _snapshot_marginal_axes_state()
+    fig, ax = plt.subplots()
+    called: dict[str, object | None] = {"fig": None}
+    try:
+        state_gateway.set_marginal_axes(None)
+        monkeypatch.setattr(
+            kde_helpers,
+            "configure_constrained_layout",
+            lambda target_fig: called.__setitem__("fig", target_fig),
+        )
+
+        df_plot = pd.DataFrame(
+            {
+                "group": ["A", "A", "A", "A"],
+                "_emb_x": [1.0, 2.0, 3.0, 4.0],
+                "_emb_y": [1.5, 2.5, 3.5, 4.5],
+            }
+        )
+
+        draw_marginal_kde(
+            ax=ax,
+            df_plot=df_plot,
+            group_col="group",
+            palette={"A": "#1f77b4"},
+            unique_cats=["A"],
+        )
+
+        assert called["fig"] is fig
     finally:
         clear_marginal_axes()
         plt.close(fig)

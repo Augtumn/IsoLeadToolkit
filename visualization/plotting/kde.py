@@ -7,6 +7,7 @@ from scipy.stats import gaussian_kde
 
 from core import app_state, state_gateway
 from visualization.line_styles import ensure_line_style
+from .style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
 
@@ -229,9 +230,5 @@ def draw_marginal_kde(
         spine.set_visible(False)
 
     state_gateway.set_marginal_axes((ax_top, ax_right))
-    try:
-        ax.figure.set_constrained_layout(True)
-        ax.figure.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
-    except Exception:
-        pass
+    configure_constrained_layout(ax.figure)
 

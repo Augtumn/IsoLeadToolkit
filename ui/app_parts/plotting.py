@@ -3,6 +3,7 @@
 import logging
 
 from core import CONFIG, app_state, state_gateway
+from visualization.plotting.style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
 
@@ -18,25 +19,13 @@ class Qt5AppPlottingMixin:
 
         fig, ax = plt.subplots(figsize=CONFIG["figure_size"], constrained_layout=True)
         state_gateway.set_figure_axes(fig, ax)
-        try:
-            app_state.fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.02, wspace=0.02, hspace=0.02)
-        except Exception:
-            pass
+        configure_constrained_layout(app_state.fig)
 
         def _on_resize(event):
             try:
                 if app_state.fig is None:
                     return
-                app_state.fig.set_constrained_layout(True)
-                try:
-                    app_state.fig.set_constrained_layout_pads(
-                        w_pad=0.02,
-                        h_pad=0.02,
-                        wspace=0.02,
-                        hspace=0.02,
-                    )
-                except Exception:
-                    pass
+                configure_constrained_layout(app_state.fig)
                 app_state.fig.canvas.draw_idle()
             except Exception:
                 pass
