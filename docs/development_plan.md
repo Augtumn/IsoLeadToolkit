@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百四十七批）
+
+- P2-3（数值稳定性统一）继续收敛 ternary helper 的数值护栏常量：
+    - `visualization/plotting/ternary.py` 新增 `_TERNARY_LIMIT_EPSILON`、`_TERNARY_FACTORS_FILL_VALUE`、`_TERNARY_FACTORS_MIN_VALUE`，替换 `_equalized_window`、`recommend_boundary_percent_from_components`、`calculate_auto_ternary_factors` 中的散落字面量。
+- 回归测试新增：
+    - `tests/test_plotting_ternary_helpers.py` 新增 2 个测试，覆盖：
+        - 低跨度数据下边界推荐值 fallback 路径；
+        - 含零值/负值/NaN 输入时自动因子计算的有限正值输出路径。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百四十六批）
 
 - P2-3（数值稳定性统一）推进 Matplotlib 布局API兼容收敛：

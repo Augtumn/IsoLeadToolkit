@@ -13,6 +13,9 @@ from core import app_state, state_gateway
 logger = logging.getLogger(__name__)
 _FULL_TERNARY_LIMITS = (0.0, 1.0, 0.0, 1.0, 0.0, 1.0)
 _VALID_LIMIT_MODES = {'min', 'max', 'both'}
+_TERNARY_LIMIT_EPSILON = 1e-9
+_TERNARY_FACTORS_FILL_VALUE = 1e-3
+_TERNARY_FACTORS_MIN_VALUE = 1e-6
 
 
 def _data_state() -> Any:
@@ -177,9 +180,9 @@ def _equalized_window(min_val: float, max_val: float, span: float) -> tuple[floa
     high = min(1.0, high)
 
     if (high - low) < span:
-        if low <= 1e-9:
+        if low <= _TERNARY_LIMIT_EPSILON:
             high = min(1.0, low + span)
-        elif high >= (1.0 - 1e-9):
+        elif high >= (1.0 - _TERNARY_LIMIT_EPSILON):
             low = max(0.0, high - span)
 
     return float(low), float(high)
@@ -318,7 +321,7 @@ def recommend_boundary_percent_from_components(
     ])
     base_span = float(np.nanmax(np.maximum(spans, 0.0)))
 
-    if not np.isfinite(base_span) or base_span <= 1e-9:
+    if not np.isfinite(base_span) or base_span <= _TERNARY_LIMIT_EPSILON:
         computed = 12.0
     else:
         target_span = 0.78 if mode in ('min', 'max') else 0.72
@@ -426,8 +429,8 @@ def calculate_auto_ternary_factors() -> bool:
         else:
             df = df_global.copy()
 
-        data = df[cols].apply(pd.to_numeric, errors='coerce').fillna(0.001).values
-        data = np.maximum(data, 1e-6)
+        data = df[cols].apply(pd.to_numeric, errors='coerce').fillna(_TERNARY_FACTORS_FILL_VALUE).values
+        data = np.maximum(data, _TERNARY_FACTORS_MIN_VALUE)
 
         gmeans = gmean(data, axis=0)
 

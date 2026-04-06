@@ -105,3 +105,44 @@ def test_calculate_auto_ternary_factors_returns_false_without_dataframe(monkeypa
         assert ternary.calculate_auto_ternary_factors() is False
     finally:
         setattr(app_state, "selected_ternary_cols", snapshot_cols)
+
+
+def test_recommend_boundary_percent_uses_low_span_fallback() -> None:
+    recommended = ternary.recommend_boundary_percent_from_components(
+        np.array([1.0, 1.0], dtype=float),
+        np.array([1.0, 1.0], dtype=float),
+        np.array([1.0, 1.0], dtype=float),
+        mode="min",
+        current_percent=5.0,
+    )
+
+    assert recommended == 9.6
+
+
+def test_calculate_auto_ternary_factors_sanitizes_nonpositive_inputs(monkeypatch) -> None:
+    snapshot_cols = list(getattr(app_state, "selected_ternary_cols", []) or [])
+    calls: list[list[float]] = []
+    try:
+        setattr(app_state, "selected_ternary_cols", ["top", "left", "right"])
+        monkeypatch.setattr(
+            ternary,
+            "_df_global",
+            lambda: pd.DataFrame(
+                {
+                    "top": [0.0, -1.0, np.nan],
+                    "left": [0.0, np.nan, -2.0],
+                    "right": [np.nan, 0.0, -3.0],
+                }
+            ),
+        )
+        monkeypatch.setattr(ternary, "_active_subset_indices", lambda: None)
+        monkeypatch.setattr(ternary.state_gateway, "set_ternary_factors", lambda factors: calls.append(list(factors)))
+
+        ok = ternary.calculate_auto_ternary_factors()
+
+        assert ok is True
+        assert len(calls) == 1
+        assert all(np.isfinite(calls[0]))
+        assert all(value > 0.0 for value in calls[0])
+    finally:
+        setattr(app_state, "selected_ternary_cols", snapshot_cols)
