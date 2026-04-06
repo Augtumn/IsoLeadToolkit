@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -20,7 +21,11 @@ from .plumbotectonics_metadata import get_overlay_default_color
 
 logger = logging.getLogger(__name__)
 
-def _draw_model_curves(ax, actual_algorithm, params_list):
+def _draw_model_curves(
+    ax: Any,
+    actual_algorithm: str,
+    params_list: Sequence[Mapping[str, object]] | None,
+) -> None:
     """Draw model curves for Pb evolution plots."""
     geochemistry, _ = _lazy_import_geochemistry()
     if geochemistry is None:
@@ -121,7 +126,7 @@ def _draw_model_curves(ax, actual_algorithm, params_list):
             logger.warning("Failed to draw model curve: %s", err)
 
 
-def _draw_mu_kappa_paleoisochrons(ax, ages):
+def _draw_mu_kappa_paleoisochrons(ax: Any, ages: Sequence[object] | None) -> None:
     """Draw paleoisochron ages as vertical guides for Mu/Kappa plots."""
     if not ages:
         return

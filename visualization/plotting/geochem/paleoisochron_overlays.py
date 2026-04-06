@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -20,7 +21,12 @@ from .plumbotectonics_metadata import get_overlay_default_color
 
 logger = logging.getLogger(__name__)
 
-def _draw_paleoisochrons(ax, actual_algorithm, ages, params):
+def _draw_paleoisochrons(
+    ax: Any,
+    actual_algorithm: str,
+    ages: Sequence[object],
+    params: Mapping[str, object],
+) -> None:
     """Draw paleoisochron reference lines for given ages."""
     geochemistry, _ = _lazy_import_geochemistry()
     if geochemistry is None:

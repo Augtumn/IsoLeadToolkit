@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ from .overlay_helpers import _register_overlay_artist
 logger = logging.getLogger(__name__)
 
 
-def _draw_isochron_overlays(ax, actual_algorithm):
+def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
     """Draw isochron reference lines for Pb-Pb plots."""
     geochemistry, _ = _lazy_import_geochemistry()
     if geochemistry is None:

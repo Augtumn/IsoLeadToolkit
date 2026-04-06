@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from visualization.line_styles import resolve_line_style
 
@@ -16,7 +17,7 @@ from .overlay_helpers import (
 
 logger = logging.getLogger(__name__)
 
-def _draw_selected_isochron(ax):
+def _draw_selected_isochron(ax: Any) -> None:
     """Draw isochron line for box-selected data points."""
     try:
         # Check if we have selected isochron data

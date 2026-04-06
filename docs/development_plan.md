@@ -2,6 +2,17 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百三十二批）
+
+- P2-1（类型注解补齐）继续收敛 geochem overlay helper：
+    - `visualization/plotting/geochem/isochron_fits.py`：`_draw_isochron_overlays`
+    - `visualization/plotting/geochem/model_overlays.py`：`_draw_model_curves`、`_draw_mu_kappa_paleoisochrons`
+    - `visualization/plotting/geochem/paleoisochron_overlays.py`：`_draw_paleoisochrons`
+    - `visualization/plotting/geochem/plumbotectonics_isoage.py`：`_draw_plumbotectonics_isoage_lines`
+    - `visualization/plotting/geochem/selected_isochron_overlay.py`：`_draw_selected_isochron`
+- 回归测试新增：
+    - `tests/test_geochem_overlay_draw_helpers.py` 新增 6 个测试，覆盖上述 helper 的关键绘制分支与空数据保护分支。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百三十一批）
 
 - P2-1（类型注解补齐）推进 equation overlays 模块：

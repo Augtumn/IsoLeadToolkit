@@ -1,6 +1,8 @@
 """Plumbotectonics same-age line rendering helpers."""
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 
 from core import app_state, state_gateway
@@ -20,7 +22,7 @@ from .plumbotectonics_metadata import (
 )
 
 
-def _draw_plumbotectonics_isoage_lines(ax, actual_algorithm):
+def _draw_plumbotectonics_isoage_lines(ax: Any, actual_algorithm: str) -> None:
     """Draw same-age connection lines (paleoisochrons) for Plumbotectonics."""
     sections = _load_plumbotectonics_data()
     section = _select_plumbotectonics_section(sections)
