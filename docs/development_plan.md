@@ -2,6 +2,18 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百零七批）
+
+- P2-1（类型注解补齐）推进 visualization/geochem 元数据模块：
+    - `visualization/plotting/geochem/plumbotectonics_metadata.py` 补齐函数签名类型注解（section 选择、分组键生成、调色板映射、marker 规则）。
+- 回归测试新增：
+    - `tests/test_plumbotectonics_metadata.py` 新增 5 个测试，覆盖：
+        - variant 名称回退策略；
+        - 分组键去重与 style_key 生成；
+        - 颜色循环映射；
+        - overlay 默认颜色索引；
+        - marker 关键词映射规则。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百零六批）
 
 - P2-1（类型注解补齐）收口 data 层残留项：

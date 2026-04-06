@@ -2,23 +2,24 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from core import app_state
 from data.plumbotectonics_data import PLUMBOTECTONICS_SECTIONS
 
 
-def _load_plumbotectonics_data():
+def _load_plumbotectonics_data() -> list[dict[str, Any]]:
     return PLUMBOTECTONICS_SECTIONS
 
 
-def _plumbotectonics_section_name(section, index):
+def _plumbotectonics_section_name(section: dict[str, Any], index: int) -> str:
     label = (section.get('label') or '').strip()
     if label:
         return label
     return f"Model {index + 1}"
 
 
-def get_plumbotectonics_variants():
+def get_plumbotectonics_variants() -> list[tuple[str, str]]:
     """Return available plumbotectonics model variants."""
     sections = _load_plumbotectonics_data()
     if not sections:
@@ -29,7 +30,7 @@ def get_plumbotectonics_variants():
     return variants
 
 
-def _select_plumbotectonics_section(sections):
+def _select_plumbotectonics_section(sections: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not sections:
         return None
     variant = getattr(app_state, 'plumbotectonics_variant', None)
@@ -53,7 +54,9 @@ def _plumbotectonics_group_visible(style_key: str) -> bool:
     return bool(visibility.get(style_key, True))
 
 
-def get_plumbotectonics_group_entries(section=None):
+def get_plumbotectonics_group_entries(
+    section: dict[str, Any] | None = None,
+) -> list[dict[str, str]]:
     """Return plumbotectonics group metadata for the active model."""
     sections = _load_plumbotectonics_data()
     if section is None:
@@ -78,7 +81,7 @@ def get_plumbotectonics_group_entries(section=None):
     return entries
 
 
-def _overlay_palette():
+def _overlay_palette() -> list[str]:
     palette = []
     try:
         from visualization.style_manager import style_manager_instance
@@ -98,7 +101,7 @@ def _overlay_palette():
     return palette
 
 
-def get_plumbotectonics_group_palette(section=None):
+def get_plumbotectonics_group_palette(section: dict[str, Any] | None = None) -> dict[str, str]:
     entries = get_plumbotectonics_group_entries(section=section)
     colors = _overlay_palette()
     if not colors:
@@ -122,7 +125,7 @@ def get_overlay_default_color(style_key: str) -> str | None:
     return colors[idx % len(colors)]
 
 
-def _plumbotectonics_marker(name):
+def _plumbotectonics_marker(name: str) -> str:
     key = str(name).lower()
     if 'mantle' in key or '地幔' in key:
         return 'o'
