@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-06 · StateStore 第一百二十二批）
+
+- P2-1（类型注解补齐）推进渲染标题辅助模块：
+    - `visualization/plotting/rendering/common/title.py` 的 `_render_title_labels` 补齐显式参数与返回类型注解。
+- 回归测试新增：
+    - `tests/test_rendering_title_helpers.py` 新增 2 个测试，覆盖：
+        - PCA 模式标题与 `PCx` 坐标轴标签；
+        - 地化模式子集渲染时标题 `(Subset)` 标记与 206/207 坐标轴标签。
+
 ## 阶段进展（2026-04-06 · StateStore 第一百二十一批）
 
 - P2-1（类型注解补齐）推进 plotting core 轴与懒加载辅助函数：

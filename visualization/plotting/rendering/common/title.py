@@ -1,6 +1,8 @@
 """Plot title and axis label helpers for embedding rendering."""
 from __future__ import annotations
 
+from typing import Any
+
 from matplotlib import font_manager
 
 from core import CONFIG, app_state, state_gateway
@@ -9,7 +11,14 @@ from ...style import _apply_axis_text_style
 from .state_access import _active_subset_indices
 
 
-def _render_title_labels(actual_algorithm, group_col, umap_params, tsne_params, pca_params, robust_pca_params):
+def _render_title_labels(
+    actual_algorithm: str,
+    group_col: str,
+    umap_params: dict[str, Any],
+    tsne_params: dict[str, Any],
+    pca_params: dict[str, Any],
+    robust_pca_params: dict[str, Any],
+) -> None:
     subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
 
     if actual_algorithm == 'UMAP':
