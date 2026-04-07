@@ -205,6 +205,11 @@ def _robust_bounds(vals: np.ndarray, trim_ratio: float) -> tuple[float, float]:
     return low, high
 
 
+def _is_tiny_span(value: float, floor: float = _TERNARY_LIMIT_EPSILON) -> bool:
+    """Return True when span is non-finite or effectively zero."""
+    return (not np.isfinite(value)) or (float(value) <= float(floor))
+
+
 def infer_ternary_limits(
     t_vals: Iterable[float],
     l_vals: Iterable[float],
@@ -231,7 +236,7 @@ def infer_ternary_limits(
 
     spans = np.maximum(maxs - mins, 0.0)
     base_span = float(np.nanmax(spans))
-    if not np.isfinite(base_span) or base_span <= _TERNARY_LIMIT_EPSILON:
+    if _is_tiny_span(base_span):
         base_span = 0.15
 
     span = min(1.0, base_span * (1.0 + 2.0 * boundary_ratio))
@@ -321,7 +326,7 @@ def recommend_boundary_percent_from_components(
     ])
     base_span = float(np.nanmax(np.maximum(spans, 0.0)))
 
-    if not np.isfinite(base_span) or base_span <= _TERNARY_LIMIT_EPSILON:
+    if _is_tiny_span(base_span):
         computed = 12.0
     else:
         target_span = 0.78 if mode in ('min', 'max') else 0.72

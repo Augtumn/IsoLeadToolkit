@@ -167,3 +167,9 @@ def test_infer_ternary_limits_uses_fallback_span_for_tiny_base_span() -> None:
     assert np.isfinite(tmin)
     assert np.isfinite(tmax)
     assert (tmax - tmin) > 0.1
+
+
+def test_is_tiny_span_for_nonfinite_and_small_values() -> None:
+    assert ternary._is_tiny_span(float("nan")) is True
+    assert ternary._is_tiny_span(1e-12) is True
+    assert ternary._is_tiny_span(1e-3) is False

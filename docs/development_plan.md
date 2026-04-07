@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百六十九批）
+
+- P2-3（数值稳定性统一）继续收敛 ternary 的 tiny-span 判定复用：
+    - `visualization/plotting/ternary.py` 新增 `_is_tiny_span`，并替换 `infer_ternary_limits` 与 `recommend_boundary_percent_from_components` 中重复的 `not finite or <= epsilon` 条件。
+- 回归测试新增：
+    - `tests/test_plotting_ternary_helpers.py` 新增 1 个测试，覆盖 `_is_tiny_span` 对 `NaN`、超小值与常规值的判定行为。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百六十八批）
 
 - P2-3（数值稳定性统一）继续收敛 ternary 基础跨度 near-zero 判定：
