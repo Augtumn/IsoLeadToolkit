@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百七十五批）
+
+- P2-3（数值稳定性统一）继续收敛 LegendState 默认 alpha 字面量：
+    - `core/legend_state.py` 新增 `DEFAULT_LEGEND_FRAME_ALPHA`，并将 `LegendState` 初始化中的 `legend_frame_alpha` 改为命名常量。
+- 回归测试更新：
+    - `tests/test_overlay_legend_state.py` 扩展默认值稳定性测试，覆盖 `legend_frame_alpha` 与命名常量绑定。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百七十四批）
 
 - P2-3（数值稳定性统一）继续收敛 legend 样式 alpha 默认值字面量：

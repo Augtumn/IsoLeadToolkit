@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from core.legend_state import LegendState
+from core.legend_state import DEFAULT_LEGEND_FRAME_ALPHA, LegendState
 from core.overlay_state import OverlayState
 
 
@@ -56,6 +56,7 @@ def test_legend_state_defaults_are_stable() -> None:
     assert legend.legend_offset == (0.0, 0.0)
     assert legend.legend_location == "outside_left"
     assert legend.legend_display_mode == "inline"
+    assert legend.legend_frame_alpha == DEFAULT_LEGEND_FRAME_ALPHA
     assert legend.hidden_groups == set()
     assert legend.legend_to_scatter == {}
     assert legend.legend_update_callback is None

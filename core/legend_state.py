@@ -4,6 +4,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 
+DEFAULT_LEGEND_FRAME_ALPHA = 0.95
+
+
 class LegendState:
     """Groups all legend position, style, and panel state fields."""
 
@@ -20,7 +23,7 @@ class LegendState:
 
         # Legend frame styling
         self.legend_frame_on = True
-        self.legend_frame_alpha = 0.95
+        self.legend_frame_alpha = DEFAULT_LEGEND_FRAME_ALPHA
         self.legend_frame_facecolor = '#ffffff'
         self.legend_frame_edgecolor = '#cbd5f5'
 
