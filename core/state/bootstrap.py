@@ -4,6 +4,9 @@ from __future__ import annotations
 from typing import Any
 
 
+DEFAULT_ELLIPSE_CONFIDENCE = 0.95
+
+
 def sync_overlay_kde_styles(state: Any) -> None:
     """Initialize KDE style defaults and mirror them into overlay line styles."""
     state.kde_style = {
@@ -59,7 +62,7 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.marginal_kde_gridsize = 256
     state.marginal_kde_cut = 1.0
     state.marginal_kde_log_transform = False
-    state.ellipse_confidence = config.get('ellipse_confidence', 0.95)
+    state.ellipse_confidence = config.get('ellipse_confidence', DEFAULT_ELLIPSE_CONFIDENCE)
     state.point_size = config['point_size']
     state.last_group_col = None
     state.render_mode = 'UMAP'

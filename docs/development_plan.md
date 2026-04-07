@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百七十六批）
+
+- P2-3（数值稳定性统一）继续收敛 AppState bootstrap 置信度默认值：
+    - `core/state/bootstrap.py` 新增 `DEFAULT_ELLIPSE_CONFIDENCE`，并将 `init_runtime_defaults` 中 `ellipse_confidence` fallback 改为命名常量。
+- 回归测试新增：
+    - `tests/test_state_bootstrap_helpers.py` 新增 2 个测试，覆盖：
+        - 缺省配置下使用命名常量默认值；
+        - 显式配置值优先生效。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百七十五批）
 
 - P2-3（数值稳定性统一）继续收敛 LegendState 默认 alpha 字面量：
