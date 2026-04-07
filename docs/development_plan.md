@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百五十八批）
+
+- P2-3（数值稳定性统一）推进 GeoPanel 参数控件配置常量收敛：
+    - `ui/panels/geo_panel.py` 新增 `_GEO_PARAM_DEFAULT_DECIMALS`、`_GEO_PARAM_SCIENTIFIC_DECIMALS`、`_GEO_PARAM_DEFAULT_STEP`，并移除 `_add_geo_param` 中冗余 `setDecimals` 调用，统一 scientific/非 scientific 路径配置。
+- 回归测试增强：
+    - `tests/test_geo_panel_helpers.py` 扩展 2 个路径断言，覆盖：
+        - scientific 模式下步长与精度常量；
+        - 非 scientific 模式下默认步长与精度常量。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百五十七批）
 
 - P2-3（数值稳定性统一）继续收敛 Pb-Pb 年龄求解区间常量：

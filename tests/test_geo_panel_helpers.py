@@ -73,4 +73,31 @@ def test_add_geo_param_uses_scientific_step_constant(monkeypatch) -> None:
 
     spinbox = panel.geo_params["lambda_238"]
     assert spinbox.single_step == geo_panel_module._GEO_PARAM_SCIENTIFIC_STEP
+    assert spinbox.decimals == geo_panel_module._GEO_PARAM_SCIENTIFIC_DECIMALS
     assert spinbox.value == geo_panel_module._GEO_DECAY_LAMBDA_238_DEFAULT
+
+
+def test_add_geo_param_uses_default_step_and_decimals_when_not_scientific(monkeypatch) -> None:
+    monkeypatch.setattr(geo_panel_module, "QLabel", _FakeLabel)
+    monkeypatch.setattr(geo_panel_module, "QDoubleSpinBox", _FakeSpinBox)
+
+    panel = SimpleNamespace(geo_params={}, geo_param_labels={})
+    grid = _FakeGrid()
+
+    geo_panel_module.GeoPanel._add_geo_param(
+        panel,
+        grid,
+        "T1",
+        "time label",
+        0,
+        0,
+        0.0,
+        10000.0,
+        4430.0,
+        scientific=False,
+    )
+
+    spinbox = panel.geo_params["T1"]
+    assert spinbox.single_step == geo_panel_module._GEO_PARAM_DEFAULT_STEP
+    assert spinbox.decimals == geo_panel_module._GEO_PARAM_DEFAULT_DECIMALS
+    assert spinbox.value == 4430.0

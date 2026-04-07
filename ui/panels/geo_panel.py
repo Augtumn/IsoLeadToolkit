@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 _GEO_DECAY_LAMBDA_238_DEFAULT = 1.55125e-10
 _GEO_DECAY_LAMBDA_235_DEFAULT = 9.8485e-10
 _GEO_DECAY_LAMBDA_232_DEFAULT = 4.94752e-11
+_GEO_PARAM_DEFAULT_DECIMALS = 3
+_GEO_PARAM_SCIENTIFIC_DECIMALS = 12
+_GEO_PARAM_DEFAULT_STEP = 0.001
 _GEO_PARAM_SCIENTIFIC_STEP = 1e-11
 
 
@@ -187,10 +190,8 @@ class GeoPanel(BasePanel):
 
         spinbox = QDoubleSpinBox()
         spinbox.setRange(min_val, max_val)
-        spinbox.setDecimals(6 if scientific else 3)
-        if scientific:
-            spinbox.setDecimals(12)
-        spinbox.setSingleStep(0.001 if not scientific else _GEO_PARAM_SCIENTIFIC_STEP)
+        spinbox.setDecimals(_GEO_PARAM_SCIENTIFIC_DECIMALS if scientific else _GEO_PARAM_DEFAULT_DECIMALS)
+        spinbox.setSingleStep(_GEO_PARAM_SCIENTIFIC_STEP if scientific else _GEO_PARAM_DEFAULT_STEP)
         spinbox.setValue(default_val)
 
         grid_layout.addWidget(spinbox, row, col + 1)
