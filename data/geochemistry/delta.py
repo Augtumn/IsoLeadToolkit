@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 
-from .engine import E1_DEFAULT, E2_DEFAULT, engine, _exp_evolution_term
+from .engine import (
+    E1_DEFAULT,
+    E2_DEFAULT,
+    REGRESSION_A,
+    REGRESSION_B,
+    REGRESSION_C,
+    engine,
+    _exp_evolution_term,
+)
 
 
 def calculate_deltas(
@@ -128,9 +136,9 @@ def calculate_v1v2(
     d_alpha,
     d_beta,
     d_gamma,
-    a: float = 0.0,
-    b: float = 2.0367,
-    c: float = -6.143,
+    a: float = REGRESSION_A,
+    b: float = REGRESSION_B,
+    c: float = REGRESSION_C,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Alias for calculate_v1v2_coordinates for backward compatibility"""
     temp_params = {'a': a, 'b': b, 'c': c}

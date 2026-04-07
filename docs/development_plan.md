@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百六十三批）
+
+- P2-3（数值稳定性统一）继续收敛 delta 模块 V1V2 默认参数：
+    - `data/geochemistry/delta.py` 将 `calculate_v1v2` 的默认参数 `a/b/c` 从字面量替换为命名常量 `REGRESSION_A/B/C`。
+- 回归测试新增：
+    - `tests/test_geochemistry_delta_helpers.py` 新增 1 个测试，覆盖 `calculate_v1v2` 默认参数路径与显式传入 `REGRESSION_A/B/C` 路径结果一致。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百六十二批）
 
 - P2-3（数值稳定性统一）继续收敛 geochemistry 中 E1/E2 回退默认值：
