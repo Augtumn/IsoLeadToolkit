@@ -5,9 +5,12 @@ from __future__ import annotations
 import pytest
 
 from core import app_state, state_gateway
+from visualization.plotting.styling import legend as legend_helpers
 from visualization.plotting.styling.legend import (
+    _DEFAULT_LEGEND_FRAME_ALPHA,
     _legend_columns_for_layout,
     _legend_layout_config,
+    _style_legend,
 )
 
 
@@ -63,3 +66,74 @@ def test_legend_columns_for_layout_rules() -> None:
     assert _legend_columns_for_layout([], ax=None, location_key=None) == 1
     assert _legend_columns_for_layout(["a", "b"], ax=None, location_key="outside_right") == 1
     assert _legend_columns_for_layout(["a", "b"], ax=None, location_key="upper right") is None
+
+
+def test_style_legend_uses_named_default_alpha_when_state_missing(monkeypatch) -> None:
+    class _FakeFrame:
+        def __init__(self) -> None:
+            self.alpha = None
+
+        def set_facecolor(self, _value) -> None:
+            pass
+
+        def set_edgecolor(self, _value) -> None:
+            pass
+
+        def set_alpha(self, value) -> None:
+            self.alpha = float(value)
+
+    class _FakeText:
+        def set_fontsize(self, _size) -> None:
+            pass
+
+        def set_color(self, _color) -> None:
+            pass
+
+    class _FakeTitle(_FakeText):
+        def set_fontweight(self, _weight) -> None:
+            pass
+
+    class _FakeAxes:
+        transAxes = object()
+
+    class _FakeLegend:
+        def __init__(self) -> None:
+            self.axes = _FakeAxes()
+            self._frame = _FakeFrame()
+            self._title = _FakeTitle()
+
+        def set_loc(self, _loc) -> None:
+            pass
+
+        def set_bbox_to_anchor(self, _bbox, transform=None) -> None:
+            _ = transform
+
+        def set_frame_on(self, _enabled) -> None:
+            pass
+
+        def get_frame(self):
+            return self._frame
+
+        def get_texts(self):
+            return [_FakeText()]
+
+        def get_title(self):
+            return self._title
+
+    class _FakeState:
+        legend_ax = None
+        legend_position = None
+        legend_offset = (0.0, 0.0)
+        legend_frame_on = True
+        legend_frame_facecolor = "#ffffff"
+        legend_frame_edgecolor = "#cbd5f5"
+        plot_font_sizes = {"legend": 10, "label": 12}
+        label_color = "#1f2937"
+        label_weight = "normal"
+
+    monkeypatch.setattr(legend_helpers, "app_state", _FakeState())
+    legend = _FakeLegend()
+
+    _style_legend(legend)
+
+    assert legend.get_frame().alpha == _DEFAULT_LEGEND_FRAME_ALPHA

@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百七十四批）
+
+- P2-3（数值稳定性统一）继续收敛 legend 样式 alpha 默认值字面量：
+    - `visualization/plotting/styling/legend.py` 新增 `_DEFAULT_LEGEND_FRAME_ALPHA`，并将 `_style_legend` 中 `legend_frame_alpha` 缺省值改为命名常量。
+- 回归测试新增：
+    - `tests/test_legend_styling_helpers.py` 新增 1 个测试，覆盖 `app_state.legend_frame_alpha` 缺失时 `_style_legend` 使用命名常量作为 fallback。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百七十三批）
 
 - P2-3（数值稳定性统一）继续收敛 export image 的最小 DPI 护栏字面量：

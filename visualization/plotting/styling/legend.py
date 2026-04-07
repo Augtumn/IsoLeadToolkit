@@ -7,6 +7,7 @@ from core import app_state
 
 
 _LEGEND_OFFSET_EPSILON = 1e-12
+_DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 
 def _is_zero_offset(value: float, floor: float = _LEGEND_OFFSET_EPSILON) -> bool:
@@ -95,7 +96,9 @@ def _style_legend(
         try:
             frame.set_facecolor(getattr(app_state, 'legend_frame_facecolor', '#ffffff'))
             frame.set_edgecolor(getattr(app_state, 'legend_frame_edgecolor', '#cbd5f5'))
-            frame.set_alpha(float(getattr(app_state, 'legend_frame_alpha', 0.95)))
+            frame.set_alpha(
+                float(getattr(app_state, 'legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA))
+            )
         except Exception:
             pass
 
