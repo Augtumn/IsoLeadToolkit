@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百七十二批）
+
+- P2-3（数值稳定性统一）继续收敛 StateStore 的默认置信度字面量：
+    - `core/state/store.py` 新增 `DEFAULT_LEGEND_FRAME_ALPHA` 与 `DEFAULT_CONFIDENCE_LEVEL`，并统一 `snapshot` 初始化与 `SET_LEGEND_FRAME_ALPHA` / `SET_CONFIDENCE_LEVEL` action 的默认值来源。
+- 回归测试新增：
+    - `tests/test_state_store.py` 新增 1 个测试，覆盖 `StateStore` 在空状态对象下生成快照时对上述命名常量默认值的使用。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百七十一批）
 
 - P2-3（数值稳定性统一）继续收敛 export image 默认纵横比字面量：

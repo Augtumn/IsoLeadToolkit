@@ -25,6 +25,8 @@ class StateStore:
         "tick": 10,
         "legend": 10,
     }
+    DEFAULT_LEGEND_FRAME_ALPHA = 0.95
+    DEFAULT_CONFIDENCE_LEVEL = 0.95
 
     def __init__(self, state: Any) -> None:
         self._state = state
@@ -177,8 +179,8 @@ class StateStore:
             ),
             "legend_frame_on": bool(getattr(state, "legend_frame_on", True)),
             "legend_frame_alpha": self._normalize_unit_interval(
-                getattr(state, "legend_frame_alpha", 0.95),
-                default=0.95,
+                getattr(state, "legend_frame_alpha", self.DEFAULT_LEGEND_FRAME_ALPHA),
+                default=self.DEFAULT_LEGEND_FRAME_ALPHA,
             ),
             "legend_frame_facecolor": self._normalize_color(
                 getattr(state, "legend_frame_facecolor", "#ffffff"),
@@ -237,7 +239,9 @@ class StateStore:
             "last_pca_components": getattr(state, "last_pca_components", None),
             "current_feature_names": getattr(state, "current_feature_names", []),
             "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
-            "confidence_level": float(getattr(state, "confidence_level", 0.95)),
+            "confidence_level": float(
+                getattr(state, "confidence_level", self.DEFAULT_CONFIDENCE_LEVEL)
+            ),
             "current_palette": dict(getattr(state, "current_palette", {}) or {}),
             "group_marker_map": dict(getattr(state, "group_marker_map", {}) or {}),
             "current_plot_title": str(getattr(state, "current_plot_title", "")),
@@ -625,8 +629,8 @@ class StateStore:
 
         elif action_type == "SET_LEGEND_FRAME_ALPHA":
             self._snapshot["legend_frame_alpha"] = self._normalize_unit_interval(
-                action.get("alpha", 0.95),
-                default=0.95,
+                action.get("alpha", self.DEFAULT_LEGEND_FRAME_ALPHA),
+                default=self.DEFAULT_LEGEND_FRAME_ALPHA,
             )
 
         elif action_type == "SET_LEGEND_FRAME_FACECOLOR":
@@ -738,7 +742,9 @@ class StateStore:
             self._snapshot["adjust_text_in_progress"] = bool(action.get("in_progress", False))
 
         elif action_type == "SET_CONFIDENCE_LEVEL":
-            self._snapshot["confidence_level"] = float(action.get("level", 0.95))
+            self._snapshot["confidence_level"] = float(
+                action.get("level", self.DEFAULT_CONFIDENCE_LEVEL)
+            )
 
         elif action_type == "SET_CURRENT_PALETTE":
             self._snapshot["current_palette"] = dict(action.get("palette") or {})

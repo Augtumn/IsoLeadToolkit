@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from core import app_state, state_gateway
+from core.state.store import StateStore
 from visualization.plotting.core import _build_group_palette
 
 
@@ -417,6 +418,23 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.sync_available_and_visible_groups(snapshot["available_groups"])
     state_gateway.set_visible_groups(snapshot["visible_groups"])
     state_gateway.set_export_image_options(**snapshot["export_image_options"])
+
+
+def test_state_store_uses_named_default_confidence_constants() -> None:
+    store = app_state.state_store
+    original_alpha = float(store.snapshot()["legend_frame_alpha"])
+    original_level = float(store.snapshot()["confidence_level"])
+
+    try:
+        store.dispatch({"type": "SET_LEGEND_FRAME_ALPHA"})
+        store.dispatch({"type": "SET_CONFIDENCE_LEVEL"})
+
+        snapshot = store.snapshot()
+        assert snapshot["legend_frame_alpha"] == StateStore.DEFAULT_LEGEND_FRAME_ALPHA
+        assert snapshot["confidence_level"] == StateStore.DEFAULT_CONFIDENCE_LEVEL
+    finally:
+        state_gateway.set_legend_frame_alpha(original_alpha)
+        state_gateway.set_confidence_level(original_level)
 
 
 def test_state_store_set_render_mode_syncs_algorithm() -> None:
