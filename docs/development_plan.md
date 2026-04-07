@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百六十四批）
+
+- P2-3（数值稳定性统一）继续收敛 geochemistry 预设模型中的参数字面量：
+    - `data/geochemistry/engine.py` 将 `PRESET_MODELS` 中 `V1V2 (Geokit)` 的时间参数 `T1/T2/Tsec` 改为 `T_EARTH_1ST`、`T_EARTH_CANON`、`T_SK_STAGE2`。
+    - 同时将 `Stacey & Kramers (2nd Stage)` 的 `mu_M/omega_M` 字面量改为 `MU_M_DEFAULT/OMEGA_M_DEFAULT`。
+- 回归测试新增：
+    - `tests/test_geochemistry_engine.py` 新增 2 个测试，覆盖：
+        - Geokit 预设时间参数与命名常量绑定；
+        - Stacey & Kramers 二阶段预设地幔参数与命名常量绑定。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百六十三批）
 
 - P2-3（数值稳定性统一）继续收敛 delta 模块 V1V2 默认参数：

@@ -14,6 +14,8 @@ from data.geochemistry.engine import (
     MU_M_DEFAULT,
     OMEGA_M_DEFAULT,
     PRESET_MODELS,
+    T_EARTH_1ST,
+    T_EARTH_CANON,
     T_SK_STAGE2,
     calculate_modelcurve,
     _exp_evolution_term,
@@ -64,6 +66,21 @@ def test_load_cumming_richards_preset_uses_named_evolution_constants() -> None:
     params = ge_engine.get_parameters()
     assert params["E1"] == pytest.approx(E1_CUMMING_RICHARDS)
     assert params["E2"] == pytest.approx(E2_CUMMING_RICHARDS)
+
+
+def test_geokit_preset_uses_named_time_constants() -> None:
+    geokit = PRESET_MODELS["V1V2 (Geokit)"]
+
+    assert geokit["T1"] == pytest.approx(T_EARTH_1ST)
+    assert geokit["T2"] == pytest.approx(T_EARTH_CANON)
+    assert geokit["Tsec"] == pytest.approx(T_SK_STAGE2)
+
+
+def test_stacey_kramers_stage2_preset_uses_named_mantle_constants() -> None:
+    sk2 = PRESET_MODELS["Stacey & Kramers (2nd Stage)"]
+
+    assert sk2["mu_M"] == pytest.approx(MU_M_DEFAULT)
+    assert sk2["omega_M"] == pytest.approx(OMEGA_M_DEFAULT)
 
 
 def test_is_zero_like_treats_zero_as_zero_like() -> None:
