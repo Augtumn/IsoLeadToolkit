@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百六十六批）
+
+- P2-3（数值稳定性统一）继续收敛 legend 偏移零值判定：
+    - `visualization/plotting/styling/legend.py` 新增 `_LEGEND_OFFSET_EPSILON` 与 `_is_zero_offset`，将 `_legend_layout_config` 中 `dx/dy == 0.0` 改为统一近零判断。
+- 回归测试新增：
+    - `tests/test_legend_styling_helpers.py` 新增 1 个测试，覆盖 near-zero 偏移输入下 `bbox` 保持 `None` 的稳定路径。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百六十五批）
 
 - P2-3（数值稳定性统一）继续收敛 V1V2 预设中的地幔参数字面量：

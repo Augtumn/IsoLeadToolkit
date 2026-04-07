@@ -6,6 +6,14 @@ from typing import Any, Sequence
 from core import app_state
 
 
+_LEGEND_OFFSET_EPSILON = 1e-12
+
+
+def _is_zero_offset(value: float, floor: float = _LEGEND_OFFSET_EPSILON) -> bool:
+    """Return True when legend offset component is effectively zero."""
+    return abs(float(value)) <= float(floor)
+
+
 def _legend_layout_config(
     ax: Any | None = None,
     show_marginal_kde: bool = False,
@@ -22,7 +30,7 @@ def _legend_layout_config(
         dx, dy = float(offsets[0]), float(offsets[1])
     except Exception:
         dx, dy = 0.0, 0.0
-    if dx == 0.0 and dy == 0.0:
+    if _is_zero_offset(dx) and _is_zero_offset(dy):
         return loc, None, None, None
 
     anchor_map = {
