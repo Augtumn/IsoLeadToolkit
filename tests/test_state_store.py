@@ -1484,13 +1484,22 @@ def test_state_store_export_image_options_roundtrip() -> None:
 
         assert options["preset_key"] == "ieee_single"
         assert options["image_ext"] == "svg"
-        assert options["dpi"] == 72
+        assert options["dpi"] == StateStore.MIN_EXPORT_DPI
         assert options["bbox_tight"] is False
         assert options["pad_inches"] == 0.0
         assert options["transparent"] is True
         assert options["point_size"] == 12
         assert options["legend_size"] == 7
         assert dict(app_state.export_image_options) == options
+    finally:
+        _restore_state(snapshot)
+
+
+def test_state_store_plot_dpi_lower_bound_uses_named_constant() -> None:
+    snapshot = _snapshot_state()
+    try:
+        state_gateway.set_plot_dpi(StateStore.MIN_EXPORT_DPI - 1)
+        assert app_state.plot_dpi == StateStore.MIN_EXPORT_DPI
     finally:
         _restore_state(snapshot)
 

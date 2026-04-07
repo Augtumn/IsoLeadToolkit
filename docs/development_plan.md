@@ -4,6 +4,16 @@
 
 ## 阶段进展（2026-04-07 · StateStore 第一百七十六批）
 
+## 阶段进展（2026-04-07 · StateStore 第一百七十七批）
+
+- P2-3（数值稳定性统一）继续收敛 StateStore 的最小 DPI 护栏字面量：
+    - `core/state/store.py` 新增 `MIN_EXPORT_DPI`，并统一 `_normalize_export_options` 与 `_normalize_plot_dpi` 的下界钳制逻辑。
+- 回归测试更新/新增：
+    - `tests/test_state_store.py` 既有导出选项测试改为断言 `StateStore.MIN_EXPORT_DPI`；
+    - 新增 1 个测试覆盖 `set_plot_dpi` 下界钳制绑定命名常量。
+
+## 阶段进展（2026-04-07 · StateStore 第一百七十六批）
+
 - P2-3（数值稳定性统一）继续收敛 AppState bootstrap 置信度默认值：
     - `core/state/bootstrap.py` 新增 `DEFAULT_ELLIPSE_CONFIDENCE`，并将 `init_runtime_defaults` 中 `ellipse_confidence` fallback 改为命名常量。
 - 回归测试新增：

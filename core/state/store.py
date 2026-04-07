@@ -25,6 +25,7 @@ class StateStore:
         "tick": 10,
         "legend": 10,
     }
+    MIN_EXPORT_DPI = 72
     DEFAULT_LEGEND_FRAME_ALPHA = 0.95
     DEFAULT_CONFIDENCE_LEVEL = 0.95
 
@@ -1541,7 +1542,7 @@ class StateStore:
 
         merged["preset_key"] = str(merged.get("preset_key") or "science_single")
         merged["image_ext"] = str(merged.get("image_ext") or "png").lower().strip(".")
-        merged["dpi"] = max(72, int(merged.get("dpi", 400)))
+        merged["dpi"] = max(cls.MIN_EXPORT_DPI, int(merged.get("dpi", 400)))
         merged["bbox_tight"] = bool(merged.get("bbox_tight", True))
         merged["pad_inches"] = max(0.0, float(merged.get("pad_inches", 0.02)))
         merged["transparent"] = bool(merged.get("transparent", False))
@@ -1601,7 +1602,7 @@ class StateStore:
 
     @staticmethod
     def _normalize_plot_dpi(value: Any) -> int:
-        return max(72, min(int(value), 1200))
+        return max(StateStore.MIN_EXPORT_DPI, min(int(value), 1200))
 
     @staticmethod
     def _normalize_font_name(value: Any) -> str:
