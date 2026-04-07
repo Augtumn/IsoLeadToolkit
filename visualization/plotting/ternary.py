@@ -195,7 +195,7 @@ def _robust_bounds(vals: np.ndarray, trim_ratio: float) -> tuple[float, float]:
 
     low = float(np.nanmin(finite))
     high = float(np.nanmax(finite))
-    if finite.size < 10 or trim_ratio <= 0.0:
+    if finite.size < 10 or trim_ratio <= _TERNARY_LIMIT_EPSILON:
         return low, high
 
     q_low = float(np.quantile(finite, trim_ratio))

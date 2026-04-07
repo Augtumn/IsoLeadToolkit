@@ -146,3 +146,12 @@ def test_calculate_auto_ternary_factors_sanitizes_nonpositive_inputs(monkeypatch
         assert all(value > 0.0 for value in calls[0])
     finally:
         setattr(app_state, "selected_ternary_cols", snapshot_cols)
+
+
+def test_robust_bounds_treats_tiny_trim_ratio_as_no_trim() -> None:
+    vals = np.array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10], dtype=float)
+
+    low, high = ternary._robust_bounds(vals, trim_ratio=1e-12)
+
+    assert low == np.nanmin(vals)
+    assert high == np.nanmax(vals)

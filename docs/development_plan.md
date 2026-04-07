@@ -2,6 +2,13 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-04-07 · StateStore 第一百六十七批）
+
+- P2-3（数值稳定性统一）继续收敛 ternary 边界估计中的近零判定：
+    - `visualization/plotting/ternary.py` 将 `_robust_bounds` 的 `trim_ratio <= 0.0` 判定改为复用 `_TERNARY_LIMIT_EPSILON`，统一 tiny trim_ratio 的阈值语义。
+- 回归测试新增：
+    - `tests/test_plotting_ternary_helpers.py` 新增 1 个测试，覆盖超小 `trim_ratio`（`1e-12`）按“无裁剪”路径返回原始 min/max 的行为。
+
 ## 阶段进展（2026-04-07 · StateStore 第一百六十六批）
 
 - P2-3（数值稳定性统一）继续收敛 legend 偏移零值判定：
