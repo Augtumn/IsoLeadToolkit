@@ -7,6 +7,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green)
 
+*以下内容可能严重落后于代码，目前尚无精力纠正*
 ---
 
 ## 目录
