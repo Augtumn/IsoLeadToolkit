@@ -184,9 +184,12 @@ class OverlayState:
             })
 
     def clear_artists(self) -> None:
-        """Reset runtime artist tracking state."""
-        self.overlay_artists = {}
-        self.overlay_curve_label_data = []
-        self.paleoisochron_label_data = []
-        self.plumbotectonics_label_data = []
-        self.plumbotectonics_isoage_label_data = []
+        """Reset runtime artist tracking state (through gateway so snapshot stays in sync)."""
+        # Lazy import to avoid circular dependency at module load time.
+        from core.state.gateway import state_gateway  # noqa: E402
+
+        state_gateway.set_overlay_artists({})
+        state_gateway.set_overlay_curve_label_data([])
+        state_gateway.set_paleoisochron_label_data([])
+        state_gateway.set_plumbotectonics_label_data([])
+        state_gateway.set_plumbotectonics_isoage_label_data([])

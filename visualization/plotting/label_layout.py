@@ -154,9 +154,13 @@ def _pick_anchor_on_line(
     mode = _normalize_position_mode(position_mode)
 
     if mode == 'start':
-        idx = int(vis_idx[0])
+        # Step a few samples inward so the label doesn't sit right on the
+        # viewport boundary where it would be clipped.
+        offset = max(1, len(vis_idx) // 20)
+        idx = int(vis_idx[min(offset, len(vis_idx) - 1)])
     elif mode == 'end':
-        idx = int(vis_idx[-1])
+        offset = max(1, len(vis_idx) // 20)
+        idx = int(vis_idx[max(0, len(vis_idx) - 1 - offset)])
     else:
         idx = int(vis_idx[len(vis_idx) // 2])
 
@@ -284,7 +288,19 @@ def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None
     static_points = []
     sample_coords = getattr(app_state, 'sample_coordinates', {}) or {}
     if isinstance(sample_coords, dict):
-        static_points.extend(sample_coords.values())
+        # Only include points that are inside the current viewport so
+        # adjustText avoids visible data rather than wasting budget on
+        # off-screen coordinates.
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        xlo, xhi = min(xlim), max(xlim)
+        ylo, yhi = min(ylim), max(ylim)
+        for (sx, sy) in sample_coords.values():
+            try:
+                if xlo <= float(sx) <= xhi and ylo <= float(sy) <= yhi:
+                    static_points.append((float(sx), float(sy)))
+            except (TypeError, ValueError):
+                continue
 
     if len(static_points) > 800:
         idx = np.linspace(0, len(static_points) - 1, 800, dtype=int)

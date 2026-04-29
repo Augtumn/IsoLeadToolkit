@@ -87,9 +87,10 @@ def _register_overlay_curve_label(
 ) -> None:
     if text_artist is None:
         return
-    if not hasattr(app_state, 'overlay_curve_label_data'):
-        state_gateway.set_overlay_curve_label_data([])
-    app_state.overlay_curve_label_data.append({
+    data = getattr(app_state, 'overlay_curve_label_data', None)
+    if data is None:
+        data = []
+    data.append({
         'text': text_artist,
         'x_line': list(x_vals),
         'y_line': list(y_vals),
@@ -97,3 +98,6 @@ def _register_overlay_curve_label(
         'position': position_mode or 'auto',
         'style_key': style_key,
     })
+    # Keep the store snapshot in sync so later _sync_state calls don't
+    # overwrite the appended entries with a stale empty list.
+    state_gateway.set_overlay_curve_label_data(list(data))

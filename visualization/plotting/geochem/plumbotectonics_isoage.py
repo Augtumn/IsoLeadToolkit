@@ -66,7 +66,7 @@ def _draw_plumbotectonics_isoage_lines(ax: Any, actual_algorithm: str) -> None:
         }
     )
 
-    state_gateway.set_plumbotectonics_isoage_label_data([])
+    isoage_labels: list[dict[str, Any]] = []
 
     for idx in range(n_points):
         pts = []
@@ -115,7 +115,7 @@ def _draw_plumbotectonics_isoage_lines(ax: Any, actual_algorithm: str) -> None:
                 alpha=paleo_style['alpha'],
                 bbox=_label_bbox(label_opts, edgecolor=line_color)
             )
-            app_state.plumbotectonics_isoage_label_data.append({
+            isoage_labels.append({
                 'text': text_artist,
                 'x_line': x_line,
                 'y_line': y_line,
@@ -134,3 +134,4 @@ def _draw_plumbotectonics_isoage_lines(ax: Any, actual_algorithm: str) -> None:
                 label_text=label_text,
                 position_mode=label_opts.get('label_position', 'auto'),
             )
+    state_gateway.set_plumbotectonics_isoage_label_data(isoage_labels)

@@ -32,12 +32,12 @@ def _draw_paleoisochrons(
     if geochemistry is None:
         return
     try:
-        state_gateway.set_paleoisochron_label_data([])
         xlim = ax.get_xlim()
         x_min = xlim[0]
         x_max = xlim[1]
         x_vals = np.linspace(x_min, x_max, 200)
 
+        paleo_labels: list[dict[str, Any]] = []
         for age in ages:
             params_line = geochemistry.calculate_paleoisochron_line(
                 age,
@@ -98,7 +98,7 @@ def _draw_paleoisochrons(
                     alpha=paleo_style['alpha'],
                     bbox=_label_bbox(label_opts, edgecolor=line_color)
                 )
-                app_state.paleoisochron_label_data.append({
+                paleo_labels.append({
                     'text': text_artist,
                     'slope': slope,
                     'intercept': intercept,
@@ -117,7 +117,7 @@ def _draw_paleoisochrons(
                     label_text=label_text,
                     position_mode=label_opts.get('label_position', 'auto'),
                 )
+        state_gateway.set_paleoisochron_label_data(paleo_labels)
     except Exception as err:
         logger.warning("Failed to draw paleoisochrons: %s", err)
-
 

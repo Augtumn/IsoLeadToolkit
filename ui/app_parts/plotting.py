@@ -54,6 +54,8 @@ class Qt5AppPlottingMixin:
                 try:
                     from visualization.plotting import refresh_paleoisochron_labels
 
+                    # Reset the draw-event gate in case it was left stuck.
+                    state_gateway.set_paleo_label_refreshing(False)
                     refresh_paleoisochron_labels()
                     if app_state.fig is not None and app_state.fig.canvas is not None:
                         app_state.fig.canvas.draw_idle()
