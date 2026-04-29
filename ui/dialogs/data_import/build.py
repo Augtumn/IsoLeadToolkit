@@ -264,20 +264,20 @@ class DataImportBuildMixin:
         current_value = self.render_mode_combo.currentData()
 
         options = [
-            (translate("2D Scatter (Fast)"), '2D'),
-            (translate("3D Scatter"), '3D'),
+            (translate("2D"), '2D'),
+            (translate("3D"), '3D'),
             (translate("Ternary"), 'Ternary'),
             (translate("V1-V2 Diagram"), 'V1V2'),
-            (translate("Pb Evolution 206-207"), 'PB_EVOL_76'),
-            (translate("Pb Evolution 206-208"), 'PB_EVOL_86'),
-            (translate("Mu vs Age"), 'PB_MU_AGE'),
-            (translate("Kappa vs Age"), 'PB_KAPPA_AGE'),
-            (translate("Plumbotectonics 206-207"), 'PLUMBOTECTONICS_76'),
-            (translate("Plumbotectonics 206-208"), 'PLUMBOTECTONICS_86'),
+            (translate("PB_EVOL_76"), 'PB_EVOL_76'),
+            (translate("PB_EVOL_86"), 'PB_EVOL_86'),
+            (translate("PB_MU_AGE"), 'PB_MU_AGE'),
+            (translate("PB_KAPPA_AGE"), 'PB_KAPPA_AGE'),
+            (translate("PLUMBOTECTONICS_76"), 'PLUMBOTECTONICS_76'),
+            (translate("PLUMBOTECTONICS_86"), 'PLUMBOTECTONICS_86'),
             (translate("UMAP"), 'UMAP'),
             (translate("t-SNE"), 'tSNE'),
             (translate("PCA"), 'PCA'),
-            (translate("Robust PCA"), 'RobustPCA'),
+            (translate("RobustPCA"), 'RobustPCA'),
         ]
         self.render_mode_combo.blockSignals(True)
         self.render_mode_combo.clear()
