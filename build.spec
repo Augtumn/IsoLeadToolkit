@@ -18,6 +18,7 @@ hiddenimports = [
     'sklearn.tree._utils',
     'scipy.special.cython_special',
     'scipy.spatial.transform._rotation_groups',
+    'originpro',
 ]
 
 excludes = [

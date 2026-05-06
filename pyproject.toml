@@ -23,6 +23,7 @@ dependencies = [
     "pyqt5>=5.15",
     "pyqt5-qt5>=5.15",
     "adjusttext>=1.3.0",
+    "originpro>=1.1.15",
 ]
 
 [project.optional-dependencies]

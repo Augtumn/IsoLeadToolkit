@@ -39,6 +39,7 @@ class ExportPanelBuildMixin:
         self.image_style_source_label = None
         self.export_image_button = None
         self.preview_image_button = None
+        self.export_origin_button = None
         self._scienceplots_available = None
 
     def build(self) -> QWidget:
@@ -210,6 +211,14 @@ class ExportPanelBuildMixin:
         self.preview_image_button.clicked.connect(self._on_preview_image_clicked)
         button_row.addWidget(self.preview_image_button, 0, Qt.AlignHCenter)
         image_layout.addLayout(button_row)
+
+        origin_row = QHBoxLayout()
+        self.export_origin_button = QPushButton(translate("Export to Origin"))
+        self.export_origin_button.setProperty('translate_key', 'Export to Origin')
+        self.export_origin_button.setFixedWidth(160)
+        self.export_origin_button.clicked.connect(self._on_export_origin_clicked)
+        origin_row.addWidget(self.export_origin_button, 0, Qt.AlignHCenter)
+        image_layout.addLayout(origin_row)
 
         image_group.setLayout(image_layout)
 

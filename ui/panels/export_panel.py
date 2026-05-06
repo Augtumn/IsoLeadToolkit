@@ -12,6 +12,7 @@ from .export import (
     ExportPanelCommonMixin,
     ExportPanelDataExportMixin,
     ExportPanelImageExportMixin,
+    ExportPanelOriginExportMixin,
     ExportPanelSelectionMixin,
 )
 
@@ -23,6 +24,7 @@ class ExportPanel(
     ExportPanelSelectionMixin,
     ExportPanelDataExportMixin,
     ExportPanelImageExportMixin,
+    ExportPanelOriginExportMixin,
     ExportPanelCommonMixin,
     BasePanel,
 ):
