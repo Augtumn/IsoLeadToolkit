@@ -323,32 +323,28 @@ def _build_origin_project(
         gl.rescale()
 
         # ---- overlay layers ----
-        # Model curves / other overlays that have only data (no simple equation)
-        # are plotted from worksheets.  Paleoisochrons have slope + intercept
-        # so we use Origin's native function plot (plotxy).
-        for overlay_name, curves in overlay_data.items():
+        # Paleoisochrons with known slope + intercept are rendered as Origin
+        # function plots via plotxy.  Other overlays use worksheet data.
+        for curves in overlay_data.values():
             for x_arr, y_arr, curve_label, style in curves:
                 slope = style.get("slope")
                 intercept = style.get("intercept")
                 if slope is not None and intercept is not None:
-                    # --- function plot (paleoisochron equation) ---
-                    formula = f"y={slope}*x+{intercept}"
+                    # --- function plot ---
                     color = style.get("color", "#94a3b8")
                     width = style.get("width", 0.9)
                     try:
-                        op.lt_exec(
-                            f'plotxy formula:="{formula}" plot:=200 '
-                            f'color:={color.replace("#", "")} width:={width}'
-                        )
+                        op.lt_exec(f'plotxy formula:="y={slope}*x+{intercept}" plot:=200')
                         plot_idx += 1
-                        legend_entries.append(
-                            f"\\l({plot_idx}) {curve_label}"
+                        op.lt_exec(
+                            f'set %C -c {color.replace("#", "0x")} -w {int(width * 1000)}'
                         )
+                        legend_entries.append(f"\\l({plot_idx}) {curve_label}")
                     except Exception as err:
                         logger.debug("Function plot failed for %s: %s", curve_label, err)
                         continue
                 else:
-                    # --- data plot (model curve, etc.) ---
+                    # --- data plot ---
                     name = _origin_sheet_name(curve_label, "OV_", sheet_names)
                     try:
                         owks = wb.add_sheet(name)
@@ -359,9 +355,7 @@ def _build_origin_project(
                         if style.get("width"):
                             line.width = style["width"]
                         plot_idx += 1
-                        legend_entries.append(
-                            f"\\l({plot_idx}) %({plot_idx},@WS)"
-                        )
+                        legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                     except Exception as err:
                         logger.debug("Skipping overlay %s: %s", curve_label, err)
 
