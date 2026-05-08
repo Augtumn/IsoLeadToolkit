@@ -214,9 +214,9 @@ def _extract_pb_evolution_overlay_data(
         if curves:
             result["model_curves"] = curves
 
-    # --- paleoisochrons ---
+    # --- paleoisochrons (export as equation lines: y = slope*x + intercept) ---
     if getattr(app_state, "show_paleoisochrons", True):
-        lines: list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]] = []
+        equations: list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]] = []
         ages = getattr(app_state, "paleoisochron_ages", [3000, 2000, 1000, 0])
         try:
             for age in ages:
@@ -228,14 +228,15 @@ def _extract_pb_evolution_overlay_data(
                 slope, intercept = line_info
                 xs = np.linspace(xlim[0], xlim[1], 200)
                 ys = slope * xs + intercept
-                lines.append((
-                    xs, ys, f"{float(age):.0f} Ma",
-                    {"color": "#94a3b8", "width": 0.9},
+                label = f"{float(age):.0f} Ma (y={slope:.4f}x+{intercept:.4f})"
+                equations.append((
+                    xs, ys, label,
+                    {"color": "#94a3b8", "width": 0.9, "slope": slope, "intercept": intercept},
                 ))
         except Exception as err:
             logger.warning("Failed to compute paleoisochrons for Origin export: %s", err)
-        if lines:
-            result["paleoisochrons"] = lines
+        if equations:
+            result["paleoisochrons"] = equations
 
     return result
 
@@ -243,6 +244,18 @@ def _extract_pb_evolution_overlay_data(
 # ---------------------------------------------------------------------------
 # Origin project builder
 # ---------------------------------------------------------------------------
+
+
+def _origin_sheet_name(label: str, prefix: str, used: set[str]) -> str:
+    """Generate a unique sheet name from *label*."""
+    base = str(label).replace("/", "_").replace(" ", "_").replace(":", "_")[:28]
+    name = f"{prefix}{base}"
+    suffix = 1
+    while name in used:
+        name = f"{prefix}{base}_{suffix}"
+        suffix += 1
+    used.add(name)
+    return name
 
 
 def _build_origin_project(
@@ -259,47 +272,50 @@ def _build_origin_project(
         return False
 
     try:
-        # Build a fresh project with a single data workbook.
         wb = op.new_book("w", "IsotopesAnalyse_Data")
-
-        # ---- scatter worksheets ----
         sheet_names: set[str] = set()
         wks_map: dict[str, Any] = {}
+
+        # ---- scatter worksheets ----
         for group in scatter_groups:
-            base = str(group["label"]).replace("/", "_").replace(" ", "_")[:28]
-            name = base
-            suffix = 1
-            while name in sheet_names:
-                name = f"{base}_{suffix}"
-                suffix += 1
-            sheet_names.add(name)
+            name = _origin_sheet_name(group["label"], "", sheet_names)
             try:
                 wks = wb.add_sheet(name)
                 wks.from_list(0, group["x"], "X")
                 wks.from_list(1, group["y"], "Y")
-                wks_map[group["label"]] = wks
+                wks_map[group["label"]] = (wks, name)
             except Exception as err:
-                logger.warning("Failed to create sheet %s: %s", name, err)
-                continue
+                logger.warning("Failed to create sheet for %s: %s", name, err)
 
         if not wks_map:
             logger.warning("No worksheets created for scatter data.")
             return False
 
         # ---- graph ----
-        template = "scatter"  # Default for embedding / raw data modes.
-        gp = op.new_graph(template=template)
+        gp = op.new_graph(template="scatter")
         gl = gp[0]
 
+        legend_entries: list[str] = []
+        plot_idx = 0
+
         for group in scatter_groups:
-            wks = wks_map.get(group["label"])
-            if wks is None:
+            entry = wks_map.get(group["label"])
+            if entry is None:
                 continue
+            wks, sheet_name = entry
             try:
-                plot = gl.add_plot(wks, coly=1, colx=0, type="s")
+                if group.get("z"):
+                    plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
+                else:
+                    plot = gl.add_plot(wks, coly=1, colx=0, type="s")
                 plot.color = group.get("color", "#333333")
                 plot.symbol_kind = group.get("marker", 1)
                 plot.symbol_size = 8
+                plot_idx += 1
+                # Use @WS substitution so the legend shows the worksheet name.
+                legend_entries.append(
+                    f"\\l({plot_idx}) %({plot_idx},@WS)"
+                )
             except Exception as err:
                 logger.debug("Skipping scatter %s: %s", group.get("label"), err)
 
@@ -307,23 +323,33 @@ def _build_origin_project(
         gl.rescale()
 
         # ---- overlay layers ----
-        for curves in overlay_data.values():
+        for overlay_name, curves in overlay_data.items():
             for x_arr, y_arr, curve_label, style in curves:
-                base = str(curve_label).replace("/", "_").replace(" ", "_")[:25]
-                name = f"OV_{base}"
-                suffix = 1
-                while name in sheet_names:
-                    name = f"OV_{base}_{suffix}"
-                    suffix += 1
-                sheet_names.add(name)
+                name = _origin_sheet_name(curve_label, "OV_", sheet_names)
                 try:
                     owks = wb.add_sheet(name)
                     owks.from_list(0, x_arr.tolist(), "X")
                     owks.from_list(1, y_arr.tolist(), "Y")
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
                     line.color = style.get("color", "#000000")
+                    if style.get("width"):
+                        line.width = style["width"]
+                    plot_idx += 1
+                    legend_entries.append(
+                        f"\\l({plot_idx}) %({plot_idx},@WS)"
+                    )
                 except Exception as err:
                     logger.debug("Skipping overlay %s: %s", curve_label, err)
+
+        # ---- legend ----
+        if legend_entries:
+            try:
+                lgnd = gl.label("Legend")
+                lgnd.set_int("fsize", 10)
+                lgnd.set_int("showframe", 0)
+                lgnd.text = "\n".join(legend_entries)
+            except Exception as err:
+                logger.debug("Failed to set custom legend: %s", err)
 
         # ---- axis labels and title ----
         if axis_labels.get("x"):
@@ -340,7 +366,7 @@ def _build_origin_project(
         op.save(file_path)
         logger.info("Origin project saved to %s", file_path)
 
-        # ---- also export a companion PNG at 300 dpi ----
+        # ---- also export a companion PNG at ~300 dpi ----
         img_path = file_path.rsplit(".", 1)[0] + ".png"
         try:
             res = gp.save_fig(img_path, width=1600)
