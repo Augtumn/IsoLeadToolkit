@@ -59,7 +59,6 @@ class ExportPanelSelectionMixin:
             getattr(self, 'export_csv_button', None),
             getattr(self, 'export_excel_button', None),
             getattr(self, 'export_append_button', None),
-            getattr(self, 'export_selected_button', None),
         ):
             if btn is not None:
                 btn.setEnabled(enable_exports)

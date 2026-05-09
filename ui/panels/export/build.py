@@ -27,7 +27,6 @@ class ExportPanelBuildMixin:
         self.export_csv_button = None
         self.export_excel_button = None
         self.export_append_button = None
-        self.export_selected_button = None
         self.image_preset_combo = None
         self.image_format_combo = None
         self.image_point_size_spin = None
@@ -74,12 +73,6 @@ class ExportPanelBuildMixin:
         self.export_append_button.setFixedWidth(200)
         self.export_append_button.clicked.connect(self._on_export_append_excel)
         export_layout.addWidget(self.export_append_button, 0, Qt.AlignHCenter)
-
-        self.export_selected_button = QPushButton(translate("Export Selected"))
-        self.export_selected_button.setProperty('translate_key', 'Export Selected')
-        self.export_selected_button.setFixedWidth(200)
-        self.export_selected_button.clicked.connect(self._on_export_clicked)
-        export_layout.addWidget(self.export_selected_button, 0, Qt.AlignHCenter)
 
         data_export_group.setLayout(export_layout)
 
