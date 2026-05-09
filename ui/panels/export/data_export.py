@@ -20,6 +20,21 @@ class ExportPanelDataExportMixin:
         algo = getattr(app_state, 'algorithm', None)
         embedding = getattr(app_state, 'last_embedding', None)
         embedding_type = getattr(app_state, 'last_embedding_type', None)
+        ax = getattr(app_state, 'ax', None)
+        axis_labels = {}
+        if ax is not None:
+            try:
+                xl = ax.get_xlabel()
+                yl = ax.get_ylabel()
+                zl = ax.get_zlabel() if hasattr(ax, 'get_zlabel') else ''
+                if xl:
+                    axis_labels['x'] = str(xl)
+                if yl:
+                    axis_labels['y'] = str(yl)
+                if zl:
+                    axis_labels['z'] = str(zl)
+            except Exception:
+                pass
         params_map = {
             'UMAP': 'umap_params',
             'tSNE': 'tsne_params',
@@ -36,6 +51,7 @@ class ExportPanelDataExportMixin:
             'active_subset_indices': app_state.active_subset_indices,
             'pca_component_indices': getattr(app_state, 'pca_component_indices', [0, 1]),
             'algorithm_params': params,
+            'axis_labels': axis_labels,
         }
 
     def _build_export_df(self, selected_indices):

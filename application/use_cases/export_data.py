@@ -21,27 +21,18 @@ def build_export_dataframe(
     active_subset_indices: Iterable[int] | None,
     pca_component_indices: Sequence[int] | None,
     algorithm_params: Mapping[str, object] | None,
+    axis_labels: Mapping[str, str] | None = None,
 ) -> pd.DataFrame:
-    """Create export DataFrame and append embedding columns when available.
+    """Create export DataFrame and append coordinate columns for every mode.
 
-    Args:
-        selected_indices: Selected row indices in the original dataset.
-        df_global: Source dataset.
-        algorithm: Current dimensionality-reduction algorithm.
-        embedding: Last computed embedding values.
-        embedding_type: Embedding display type.
-        active_subset_indices: Dataset subset used when computing embedding.
-        pca_component_indices: Selected PCA component indices.
-        algorithm_params: Algorithm parameter map to be exported.
-
-    Returns:
-        DataFrame for exporting selected samples.
+    Column names are taken from the current plot's axis labels so they
+    reflect exactly what is shown on screen (e.g. "UMAP 1" / "UMAP 2",
+    "206Pb/204Pb" / "207Pb/204Pb" for Pb evolution, etc.).
     """
     selected_list = list(selected_indices)
     selected_df = df_global.iloc[selected_list].copy()
 
-    dr_algorithms = {"UMAP", "tSNE", "PCA", "RobustPCA"}
-    if algorithm not in dr_algorithms or embedding is None or embedding_type is None:
+    if embedding is None or len(embedding) == 0:
         return selected_df
 
     if active_subset_indices is not None:
@@ -49,36 +40,50 @@ def build_export_dataframe(
     else:
         data_indices = list(range(len(df_global)))
 
+    axis_lbl = dict(axis_labels or {})
+
     index_map = {orig: i for i, orig in enumerate(data_indices)}
-    dim1: list[float | None] = []
-    dim2: list[float | None] = []
+    n_dims = len(embedding[0]) if len(embedding) > 0 else 0
 
-    for idx in selected_list:
-        mapped_idx = index_map.get(idx)
-        if mapped_idx is None or mapped_idx >= len(embedding):
-            dim1.append(None)
-            dim2.append(None)
-            continue
+    for dim_idx in range(min(n_dims, 3)):
+        col_values: list[float | None] = []
+        for idx in selected_list:
+            mapped_idx = index_map.get(idx)
+            if mapped_idx is None or mapped_idx >= len(embedding):
+                col_values.append(None)
+                continue
+            row = embedding[mapped_idx]
+            col_values.append(
+                float(row[dim_idx]) if dim_idx < len(row) else None
+            )
 
-        row = embedding[mapped_idx]
-        dim1.append(row[0] if len(row) > 0 else None)
-        dim2.append(row[1] if len(row) > 1 else None)
+        if dim_idx == 0:
+            col_name = axis_lbl.get("x") or _dimension_label(embedding_type, 0, pca_component_indices)
+        elif dim_idx == 1:
+            col_name = axis_lbl.get("y") or _dimension_label(embedding_type, 1, pca_component_indices)
+        else:
+            col_name = axis_lbl.get("z") or _dimension_label(embedding_type, 2, pca_component_indices)
 
-    if embedding_type in ("PCA", "RobustPCA"):
-        pca_idx = list(pca_component_indices or [0, 1])
-        col1 = f"PC{pca_idx[0] + 1}"
-        col2 = f"PC{pca_idx[1] + 1}" if len(pca_idx) > 1 else "PC2"
-    else:
-        col1 = f"{embedding_type} Dimension 1"
-        col2 = f"{embedding_type} Dimension 2"
-
-    selected_df[col1] = dim1
-    selected_df[col2] = dim2
+        selected_df[col_name] = col_values
 
     for key, value in (algorithm_params or {}).items():
         selected_df[f"param_{key}"] = value
 
     return selected_df
+
+
+def _dimension_label(
+    embedding_type: str | None,
+    dim_idx: int,
+    pca_component_indices: Sequence[int] | None,
+) -> str:
+    """Build a fallback column name for a dimension index."""
+    if embedding_type in ("PCA", "RobustPCA"):
+        pca_idx = list(pca_component_indices or [0, 1])
+        pc = pca_idx[dim_idx] + 1 if dim_idx < len(pca_idx) else dim_idx + 1
+        return f"PC{pc}"
+    prefix = embedding_type or "Dim"
+    return f"{prefix} {dim_idx + 1}"
 
 
 def export_dataframe_to_file(
