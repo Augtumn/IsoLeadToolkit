@@ -13,6 +13,7 @@ __all__ = [
     "append_selected_data_to_excel",
     "build_export_dataframe",
     "build_image_export_profile",
+    "collect_geochem_curve_data",
     "export_dataframe_to_file",
     "export_selected_data_to_file",
     "fallback_export_rc",
