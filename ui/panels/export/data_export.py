@@ -17,7 +17,18 @@ class ExportPanelDataExportMixin:
     @staticmethod
     def _current_export_context() -> dict:
         """Collect export context from app_state for application use cases."""
-        algo = getattr(app_state, 'algorithm', None)
+        render_mode = str(getattr(app_state, 'render_mode', '') or '')
+        # Only DR modes have tunable algorithm parameters worth exporting;
+        # geochem modes use fixed physical constants that are already
+        # documented in the curve-data sheets.
+        dr_params_map = {
+            'UMAP': 'umap_params',
+            'tSNE': 'tsne_params',
+            'PCA': 'pca_params',
+            'RobustPCA': 'robust_pca_params',
+        }
+        params_attr = dr_params_map.get(render_mode)
+        params = getattr(app_state, params_attr, {}) if params_attr else {}
         embedding = getattr(app_state, 'last_embedding', None)
         embedding_type = getattr(app_state, 'last_embedding_type', None)
         ax = getattr(app_state, 'ax', None)
@@ -35,17 +46,9 @@ class ExportPanelDataExportMixin:
                     axis_labels['z'] = str(zl)
             except Exception:
                 pass
-        params_map = {
-            'UMAP': 'umap_params',
-            'tSNE': 'tsne_params',
-            'PCA': 'pca_params',
-            'RobustPCA': 'robust_pca_params',
-        }
-        params_attr = params_map.get(algo)
-        params = getattr(app_state, params_attr, {}) if params_attr else {}
         return {
             'df_global': app_state.df_global,
-            'algorithm': algo,
+            'algorithm': render_mode,
             'embedding': embedding,
             'embedding_type': embedding_type,
             'active_subset_indices': app_state.active_subset_indices,
