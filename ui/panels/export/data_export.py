@@ -66,19 +66,31 @@ class ExportPanelDataExportMixin:
             **context,
         )
 
+    @staticmethod
+    def _resolve_export_indices():
+        """Return the indices to export — selected rows, or all rows."""
+        sel = getattr(app_state, "selected_indices", None)
+        if sel:
+            return list(sel)
+        df = getattr(app_state, "df_global", None)
+        if df is not None:
+            return list(range(len(df)))
+        return []
+
     def _on_export_csv(self):
         """导出CSV"""
-        if not app_state.selected_indices:
+        indices = self._resolve_export_indices()
+        if not indices:
             QMessageBox.warning(
                 self,
                 translate("Warning"),
-                translate("No data selected. Please select data points first."),
+                translate("No data to export."),
             )
             return
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            translate("Export Selected Data as CSV"),
+            translate("Export Data as CSV"),
             "",
             "CSV Files (*.csv);;All Files (*.*)",
         )
@@ -86,7 +98,7 @@ class ExportPanelDataExportMixin:
         if file_path:
             try:
                 export_path = export_selected_data_to_file(
-                    selected_indices=app_state.selected_indices,
+                    selected_indices=indices,
                     file_path=file_path,
                     preferred_format='csv',
                     **self._current_export_context(),
@@ -105,17 +117,18 @@ class ExportPanelDataExportMixin:
 
     def _on_export_excel(self):
         """导出Excel"""
-        if not app_state.selected_indices:
+        indices = self._resolve_export_indices()
+        if not indices:
             QMessageBox.warning(
                 self,
                 translate("Warning"),
-                translate("No data selected. Please select data points first."),
+                translate("No data to export."),
             )
             return
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            translate("Export Selected Data as Excel"),
+            translate("Export Data as Excel"),
             "",
             "Excel Files (*.xlsx);;All Files (*.*)",
         )
@@ -123,7 +136,7 @@ class ExportPanelDataExportMixin:
         if file_path:
             try:
                 export_path = export_selected_data_to_file(
-                    selected_indices=app_state.selected_indices,
+                    selected_indices=indices,
                     file_path=file_path,
                     preferred_format='xlsx',
                     **self._current_export_context(),
@@ -142,11 +155,12 @@ class ExportPanelDataExportMixin:
 
     def _on_export_append_excel(self):
         """追加数据到已有 Excel 文件的新 Sheet"""
-        if not app_state.selected_indices:
+        indices = self._resolve_export_indices()
+        if not indices:
             QMessageBox.warning(
                 self,
                 translate("Warning"),
-                translate("No data selected. Please select data points first."),
+                translate("No data to export."),
             )
             return
 
@@ -176,7 +190,7 @@ class ExportPanelDataExportMixin:
 
         try:
             export_path = append_selected_data_to_excel(
-                selected_indices=app_state.selected_indices,
+                selected_indices=indices,
                 file_path=file_path,
                 sheet_name=sheet_name,
                 **self._current_export_context(),
