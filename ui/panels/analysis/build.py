@@ -280,6 +280,29 @@ class AnalysisPanelBuildMixin:
         endmember_group.setLayout(endmember_layout)
         _add_group_page(endmember_group, 'Endmember Identification')
 
+        clustering_group = QGroupBox(translate("HDBSCAN Clustering"))
+        clustering_group.setProperty('translate_key', 'HDBSCAN Clustering')
+        clustering_layout = QVBoxLayout()
+
+        cluster_hint = QLabel(
+            translate("Cluster the current embedding (UMAP, t-SNE, PCA, etc.) using HDBSCAN.")
+        )
+        cluster_hint.setProperty(
+            'translate_key',
+            'Cluster the current embedding (UMAP, t-SNE, PCA, etc.) using HDBSCAN.',
+        )
+        cluster_hint.setWordWrap(True)
+        clustering_layout.addWidget(cluster_hint)
+
+        cluster_btn = QPushButton(translate("Run HDBSCAN Clustering"))
+        cluster_btn.setProperty('translate_key', 'Run HDBSCAN Clustering')
+        cluster_btn.setFixedWidth(200)
+        cluster_btn.clicked.connect(self._on_run_clustering)
+        clustering_layout.addWidget(cluster_btn, 0, Qt.AlignHCenter)
+
+        clustering_group.setLayout(clustering_layout)
+        _add_group_page(clustering_group, 'HDBSCAN Clustering')
+
         provenance_group = QGroupBox(translate("Provenance ML"))
         provenance_group.setProperty('translate_key', 'Provenance ML')
         provenance_layout = QVBoxLayout()

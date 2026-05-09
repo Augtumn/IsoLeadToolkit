@@ -165,6 +165,35 @@ class AnalysisPanelMixingMixin:
                 translate("Endmember analysis failed: {error}").format(error=str(error)),
             )
 
+    def _on_run_clustering(self):
+        """Open HDBSCAN clustering dialog."""
+        if app_state.df_global is None:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("Please load data first."),
+            )
+            return
+        if getattr(app_state, "last_embedding", None) is None:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("No embedding available. Please run a dimensionality reduction first."),
+            )
+            return
+        try:
+            from ui.dialogs.clustering_dialog import ClusteringDialog
+
+            dialog = ClusteringDialog(self)
+            dialog.exec_()
+        except Exception as error:
+            logger.error("HDBSCAN clustering failed: %s", error)
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Clustering failed: {error}").format(error=str(error)),
+            )
+
     def _on_run_provenance_ml(self):
         """Run provenance machine learning workflow."""
         if app_state.df_global is None:
