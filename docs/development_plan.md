@@ -2,6 +2,23 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-05-18 · P2-1/A4 第一百八十六批）
+
+- P2-1（类型注解收尾）：
+    - `core/config.py`：`load_user_config()` / `merge_config()` 参数类型从 `dict` 细化为 `dict[str, object]`。
+    - `data/geochemistry/engine.py`：`calculate_modelcurve()` 补全 15 个参数类型注解（`np.ndarray | float`、`dict[str, Any] | None`、`float | None`）。
+    - `data/geochemistry/delta.py`：`calculate_deltas()`、`calculate_v1v2_coordinates()`、`calculate_delta_values()`、`calculate_v1v2()` 补全参数类型注解，新增 `from typing import Any`。
+    - `core/localization.py`、`core/session/io.py` 经核查已标注完整，无需改动。
+- A4（大文件拆分 — core/state/ 收敛到 800 行以内）：
+    - `store.py`：**1846 → 1411 行**（-435），抽离 35 个 normalizer 函数 + `_sync_state` 逻辑到 `_normalizers.py`（542 行）。
+    - `app_state.py`：**990 → 737 行**（-253），抽离 6 个兼容视图类（DataState/AlgorithmState/VisualState/GeochemState/StyleState/InteractionState）到 `_views.py`（261 行）。
+    - `gateway.py`：**926 → 623 行**（-303），抽离 3 个 builder 方法（`_build_compat_attr_handlers`、`_build_overlay_toggle_handlers`、`_build_panel_style_allowed_keys`）到 `_compat_builders.py`（314 行）。
+    - 拆分策略：纯提取不改变行为，对外导入路径（`from core.state import StateStore, app_state, state_gateway`）保持不变。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`。
+    - 完整测试套件无新增失败（35 个预存失败与本次无关）。
+    - 导入冒烟通过：`from core.state.app_state import AppState`、`from core.state import app_state, state_gateway`。
+
 ## 阶段进展（2026-05-18 · P2 收尾第一百八十五批）
 
 - P2-2（StateStore 快照同步 — 原地 dict 修改缺口收尾）：

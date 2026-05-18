@@ -264,8 +264,7 @@ class DataPanelBuildMixin:
         n_slider.setMaximum(50)
         n_neighbors = min(app_state.umap_params["n_neighbors"], 50)
         if app_state.umap_params["n_neighbors"] != n_neighbors:
-            app_state.umap_params["n_neighbors"] = n_neighbors
-            state_gateway.set_umap_params(app_state.umap_params)
+            state_gateway.set_umap_params(app_state.umap_params | {"n_neighbors": n_neighbors})
         n_slider.setValue(n_neighbors)
         n_slider.valueChanged.connect(lambda v: self._on_umap_slider_changed("n_neighbors", v, n_label, n_slider))
         n_slider.sliderReleased.connect(self._on_change)
@@ -318,8 +317,7 @@ class DataPanelBuildMixin:
         perp_slider.setMaximum(100)
         perplexity = min(int(app_state.tsne_params["perplexity"]), 100)
         if app_state.tsne_params["perplexity"] != perplexity:
-            app_state.tsne_params["perplexity"] = perplexity
-            state_gateway.set_tsne_params(app_state.tsne_params)
+            state_gateway.set_tsne_params(app_state.tsne_params | {"perplexity": perplexity})
         perp_slider.setValue(perplexity)
         perp_slider.valueChanged.connect(lambda v: self._on_tsne_slider_changed("perplexity", v, perp_label))
         perp_slider.sliderReleased.connect(self._on_change)

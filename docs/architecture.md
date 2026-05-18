@@ -79,14 +79,14 @@ Excel/CSV 文件
 
 ## 各模块文档索引
 
-| 模块 | 文档路径 | 行数 |
-|------|----------|------|
-| core/ | [docs/core.md](core.md) | 905 |
-| data/ | [docs/data.md](data.md) | 2,410 |
-| ui/ | [docs/ui.md](ui.md) | 9,422 |
-| export/专题 | [docs/export.md](export.md) | - |
-| visualization/ | [docs/visualization.md](visualization.md) | 3,728 |
-| utils/ | [docs/utils.md](utils.md) | 74 |
+| 模块 | 文档路径 | 行数 | 备注 |
+|------|----------|------|------|
+| core/ | [docs/core.md](core.md) | 905 | 含 state/ 子包（store 1411, gateway 623, app_state 737, _normalizers 542, _views 261, _compat_builders 314, bootstrap/gateway 等） |
+| data/ | [docs/data.md](data.md) | 2,410 | |
+| ui/ | [docs/ui.md](ui.md) | 9,422 | |
+| export/专题 | [docs/export.md](export.md) | - | |
+| visualization/ | [docs/visualization.md](visualization.md) | 3,728 | |
+| utils/ | [docs/utils.md](utils.md) | 74 | |
 
 ---
 
