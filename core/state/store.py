@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class StateStore:
@@ -1370,6 +1373,29 @@ class StateStore:
             algorithm = render_mode
             self._snapshot["algorithm"] = algorithm
         self._state.algorithm = algorithm
+
+        # Detect unsynchronized in-place dict mutations before overwriting.
+        # If any of these differ from the snapshot, a state_gateway.set_*_params()
+        # call was missed after an in-place modification — log a warning so the
+        # regression is visible in logs before it manifests as a user-facing bug.
+        _WATCHED_DICT_FIELDS = (
+            ("umap_params", self._state.umap_params),
+            ("tsne_params", self._state.tsne_params),
+            ("pca_params", self._state.pca_params),
+            ("robust_pca_params", self._state.robust_pca_params),
+            ("ml_params", self._state.ml_params),
+            ("v1v2_params", self._state.v1v2_params),
+        )
+        for name, current in _WATCHED_DICT_FIELDS:
+            snap = self._snapshot.get(name)
+            if isinstance(snap, dict) and isinstance(current, dict):
+                if current != snap:
+                    logger.warning(
+                        "_sync_state overwriting %s: snapshot differs from live state. "
+                        "Missing state_gateway.set_%s() after in-place mutation?",
+                        name, name,
+                    )
+
         self._state.umap_params = dict(self._snapshot["umap_params"])
         self._state.tsne_params = dict(self._snapshot["tsne_params"])
         self._state.pca_params = dict(self._snapshot["pca_params"])
