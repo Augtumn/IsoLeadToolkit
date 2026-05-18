@@ -32,3 +32,12 @@ jobs:
 
       - name: Check app_state direct assignments
         run: python scripts/check_state_mutations.py --fail-on-hits
+
+      - name: Check gateway direct state assignments
+        run: python scripts/check_gateway_direct_state_assignments.py --fail-on-hits
+
+      - name: Check gateway generic mutations
+        run: python scripts/check_gateway_generic_mutations.py --fail-on-hits
+
+      - name: Check state dict in-place mutations
+        run: python scripts/check_state_dict_mutations.py --fail-on-hits

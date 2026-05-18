@@ -14,6 +14,7 @@ from tests.guard_helpers import assert_guard_clean, run_guard_script
         "check_gateway_generic_mutations.py",
         "check_gateway_generic_mutations_in_tests.py",
         "check_gateway_direct_state_assignments.py",
+        "check_state_dict_mutations.py",
     ],
 )
 def test_guard_script_reports_zero_hits(script_name: str) -> None:
