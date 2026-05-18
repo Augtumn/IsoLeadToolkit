@@ -636,6 +636,9 @@ class AppStateGateway:
     def set_ternary_manual_limits(self, limits: Any) -> None:
         self._dispatch("SET_TERNARY_MANUAL_LIMITS", limits=dict(limits or {}))
 
+    def set_ternary_boundary_percent(self, percent: Any) -> None:
+        self._dispatch("SET_TERNARY_BOUNDARY_PERCENT", percent=percent)
+
     def set_model_curve_width(self, width: float) -> None:
         self._dispatch("SET_MODEL_CURVE_WIDTH", width=width)
 
@@ -674,6 +677,15 @@ class AppStateGateway:
 
     def set_ternary_render_margin(self, margin: float) -> None:
         self._dispatch("SET_TERNARY_RENDER_MARGIN", margin=margin)
+
+    def set_ternary_stretch_mode(self, mode: str) -> None:
+        self._dispatch("SET_TERNARY_STRETCH_MODE", mode=mode)
+
+    def set_ternary_stretch(self, stretch: bool) -> None:
+        self._dispatch("SET_TERNARY_STRETCH", stretch=bool(stretch))
+
+    def set_ternary_factors(self, factors: Any) -> None:
+        self._dispatch("SET_TERNARY_FACTORS", factors=factors)
 
     def set_ternary_ranges(self, ranges: Any) -> None:
         self._dispatch("SET_TERNARY_RANGES", ranges=dict(ranges or {}))

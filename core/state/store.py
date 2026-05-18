@@ -439,6 +439,9 @@ class StateStore:
             "ternary_render_margin": _normalize_ternary_render_margin(
                 getattr(state, "ternary_render_margin", 0.002)
             ),
+            "ternary_stretch_mode": str(getattr(state, "ternary_stretch_mode", "power") or "power"),
+            "ternary_stretch": bool(getattr(state, "ternary_stretch", False)),
+            "ternary_factors": list(getattr(state, "ternary_factors", [1.0, 1.0, 1.0]) or [1.0, 1.0, 1.0]),
             "model_curve_width": float(getattr(state, "model_curve_width", 1.2)),
             "plumbotectonics_curve_width": float(getattr(state, "plumbotectonics_curve_width", 1.2)),
             "paleoisochron_width": float(getattr(state, "paleoisochron_width", 0.9)),
@@ -652,6 +655,9 @@ class StateStore:
             "ternary_boundary_percent": float(self._snapshot["ternary_boundary_percent"]),
             "ternary_manual_limits_enabled": bool(self._snapshot["ternary_manual_limits_enabled"]),
             "ternary_manual_limits": dict(self._snapshot["ternary_manual_limits"]),
+            "ternary_stretch_mode": str(self._snapshot["ternary_stretch_mode"]),
+            "ternary_stretch": bool(self._snapshot["ternary_stretch"]),
+            "ternary_factors": list(self._snapshot["ternary_factors"]),
             "model_curve_width": float(self._snapshot["model_curve_width"]),
             "plumbotectonics_curve_width": float(self._snapshot["plumbotectonics_curve_width"]),
             "paleoisochron_width": float(self._snapshot["paleoisochron_width"]),

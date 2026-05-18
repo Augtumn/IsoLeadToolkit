@@ -733,6 +733,15 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             action.get("margin")
         )
 
+    elif action_type == "SET_TERNARY_STRETCH_MODE":
+        store._snapshot["ternary_stretch_mode"] = str(action.get("mode", "power") or "power")
+
+    elif action_type == "SET_TERNARY_STRETCH":
+        store._snapshot["ternary_stretch"] = bool(action.get("stretch", False))
+
+    elif action_type == "SET_TERNARY_FACTORS":
+        store._snapshot["ternary_factors"] = list(action.get("factors") or [1.0, 1.0, 1.0])
+
     elif action_type == "SET_MODEL_CURVE_WIDTH":
         store._snapshot["model_curve_width"] = float(action.get("width", 1.2))
 

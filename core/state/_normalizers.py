@@ -524,6 +524,9 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.ternary_boundary_percent = float(snapshot["ternary_boundary_percent"])
     state.ternary_manual_limits_enabled = bool(snapshot["ternary_manual_limits_enabled"])
     state.ternary_manual_limits = dict(snapshot["ternary_manual_limits"])
+    state.ternary_stretch_mode = str(snapshot["ternary_stretch_mode"])
+    state.ternary_stretch = bool(snapshot["ternary_stretch"])
+    state.ternary_factors = list(snapshot["ternary_factors"] or [])
     state.overlay.model_curve_width = float(snapshot["model_curve_width"])
     state.overlay.plumbotectonics_curve_width = float(
         snapshot["plumbotectonics_curve_width"]
