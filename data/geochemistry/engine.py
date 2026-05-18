@@ -19,6 +19,8 @@
 
 from typing import Any
 
+import threading
+
 import numpy as np
 from scipy import optimize
 try:
@@ -210,6 +212,7 @@ class GeochemistryEngine:
             'E1': E1_DEFAULT, 'E2': E2_DEFAULT
         }
         self.current_model_name = "Stacey & Kramers (2nd Stage)"
+        self._lock = threading.RLock()
         self._update_derived_params()
 
     def _update_derived_params(self) -> None:
@@ -233,12 +236,13 @@ class GeochemistryEngine:
         Returns:
             bool: 加载是否成功
         """
-        if model_name in PRESET_MODELS:
-            preset = PRESET_MODELS[model_name]
-            self.update_parameters(preset)
-            self.current_model_name = model_name
-            return True
-        return False
+        with self._lock:
+            if model_name in PRESET_MODELS:
+                preset = PRESET_MODELS[model_name]
+                self.update_parameters(preset)
+                self.current_model_name = model_name
+                return True
+            return False
 
     def update_parameters(self, new_params: dict[str, Any]) -> None:
         """
@@ -247,16 +251,17 @@ class GeochemistryEngine:
         Args:
             new_params (dict): 包含参数键值对的字典
         """
-        for k, v in new_params.items():
-            if k in self.params:
-                if k in ('age_model', 'v1v2_formula'):
-                    self.params[k] = str(v)
-                else:
-                    try:
-                        self.params[k] = float(v)
-                    except (ValueError, TypeError):
-                        pass # 忽略无效输入
-        self._update_derived_params()
+        with self._lock:
+            for k, v in new_params.items():
+                if k in self.params:
+                    if k in ('age_model', 'v1v2_formula'):
+                        self.params[k] = str(v)
+                    else:
+                        try:
+                            self.params[k] = float(v)
+                        except (ValueError, TypeError):
+                            pass # 忽略无效输入
+            self._update_derived_params()
 
     def get_parameters(self) -> dict[str, float | str]:
         """获取当前参数副本"""
@@ -310,7 +315,8 @@ def calculate_modelcurve(
         dict: {'t_Ma', 'Pb206_204', 'Pb207_204', 'Pb208_204'}
     """
     if params is None:
-        params = engine.params
+        with engine._lock:
+            params = engine.params
 
     t_years = np.asarray(t_Ma, dtype=float) * 1e6
 
