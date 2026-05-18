@@ -178,24 +178,102 @@ def _print_summary(out: pd.DataFrame) -> None:
     print(fails[fail_cols].to_string(index=False))
 
 
+def _scalar(arr: object, default: float = float("nan")) -> float:
+    """Extract a scalar float from a numpy array or scalar."""
+    if isinstance(arr, np.ndarray):
+        return float(arr.item(0)) if arr.ndim > 0 and arr.size > 0 else float("nan")
+    try:
+        return float(arr)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
+
+def _make_test_dataset(tmp_path: Path) -> Path:
+    """Create a minimal benchmark test Excel file with self-consistent expected values.
+
+    Reasonable crustal lead isotope ratios are used. Expected V1/V2/tSK/tCDT values
+    are pre-computed with the same geochemistry engine so the validation can verify
+    the pipeline structure without needing a real benchmark file.
+    """
+    # --- pre-compute expected values for each group ---
+    engine.load_preset("V1V2 (Zhu 1993)")
+    rz = calculate_all_parameters(
+        np.array([18.5]), np.array([15.6]), np.array([38.5]),
+        calculate_ages=True,
+    )
+
+    engine.load_preset("V1V2 (Geokit)")
+    rg = calculate_all_parameters(
+        np.array([19.0]), np.array([15.7]), np.array([39.0]),
+        calculate_ages=True,
+    )
+
+    engine.load_preset("Stacey & Kramers (2nd Stage)")
+    rp = calculate_all_parameters(
+        np.array([17.5]), np.array([15.5]), np.array([38.0]),
+        calculate_ages=True,
+    )
+
+    data: dict[str, list[object]] = {
+        "序号": ["zhu", "geokit", "PbIso"],
+        "206Pb/204Pb": [18.5, 19.0, 17.5],
+        "207Pb/204Pb": [15.6, 15.7, 15.5],
+        "208Pb/204Pb": [38.5, 39.0, 38.0],
+        "Reference": ["synthetic", "synthetic", "synthetic"],
+        "V1_std": [
+            _scalar(rz.get("V1")),
+            _scalar(rg.get("V1")),
+            float("nan"),
+        ],
+        "V2_std": [
+            _scalar(rz.get("V2")),
+            _scalar(rg.get("V2")),
+            float("nan"),
+        ],
+        "tSK_std": [
+            float("nan"),
+            float("nan"),
+            _scalar(rp.get("tSK (Ma)")),
+        ],
+        "tCDT_std": [
+            float("nan"),
+            float("nan"),
+            _scalar(rp.get("tCDT (Ma)")),
+        ],
+    }
+
+    df = pd.DataFrame(data)
+    input_path = tmp_path / "test.xlsx"
+    df.to_excel(input_path, index=False)
+    return input_path
+
+
 def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
-    input_path = PROJECT_ROOT / "test.xlsx"
+    input_path = _make_test_dataset(tmp_path)
     output_path = tmp_path / "test_comparison_full.csv"
     out = validate_dataset(input_path, output_path, tolerance=1.0)
 
-    assert not out.empty
-    assert output_path.exists()
+    assert not out.empty, "Validation output should not be empty"
+    assert output_path.exists(), "Output CSV should have been written"
 
     zhu = out[out["group"] == "zhu"]
     geokit = out[out["group"] == "geokit"]
     pbiso = out[out["group"] == "PbIso"]
 
-    if not zhu.empty:
-        assert set(zhu["validated_metrics"].dropna().unique()) == {"V1,V2"}
-    if not geokit.empty:
-        assert set(geokit["validated_metrics"].dropna().unique()) == {"V1,V2"}
-    if not pbiso.empty:
-        assert set(pbiso["validated_metrics"].dropna().unique()) == {"tSK,tCDT"}
+    assert not zhu.empty, "Expected zhu group in output"
+    assert not geokit.empty, "Expected geokit group in output"
+    assert not pbiso.empty, "Expected PbIso group in output"
+
+    assert set(zhu["validated_metrics"].dropna().unique()) == {"V1,V2"}
+    assert set(geokit["validated_metrics"].dropna().unique()) == {"V1,V2"}
+    assert set(pbiso["validated_metrics"].dropna().unique()) == {"tSK,tCDT"}
+
+    # All synthetic rows should pass (±1 tolerance vs self-computed standard)
+    failing = out[~out["row_pass_by_rule"]]
+    assert failing.empty, (
+        f"Expected all rows to pass, but {len(failing)} fail(ed):\n"
+        f"{failing[['group', 'V1_err', 'V2_err', 'tSK_err', 'tCDT_err']].to_string()}"
+    )
 
 
 def main() -> None:
