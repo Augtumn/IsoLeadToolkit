@@ -106,7 +106,7 @@ Excel/CSV 文件
 | `_reset_ui_state` 重复赋值 | control_panel.py:285-296 | ✅ 已不适用（相关实现已迁移） |
 | 全局 widget 引用 (slider_n 等) | state.py:332-344 | ✅ 已不适用（旧 state.py 已拆分为 core/state/） |
 | 循环导入风险 | visualization/plotting (旧 shim) | ✅ 已消解 (兼容入口已移除) |
-| 控制面板禁用但代码保留 | ui/app_parts/plotting.py:_setup_control_panel | 🔄 持续收敛（已移除启动链路中的模块级遗留状态写入、Qt 应用/主窗口中的 legacy 字段初始化，以及 main_window_parts 中无调用的 legacy 面板容器分割层） |
+| 控制面板禁用但代码保留 | ui/app_parts/plotting.py:_setup_control_panel | ✅ 已修复 (`Qt5ControlPanel` 类与 `create_control_panel` 工厂已移除，仅保留 `create_section_dialog`) |
 | 可视化模块 docstring/导入顺序不规范 | visualization/events.py, visualization/plotting/* | ✅ 已修复 |
 | 可视化模块日志前缀残留 | visualization/events.py, visualization/plotting/* | ✅ 已修复 |
 | 可视化模块 core 导入入口不统一 | visualization/plotting/* | ✅ 已修复 |

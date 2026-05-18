@@ -78,22 +78,6 @@ def test_configure_matplotlib_fonts_applies_preferred_font_and_dpi(monkeypatch) 
             ui_app.CONFIG["savefig_dpi"] = savefig_cfg_before
 
 
-def test_create_control_panel_delegates_constructor(monkeypatch) -> None:
-    from ui import control_panel
-
-    class _FakePanel:
-        def __init__(self, callback):
-            self.callback = callback
-
-    monkeypatch.setattr(control_panel, "Qt5ControlPanel", _FakePanel)
-    callback = lambda: None
-
-    panel = control_panel.create_control_panel(callback)
-
-    assert isinstance(panel, _FakePanel)
-    assert panel.callback is callback
-
-
 def test_create_section_dialog_invalid_key_returns_none() -> None:
     from ui import control_panel
 
