@@ -1004,6 +1004,8 @@
   "Pan axes with left mouse, zoom with right": "Pan axes with left mouse, zoom with right",
   "Zoom to rectangle": "Zoom to rectangle",
   "Configure subplots": "Configure subplots",
-  "Save the figure": "Save the figure"
+  "Save the figure": "Save the figure",
+  "No data loaded": "No data loaded",
+  "Samples: {n} | Mode: {mode} | Groups: {g}": "Samples: {n} | Mode: {mode} | Groups: {g}"
 }
 

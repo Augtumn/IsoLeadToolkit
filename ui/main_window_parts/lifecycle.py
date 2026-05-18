@@ -82,6 +82,7 @@ class MainWindowLifecycleMixin:
 
         if load_dataset(show_file_dialog=True, show_config_dialog=True):
             self.statusBar().showMessage(translate("Data reloaded successfully"), 3000)
+            self._refresh_status_info()
             if not app_state.last_group_col and app_state.group_cols:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
             if hasattr(self, "on_data_reload"):

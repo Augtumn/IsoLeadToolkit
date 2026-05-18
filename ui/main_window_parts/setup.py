@@ -206,7 +206,13 @@ class MainWindowSetupMixin:
         self._embedding_progress_bar.setMaximumHeight(18)
         self._embedding_progress_bar.hide()
 
+        self._status_info_label = QLabel()
+        self._status_info_label.setContentsMargins(4, 0, 8, 0)
+        status_bar.addPermanentWidget(self._status_info_label)
+
         status_bar.addPermanentWidget(self._embedding_progress_bar)
+
+        self._refresh_status_info()
 
         def _on_embedding_progress(percent: int, stage: str) -> None:
             bar = getattr(self, "_embedding_progress_bar", None)
@@ -234,6 +240,22 @@ class MainWindowSetupMixin:
             bar.show()
 
         state_gateway.set_embedding_progress_callback(_on_embedding_progress)
+
+    def _refresh_status_info(self) -> None:
+        """Update status bar info label with current app state summary."""
+        df = getattr(app_state, "df_global", None)
+        if df is not None and len(df) > 0:
+            n = len(df)
+            mode = getattr(app_state, "render_mode", "?")
+            group_cols = getattr(app_state, "group_cols", []) or []
+            g = len(group_cols)
+            text = translate(
+                "Samples: {n} | Mode: {mode} | Groups: {g}",
+                n=n, mode=mode, g=g,
+            )
+        else:
+            text = translate("No data loaded")
+        self._status_info_label.setText(text)
 
     def _apply_legend_panel_layout(self):
         try:
@@ -302,6 +324,8 @@ class MainWindowSetupMixin:
             actions["geochemistry"].setText(translate("Geochemistry"))
         if self.statusBar() is not None:
             self.statusBar().showMessage(translate("Ready"))
+
+        self._refresh_status_info()
 
         if hasattr(self, "_legend_title_label") and self._legend_title_label is not None:
             last_title = getattr(app_state, "legend_last_title", None)

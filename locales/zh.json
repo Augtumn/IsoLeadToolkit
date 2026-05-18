@@ -1004,6 +1004,8 @@
   "Pan axes with left mouse, zoom with right": "左键平移，右键缩放",
   "Zoom to rectangle": "框选缩放",
   "Configure subplots": "配置子图",
-  "Save the figure": "保存图像"
+  "Save the figure": "保存图像",
+  "No data loaded": "未加载数据",
+  "Samples: {n} | Mode: {mode} | Groups: {g}": "样品: {n} | 模式: {mode} | 分组: {g}"
 }
 
