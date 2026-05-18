@@ -997,6 +997,13 @@
   "Top KDE Height (%)": "Top KDE Height (%)",
   "Up": "Up",
   "min_dist: {value:.2f}": "min_dist: {value:.2f}",
-  "{param}: {value:.2f}": "{param}: {value:.2f}"
+  "{param}: {value:.2f}": "{param}: {value:.2f}",
+  "Reset original view": "Reset original view",
+  "Back to previous view": "Back to previous view",
+  "Forward to next view": "Forward to next view",
+  "Pan axes with left mouse, zoom with right": "Pan axes with left mouse, zoom with right",
+  "Zoom to rectangle": "Zoom to rectangle",
+  "Configure subplots": "Configure subplots",
+  "Save the figure": "Save the figure"
 }
 

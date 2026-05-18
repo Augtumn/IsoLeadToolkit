@@ -28,7 +28,7 @@ class MainWindowCanvasMixin:
 
         canvas = FigureCanvas(fig)
         toolbar = NavigationToolbar(canvas, self)
-        toolbar.setVisible(False)
+
         zoom_out_action = QAction(self._get_zoom_out_icon(), translate("Zoom Out"), self)
         zoom_out_action.setToolTip(translate("Zoom Out"))
         zoom_out_action.triggered.connect(self._zoom_out_view)
@@ -52,7 +52,7 @@ class MainWindowCanvasMixin:
         rect_select_action = QAction(self._get_selection_icon("selection_rect.svg"), translate("Box Select"), self)
         rect_select_action.setToolTip(translate("Box Select"))
         rect_select_action.setCheckable(True)
-        rect_select_action.triggered.connect(lambda: self._toggle_selection_tool("export"))
+        rect_select_action.triggered.connect(lambda: self._toggle_selection_tool("rect"))
 
         lasso_select_action = QAction(
             self._get_selection_icon("selection_polygon.svg"), translate("Lasso Select"), self
@@ -72,7 +72,6 @@ class MainWindowCanvasMixin:
         self._sync_selection_tool_actions()
 
         self._attach_matplotlib_toolbar_actions(toolbar)
-        self.canvas_layout.addWidget(canvas)
         self.canvas_layout.addWidget(canvas)
 
         state_gateway.set_figure(fig)
@@ -102,6 +101,22 @@ class MainWindowCanvasMixin:
 
         for action in filtered:
             self.toolbar.addAction(action)
+
+        _MPL_TOOLTIP_TRANSLATIONS = {
+            "Home": "Reset original view",
+            "Back": "Back to previous view",
+            "Forward": "Forward to next view",
+            "Pan": "Pan axes with left mouse, zoom with right",
+            "Zoom": "Zoom to rectangle",
+            "Subplots": "Configure subplots",
+            "Save": "Save the figure",
+        }
+        for action in filtered:
+            text = (action.text() or "").strip()
+            for en_key, tr_key in _MPL_TOOLTIP_TRANSLATIONS.items():
+                if en_key.lower() in text.lower():
+                    action.setToolTip(translate(tr_key))
+                    break
         self._mpl_toolbar_actions = filtered
 
     def _clear_matplotlib_toolbar_actions(self):

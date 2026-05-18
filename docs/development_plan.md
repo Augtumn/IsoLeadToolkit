@@ -2,6 +2,35 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-05-18 · 功能第一百八十八批）
+
+- 异步嵌入进度指示器（可视化模块 HIGH 优先级）：
+    - **现状**：`EmbeddingWorker` 已发出 `progress` 信号（含 token/percent/stage），`events.py` 通过 `app_state.embedding_progress_callback` 转发，但该回调从未被设置，导致进度信息静默丢弃。
+    - **实现**：
+        - `ui/main_window_parts/setup.py`：`_setup_statusbar` 新增 `QProgressBar`（最大宽度 300px，永久挂载到状态栏右端），注册 `_on_embedding_progress` 闭包更新进度条格式与数值。
+        - 阶段名称翻译映射：`umap_init/umap_fit` → "UMAP 初始化中/计算中"，`tsne_init/tsne_fit` → "t-SNE 初始化中/计算中"，`pca_scale/pca_fit` → "PCA 标准化中/计算中"，`robust_scale/robust_mcd_fit` → "Robust PCA 标准化中/计算中"。
+        - `core/state/gateway.py`：新增 `set_embedding_progress_callback`（运行时引用，直写 `self._state`）。
+        - `scripts/check_gateway_direct_state_assignments.py`：allowlist 新增 `embedding_progress_callback`。
+        - `locales/en.json`、`locales/zh.json`：新增 10 条进度阶段翻译键。
+    - 行为：进度条在嵌入计算期间显示"UMAP Computing... 45%"等，完成后自动隐藏并恢复"Ready"。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`。
+    - 完整测试套件无新增失败。
+
+## 阶段进展（2026-05-18 · P2-2/A4 第一百八十七批）
+
+- P2-2（params dict 原地修改彻底清理）：
+    - `ui/panels/data/build.py`：2 处 `app_state.umap_params["n_neighbors"] =` / `app_state.tsne_params["perplexity"] =` 改为纯 `state_gateway.set_*_params({**dict, key: val})`。
+    - `ui/panels/data/projection.py`：6 处（umap/tsne/pca/robust_pca 共 4 个 handler）原地修改改为 `{**dict, param: value}` 展开后直传 gateway。
+    - 结果：`check_state_dict_mutations.py` 扫描的 12 个受监控字段中 `_params` 类原地写入完全清零。
+- A4（store.py dispatch 提取）：
+    - `store.py`：**1226 → 660 行**（-566），抽离 dispatch 740 行到 `_dispatch_handlers.py`（614 行）。
+    - `store.py` 现仅保留 `__init__`（快照模板）、`dispatch`（薄入口 → `dispatch_action` + `_sync_state` + 返回）、`snapshot`、`_sync_state`（委托给 normalizers）。
+    - **里程碑：core/state/ 目录全部文件 ≤ 800 行**（store 660 / app_state 737 / gateway 623 / _normalizers 542 / _views 261 / _compat_builders 314 / _dispatch_handlers 614）。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`。
+    - 完整测试套件无新增失败（35 个预存失败与本次无关）。
+
 ## 阶段进展（2026-05-18 · P2-1/A4 第一百八十六批）
 
 - P2-1（类型注解收尾）：

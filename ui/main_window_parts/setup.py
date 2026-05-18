@@ -101,8 +101,8 @@ class MainWindowSetupMixin:
         self._legend_list = legend_list
         try:
             legend_list.model().rowsMoved.connect(self._on_legend_rows_moved)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to connect legend rowsMoved signal: %s", exc)
 
         self.legend_splitter = QSplitter(Qt.Horizontal)
         self.legend_splitter.setChildrenCollapsible(False)
