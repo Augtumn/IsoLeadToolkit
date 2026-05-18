@@ -2,6 +2,25 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-05-18 · UI 第一百八十九批）
+
+- UI 改进（bug 修复 + 工具栏 + 对话框）：
+    - **Bug 修复**：
+        - `canvas.py:55`：选择工具 key `"export"` → `"rect"`（与 `_sync_selection_tool_actions` 保持一致）。
+        - `canvas.py:76`：删除重复的 `self.canvas_layout.addWidget(canvas)`。
+        - `setup.py:105`：legend `rowsMoved` 连接失败从 `except: pass` 改为 `logger.warning`。
+    - **工具栏**：
+        - `setup.py`：数据加载前显示占位 `QLabel("请加载数据")`，`_attach_matplotlib_toolbar_actions` 完成后隐藏。
+        - `canvas.py:31`：取消 `toolbar.setVisible(False)`，直接显示 matplotlib NavigationToolbar。
+        - `canvas.py`：遍历 mpl 内置 action，将 tooltip 翻译为中文（Home/Back/Forward/Pan/Zoom/Subplots/Save）。
+    - **对话框**：
+        - `control_panel.py`：`create_section_dialog` 使用 `QSettings("IsotopesAnalyse", "Dialogs")` 保存/恢复 dialog geometry。
+    - **本地化**：
+        - `locales/en.json`、`locales/zh.json`：新增 18 个翻译键。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`。
+    - 导入冒烟 + 完整测试套件无新增失败。
+
 ## 阶段进展（2026-05-18 · 功能第一百八十八批）
 
 - 异步嵌入进度指示器（可视化模块 HIGH 优先级）：

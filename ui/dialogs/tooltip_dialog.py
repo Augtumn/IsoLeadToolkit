@@ -88,13 +88,13 @@ class TooltipConfigDialog(QDialog):
 
         button_layout.addStretch()
 
-        ok_btn = QPushButton(translate("OK"))
-        ok_btn.clicked.connect(self._ok_clicked)
-        button_layout.addWidget(ok_btn)
-
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
+
+        ok_btn = QPushButton(translate("OK"))
+        ok_btn.clicked.connect(self._ok_clicked)
+        button_layout.addWidget(ok_btn)
 
         layout.addLayout(button_layout)
 

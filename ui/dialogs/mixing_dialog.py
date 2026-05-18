@@ -83,7 +83,7 @@ class MixingCalculatorDialog(QDialog):
         button_layout.addWidget(export_btn)
 
         close_btn = QPushButton(translate("Close"))
-        close_btn.clicked.connect(self.accept)
+        close_btn.clicked.connect(self.reject)
         button_layout.addWidget(close_btn)
 
         layout.addLayout(button_layout)
