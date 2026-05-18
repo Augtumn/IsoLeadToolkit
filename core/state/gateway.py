@@ -419,6 +419,9 @@ class AppStateGateway:
     def set_legend_ax(self, legend_ax: Any) -> None:
         self._state.legend_ax = legend_ax
 
+    def set_embedding_progress_callback(self, callback: Any) -> None:
+        self._state.embedding_progress_callback = callback
+
     def set_last_embedding(self, embedding: Any, embedding_type: str) -> None:
         self._dispatch(
             "SET_LAST_EMBEDDING",

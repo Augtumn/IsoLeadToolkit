@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QListWidget,
     QMainWindow,
     QMenuBar,
+    QProgressBar,
     QPushButton,
     QSizePolicy,
     QSplitter,
@@ -24,7 +25,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from core import app_state, translate
+from core import app_state, state_gateway, translate
 
 logger = logging.getLogger(__name__)
 QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
@@ -193,8 +194,46 @@ class MainWindowSetupMixin:
         # 控制面板按钮已弃用
 
     def _setup_statusbar(self):
-        """设置状态栏"""
-        self.statusBar().showMessage(translate("Ready"))
+        """设置状态栏，含异步嵌入计算进度条"""
+        status_bar = self.statusBar()
+        status_bar.showMessage(translate("Ready"))
+
+        self._embedding_progress_bar = QProgressBar()
+        self._embedding_progress_bar.setRange(0, 100)
+        self._embedding_progress_bar.setValue(0)
+        self._embedding_progress_bar.setTextVisible(True)
+        self._embedding_progress_bar.setMaximumWidth(300)
+        self._embedding_progress_bar.setMaximumHeight(18)
+        self._embedding_progress_bar.hide()
+
+        status_bar.addPermanentWidget(self._embedding_progress_bar)
+
+        def _on_embedding_progress(percent: int, stage: str) -> None:
+            bar = getattr(self, "_embedding_progress_bar", None)
+            if bar is None:
+                return
+            if percent >= 100 or stage == "done":
+                bar.hide()
+                status_bar.showMessage(translate("Ready"))
+                return
+            stage_names = {
+                "prepare": translate("Preparing..."),
+                "umap_init": translate("UMAP Initializing..."),
+                "umap_fit": translate("UMAP Computing..."),
+                "tsne_init": translate("t-SNE Initializing..."),
+                "tsne_fit": translate("t-SNE Computing..."),
+                "pca_scale": translate("PCA Scaling..."),
+                "pca_fit": translate("PCA Computing..."),
+                "robust_scale": translate("Robust PCA Scaling..."),
+                "robust_mcd_fit": translate("Robust PCA Computing..."),
+                "robust_fallback_pca_fit": translate("Robust PCA Computing..."),
+            }
+            label = stage_names.get(stage, stage)
+            bar.setFormat(f"{label}  %p%")
+            bar.setValue(percent)
+            bar.show()
+
+        state_gateway.set_embedding_progress_callback(_on_embedding_progress)
 
     def _apply_legend_panel_layout(self):
         try:
