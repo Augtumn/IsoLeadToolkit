@@ -28,8 +28,8 @@ def test_build_export_dataframe_with_umap_dimensions() -> None:
     )
 
     assert list(export_df["sample"]) == ["A", "C"]
-    assert list(export_df["UMAP Dimension 1"]) == [0.1, 0.5]
-    assert list(export_df["UMAP Dimension 2"]) == [0.2, 0.6]
+    assert list(export_df["UMAP 1"]) == [0.1, 0.5]
+    assert list(export_df["UMAP 2"]) == [0.2, 0.6]
     assert list(export_df["param_n_neighbors"]) == [15, 15]
 
 
