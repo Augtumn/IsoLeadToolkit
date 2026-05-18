@@ -2,6 +2,24 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-05-18 · P2 收尾第一百八十五批）
+
+- P2-2（StateStore 快照同步 — 原地 dict 修改缺口收尾）：
+    - **根因**：`_sync_state()` 每次 dispatch 都会用 `dict(self._snapshot[...])` 覆盖 `app_state.*_params` 等 dict 字段，而 slider handler 仅做 `app_state.umap_params["key"] = value` 原地修改，未同步 snapshot，导致参数变更被静默覆盖为默认值。
+    - **修复**：
+        - `ui/panels/data/projection.py`：6 个 handler（`_on_umap_slider_changed`、`_on_umap_param_change`、`_on_tsne_slider_changed`、`_on_tsne_param_change`、`_on_pca_param_change`、`_on_robust_pca_param_change`）在原地修改后立即调用 `state_gateway.set_*_params(app_state.*_params)` 同步 snapshot。
+        - `ui/panels/data/build.py`：初始值钳制（`n_neighbors`/`perplexity` 边界夹逼）后同样调用 `state_gateway.set_*_params()`。
+        - `visualization/plotting/geochem/isochron_fits.py`：`app_state.isochron_results[grp] = {...}` 原地修改后调用 `state_gateway.set_isochron_results(app_state.isochron_results)`。
+    - **增强**：
+        - `visualization/events.py`：`_on_embedding_task_failed` 新增 `QMessageBox.warning()` 用户可见错误弹窗（此前静默失败）。
+        - `ui/panels/base_panel.py`：`_on_change()` 调用前停止所有待处理防抖 timer，消除 `sliderReleased` + debounce 双重触发。
+        - `ui/panels/data/projection.py`：Combo/Spinbox handler 在防抖前增加即时 `_on_change()` 调用。
+- **新增守护脚本**：
+    - `scripts/check_state_dict_mutations.py` — 检测 `app_state.<dict_field>["key"] = value` 原地修改，仅标记 `_sync_state()` 中用 `dict()` 覆盖的 12 个字段，排除 tests/scripts 目录。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`：`check_state_mutations.py`、`check_gateway_direct_state_assignments.py`、`check_gateway_generic_mutations.py`、`check_state_dict_mutations.py`。
+    - 定向回归 `uv run pytest tests/test_gateway_set_attr_compatibility.py tests/test_app_plotting_helpers.py tests/test_ui_wrapper_helpers.py -q` 无新增失败（1 个预存 ternary 失败与本次无关）。
+
 ## 阶段进展（2026-04-27 · P2 收尾第一百八十四批）
 
 - P2-1（主窗口 legacy 面板容器路径收敛）：

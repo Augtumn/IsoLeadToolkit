@@ -128,6 +128,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
                 'n_points': len(x_grp),
                 'mswd': fit.get('mswd', None),
             }
+            state_gateway.set_isochron_results(app_state.isochron_results)
 
             x_min_g, x_max_g = np.min(x_grp), np.max(x_grp)
             if x_max_g == x_min_g:
