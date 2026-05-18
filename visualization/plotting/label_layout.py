@@ -156,10 +156,12 @@ def _pick_anchor_on_line(
     if mode == 'start':
         # Step a few samples inward so the label doesn't sit right on the
         # viewport boundary where it would be clipped.
-        offset = max(1, len(vis_idx) // 20)
+        # Allow 0 offset for short visible segments (< 20 points) so the
+        # first/last point is never confused with center.
+        offset = max(0, len(vis_idx) // 20)
         idx = int(vis_idx[min(offset, len(vis_idx) - 1)])
     elif mode == 'end':
-        offset = max(1, len(vis_idx) // 20)
+        offset = max(0, len(vis_idx) // 20)
         idx = int(vis_idx[max(0, len(vis_idx) - 1 - offset)])
     else:
         idx = int(vis_idx[len(vis_idx) // 2])
