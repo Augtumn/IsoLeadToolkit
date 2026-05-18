@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Delta calculations and V1-V2 projection."""
 from __future__ import annotations
+from typing import Any
 
 import numpy as np
 
@@ -16,15 +17,15 @@ from .engine import (
 
 
 def calculate_deltas(
-    Pb206_204_S,
-    Pb207_204_S,
-    Pb208_204_S,
-    t_Ma,
-    params=None,
-    T_mantle=None,
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    Pb208_204_S: np.ndarray | float,
+    t_Ma: np.ndarray | float | None,
+    params: dict[str, Any] | None = None,
+    T_mantle: float | None = None,
     use_two_stage: bool = False,
-    E1=None,
-    E2=None,
+    E1: float | None = None,
+    E2: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     计算 Delta 值 (Δα, Δβ, Δγ)
@@ -98,10 +99,10 @@ def calculate_deltas(
     return d_alpha, d_beta, d_gamma
 
 def calculate_v1v2_coordinates(
-    d_alpha,
-    d_beta,
-    d_gamma,
-    params=None,
+    d_alpha: np.ndarray,
+    d_beta: np.ndarray,
+    d_gamma: np.ndarray,
+    params: dict[str, Any] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     计算 V1, V2 判别图投影坐标
@@ -123,19 +124,19 @@ def calculate_v1v2_coordinates(
     return V1, V2
 
 def calculate_delta_values(
-    Pb206_204_S,
-    Pb207_204_S,
-    Pb208_204_S,
-    t_Ma,
-    params=None,
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    Pb208_204_S: np.ndarray | float,
+    t_Ma: np.ndarray | float | None,
+    params: dict[str, Any] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Alias for calculate_deltas for backward compatibility"""
     return calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params)
 
 def calculate_v1v2(
-    d_alpha,
-    d_beta,
-    d_gamma,
+    d_alpha: np.ndarray,
+    d_beta: np.ndarray,
+    d_gamma: np.ndarray,
     a: float = REGRESSION_A,
     b: float = REGRESSION_B,
     c: float = REGRESSION_C,

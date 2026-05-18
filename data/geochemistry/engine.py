@@ -279,20 +279,20 @@ def _exp_evolution_term(lmbda: float, t_years, E: float = 0.0) -> np.ndarray | f
     return np.exp(lmbda * t_years) * (1.0 - E * (t_years - (1.0 / lmbda)))
 
 def calculate_modelcurve(
-    t_Ma,
-    params=None,
-    T1=None,
-    X1=None,
-    Y1=None,
-    Z1=None,
-    Mu1=None,
-    W1=None,
-    U8U5=None,
-    L5=None,
-    L8=None,
-    L2=None,
-    E1=None,
-    E2=None,
+    t_Ma: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+    T1: float | None = None,
+    X1: float | None = None,
+    Y1: float | None = None,
+    Z1: float | None = None,
+    Mu1: float | None = None,
+    W1: float | None = None,
+    U8U5: float | None = None,
+    L5: float | None = None,
+    L8: float | None = None,
+    L2: float | None = None,
+    E1: float | None = None,
+    E2: float | None = None,
 ) -> dict[str, np.ndarray]:
     """
     生成 PbIso 风格的模型曲线（等价 R 的 modelcurve）

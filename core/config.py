@@ -133,7 +133,7 @@ _MERGEABLE_KEYS: frozenset[str] = frozenset({
 })
 
 
-def load_user_config() -> dict:
+def load_user_config() -> dict[str, object]:
     """Load user configuration from the JSON file in the temp directory.
 
     Returns an empty dict when the file is missing, unreadable, or does not
@@ -200,7 +200,7 @@ def _validate_config_value(key: str, value: object, default: object) -> object:
     return value
 
 
-def merge_config(user_config: dict) -> None:
+def merge_config(user_config: dict[str, object]) -> None:
     """Merge user configuration into the global CONFIG dict in-place.
 
     Top-level scalars are validated and replaced individually.

@@ -6,6 +6,45 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
+from ._normalizers import (
+    _normalize_active_subset_indices,
+    _normalize_adjust_text_iter_lim,
+    _normalize_adjust_text_pair,
+    _normalize_adjust_text_time_lim,
+    _normalize_algorithm_params,
+    _normalize_bw_adjust,
+    _normalize_color,
+    _normalize_cut,
+    _normalize_export_options,
+    _normalize_font_name,
+    _normalize_grid_linestyle,
+    _normalize_gridsize,
+    _normalize_kde_auto_bandwidth_method,
+    _normalize_kde_bandwidth,
+    _normalize_kde_kernel,
+    _normalize_marginal_size,
+    _normalize_max_points,
+    _normalize_pca_component_indices,
+    _normalize_plot_dpi,
+    _normalize_plot_font_sizes,
+    _normalize_plot_marker_alpha,
+    _normalize_plot_marker_size,
+    _normalize_style_linewidth,
+    _normalize_ternary_boundary_percent,
+    _normalize_ternary_limit_anchor,
+    _normalize_ternary_limit_mode,
+    _normalize_ternary_manual_limits,
+    _normalize_ternary_render_margin,
+    _normalize_text_pad,
+    _normalize_text_weight,
+    _normalize_tick_direction,
+    _normalize_tick_length,
+    _normalize_unit_interval,
+    _normalize_visible_groups,
+    _to_index_set,
+    sync_state_store_to_app,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,185 +101,185 @@ class StateStore:
         self._snapshot: dict[str, Any] = {
             "render_mode": str(getattr(state, "render_mode", "UMAP")),
             "algorithm": str(getattr(state, "algorithm", "UMAP")),
-            "umap_params": self._normalize_algorithm_params(
+            "umap_params": _normalize_algorithm_params(
                 getattr(state, "umap_params", None)
             ),
-            "tsne_params": self._normalize_algorithm_params(
+            "tsne_params": _normalize_algorithm_params(
                 getattr(state, "tsne_params", None)
             ),
-            "pca_params": self._normalize_algorithm_params(
+            "pca_params": _normalize_algorithm_params(
                 getattr(state, "pca_params", None)
             ),
-            "robust_pca_params": self._normalize_algorithm_params(
+            "robust_pca_params": _normalize_algorithm_params(
                 getattr(state, "robust_pca_params", None)
             ),
-            "ml_params": self._normalize_algorithm_params(
+            "ml_params": _normalize_algorithm_params(
                 getattr(state, "ml_params", None)
             ),
-            "v1v2_params": self._normalize_algorithm_params(
+            "v1v2_params": _normalize_algorithm_params(
                 getattr(state, "v1v2_params", None)
             ),
             "plot_style_grid": bool(getattr(state, "plot_style_grid", False)),
-            "plot_marker_size": self._normalize_plot_marker_size(
+            "plot_marker_size": _normalize_plot_marker_size(
                 getattr(state, "plot_marker_size", 60)
             ),
-            "plot_marker_alpha": self._normalize_plot_marker_alpha(
+            "plot_marker_alpha": _normalize_plot_marker_alpha(
                 getattr(state, "plot_marker_alpha", 0.8)
             ),
             "show_plot_title": bool(getattr(state, "show_plot_title", False)),
-            "plot_dpi": self._normalize_plot_dpi(getattr(state, "plot_dpi", 130)),
-            "custom_primary_font": self._normalize_font_name(
+            "plot_dpi": _normalize_plot_dpi(getattr(state, "plot_dpi", 130)),
+            "custom_primary_font": _normalize_font_name(
                 getattr(state, "custom_primary_font", "")
             ),
-            "custom_cjk_font": self._normalize_font_name(
+            "custom_cjk_font": _normalize_font_name(
                 getattr(state, "custom_cjk_font", "")
             ),
-            "plot_font_sizes": self._normalize_plot_font_sizes(
+            "plot_font_sizes": _normalize_plot_font_sizes(
                 getattr(state, "plot_font_sizes", None)
             ),
-            "plot_facecolor": self._normalize_color(
+            "plot_facecolor": _normalize_color(
                 getattr(state, "plot_facecolor", "#ffffff"),
                 "#ffffff",
             ),
-            "axes_facecolor": self._normalize_color(
+            "axes_facecolor": _normalize_color(
                 getattr(state, "axes_facecolor", "#ffffff"),
                 "#ffffff",
             ),
-            "grid_color": self._normalize_color(
+            "grid_color": _normalize_color(
                 getattr(state, "grid_color", "#e2e8f0"),
                 "#e2e8f0",
             ),
-            "grid_linewidth": self._normalize_style_linewidth(
+            "grid_linewidth": _normalize_style_linewidth(
                 getattr(state, "grid_linewidth", 0.6),
                 default=0.6,
             ),
-            "grid_alpha": self._normalize_unit_interval(
+            "grid_alpha": _normalize_unit_interval(
                 getattr(state, "grid_alpha", 0.7),
                 default=0.7,
             ),
-            "grid_linestyle": self._normalize_grid_linestyle(
+            "grid_linestyle": _normalize_grid_linestyle(
                 getattr(state, "grid_linestyle", "--")
             ),
-            "tick_direction": self._normalize_tick_direction(
+            "tick_direction": _normalize_tick_direction(
                 getattr(state, "tick_direction", "out")
             ),
-            "tick_color": self._normalize_color(
+            "tick_color": _normalize_color(
                 getattr(state, "tick_color", "#1f2937"),
                 "#1f2937",
             ),
-            "tick_length": self._normalize_tick_length(
+            "tick_length": _normalize_tick_length(
                 getattr(state, "tick_length", 4.0),
                 default=4.0,
             ),
-            "tick_width": self._normalize_style_linewidth(
+            "tick_width": _normalize_style_linewidth(
                 getattr(state, "tick_width", 0.8),
                 default=0.8,
             ),
-            "axis_linewidth": self._normalize_style_linewidth(
+            "axis_linewidth": _normalize_style_linewidth(
                 getattr(state, "axis_linewidth", 1.0),
                 default=1.0,
             ),
-            "axis_line_color": self._normalize_color(
+            "axis_line_color": _normalize_color(
                 getattr(state, "axis_line_color", "#1f2937"),
                 "#1f2937",
             ),
             "minor_ticks": bool(getattr(state, "minor_ticks", False)),
-            "minor_tick_length": self._normalize_tick_length(
+            "minor_tick_length": _normalize_tick_length(
                 getattr(state, "minor_tick_length", 2.5),
                 default=2.5,
             ),
-            "minor_tick_width": self._normalize_style_linewidth(
+            "minor_tick_width": _normalize_style_linewidth(
                 getattr(state, "minor_tick_width", 0.6),
                 default=0.6,
             ),
             "show_top_spine": bool(getattr(state, "show_top_spine", True)),
             "show_right_spine": bool(getattr(state, "show_right_spine", True)),
             "minor_grid": bool(getattr(state, "minor_grid", False)),
-            "minor_grid_color": self._normalize_color(
+            "minor_grid_color": _normalize_color(
                 getattr(state, "minor_grid_color", "#e2e8f0"),
                 "#e2e8f0",
             ),
-            "minor_grid_linewidth": self._normalize_style_linewidth(
+            "minor_grid_linewidth": _normalize_style_linewidth(
                 getattr(state, "minor_grid_linewidth", 0.4),
                 default=0.4,
             ),
-            "minor_grid_alpha": self._normalize_unit_interval(
+            "minor_grid_alpha": _normalize_unit_interval(
                 getattr(state, "minor_grid_alpha", 0.4),
                 default=0.4,
             ),
-            "minor_grid_linestyle": self._normalize_grid_linestyle(
+            "minor_grid_linestyle": _normalize_grid_linestyle(
                 getattr(state, "minor_grid_linestyle", ":")
             ),
             "scatter_show_edge": bool(getattr(state, "scatter_show_edge", True)),
-            "scatter_edgecolor": self._normalize_color(
+            "scatter_edgecolor": _normalize_color(
                 getattr(state, "scatter_edgecolor", "#1e293b"),
                 "#1e293b",
             ),
-            "scatter_edgewidth": self._normalize_style_linewidth(
+            "scatter_edgewidth": _normalize_style_linewidth(
                 getattr(state, "scatter_edgewidth", 0.4),
                 default=0.4,
             ),
-            "label_color": self._normalize_color(
+            "label_color": _normalize_color(
                 getattr(state, "label_color", "#1f2937"),
                 "#1f2937",
             ),
-            "label_weight": self._normalize_text_weight(
+            "label_weight": _normalize_text_weight(
                 getattr(state, "label_weight", "normal"),
                 default="normal",
             ),
-            "label_pad": self._normalize_text_pad(
+            "label_pad": _normalize_text_pad(
                 getattr(state, "label_pad", 6.0),
                 default=6.0,
                 max_value=60.0,
             ),
-            "title_color": self._normalize_color(
+            "title_color": _normalize_color(
                 getattr(state, "title_color", "#111827"),
                 "#111827",
             ),
-            "title_weight": self._normalize_text_weight(
+            "title_weight": _normalize_text_weight(
                 getattr(state, "title_weight", "bold"),
                 default="bold",
             ),
-            "title_pad": self._normalize_text_pad(
+            "title_pad": _normalize_text_pad(
                 getattr(state, "title_pad", 20.0),
                 default=20.0,
                 max_value=80.0,
             ),
             "legend_frame_on": bool(getattr(state, "legend_frame_on", True)),
-            "legend_frame_alpha": self._normalize_unit_interval(
+            "legend_frame_alpha": _normalize_unit_interval(
                 getattr(state, "legend_frame_alpha", self.DEFAULT_LEGEND_FRAME_ALPHA),
                 default=self.DEFAULT_LEGEND_FRAME_ALPHA,
             ),
-            "legend_frame_facecolor": self._normalize_color(
+            "legend_frame_facecolor": _normalize_color(
                 getattr(state, "legend_frame_facecolor", "#ffffff"),
                 "#ffffff",
             ),
-            "legend_frame_edgecolor": self._normalize_color(
+            "legend_frame_edgecolor": _normalize_color(
                 getattr(state, "legend_frame_edgecolor", "#cbd5f5"),
                 "#cbd5f5",
             ),
-            "adjust_text_force_text": self._normalize_adjust_text_pair(
+            "adjust_text_force_text": _normalize_adjust_text_pair(
                 getattr(state, "adjust_text_force_text", (0.8, 1.0)),
                 default=(0.8, 1.0),
                 min_value=0.0,
                 max_value=3.0,
             ),
-            "adjust_text_force_static": self._normalize_adjust_text_pair(
+            "adjust_text_force_static": _normalize_adjust_text_pair(
                 getattr(state, "adjust_text_force_static", (0.4, 0.6)),
                 default=(0.4, 0.6),
                 min_value=0.0,
                 max_value=3.0,
             ),
-            "adjust_text_expand": self._normalize_adjust_text_pair(
+            "adjust_text_expand": _normalize_adjust_text_pair(
                 getattr(state, "adjust_text_expand", (1.08, 1.20)),
                 default=(1.08, 1.20),
                 min_value=1.0,
                 max_value=2.5,
             ),
-            "adjust_text_iter_lim": self._normalize_adjust_text_iter_lim(
+            "adjust_text_iter_lim": _normalize_adjust_text_iter_lim(
                 getattr(state, "adjust_text_iter_lim", 120)
             ),
-            "adjust_text_time_lim": self._normalize_adjust_text_time_lim(
+            "adjust_text_time_lim": _normalize_adjust_text_time_lim(
                 getattr(state, "adjust_text_time_lim", 0.25)
             ),
             "show_kde": bool(getattr(state, "show_kde", False)),
@@ -315,13 +354,13 @@ class StateStore:
             "marginal_kde_right_size": float(getattr(state, "marginal_kde_right_size", 15.0)),
             "marginal_kde_max_points": int(getattr(state, "marginal_kde_max_points", 5000)),
             "marginal_kde_bw_adjust": float(getattr(state, "marginal_kde_bw_adjust", 1.0)),
-            "marginal_kde_bandwidth": self._normalize_kde_bandwidth(
+            "marginal_kde_bandwidth": _normalize_kde_bandwidth(
                 getattr(state, "marginal_kde_bandwidth", 0.0)
             ),
-            "marginal_kde_kernel": self._normalize_kde_kernel(
+            "marginal_kde_kernel": _normalize_kde_kernel(
                 getattr(state, "marginal_kde_kernel", self.MARGINAL_KDE_DEFAULT_KERNEL)
             ),
-            "marginal_kde_auto_bandwidth_method": self._normalize_kde_auto_bandwidth_method(
+            "marginal_kde_auto_bandwidth_method": _normalize_kde_auto_bandwidth_method(
                 getattr(
                     state,
                     "marginal_kde_auto_bandwidth_method",
@@ -332,7 +371,7 @@ class StateStore:
             "marginal_kde_cut": float(getattr(state, "marginal_kde_cut", 1.0)),
             "marginal_kde_log_transform": bool(getattr(state, "marginal_kde_log_transform", False)),
             "selected_indices": set(getattr(state, "selected_indices", set()) or set()),
-            "active_subset_indices": self._normalize_active_subset_indices(
+            "active_subset_indices": _normalize_active_subset_indices(
                 getattr(state, "active_subset_indices", None)
             ),
             "df_global": getattr(state, "df_global", None),
@@ -375,7 +414,7 @@ class StateStore:
             "ml_last_model_meta": getattr(state, "ml_last_model_meta", None),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
-            "visible_groups": self._normalize_visible_groups(getattr(state, "visible_groups", None)),
+            "visible_groups": _normalize_visible_groups(getattr(state, "visible_groups", None)),
             "selected_2d_cols": list(getattr(state, "selected_2d_cols", []) or []),
             "selected_3d_cols": list(getattr(state, "selected_3d_cols", []) or []),
             "selected_ternary_cols": list(getattr(state, "selected_ternary_cols", []) or []),
@@ -384,26 +423,26 @@ class StateStore:
             "selected_ternary_confirmed": bool(getattr(state, "selected_ternary_confirmed", False)),
             "standardize_data": bool(getattr(state, "standardize_data", True)),
             "initial_render_done": bool(getattr(state, "initial_render_done", False)),
-            "pca_component_indices": self._normalize_pca_component_indices(
+            "pca_component_indices": _normalize_pca_component_indices(
                 getattr(state, "pca_component_indices", None)
             ),
             "ternary_auto_zoom": bool(getattr(state, "ternary_auto_zoom", True)),
-            "ternary_limit_mode": self._normalize_ternary_limit_mode(
+            "ternary_limit_mode": _normalize_ternary_limit_mode(
                 getattr(state, "ternary_limit_mode", "min")
             ),
-            "ternary_limit_anchor": self._normalize_ternary_limit_anchor(
+            "ternary_limit_anchor": _normalize_ternary_limit_anchor(
                 getattr(state, "ternary_limit_anchor", "min")
             ),
-            "ternary_boundary_percent": self._normalize_ternary_boundary_percent(
+            "ternary_boundary_percent": _normalize_ternary_boundary_percent(
                 getattr(state, "ternary_boundary_percent", 5.0)
             ),
             "ternary_manual_limits_enabled": bool(
                 getattr(state, "ternary_manual_limits_enabled", False)
             ),
-            "ternary_manual_limits": self._normalize_ternary_manual_limits(
+            "ternary_manual_limits": _normalize_ternary_manual_limits(
                 getattr(state, "ternary_manual_limits", None)
             ),
-            "ternary_render_margin": self._normalize_ternary_render_margin(
+            "ternary_render_margin": _normalize_ternary_render_margin(
                 getattr(state, "ternary_render_margin", 0.002)
             ),
             "model_curve_width": float(getattr(state, "model_curve_width", 1.2)),
@@ -419,7 +458,7 @@ class StateStore:
                 else None
             ),
             "equation_overlays": list(getattr(state, "equation_overlays", []) or []),
-            "export_image_options": self._normalize_export_options(
+            "export_image_options": _normalize_export_options(
                 getattr(state, "export_image_options", None)
             ),
         }
@@ -439,35 +478,35 @@ class StateStore:
             self._snapshot["algorithm"] = str(action.get("algorithm", "UMAP") or "UMAP")
 
         elif action_type == "SET_UMAP_PARAMS":
-            self._snapshot["umap_params"] = self._normalize_algorithm_params(action.get("params"))
+            self._snapshot["umap_params"] = _normalize_algorithm_params(action.get("params"))
 
         elif action_type == "SET_TSNE_PARAMS":
-            self._snapshot["tsne_params"] = self._normalize_algorithm_params(action.get("params"))
+            self._snapshot["tsne_params"] = _normalize_algorithm_params(action.get("params"))
 
         elif action_type == "SET_PCA_PARAMS":
-            self._snapshot["pca_params"] = self._normalize_algorithm_params(action.get("params"))
+            self._snapshot["pca_params"] = _normalize_algorithm_params(action.get("params"))
 
         elif action_type == "SET_ROBUST_PCA_PARAMS":
-            self._snapshot["robust_pca_params"] = self._normalize_algorithm_params(
+            self._snapshot["robust_pca_params"] = _normalize_algorithm_params(
                 action.get("params")
             )
 
         elif action_type == "SET_ML_PARAMS":
-            self._snapshot["ml_params"] = self._normalize_algorithm_params(action.get("params"))
+            self._snapshot["ml_params"] = _normalize_algorithm_params(action.get("params"))
 
         elif action_type == "SET_V1V2_PARAMS":
-            self._snapshot["v1v2_params"] = self._normalize_algorithm_params(action.get("params"))
+            self._snapshot["v1v2_params"] = _normalize_algorithm_params(action.get("params"))
 
         elif action_type == "SET_PLOT_STYLE_GRID":
             self._snapshot["plot_style_grid"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_PLOT_MARKER_SIZE":
-            self._snapshot["plot_marker_size"] = self._normalize_plot_marker_size(
+            self._snapshot["plot_marker_size"] = _normalize_plot_marker_size(
                 action.get("size", 60)
             )
 
         elif action_type == "SET_PLOT_MARKER_ALPHA":
-            self._snapshot["plot_marker_alpha"] = self._normalize_plot_marker_alpha(
+            self._snapshot["plot_marker_alpha"] = _normalize_plot_marker_alpha(
                 action.get("alpha", 0.8)
             )
 
@@ -475,89 +514,89 @@ class StateStore:
             self._snapshot["show_plot_title"] = bool(action.get("show", False))
 
         elif action_type == "SET_PLOT_DPI":
-            self._snapshot["plot_dpi"] = self._normalize_plot_dpi(action.get("dpi", 130))
+            self._snapshot["plot_dpi"] = _normalize_plot_dpi(action.get("dpi", 130))
 
         elif action_type == "SET_CUSTOM_PRIMARY_FONT":
-            self._snapshot["custom_primary_font"] = self._normalize_font_name(
+            self._snapshot["custom_primary_font"] = _normalize_font_name(
                 action.get("font_name", "")
             )
 
         elif action_type == "SET_CUSTOM_CJK_FONT":
-            self._snapshot["custom_cjk_font"] = self._normalize_font_name(
+            self._snapshot["custom_cjk_font"] = _normalize_font_name(
                 action.get("font_name", "")
             )
 
         elif action_type == "SET_PLOT_FONT_SIZES":
-            self._snapshot["plot_font_sizes"] = self._normalize_plot_font_sizes(
+            self._snapshot["plot_font_sizes"] = _normalize_plot_font_sizes(
                 action.get("sizes")
             )
 
         elif action_type == "SET_PLOT_FACECOLOR":
-            self._snapshot["plot_facecolor"] = self._normalize_color(
+            self._snapshot["plot_facecolor"] = _normalize_color(
                 action.get("color", "#ffffff"),
                 "#ffffff",
             )
 
         elif action_type == "SET_AXES_FACECOLOR":
-            self._snapshot["axes_facecolor"] = self._normalize_color(
+            self._snapshot["axes_facecolor"] = _normalize_color(
                 action.get("color", "#ffffff"),
                 "#ffffff",
             )
 
         elif action_type == "SET_GRID_COLOR":
-            self._snapshot["grid_color"] = self._normalize_color(
+            self._snapshot["grid_color"] = _normalize_color(
                 action.get("color", "#e2e8f0"),
                 "#e2e8f0",
             )
 
         elif action_type == "SET_GRID_LINEWIDTH":
-            self._snapshot["grid_linewidth"] = self._normalize_style_linewidth(
+            self._snapshot["grid_linewidth"] = _normalize_style_linewidth(
                 action.get("width", 0.6),
                 default=0.6,
             )
 
         elif action_type == "SET_GRID_ALPHA":
-            self._snapshot["grid_alpha"] = self._normalize_unit_interval(
+            self._snapshot["grid_alpha"] = _normalize_unit_interval(
                 action.get("alpha", 0.7),
                 default=0.7,
             )
 
         elif action_type == "SET_GRID_LINESTYLE":
-            self._snapshot["grid_linestyle"] = self._normalize_grid_linestyle(
+            self._snapshot["grid_linestyle"] = _normalize_grid_linestyle(
                 action.get("linestyle", "--")
             )
 
         elif action_type == "SET_TICK_DIRECTION":
-            self._snapshot["tick_direction"] = self._normalize_tick_direction(
+            self._snapshot["tick_direction"] = _normalize_tick_direction(
                 action.get("direction", "out")
             )
 
         elif action_type == "SET_TICK_COLOR":
-            self._snapshot["tick_color"] = self._normalize_color(
+            self._snapshot["tick_color"] = _normalize_color(
                 action.get("color", "#1f2937"),
                 "#1f2937",
             )
 
         elif action_type == "SET_TICK_LENGTH":
-            self._snapshot["tick_length"] = self._normalize_tick_length(
+            self._snapshot["tick_length"] = _normalize_tick_length(
                 action.get("length", 4.0),
                 default=4.0,
             )
 
         elif action_type == "SET_TICK_WIDTH":
-            self._snapshot["tick_width"] = self._normalize_style_linewidth(
+            self._snapshot["tick_width"] = _normalize_style_linewidth(
                 action.get("width", 0.8),
                 default=0.8,
             )
 
         elif action_type == "SET_AXIS_LINEWIDTH":
-            self._snapshot["axis_linewidth"] = self._normalize_style_linewidth(
+            self._snapshot["axis_linewidth"] = _normalize_style_linewidth(
                 action.get("width", 1.0),
                 default=1.0,
             )
 
         elif action_type == "SET_AXIS_LINE_COLOR":
-            self._snapshot["axis_line_color"] = self._normalize_color(
+            self._snapshot["axis_line_color"] = _normalize_color(
                 action.get("color", "#1f2937"),
                 "#1f2937",
             )
@@ -566,13 +605,13 @@ class StateStore:
             self._snapshot["minor_ticks"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_MINOR_TICK_LENGTH":
-            self._snapshot["minor_tick_length"] = self._normalize_tick_length(
+            self._snapshot["minor_tick_length"] = _normalize_tick_length(
                 action.get("length", 2.5),
                 default=2.5,
             )
 
         elif action_type == "SET_MINOR_TICK_WIDTH":
-            self._snapshot["minor_tick_width"] = self._normalize_style_linewidth(
+            self._snapshot["minor_tick_width"] = _normalize_style_linewidth(
                 action.get("width", 0.6),
                 default=0.6,
             )
@@ -587,25 +626,25 @@ class StateStore:
             self._snapshot["minor_grid"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_MINOR_GRID_COLOR":
-            self._snapshot["minor_grid_color"] = self._normalize_color(
+            self._snapshot["minor_grid_color"] = _normalize_color(
                 action.get("color", "#e2e8f0"),
                 "#e2e8f0",
             )
 
         elif action_type == "SET_MINOR_GRID_LINEWIDTH":
-            self._snapshot["minor_grid_linewidth"] = self._normalize_style_linewidth(
+            self._snapshot["minor_grid_linewidth"] = _normalize_style_linewidth(
                 action.get("width", 0.4),
                 default=0.4,
             )
 
         elif action_type == "SET_MINOR_GRID_ALPHA":
-            self._snapshot["minor_grid_alpha"] = self._normalize_unit_interval(
+            self._snapshot["minor_grid_alpha"] = _normalize_unit_interval(
                 action.get("alpha", 0.4),
                 default=0.4,
             )
 
         elif action_type == "SET_MINOR_GRID_LINESTYLE":
-            self._snapshot["minor_grid_linestyle"] = self._normalize_grid_linestyle(
+            self._snapshot["minor_grid_linestyle"] = _normalize_grid_linestyle(
                 action.get("linestyle", ":")
             )
 
@@ -613,50 +652,50 @@ class StateStore:
             self._snapshot["scatter_show_edge"] = bool(action.get("show", True))
 
         elif action_type == "SET_SCATTER_EDGECOLOR":
-            self._snapshot["scatter_edgecolor"] = self._normalize_color(
+            self._snapshot["scatter_edgecolor"] = _normalize_color(
                 action.get("color", "#1e293b"),
                 "#1e293b",
             )
 
         elif action_type == "SET_SCATTER_EDGEWIDTH":
-            self._snapshot["scatter_edgewidth"] = self._normalize_style_linewidth(
+            self._snapshot["scatter_edgewidth"] = _normalize_style_linewidth(
                 action.get("width", 0.4),
                 default=0.4,
             )
 
         elif action_type == "SET_LABEL_COLOR":
-            self._snapshot["label_color"] = self._normalize_color(
+            self._snapshot["label_color"] = _normalize_color(
                 action.get("color", "#1f2937"),
                 "#1f2937",
             )
 
         elif action_type == "SET_LABEL_WEIGHT":
-            self._snapshot["label_weight"] = self._normalize_text_weight(
+            self._snapshot["label_weight"] = _normalize_text_weight(
                 action.get("weight", "normal"),
                 default="normal",
             )
 
         elif action_type == "SET_LABEL_PAD":
-            self._snapshot["label_pad"] = self._normalize_text_pad(
+            self._snapshot["label_pad"] = _normalize_text_pad(
                 action.get("pad", 6.0),
                 default=6.0,
                 max_value=60.0,
             )
 
         elif action_type == "SET_TITLE_COLOR":
-            self._snapshot["title_color"] = self._normalize_color(
+            self._snapshot["title_color"] = _normalize_color(
                 action.get("color", "#111827"),
                 "#111827",
             )
 
         elif action_type == "SET_TITLE_WEIGHT":
-            self._snapshot["title_weight"] = self._normalize_text_weight(
+            self._snapshot["title_weight"] = _normalize_text_weight(
                 action.get("weight", "bold"),
                 default="bold",
             )
 
         elif action_type == "SET_TITLE_PAD":
-            self._snapshot["title_pad"] = self._normalize_text_pad(
+            self._snapshot["title_pad"] = _normalize_text_pad(
                 action.get("pad", 20.0),
                 default=20.0,
                 max_value=80.0,
@@ -666,25 +705,25 @@ class StateStore:
             self._snapshot["legend_frame_on"] = bool(action.get("enabled", True))
 
         elif action_type == "SET_LEGEND_FRAME_ALPHA":
-            self._snapshot["legend_frame_alpha"] = self._normalize_unit_interval(
+            self._snapshot["legend_frame_alpha"] = _normalize_unit_interval(
                 action.get("alpha", self.DEFAULT_LEGEND_FRAME_ALPHA),
                 default=self.DEFAULT_LEGEND_FRAME_ALPHA,
             )
 
         elif action_type == "SET_LEGEND_FRAME_FACECOLOR":
-            self._snapshot["legend_frame_facecolor"] = self._normalize_color(
+            self._snapshot["legend_frame_facecolor"] = _normalize_color(
                 action.get("color", "#ffffff"),
                 "#ffffff",
             )
 
         elif action_type == "SET_LEGEND_FRAME_EDGECOLOR":
-            self._snapshot["legend_frame_edgecolor"] = self._normalize_color(
+            self._snapshot["legend_frame_edgecolor"] = _normalize_color(
                 action.get("color", "#cbd5f5"),
                 "#cbd5f5",
             )
 
         elif action_type == "SET_ADJUST_TEXT_FORCE_TEXT":
-            self._snapshot["adjust_text_force_text"] = self._normalize_adjust_text_pair(
+            self._snapshot["adjust_text_force_text"] = _normalize_adjust_text_pair(
                 action.get("force", (0.8, 1.0)),
                 default=(0.8, 1.0),
                 min_value=0.0,
@@ -692,7 +731,7 @@ class StateStore:
             )
 
         elif action_type == "SET_ADJUST_TEXT_FORCE_STATIC":
-            self._snapshot["adjust_text_force_static"] = self._normalize_adjust_text_pair(
+            self._snapshot["adjust_text_force_static"] = _normalize_adjust_text_pair(
                 action.get("force", (0.4, 0.6)),
                 default=(0.4, 0.6),
                 min_value=0.0,
@@ -700,7 +739,7 @@ class StateStore:
             )
 
         elif action_type == "SET_ADJUST_TEXT_EXPAND":
-            self._snapshot["adjust_text_expand"] = self._normalize_adjust_text_pair(
+            self._snapshot["adjust_text_expand"] = _normalize_adjust_text_pair(
                 action.get("expand", (1.08, 1.20)),
                 default=(1.08, 1.20),
                 min_value=1.0,
@@ -708,12 +747,12 @@ class StateStore:
             )
 
         elif action_type == "SET_ADJUST_TEXT_ITER_LIM":
-            self._snapshot["adjust_text_iter_lim"] = self._normalize_adjust_text_iter_lim(
+            self._snapshot["adjust_text_iter_lim"] = _normalize_adjust_text_iter_lim(
                 action.get("iter_lim", 120)
             )
 
         elif action_type == "SET_ADJUST_TEXT_TIME_LIM":
-            self._snapshot["adjust_text_time_lim"] = self._normalize_adjust_text_time_lim(
+            self._snapshot["adjust_text_time_lim"] = _normalize_adjust_text_time_lim(
                 action.get("time_lim", 0.25)
             )
 
@@ -863,9 +902,9 @@ class StateStore:
             top_size = action.get("top_size")
             right_size = action.get("right_size")
             if top_size is not None:
-                self._snapshot["marginal_kde_top_size"] = self._normalize_marginal_size(top_size)
+                self._snapshot["marginal_kde_top_size"] = _normalize_marginal_size(top_size)
             if right_size is not None:
-                self._snapshot["marginal_kde_right_size"] = self._normalize_marginal_size(right_size)
+                self._snapshot["marginal_kde_right_size"] = _normalize_marginal_size(right_size)
 
         elif action_type == "SET_MARGINAL_KDE_COMPUTE_OPTIONS":
             max_points = action.get("max_points")
@@ -878,21 +917,21 @@ class StateStore:
             log_transform = action.get("log_transform")
 
             if max_points is not None:
-                self._snapshot["marginal_kde_max_points"] = self._normalize_max_points(max_points)
+                self._snapshot["marginal_kde_max_points"] = _normalize_max_points(max_points)
             if bw_adjust is not None:
-                self._snapshot["marginal_kde_bw_adjust"] = self._normalize_bw_adjust(bw_adjust)
+                self._snapshot["marginal_kde_bw_adjust"] = _normalize_bw_adjust(bw_adjust)
             if bandwidth is not None:
-                self._snapshot["marginal_kde_bandwidth"] = self._normalize_kde_bandwidth(bandwidth)
+                self._snapshot["marginal_kde_bandwidth"] = _normalize_kde_bandwidth(bandwidth)
             if kernel is not None:
-                self._snapshot["marginal_kde_kernel"] = self._normalize_kde_kernel(kernel)
+                self._snapshot["marginal_kde_kernel"] = _normalize_kde_kernel(kernel)
             if auto_bandwidth_method is not None:
                 self._snapshot["marginal_kde_auto_bandwidth_method"] = (
-                    self._normalize_kde_auto_bandwidth_method(auto_bandwidth_method)
+                    _normalize_kde_auto_bandwidth_method(auto_bandwidth_method)
                 )
             if gridsize is not None:
-                self._snapshot["marginal_kde_gridsize"] = self._normalize_gridsize(gridsize)
+                self._snapshot["marginal_kde_gridsize"] = _normalize_gridsize(gridsize)
             if cut is not None:
-                self._snapshot["marginal_kde_cut"] = self._normalize_cut(cut)
+                self._snapshot["marginal_kde_cut"] = _normalize_cut(cut)
             if log_transform is not None:
                 self._snapshot["marginal_kde_log_transform"] = bool(log_transform)
 
@@ -984,20 +1023,20 @@ class StateStore:
             self._snapshot["preserve_import_render_mode"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_SELECTED_INDICES":
-            indices = self._to_index_set(action.get("indices", []))
+            indices = _to_index_set(action.get("indices", []))
             self._snapshot["selected_indices"] = indices
 
         elif action_type == "SET_ACTIVE_SUBSET_INDICES":
-            self._snapshot["active_subset_indices"] = self._normalize_active_subset_indices(
+            self._snapshot["active_subset_indices"] = _normalize_active_subset_indices(
                 action.get("indices")
             )
 
         elif action_type == "ADD_SELECTED_INDICES":
-            indices = self._to_index_set(action.get("indices", []))
+            indices = _to_index_set(action.get("indices", []))
             self._snapshot["selected_indices"].update(indices)
 
         elif action_type == "REMOVE_SELECTED_INDICES":
-            indices = self._to_index_set(action.get("indices", []))
+            indices = _to_index_set(action.get("indices", []))
             for index in indices:
                 self._snapshot["selected_indices"].discard(index)
 
@@ -1066,7 +1105,7 @@ class StateStore:
             self._snapshot["initial_render_done"] = bool(action.get("done", False))
 
         elif action_type == "SET_PCA_COMPONENT_INDICES":
-            self._snapshot["pca_component_indices"] = self._normalize_pca_component_indices(
+            self._snapshot["pca_component_indices"] = _normalize_pca_component_indices(
                 action.get("indices")
             )
 
@@ -1074,17 +1113,17 @@ class StateStore:
             self._snapshot["ternary_auto_zoom"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_TERNARY_LIMIT_MODE":
-            self._snapshot["ternary_limit_mode"] = self._normalize_ternary_limit_mode(
+            self._snapshot["ternary_limit_mode"] = _normalize_ternary_limit_mode(
                 action.get("mode")
             )
 
         elif action_type == "SET_TERNARY_LIMIT_ANCHOR":
-            self._snapshot["ternary_limit_anchor"] = self._normalize_ternary_limit_anchor(
+            self._snapshot["ternary_limit_anchor"] = _normalize_ternary_limit_anchor(
                 action.get("anchor")
             )
 
         elif action_type == "SET_TERNARY_BOUNDARY_PERCENT":
-            self._snapshot["ternary_boundary_percent"] = self._normalize_ternary_boundary_percent(
+            self._snapshot["ternary_boundary_percent"] = _normalize_ternary_boundary_percent(
                 action.get("percent")
             )
 
@@ -1092,12 +1131,12 @@ class StateStore:
             self._snapshot["ternary_manual_limits_enabled"] = bool(action.get("enabled", False))
 
         elif action_type == "SET_TERNARY_MANUAL_LIMITS":
-            self._snapshot["ternary_manual_limits"] = self._normalize_ternary_manual_limits(
+            self._snapshot["ternary_manual_limits"] = _normalize_ternary_manual_limits(
                 action.get("limits")
             )
 
         elif action_type == "SET_TERNARY_RENDER_MARGIN":
-            self._snapshot["ternary_render_margin"] = self._normalize_ternary_render_margin(
+            self._snapshot["ternary_render_margin"] = _normalize_ternary_render_margin(
                 action.get("margin")
             )
 
@@ -1148,7 +1187,7 @@ class StateStore:
                 self._snapshot["visible_groups"] = filtered if filtered else None
 
         elif action_type == "SET_VISIBLE_GROUPS":
-            self._snapshot["visible_groups"] = self._normalize_visible_groups(action.get("groups"))
+            self._snapshot["visible_groups"] = _normalize_visible_groups(action.get("groups"))
 
         elif action_type == "SET_EXPORT_IMAGE_OPTIONS":
             merged = dict(self._snapshot["export_image_options"])
@@ -1156,7 +1195,7 @@ class StateStore:
             for key, value in payload.items():
                 if value is not None:
                     merged[key] = value
-            self._snapshot["export_image_options"] = self._normalize_export_options(merged)
+            self._snapshot["export_image_options"] = _normalize_export_options(merged)
 
         self._sync_state()
         return self.snapshot()
@@ -1290,7 +1329,7 @@ class StateStore:
             "marginal_kde_cut": float(self._snapshot["marginal_kde_cut"]),
             "marginal_kde_log_transform": bool(self._snapshot["marginal_kde_log_transform"]),
             "selected_indices": set(self._snapshot["selected_indices"]),
-            "active_subset_indices": self._normalize_active_subset_indices(
+            "active_subset_indices": _normalize_active_subset_indices(
                 self._snapshot["active_subset_indices"]
             ),
             "df_global": self._snapshot["df_global"],
@@ -1333,7 +1372,7 @@ class StateStore:
             "ml_last_model_meta": self._snapshot["ml_last_model_meta"],
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),
             "available_groups": list(self._snapshot["available_groups"]),
-            "visible_groups": self._normalize_visible_groups(self._snapshot["visible_groups"]),
+            "visible_groups": _normalize_visible_groups(self._snapshot["visible_groups"]),
             "selected_2d_cols": list(self._snapshot["selected_2d_cols"]),
             "selected_3d_cols": list(self._snapshot["selected_3d_cols"]),
             "selected_ternary_cols": list(self._snapshot["selected_ternary_cols"]),
@@ -1366,481 +1405,7 @@ class StateStore:
         }
 
     def _sync_state(self) -> None:
-        render_mode = str(self._snapshot["render_mode"])
-        self._state.render_mode = render_mode
-        algorithm = str(self._snapshot["algorithm"])
-        if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
-            algorithm = render_mode
-            self._snapshot["algorithm"] = algorithm
-        self._state.algorithm = algorithm
+        sync_state_store_to_app(self._state, self._snapshot)
 
-        # Detect unsynchronized in-place dict mutations before overwriting.
-        # If any of these differ from the snapshot, a state_gateway.set_*_params()
-        # call was missed after an in-place modification — log a warning so the
-        # regression is visible in logs before it manifests as a user-facing bug.
-        _WATCHED_DICT_FIELDS = (
-            ("umap_params", self._state.umap_params),
-            ("tsne_params", self._state.tsne_params),
-            ("pca_params", self._state.pca_params),
-            ("robust_pca_params", self._state.robust_pca_params),
-            ("ml_params", self._state.ml_params),
-            ("v1v2_params", self._state.v1v2_params),
-        )
-        for name, current in _WATCHED_DICT_FIELDS:
-            snap = self._snapshot.get(name)
-            if isinstance(snap, dict) and isinstance(current, dict):
-                if current != snap:
-                    logger.warning(
-                        "_sync_state overwriting %s: snapshot differs from live state. "
-                        "Missing state_gateway.set_%s() after in-place mutation?",
-                        name, name,
-                    )
 
-        self._state.umap_params = dict(self._snapshot["umap_params"])
-        self._state.tsne_params = dict(self._snapshot["tsne_params"])
-        self._state.pca_params = dict(self._snapshot["pca_params"])
-        self._state.robust_pca_params = dict(self._snapshot["robust_pca_params"])
-        self._state.ml_params = dict(self._snapshot["ml_params"])
-        self._state.v1v2_params = dict(self._snapshot["v1v2_params"])
-        self._state.plot_style_grid = bool(self._snapshot["plot_style_grid"])
-        self._state.plot_marker_size = int(self._snapshot["plot_marker_size"])
-        self._state.plot_marker_alpha = float(self._snapshot["plot_marker_alpha"])
-        self._state.show_plot_title = bool(self._snapshot["show_plot_title"])
-        self._state.plot_dpi = int(self._snapshot["plot_dpi"])
-        self._state.custom_primary_font = str(self._snapshot["custom_primary_font"])
-        self._state.custom_cjk_font = str(self._snapshot["custom_cjk_font"])
-        self._state.plot_font_sizes = dict(self._snapshot["plot_font_sizes"])
-        self._state.plot_facecolor = str(self._snapshot["plot_facecolor"])
-        self._state.axes_facecolor = str(self._snapshot["axes_facecolor"])
-        self._state.grid_color = str(self._snapshot["grid_color"])
-        self._state.grid_linewidth = float(self._snapshot["grid_linewidth"])
-        self._state.grid_alpha = float(self._snapshot["grid_alpha"])
-        self._state.grid_linestyle = str(self._snapshot["grid_linestyle"])
-        self._state.tick_direction = str(self._snapshot["tick_direction"])
-        self._state.tick_color = str(self._snapshot["tick_color"])
-        self._state.tick_length = float(self._snapshot["tick_length"])
-        self._state.tick_width = float(self._snapshot["tick_width"])
-        self._state.axis_linewidth = float(self._snapshot["axis_linewidth"])
-        self._state.axis_line_color = str(self._snapshot["axis_line_color"])
-        self._state.minor_ticks = bool(self._snapshot["minor_ticks"])
-        self._state.minor_tick_length = float(self._snapshot["minor_tick_length"])
-        self._state.minor_tick_width = float(self._snapshot["minor_tick_width"])
-        self._state.show_top_spine = bool(self._snapshot["show_top_spine"])
-        self._state.show_right_spine = bool(self._snapshot["show_right_spine"])
-        self._state.minor_grid = bool(self._snapshot["minor_grid"])
-        self._state.minor_grid_color = str(self._snapshot["minor_grid_color"])
-        self._state.minor_grid_linewidth = float(self._snapshot["minor_grid_linewidth"])
-        self._state.minor_grid_alpha = float(self._snapshot["minor_grid_alpha"])
-        self._state.minor_grid_linestyle = str(self._snapshot["minor_grid_linestyle"])
-        self._state.scatter_show_edge = bool(self._snapshot["scatter_show_edge"])
-        self._state.scatter_edgecolor = str(self._snapshot["scatter_edgecolor"])
-        self._state.scatter_edgewidth = float(self._snapshot["scatter_edgewidth"])
-        self._state.label_color = str(self._snapshot["label_color"])
-        self._state.label_weight = str(self._snapshot["label_weight"])
-        self._state.label_pad = float(self._snapshot["label_pad"])
-        self._state.title_color = str(self._snapshot["title_color"])
-        self._state.title_weight = str(self._snapshot["title_weight"])
-        self._state.title_pad = float(self._snapshot["title_pad"])
-        self._state.legend.legend_frame_on = bool(self._snapshot["legend_frame_on"])
-        self._state.legend.legend_frame_alpha = float(self._snapshot["legend_frame_alpha"])
-        self._state.legend.legend_frame_facecolor = str(self._snapshot["legend_frame_facecolor"])
-        self._state.legend.legend_frame_edgecolor = str(self._snapshot["legend_frame_edgecolor"])
-        self._state.adjust_text_force_text = tuple(self._snapshot["adjust_text_force_text"])
-        self._state.adjust_text_force_static = tuple(self._snapshot["adjust_text_force_static"])
-        self._state.adjust_text_expand = tuple(self._snapshot["adjust_text_expand"])
-        self._state.adjust_text_iter_lim = int(self._snapshot["adjust_text_iter_lim"])
-        self._state.adjust_text_time_lim = float(self._snapshot["adjust_text_time_lim"])
-        self._state.show_kde = bool(self._snapshot["show_kde"])
-        self._state.show_marginal_kde = bool(self._snapshot["show_marginal_kde"])
-        self._state.overlay.show_equation_overlays = bool(self._snapshot["show_equation_overlays"])
-        self._state.overlay.geo_model_name = str(self._snapshot["geo_model_name"])
-        self._state.paleo_label_refreshing = bool(self._snapshot["paleo_label_refreshing"])
-        self._state.overlay_label_refreshing = bool(self._snapshot["overlay_label_refreshing"])
-        self._state.overlay.overlay_curve_label_data = list(self._snapshot["overlay_curve_label_data"])
-        self._state.overlay.paleoisochron_label_data = list(self._snapshot["paleoisochron_label_data"])
-        self._state.overlay.plumbotectonics_label_data = list(
-            self._snapshot["plumbotectonics_label_data"]
-        )
-        self._state.overlay.plumbotectonics_isoage_label_data = list(
-            self._snapshot["plumbotectonics_isoage_label_data"]
-        )
-        self._state.overlay.overlay_artists = dict(self._snapshot["overlay_artists"])
-        self._state.last_embedding = self._snapshot["last_embedding"]
-        self._state.last_embedding_type = str(self._snapshot["last_embedding_type"])
-        self._state.overlay.selected_isochron_data = self._snapshot["selected_isochron_data"]
-        self._state.embedding_task_token = int(self._snapshot["embedding_task_token"])
-        self._state.embedding_task_running = bool(self._snapshot["embedding_task_running"])
-        self._state.marginal_axes = self._snapshot["marginal_axes"]
-        self._state.last_pca_variance = self._snapshot["last_pca_variance"]
-        self._state.last_pca_components = self._snapshot["last_pca_components"]
-        self._state.current_feature_names = self._snapshot["current_feature_names"]
-        self._state.adjust_text_in_progress = bool(self._snapshot["adjust_text_in_progress"])
-        self._state.confidence_level = float(self._snapshot["confidence_level"])
-        self._state.current_palette = dict(self._snapshot["current_palette"])
-        self._state.group_marker_map = dict(self._snapshot["group_marker_map"])
-        self._state.current_plot_title = str(self._snapshot["current_plot_title"])
-        self._state.last_2d_cols = (
-            list(self._snapshot["last_2d_cols"])
-            if self._snapshot["last_2d_cols"] is not None
-            else None
-        )
-        self._state.overlay.show_model_curves = bool(self._snapshot["show_model_curves"])
-        self._state.overlay.show_plumbotectonics_curves = bool(
-            self._snapshot["show_plumbotectonics_curves"]
-        )
-        self._state.overlay.show_paleoisochrons = bool(self._snapshot["show_paleoisochrons"])
-        self._state.overlay.show_model_age_lines = bool(self._snapshot["show_model_age_lines"])
-        self._state.overlay.show_growth_curves = bool(self._snapshot["show_growth_curves"])
-        self._state.overlay.show_isochrons = bool(self._snapshot["show_isochrons"])
-        self._state.overlay.isochron_error_mode = str(self._snapshot["isochron_error_mode"])
-        self._state.overlay.isochron_sx_col = str(self._snapshot["isochron_sx_col"])
-        self._state.overlay.isochron_sy_col = str(self._snapshot["isochron_sy_col"])
-        self._state.overlay.isochron_rxy_col = str(self._snapshot["isochron_rxy_col"])
-        self._state.overlay.isochron_sx_value = float(self._snapshot["isochron_sx_value"])
-        self._state.overlay.isochron_sy_value = float(self._snapshot["isochron_sy_value"])
-        self._state.overlay.isochron_rxy_value = float(self._snapshot["isochron_rxy_value"])
-        self._state.overlay.isochron_results = dict(self._snapshot["isochron_results"])
-        self._state.overlay.plumbotectonics_group_visibility = dict(
-            self._snapshot["plumbotectonics_group_visibility"]
-        )
-        self._state.overlay.use_real_age_for_mu_kappa = bool(
-            self._snapshot["use_real_age_for_mu_kappa"]
-        )
-        self._state.overlay.mu_kappa_age_col = self._snapshot["mu_kappa_age_col"]
-        self._state.overlay.plumbotectonics_variant = str(self._snapshot["plumbotectonics_variant"])
-        self._state.overlay.paleoisochron_min_age = int(self._snapshot["paleoisochron_min_age"])
-        self._state.overlay.paleoisochron_max_age = int(self._snapshot["paleoisochron_max_age"])
-        self._state.overlay.paleoisochron_step = int(self._snapshot["paleoisochron_step"])
-        self._state.overlay.paleoisochron_ages = list(self._snapshot["paleoisochron_ages"])
-        self._state.draw_selection_ellipse = bool(self._snapshot["draw_selection_ellipse"])
-        self._state.marginal_kde_top_size = float(self._snapshot["marginal_kde_top_size"])
-        self._state.marginal_kde_right_size = float(self._snapshot["marginal_kde_right_size"])
-        self._state.marginal_kde_max_points = int(self._snapshot["marginal_kde_max_points"])
-        self._state.marginal_kde_bw_adjust = float(self._snapshot["marginal_kde_bw_adjust"])
-        self._state.marginal_kde_bandwidth = float(self._snapshot["marginal_kde_bandwidth"])
-        self._state.marginal_kde_kernel = str(self._snapshot["marginal_kde_kernel"])
-        self._state.marginal_kde_auto_bandwidth_method = str(
-            self._snapshot["marginal_kde_auto_bandwidth_method"]
-        )
-        self._state.marginal_kde_gridsize = int(self._snapshot["marginal_kde_gridsize"])
-        self._state.marginal_kde_cut = float(self._snapshot["marginal_kde_cut"])
-        self._state.marginal_kde_log_transform = bool(self._snapshot["marginal_kde_log_transform"])
-
-        self._state.selected_indices = set(self._snapshot["selected_indices"])
-        self._state.active_subset_indices = self._normalize_active_subset_indices(
-            self._snapshot["active_subset_indices"]
-        )
-        self._state.df_global = self._snapshot["df_global"]
-        self._state.file_path = self._snapshot["file_path"]
-        self._state.sheet_name = self._snapshot["sheet_name"]
-        self._state.data_version = int(self._snapshot["data_version"])
-        self._state.group_cols = list(self._snapshot["group_cols"])
-        self._state.data_cols = list(self._snapshot["data_cols"])
-        self._state.last_group_col = self._snapshot["last_group_col"]
-        self._state.selection_mode = bool(self._snapshot["selection_mode"])
-        self._state.selection_tool = self._snapshot["selection_tool"]
-        self._state.point_size = int(self._snapshot["point_size"])
-        self._state.show_tooltip = bool(self._snapshot["show_tooltip"])
-        self._state.tooltip_columns = list(self._snapshot["tooltip_columns"])
-        self._state.ui_theme = str(self._snapshot["ui_theme"])
-        self._state.language = str(self._snapshot["language"])
-        self._state.color_scheme = str(self._snapshot["color_scheme"])
-        self._state.legend.legend_position = self._snapshot["legend_position"]
-        self._state.legend.legend_location = self._snapshot["legend_location"]
-        self._state.legend.legend_display_mode = str(self._snapshot["legend_display_mode"])
-        self._state.legend.legend_columns = int(self._snapshot["legend_columns"])
-        self._state.legend.legend_nudge_step = float(self._snapshot["legend_nudge_step"])
-        self._state.legend.legend_offset = tuple(self._snapshot["legend_offset"])
-        self._state.legend.hidden_groups = set(self._snapshot["hidden_groups"])
-        self._state.legend.legend_last_title = self._snapshot["legend_last_title"]
-        self._state.legend.legend_last_handles = self._snapshot["legend_last_handles"]
-        self._state.legend.legend_last_labels = self._snapshot["legend_last_labels"]
-        self._state.recent_files = list(self._snapshot["recent_files"])
-        self._state.overlay.line_styles = dict(self._snapshot["line_styles"])
-        self._state.saved_themes = dict(self._snapshot["saved_themes"])
-        self._state.custom_palettes = dict(self._snapshot["custom_palettes"])
-        self._state.custom_shape_sets = dict(self._snapshot["custom_shape_sets"])
-        self._state.legend_item_order = list(self._snapshot["legend_item_order"])
-        self._state.mixing_endmembers = dict(self._snapshot["mixing_endmembers"])
-        self._state.mixing_mixtures = dict(self._snapshot["mixing_mixtures"])
-        self._state.ternary_ranges = dict(self._snapshot["ternary_ranges"])
-        self._state.kde_style = dict(self._snapshot["kde_style"])
-        self._state.marginal_kde_style = dict(self._snapshot["marginal_kde_style"])
-        self._state.ml_last_result = self._snapshot["ml_last_result"]
-        self._state.ml_last_model_meta = self._snapshot["ml_last_model_meta"]
-        self._state.preserve_import_render_mode = bool(self._snapshot["preserve_import_render_mode"])
-        self._state.available_groups = list(self._snapshot["available_groups"])
-        self._state.visible_groups = self._normalize_visible_groups(self._snapshot["visible_groups"])
-        self._state.selected_2d_cols = list(self._snapshot["selected_2d_cols"])
-        self._state.selected_3d_cols = list(self._snapshot["selected_3d_cols"])
-        self._state.selected_ternary_cols = list(self._snapshot["selected_ternary_cols"])
-        self._state.selected_2d_confirmed = bool(self._snapshot["selected_2d_confirmed"])
-        self._state.selected_3d_confirmed = bool(self._snapshot["selected_3d_confirmed"])
-        self._state.selected_ternary_confirmed = bool(self._snapshot["selected_ternary_confirmed"])
-        self._state.standardize_data = bool(self._snapshot["standardize_data"])
-        self._state.initial_render_done = bool(self._snapshot["initial_render_done"])
-        self._state.pca_component_indices = list(self._snapshot["pca_component_indices"])
-        self._state.ternary_auto_zoom = bool(self._snapshot["ternary_auto_zoom"])
-        self._state.ternary_limit_mode = str(self._snapshot["ternary_limit_mode"])
-        self._state.ternary_limit_anchor = str(self._snapshot["ternary_limit_anchor"])
-        self._state.ternary_boundary_percent = float(self._snapshot["ternary_boundary_percent"])
-        self._state.ternary_manual_limits_enabled = bool(self._snapshot["ternary_manual_limits_enabled"])
-        self._state.ternary_manual_limits = dict(self._snapshot["ternary_manual_limits"])
-        self._state.overlay.model_curve_width = float(self._snapshot["model_curve_width"])
-        self._state.overlay.plumbotectonics_curve_width = float(
-            self._snapshot["plumbotectonics_curve_width"]
-        )
-        self._state.overlay.paleoisochron_width = float(self._snapshot["paleoisochron_width"])
-        self._state.overlay.model_age_line_width = float(self._snapshot["model_age_line_width"])
-        self._state.overlay.isochron_line_width = float(self._snapshot["isochron_line_width"])
-        self._state.selected_isochron_line_width = float(self._snapshot["selected_isochron_line_width"])
-        self._state.overlay.isochron_label_options = dict(self._snapshot["isochron_label_options"])
-        self._state.overlay.model_curve_models = (
-            list(self._snapshot["model_curve_models"])
-            if self._snapshot["model_curve_models"] is not None
-            else None
-        )
-        self._state.overlay.equation_overlays = list(self._snapshot["equation_overlays"])
-        self._state.export_image_options = dict(self._snapshot["export_image_options"])
-
-    @classmethod
-    def _normalize_export_options(cls, options: Any) -> dict[str, Any]:
-        merged = dict(cls.DEFAULT_EXPORT_IMAGE_OPTIONS)
-        if isinstance(options, dict):
-            merged.update(options)
-
-        merged["preset_key"] = str(merged.get("preset_key") or "science_single")
-        merged["image_ext"] = str(merged.get("image_ext") or "png").lower().strip(".")
-        merged["dpi"] = max(cls.MIN_EXPORT_DPI, int(merged.get("dpi", 400)))
-        merged["bbox_tight"] = bool(merged.get("bbox_tight", True))
-        merged["pad_inches"] = max(0.0, float(merged.get("pad_inches", 0.02)))
-        merged["transparent"] = bool(merged.get("transparent", False))
-
-        point_size = merged.get("point_size")
-        legend_size = merged.get("legend_size")
-        merged["point_size"] = int(point_size) if point_size is not None else None
-        merged["legend_size"] = int(legend_size) if legend_size is not None else None
-        return merged
-
-    @staticmethod
-    def _to_index_set(indices: Any) -> set[int]:
-        if indices is None:
-            return set()
-        if isinstance(indices, set):
-            return {int(v) for v in indices}
-        if isinstance(indices, Iterable) and not isinstance(indices, (str, bytes)):
-            return {int(v) for v in indices}
-        return {int(indices)}
-
-    @staticmethod
-    def _normalize_visible_groups(groups: Any) -> list[str] | None:
-        if groups is None:
-            return None
-        if isinstance(groups, Iterable) and not isinstance(groups, (str, bytes)):
-            out = [str(group) for group in groups]
-            return out if out else None
-        return [str(groups)]
-
-    @staticmethod
-    def _normalize_active_subset_indices(indices: Any) -> set[int] | None:
-        if indices is None:
-            return None
-        if isinstance(indices, Iterable) and not isinstance(indices, (str, bytes)):
-            normalized = {int(v) for v in indices}
-            return normalized if normalized else set()
-        return {int(indices)}
-
-    @staticmethod
-    def _normalize_algorithm_params(params: Any) -> dict[str, Any]:
-        if isinstance(params, dict):
-            return dict(params)
-        if params is None:
-            return {}
-        try:
-            return dict(params)
-        except Exception:
-            return {}
-
-    @staticmethod
-    def _normalize_plot_marker_size(value: Any) -> int:
-        return max(1, min(int(value), 2000))
-
-    @staticmethod
-    def _normalize_plot_marker_alpha(value: Any) -> float:
-        return max(0.0, min(float(value), 1.0))
-
-    @staticmethod
-    def _normalize_plot_dpi(value: Any) -> int:
-        return max(StateStore.MIN_EXPORT_DPI, min(int(value), 1200))
-
-    @staticmethod
-    def _normalize_font_name(value: Any) -> str:
-        return str(value or "").strip()
-
-    @classmethod
-    def _normalize_plot_font_sizes(cls, sizes: Any) -> dict[str, int]:
-        merged = dict(cls.DEFAULT_PLOT_FONT_SIZES)
-        if isinstance(sizes, dict):
-            for key in merged:
-                if key not in sizes or sizes.get(key) is None:
-                    continue
-                merged[key] = max(6, min(int(sizes[key]), 72))
-        return merged
-
-    @staticmethod
-    def _normalize_color(value: Any, default: str) -> str:
-        text = str(value or "").strip()
-        return text if text else default
-
-    @staticmethod
-    def _normalize_style_linewidth(value: Any, *, default: float) -> float:
-        return max(0.0, min(float(value if value is not None else default), 10.0))
-
-    @staticmethod
-    def _normalize_unit_interval(value: Any, *, default: float) -> float:
-        return max(0.0, min(float(value if value is not None else default), 1.0))
-
-    @staticmethod
-    def _normalize_grid_linestyle(value: Any) -> str:
-        text = str(value or "--").strip()
-        return text if text in ("-", "--", "-.", ":") else "--"
-
-    @staticmethod
-    def _normalize_tick_direction(value: Any) -> str:
-        text = str(value or "out").strip().lower()
-        return text if text in ("in", "out", "inout") else "out"
-
-    @staticmethod
-    def _normalize_tick_length(value: Any, *, default: float) -> float:
-        return max(0.0, min(float(value if value is not None else default), 20.0))
-
-    @staticmethod
-    def _normalize_text_weight(value: Any, *, default: str) -> str:
-        text = str(value or default).strip().lower()
-        return text if text in ("normal", "bold") else default
-
-    @staticmethod
-    def _normalize_text_pad(value: Any, *, default: float, max_value: float) -> float:
-        return max(0.0, min(float(value if value is not None else default), max_value))
-
-    @staticmethod
-    def _normalize_adjust_text_pair(
-        value: Any,
-        *,
-        default: tuple[float, float],
-        min_value: float,
-        max_value: float,
-    ) -> tuple[float, float]:
-        values: list[float] = []
-        if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
-            for item in value:
-                try:
-                    values.append(float(item))
-                except Exception:
-                    values.append(0.0)
-                if len(values) >= 2:
-                    break
-        if not values:
-            values = [default[0], default[1]]
-        elif len(values) == 1:
-            values = [values[0], default[1]]
-        return (
-            max(min_value, min(values[0], max_value)),
-            max(min_value, min(values[1], max_value)),
-        )
-
-    @staticmethod
-    def _normalize_adjust_text_iter_lim(value: Any) -> int:
-        return max(StateStore._ADJUST_TEXT_ITER_MIN, min(int(value), StateStore._ADJUST_TEXT_ITER_MAX))
-
-    @staticmethod
-    def _normalize_adjust_text_time_lim(value: Any) -> float:
-        return max(StateStore._ADJUST_TEXT_TIME_MIN, min(float(value), StateStore._ADJUST_TEXT_TIME_MAX))
-
-    @staticmethod
-    def _normalize_marginal_size(value: Any) -> float:
-        return max(StateStore._MARGINAL_SIZE_MIN, min(float(value), StateStore._MARGINAL_SIZE_MAX))
-
-    @staticmethod
-    def _normalize_max_points(value: Any) -> int:
-        return max(StateStore._MAX_POINTS_MIN, min(int(value), StateStore._MAX_POINTS_MAX))
-
-    @staticmethod
-    def _normalize_bw_adjust(value: Any) -> float:
-        return max(StateStore._BW_ADJUST_MIN, min(float(value), StateStore._BW_ADJUST_MAX))
-
-    @staticmethod
-    def _normalize_kde_bandwidth(value: Any) -> float:
-        if value is None:
-            return StateStore._KDE_BW_MIN
-        return max(StateStore._KDE_BW_MIN, min(float(value), StateStore._KDE_BW_MAX))
-
-    @classmethod
-    def _normalize_kde_kernel(cls, value: Any) -> str:
-        text = str(value or cls.MARGINAL_KDE_DEFAULT_KERNEL).strip().lower()
-        return text if text in cls.MARGINAL_KDE_ALLOWED_KERNELS else cls.MARGINAL_KDE_DEFAULT_KERNEL
-
-    @classmethod
-    def _normalize_kde_auto_bandwidth_method(cls, value: Any) -> str:
-        text = str(value or cls.MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD).strip().lower()
-        return (
-            text
-            if text in cls.MARGINAL_KDE_ALLOWED_AUTO_BANDWIDTH_METHODS
-            else cls.MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD
-        )
-
-    @staticmethod
-    def _normalize_gridsize(value: Any) -> int:
-        return max(32, min(int(value), 1024))
-
-    @staticmethod
-    def _normalize_cut(value: Any) -> float:
-        return max(0.0, min(float(value), 5.0))
-
-    @staticmethod
-    def _normalize_pca_component_indices(indices: Any) -> list[int]:
-        if indices is None:
-            return [0, 1]
-        if isinstance(indices, Iterable) and not isinstance(indices, (str, bytes)):
-            values = [int(v) for v in indices]
-        else:
-            values = [int(indices)]
-        if len(values) < 2:
-            values = (values + [1])[:2]
-        return [max(0, values[0]), max(0, values[1])]
-
-    @staticmethod
-    def _normalize_ternary_limit_mode(mode: Any) -> str:
-        text = str(mode or "min").strip().lower()
-        return text if text in ("min", "max", "both") else "min"
-
-    @staticmethod
-    def _normalize_ternary_limit_anchor(anchor: Any) -> str:
-        text = str(anchor or "min").strip().lower()
-        return text if text in ("min", "max") else "min"
-
-    @staticmethod
-    def _normalize_ternary_boundary_percent(percent: Any) -> float:
-        return max(0.0, min(float(percent if percent is not None else 5.0), 30.0))
-
-    @staticmethod
-    def _normalize_ternary_manual_limits(limits: Any) -> dict[str, float]:
-        defaults = {
-            "tmin": 0.0,
-            "tmax": 1.0,
-            "lmin": 0.0,
-            "lmax": 1.0,
-            "rmin": 0.0,
-            "rmax": 1.0,
-        }
-        merged = dict(defaults)
-        if isinstance(limits, dict):
-            for key, value in limits.items():
-                if key in merged and value is not None:
-                    merged[key] = max(0.0, min(float(value), 1.0))
-        return merged
-
-    @staticmethod
-    def _normalize_ternary_render_margin(margin: Any) -> float:
-        return max(0.0, min(float(margin if margin is not None else 0.002), 0.05))
 
