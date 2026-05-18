@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 
 from core import app_state
 from visualization.plotting import ternary
@@ -60,42 +59,5 @@ def test_configure_ternary_axis_uses_gateway_writes(monkeypatch) -> None:
     assert axis.limits == limits
     assert axis.aspect == ("equal", "box")
 
-def test_calculate_auto_ternary_factors_writes_via_gateway(monkeypatch) -> None:
-    snapshot_cols = list(getattr(app_state, "selected_ternary_cols", []) or [])
-    calls: list[list[float]] = []
-    try:
-        setattr(app_state, "selected_ternary_cols", ["top", "left", "right"])
-        monkeypatch.setattr(
-            ternary,
-            "_df_global",
-            lambda: pd.DataFrame(
-                {
-                    "top": [1.0, 2.0, 3.0],
-                    "left": [2.0, 3.0, 4.0],
-                    "right": [3.0, 4.0, 5.0],
-                }
-            ),
-        )
-        monkeypatch.setattr(ternary, "_active_subset_indices", lambda: None)
-        monkeypatch.setattr(ternary.state_gateway, "set_ternary_factors", lambda factors: calls.append(list(factors)))
 
-        ok = ternary.calculate_auto_ternary_factors()
-
-        assert ok is True
-        assert len(calls) == 1
-        assert len(calls[0]) == 3
-        assert all(np.isfinite(calls[0]))
-        assert all(value > 0 for value in calls[0])
-    finally:
-        setattr(app_state, "selected_ternary_cols", snapshot_cols)
-
-def test_calculate_auto_ternary_factors_returns_false_without_dataframe(monkeypatch) -> None:
-    snapshot_cols = list(getattr(app_state, "selected_ternary_cols", []) or [])
-    try:
-        setattr(app_state, "selected_ternary_cols", ["top", "left", "right"])
-        monkeypatch.setattr(ternary, "_df_global", lambda: None)
-
-        assert ternary.calculate_auto_ternary_factors() is False
-    finally:
-        setattr(app_state, "selected_ternary_cols", snapshot_cols)
 

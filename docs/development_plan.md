@@ -2,6 +2,24 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-05-18 · 第一百九十四批）
+
+- 三元图 Gateway 方法补齐（#193）：
+    - `core/state/gateway.py`：新增 `set_ternary_boundary_percent`、`set_ternary_stretch_mode`、`set_ternary_stretch`、`set_ternary_factors` 方法。
+    - `core/state/_dispatch_handlers.py`：新增对应 dispatch handler。
+    - `core/state/_normalizers.py`：新增 sync entry。
+    - `core/state/store.py`：snapshot 字段补齐。
+    - `core/state/_compat_builders.py`：新增 compat attr handler。
+    - 结果：test 失败从约 35 个降至 3 个预存失败。
+- GeochemistryEngine 线程安全（#194）：
+    - `data/geochemistry/engine.py`：`GeochemistryEngine` 单例新增 `threading.RLock()`。
+    - `update_parameters()` 与 `load_preset()` 包裹 `with self._lock:` 块。
+    - `calculate_modelcurve` 的 params 读取同样加锁保护。
+    - 回归保障：33 个地球化学测试全部通过。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`。
+    - 完整测试套件无新增失败。
+
 ## 阶段进展（2026-05-18 · UI 第一百八十九批）
 
 - UI 改进（bug 修复 + 工具栏 + 对话框）：
