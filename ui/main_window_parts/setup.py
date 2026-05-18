@@ -187,11 +187,9 @@ class MainWindowSetupMixin:
         """设置工具栏"""
         self.toolbar = QToolBar("Main Toolbar")
         self.toolbar.setMovable(False)
-        self.toolbar.setIconSize(DEFAULT_TOOLBAR_ICON_SIZE)
+        self.toolbar.setIconSize(QSize(20, 20))
         self.toolbar.setObjectName("MainToolbar")
         self.addToolBar(self.toolbar)
-
-        # 控制面板按钮已弃用
 
     def _setup_statusbar(self):
         """设置状态栏，含异步嵌入计算进度条"""

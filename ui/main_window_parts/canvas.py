@@ -28,18 +28,19 @@ class MainWindowCanvasMixin:
 
         canvas = FigureCanvas(fig)
         toolbar = NavigationToolbar(canvas, self)
+        toolbar.setVisible(False)  # Keep hidden; actions are extracted below
 
         zoom_out_action = QAction(self._get_zoom_out_icon(), translate("Zoom Out"), self)
         zoom_out_action.setToolTip(translate("Zoom Out"))
         zoom_out_action.triggered.connect(self._zoom_out_view)
 
+        # Insert Zoom Out after matplotlib's Zoom action
         zoom_action = None
         actions = toolbar.actions()
         for action in actions:
             if "zoom" in (action.text() or "").lower():
                 zoom_action = action
                 break
-
         if zoom_action is not None:
             zoom_index = actions.index(zoom_action)
             if zoom_index + 1 < len(actions):
@@ -71,37 +72,7 @@ class MainWindowCanvasMixin:
         }
         self._sync_selection_tool_actions()
 
-        self._attach_matplotlib_toolbar_actions(toolbar)
-        self.canvas_layout.addWidget(canvas)
-
-        state_gateway.set_figure(fig)
-        state_gateway.set_canvas(canvas)
-
-        self._connect_event_handlers(canvas)
-
-    def _attach_matplotlib_toolbar_actions(self, toolbar):
-        self._clear_matplotlib_toolbar_actions()
-        self._mpl_toolbar = toolbar
-        actions = list(toolbar.actions())
-        if not actions:
-            return
-        filtered = []
-        for action in actions:
-            if action is None:
-                continue
-            if action.isSeparator():
-                filtered.append(action)
-                continue
-            text = (action.text() or "").strip()
-            tooltip = (action.toolTip() or "").strip()
-            has_icon = action.icon() is not None and not action.icon().isNull()
-            if not text and not tooltip and not has_icon:
-                continue
-            filtered.append(action)
-
-        for action in filtered:
-            self.toolbar.addAction(action)
-
+        # Copy NavigationToolbar actions to main toolbar, translating tooltips
         _MPL_TOOLTIP_TRANSLATIONS = {
             "Home": "Reset original view",
             "Back": "Back to previous view",
@@ -111,24 +82,22 @@ class MainWindowCanvasMixin:
             "Subplots": "Configure subplots",
             "Save": "Save the figure",
         }
-        for action in filtered:
+        for action in toolbar.actions():
+            if action is None:
+                continue
+            self.toolbar.addAction(action)
             text = (action.text() or "").strip()
             for en_key, tr_key in _MPL_TOOLTIP_TRANSLATIONS.items():
                 if en_key.lower() in text.lower():
                     action.setToolTip(translate(tr_key))
                     break
-        self._mpl_toolbar_actions = filtered
 
-    def _clear_matplotlib_toolbar_actions(self):
-        actions = getattr(self, "_mpl_toolbar_actions", [])
-        if not actions:
-            return
-        for action in actions:
-            try:
-                self.toolbar.removeAction(action)
-            except Exception:
-                pass
-        self._mpl_toolbar_actions = []
+        self.canvas_layout.addWidget(canvas)
+
+        state_gateway.set_figure(fig)
+        state_gateway.set_canvas(canvas)
+
+        self._connect_event_handlers(canvas)
 
     def _get_zoom_out_icon(self):
         """Resolve a zoom-out icon, falling back to a standard icon."""
