@@ -12,6 +12,98 @@ from core import app_state, state_gateway, translate
 logger = logging.getLogger(__name__)
 
 
+def _safe_float(text, default):
+    """安全转换为 float，失败时返回默认值。"""
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_color(widget, default):
+    """从 widget 安全提取颜色值。
+
+    优先读取 ``property('color_value')``，其次读取 ``text()``，
+    均失败时返回 *default*。
+    """
+    if widget is None:
+        return default
+    try:
+        color_value = widget.property('color_value')
+        if isinstance(color_value, str) and color_value.strip():
+            return color_value.strip()
+    except Exception:
+        pass
+    if hasattr(widget, 'text') and callable(widget.text):
+        try:
+            text_value = widget.text()
+            if isinstance(text_value, str) and text_value.strip():
+                return text_value.strip()
+        except Exception:
+            pass
+    return default
+
+
+# ---------------------------------------------------------------------------
+# 样式 Widget → 状态 映射表
+# 每项: (widget_attr_name, state_key, extractor_id, *extractor_args)
+# extractor_id: 'bool' | 'int' | 'float' | 'text' | 'text_or' | 'color'
+# ---------------------------------------------------------------------------
+_STYLE_WIDGET_MAP: list[tuple] = [
+    # --- basic controls ---
+    ('grid_check', 'plot_style_grid', 'bool'),
+    ('marker_size_spin', 'plot_marker_size', 'int'),
+    ('marker_alpha_spin', 'plot_marker_alpha', 'float'),
+    ('show_title_check', 'show_plot_title', 'bool'),
+    ('figure_dpi_spin', 'plot_dpi', 'int'),
+    # --- color edits ---
+    ('figure_bg_edit', 'plot_facecolor', 'color', '#ffffff'),
+    ('axes_bg_edit', 'axes_facecolor', 'color', '#ffffff'),
+    ('grid_color_edit', 'grid_color', 'color', '#e2e8f0'),
+    ('tick_color_edit', 'tick_color', 'color', '#1f2937'),
+    ('axis_line_color_edit', 'axis_line_color', 'color', '#1f2937'),
+    ('minor_grid_color_edit', 'minor_grid_color', 'color', '#e2e8f0'),
+    ('scatter_edgecolor_edit', 'scatter_edgecolor', 'color', '#1e293b'),
+    ('label_color_edit', 'label_color', 'color', '#1f2937'),
+    ('title_color_edit', 'title_color', 'color', '#111827'),
+    # --- misc ---
+    ('grid_width_spin', 'grid_linewidth', 'float'),
+    ('grid_alpha_spin', 'grid_alpha', 'float'),
+    ('grid_style_combo', 'grid_linestyle', 'text_or', '--'),
+    ('tick_dir_combo', 'tick_direction', 'text_or', 'out'),
+    ('tick_length_spin', 'tick_length', 'float'),
+    ('tick_width_spin', 'tick_width', 'float'),
+    ('minor_ticks_check', 'minor_ticks', 'bool'),
+    ('minor_tick_length_spin', 'minor_tick_length', 'float'),
+    ('minor_tick_width_spin', 'minor_tick_width', 'float'),
+    ('axis_linewidth_spin', 'axis_linewidth', 'float'),
+    ('show_top_spine_check', 'show_top_spine', 'bool'),
+    ('show_right_spine_check', 'show_right_spine', 'bool'),
+    ('minor_grid_check', 'minor_grid', 'bool'),
+    ('minor_grid_width_spin', 'minor_grid_linewidth', 'float'),
+    ('minor_grid_alpha_spin', 'minor_grid_alpha', 'float'),
+    ('minor_grid_style_combo', 'minor_grid_linestyle', 'text_or', ':'),
+    ('scatter_edge_check', 'scatter_show_edge', 'bool'),
+    ('scatter_edgewidth_spin', 'scatter_edgewidth', 'float'),
+    # --- line widths ---
+    ('model_curve_width_spin', 'model_curve_width', 'float'),
+    ('paleoisochron_width_spin', 'paleoisochron_width', 'float'),
+    ('model_age_width_spin', 'model_age_line_width', 'float'),
+    ('isochron_width_spin', 'isochron_line_width', 'float'),
+    # --- labels ---
+    ('label_weight_combo', 'label_weight', 'text_or', 'normal'),
+    ('label_pad_spin', 'label_pad', 'float'),
+    ('title_weight_combo', 'title_weight', 'text_or', 'bold'),
+    ('title_pad_spin', 'title_pad', 'float'),
+    # --- legend frame ---
+    ('legend_frame_on_check', 'legend_frame_on', 'bool'),
+    ('legend_frame_alpha_spin', 'legend_frame_alpha', 'float'),
+    # --- adjust text scalars ---
+    ('adjust_iter_lim_spin', 'adjust_text_iter_lim', 'int'),
+    ('adjust_time_lim_spin', 'adjust_text_time_lim', 'float'),
+]
+
+
 class BasePanel(QWidget):
     """所有面板的基类，提供共享工具方法"""
 
@@ -58,17 +150,14 @@ class BasePanel(QWidget):
             key = child.property('translate_key')
             if not key:
                 continue
-            translated = translate(key)
+            translated_str = translate(key)
             if isinstance(child, QGroupBox):
-                child.setTitle(translated)
+                child.setTitle(translated_str)
             elif isinstance(child, (QLabel, QPushButton, QCheckBox, QRadioButton)):
-                child.setText(translated)
+                child.setText(translated_str)
 
     def _on_change(self):
         """参数变化回调"""
-        # Cancel pending debounce timers to prevent double-firing when
-        # _on_change is called directly (e.g. from sliderReleased) while a
-        # _schedule_slider_callback timer is still pending.
         for key, timer in list(self._slider_timers.items()):
             try:
                 timer.stop()
@@ -147,34 +236,43 @@ class BasePanel(QWidget):
             combo.setCurrentIndex(index)
             combo.blockSignals(False)
 
+    # ------------------------------------------------------------------
+    # 数据驱动的样式收集
+    # ------------------------------------------------------------------
+
+    def _collect_style_updates(self) -> dict[str, object]:
+        """遍历 ``_STYLE_WIDGET_MAP``，从已注册的 widget 提取样式更新。
+
+        Returns:
+            以 *state_key* 为键的样式更新字典。
+        """
+        updates: dict[str, object] = {}
+        for attr, key, extractor, *args in _STYLE_WIDGET_MAP:
+            widget = getattr(self, attr, None)
+            if widget is None:
+                continue
+            if extractor == 'bool':
+                updates[key] = bool(widget.isChecked())
+            elif extractor == 'int':
+                updates[key] = int(widget.value())
+            elif extractor == 'float':
+                updates[key] = float(widget.value())
+            elif extractor == 'text':
+                updates[key] = widget.currentText()
+            elif extractor == 'text_or':
+                updates[key] = widget.currentText() or (args[0] if args else '')
+            elif extractor == 'color':
+                updates[key] = _safe_color(widget, args[0] if args else '#000000')
+        return updates
+
+    # ------------------------------------------------------------------
+    # 样式变化处理
+    # ------------------------------------------------------------------
+
     def _on_style_change(self, *_args):
         """处理样式变化"""
         if not getattr(self, "_is_initialized", False):
             return
-
-        def _safe_float(text, default):
-            try:
-                return float(text)
-            except (TypeError, ValueError):
-                return default
-
-        def _safe_color(widget, default):
-            if widget is None:
-                return default
-            try:
-                color_value = widget.property('color_value')
-                if isinstance(color_value, str) and color_value.strip():
-                    return color_value.strip()
-            except Exception:
-                pass
-            if hasattr(widget, 'text') and callable(widget.text):
-                try:
-                    text_value = widget.text()
-                    if isinstance(text_value, str) and text_value.strip():
-                        return text_value.strip()
-                except Exception:
-                    pass
-            return default
 
         previous_scheme = getattr(app_state, 'color_scheme', None)
         previous_fonts = (
@@ -191,15 +289,18 @@ class BasePanel(QWidget):
             getattr(app_state, 'isochron_line_width', 1.5),
         )
 
+        # ---- 数据驱动: 从 _STYLE_WIDGET_MAP 批量提取样式更新 ----
         style_updates: dict[str, object] = {}
+        style_updates = self._collect_style_updates()
 
-        grid_check = getattr(self, 'grid_check', None)
-        if grid_check is not None:
-            style_updates['plot_style_grid'] = bool(grid_check.isChecked())
+        # ---- 特殊处理: 需额外逻辑的控件 ----
+
+        # 配色方案 (用于后续 replot 检测)
         color_combo = getattr(self, 'color_combo', None)
         new_scheme = color_combo.currentText() if color_combo is not None else app_state.color_scheme
         style_updates['color_scheme'] = new_scheme
 
+        # 字体选择器 (<Default> 哨兵值处理)
         primary_combo = getattr(self, 'primary_font_combo', None)
         primary_font = primary_combo.currentText() if primary_combo is not None else ''
         if primary_font == '<Default>':
@@ -212,110 +313,29 @@ class BasePanel(QWidget):
             cjk_font = ''
         style_updates['custom_cjk_font'] = cjk_font
 
+        # 字号字典
         font_size_spins = getattr(self, 'font_size_spins', {})
         if font_size_spins:
             style_updates['plot_font_sizes'] = {k: v.value() for k, v in font_size_spins.items()}
-        marker_size_spin = getattr(self, 'marker_size_spin', None)
-        if marker_size_spin is not None:
-            style_updates['plot_marker_size'] = marker_size_spin.value()
-        marker_alpha_spin = getattr(self, 'marker_alpha_spin', None)
-        if marker_alpha_spin is not None:
-            style_updates['plot_marker_alpha'] = marker_alpha_spin.value()
-        show_title_check = getattr(self, 'show_title_check', None)
-        if show_title_check is not None:
-            style_updates['show_plot_title'] = bool(show_title_check.isChecked())
 
-        figure_dpi_spin = getattr(self, 'figure_dpi_spin', None)
-        if figure_dpi_spin is not None:
-            style_updates['plot_dpi'] = int(figure_dpi_spin.value())
-        figure_bg_edit = getattr(self, 'figure_bg_edit', None)
-        if figure_bg_edit is not None:
-            style_updates['plot_facecolor'] = _safe_color(figure_bg_edit, '#ffffff')
-        axes_bg_edit = getattr(self, 'axes_bg_edit', None)
-        if axes_bg_edit is not None:
-            style_updates['axes_facecolor'] = _safe_color(axes_bg_edit, '#ffffff')
-        grid_color_edit = getattr(self, 'grid_color_edit', None)
-        if grid_color_edit is not None:
-            style_updates['grid_color'] = _safe_color(grid_color_edit, '#e2e8f0')
-        grid_width_spin = getattr(self, 'grid_width_spin', None)
-        if grid_width_spin is not None:
-            style_updates['grid_linewidth'] = float(grid_width_spin.value())
-        grid_alpha_spin = getattr(self, 'grid_alpha_spin', None)
-        if grid_alpha_spin is not None:
-            style_updates['grid_alpha'] = float(grid_alpha_spin.value())
-        grid_style_combo = getattr(self, 'grid_style_combo', None)
-        if grid_style_combo is not None:
-            style_updates['grid_linestyle'] = grid_style_combo.currentText() or '--'
-        tick_dir_combo = getattr(self, 'tick_dir_combo', None)
-        if tick_dir_combo is not None:
-            style_updates['tick_direction'] = tick_dir_combo.currentText() or 'out'
-        tick_color_edit = getattr(self, 'tick_color_edit', None)
-        if tick_color_edit is not None:
-            style_updates['tick_color'] = _safe_color(tick_color_edit, '#1f2937')
-        tick_length_spin = getattr(self, 'tick_length_spin', None)
-        if tick_length_spin is not None:
-            style_updates['tick_length'] = float(tick_length_spin.value())
-        tick_width_spin = getattr(self, 'tick_width_spin', None)
-        if tick_width_spin is not None:
-            style_updates['tick_width'] = float(tick_width_spin.value())
-        minor_ticks_check = getattr(self, 'minor_ticks_check', None)
-        if minor_ticks_check is not None:
-            style_updates['minor_ticks'] = bool(minor_ticks_check.isChecked())
-        minor_tick_length_spin = getattr(self, 'minor_tick_length_spin', None)
-        if minor_tick_length_spin is not None:
-            style_updates['minor_tick_length'] = float(minor_tick_length_spin.value())
-        minor_tick_width_spin = getattr(self, 'minor_tick_width_spin', None)
-        if minor_tick_width_spin is not None:
-            style_updates['minor_tick_width'] = float(minor_tick_width_spin.value())
-        axis_linewidth_spin = getattr(self, 'axis_linewidth_spin', None)
-        if axis_linewidth_spin is not None:
-            style_updates['axis_linewidth'] = float(axis_linewidth_spin.value())
-        axis_line_color_edit = getattr(self, 'axis_line_color_edit', None)
-        if axis_line_color_edit is not None:
-            style_updates['axis_line_color'] = _safe_color(axis_line_color_edit, '#1f2937')
-        show_top_spine_check = getattr(self, 'show_top_spine_check', None)
-        if show_top_spine_check is not None:
-            style_updates['show_top_spine'] = bool(show_top_spine_check.isChecked())
-        show_right_spine_check = getattr(self, 'show_right_spine_check', None)
-        if show_right_spine_check is not None:
-            style_updates['show_right_spine'] = bool(show_right_spine_check.isChecked())
-        minor_grid_check = getattr(self, 'minor_grid_check', None)
-        if minor_grid_check is not None:
-            style_updates['minor_grid'] = bool(minor_grid_check.isChecked())
-        minor_grid_color_edit = getattr(self, 'minor_grid_color_edit', None)
-        if minor_grid_color_edit is not None:
-            style_updates['minor_grid_color'] = _safe_color(minor_grid_color_edit, '#e2e8f0')
-        minor_grid_width_spin = getattr(self, 'minor_grid_width_spin', None)
-        if minor_grid_width_spin is not None:
-            style_updates['minor_grid_linewidth'] = float(minor_grid_width_spin.value())
-        minor_grid_alpha_spin = getattr(self, 'minor_grid_alpha_spin', None)
-        if minor_grid_alpha_spin is not None:
-            style_updates['minor_grid_alpha'] = float(minor_grid_alpha_spin.value())
-        minor_grid_style_combo = getattr(self, 'minor_grid_style_combo', None)
-        if minor_grid_style_combo is not None:
-            style_updates['minor_grid_linestyle'] = minor_grid_style_combo.currentText() or ':'
-        scatter_edgecolor_edit = getattr(self, 'scatter_edgecolor_edit', None)
-        scatter_edge_check = getattr(self, 'scatter_edge_check', None)
-        if scatter_edge_check is not None:
-            style_updates['scatter_show_edge'] = bool(scatter_edge_check.isChecked())
-        if scatter_edgecolor_edit is not None:
-            style_updates['scatter_edgecolor'] = _safe_color(scatter_edgecolor_edit, '#1e293b')
-        scatter_edgewidth_spin = getattr(self, 'scatter_edgewidth_spin', None)
-        if scatter_edgewidth_spin is not None:
-            style_updates['scatter_edgewidth'] = float(scatter_edgewidth_spin.value())
-        model_curve_width_spin = getattr(self, 'model_curve_width_spin', None)
-        if model_curve_width_spin is not None:
-            style_updates['model_curve_width'] = float(model_curve_width_spin.value())
-        paleoisochron_width_spin = getattr(self, 'paleoisochron_width_spin', None)
-        if paleoisochron_width_spin is not None:
-            style_updates['paleoisochron_width'] = float(paleoisochron_width_spin.value())
-        model_age_width_spin = getattr(self, 'model_age_width_spin', None)
-        if model_age_width_spin is not None:
-            style_updates['model_age_line_width'] = float(model_age_width_spin.value())
-        isochron_width_spin = getattr(self, 'isochron_width_spin', None)
-        if isochron_width_spin is not None:
-            style_updates['isochron_line_width'] = float(isochron_width_spin.value())
+        # adjust_text 成对 spinners → 元组
+        for base, key in [('adjust_force_text', 'adjust_text_force_text'),
+                          ('adjust_force_static', 'adjust_text_force_static'),
+                          ('adjust_expand', 'adjust_text_expand')]:
+            x = getattr(self, f'{base}_x_spin', None)
+            y = getattr(self, f'{base}_y_spin', None)
+            if x is not None and y is not None:
+                style_updates[key] = (float(x.value()), float(y.value()))
 
+        # 图例框架背景 / 边框 (纯文本，不使用 _safe_color)
+        legend_frame_face_edit = getattr(self, 'legend_frame_face_edit', None)
+        if legend_frame_face_edit is not None:
+            style_updates['legend_frame_facecolor'] = legend_frame_face_edit.text() or '#ffffff'
+        legend_frame_edge_edit = getattr(self, 'legend_frame_edge_edit', None)
+        if legend_frame_edge_edit is not None:
+            style_updates['legend_frame_edgecolor'] = legend_frame_edge_edit.text() or '#cbd5f5'
+
+        # ---- line_styles 同步 ----
         if hasattr(app_state, 'line_styles'):
             app_state.line_styles.setdefault('model_curve', {})['linewidth'] = float(
                 style_updates.get('model_curve_width', app_state.model_curve_width)
@@ -330,69 +350,11 @@ class BasePanel(QWidget):
                 style_updates.get('isochron_line_width', app_state.isochron_line_width)
             )
 
-        label_color_edit = getattr(self, 'label_color_edit', None)
-        if label_color_edit is not None:
-            style_updates['label_color'] = _safe_color(label_color_edit, '#1f2937')
-        label_weight_combo = getattr(self, 'label_weight_combo', None)
-        if label_weight_combo is not None:
-            style_updates['label_weight'] = label_weight_combo.currentText() or 'normal'
-        label_pad_spin = getattr(self, 'label_pad_spin', None)
-        if label_pad_spin is not None:
-            style_updates['label_pad'] = float(label_pad_spin.value())
-        title_color_edit = getattr(self, 'title_color_edit', None)
-        if title_color_edit is not None:
-            style_updates['title_color'] = _safe_color(title_color_edit, '#111827')
-        title_weight_combo = getattr(self, 'title_weight_combo', None)
-        if title_weight_combo is not None:
-            style_updates['title_weight'] = title_weight_combo.currentText() or 'bold'
-        title_pad_spin = getattr(self, 'title_pad_spin', None)
-        if title_pad_spin is not None:
-            style_updates['title_pad'] = float(title_pad_spin.value())
-
-        adjust_force_text_x_spin = getattr(self, 'adjust_force_text_x_spin', None)
-        adjust_force_text_y_spin = getattr(self, 'adjust_force_text_y_spin', None)
-        if adjust_force_text_x_spin is not None and adjust_force_text_y_spin is not None:
-            style_updates['adjust_text_force_text'] = (
-                float(adjust_force_text_x_spin.value()),
-                float(adjust_force_text_y_spin.value()),
-            )
-        adjust_force_static_x_spin = getattr(self, 'adjust_force_static_x_spin', None)
-        adjust_force_static_y_spin = getattr(self, 'adjust_force_static_y_spin', None)
-        if adjust_force_static_x_spin is not None and adjust_force_static_y_spin is not None:
-            style_updates['adjust_text_force_static'] = (
-                float(adjust_force_static_x_spin.value()),
-                float(adjust_force_static_y_spin.value()),
-            )
-        adjust_expand_x_spin = getattr(self, 'adjust_expand_x_spin', None)
-        adjust_expand_y_spin = getattr(self, 'adjust_expand_y_spin', None)
-        if adjust_expand_x_spin is not None and adjust_expand_y_spin is not None:
-            style_updates['adjust_text_expand'] = (
-                float(adjust_expand_x_spin.value()),
-                float(adjust_expand_y_spin.value()),
-            )
-        adjust_iter_lim_spin = getattr(self, 'adjust_iter_lim_spin', None)
-        if adjust_iter_lim_spin is not None:
-            style_updates['adjust_text_iter_lim'] = int(adjust_iter_lim_spin.value())
-        adjust_time_lim_spin = getattr(self, 'adjust_time_lim_spin', None)
-        if adjust_time_lim_spin is not None:
-            style_updates['adjust_text_time_lim'] = float(adjust_time_lim_spin.value())
-
-        legend_frame_on_check = getattr(self, 'legend_frame_on_check', None)
-        if legend_frame_on_check is not None:
-            style_updates['legend_frame_on'] = bool(legend_frame_on_check.isChecked())
-        legend_frame_alpha_spin = getattr(self, 'legend_frame_alpha_spin', None)
-        if legend_frame_alpha_spin is not None:
-            style_updates['legend_frame_alpha'] = float(legend_frame_alpha_spin.value())
-        legend_frame_face_edit = getattr(self, 'legend_frame_face_edit', None)
-        if legend_frame_face_edit is not None:
-            style_updates['legend_frame_facecolor'] = legend_frame_face_edit.text() or '#ffffff'
-        legend_frame_edge_edit = getattr(self, 'legend_frame_edge_edit', None)
-        if legend_frame_edge_edit is not None:
-            style_updates['legend_frame_edgecolor'] = legend_frame_edge_edit.text() or '#cbd5f5'
-
+        # ---- 提交到状态网关 ----
         if style_updates:
             state_gateway.set_panel_style_updates(style_updates)
 
+        # ---- fig / ax 直接样式更新 ----
         if app_state.fig is not None:
             try:
                 app_state.fig.set_dpi(app_state.plot_dpi)
@@ -405,6 +367,7 @@ class BasePanel(QWidget):
             except Exception:
                 pass
 
+        # ---- 判定是否需要完整重绘 ----
         requires_replot = False
         if new_scheme != previous_scheme:
             requires_replot = True
@@ -417,7 +380,6 @@ class BasePanel(QWidget):
             or app_state.title_pad != previous_title_pad
         )
 
-        # Overlay line width changes → lightweight refresh
         overlay_widths_changed = (
             app_state.model_curve_width,
             app_state.paleoisochron_width,
