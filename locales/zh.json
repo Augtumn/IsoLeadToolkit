@@ -997,6 +997,13 @@
   "Shepard Diagram ({embedding})": "Shepard 图（{embedding}）",
   "Original Distance": "原始距离",
   "Embedding Distance": "嵌入距离",
-  "Shepard Diagram\nSpearman Correlation: {value}": "Shepard 图\nSpearman 相关系数：{value}"
+  "Shepard Diagram\nSpearman Correlation: {value}": "Shepard 图\nSpearman 相关系数：{value}",
+  "Reset original view": "重置视图",
+  "Back to previous view": "后退",
+  "Forward to next view": "前进",
+  "Pan axes with left mouse, zoom with right": "左键平移，右键缩放",
+  "Zoom to rectangle": "框选缩放",
+  "Configure subplots": "配置子图",
+  "Save the figure": "保存图像"
 }
 
