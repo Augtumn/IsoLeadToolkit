@@ -156,6 +156,7 @@ class ExportPanelImageExportMixin:
         original_marginal_axes = getattr(app_state, 'marginal_axes', None)
         original_show_marginal_kde = bool(getattr(app_state, 'show_marginal_kde', False))
         original_has_marginal_axes = bool(original_fig is not None and len(getattr(original_fig, 'axes', [])) > 1)
+        original_marker_size = int(getattr(app_state, 'plot_marker_size', 60))
 
         try:
             use_scienceplots = self._is_scienceplots_available()
@@ -187,6 +188,8 @@ class ExportPanelImageExportMixin:
 
                 state_gateway.set_figure_axes(export_fig, export_ax)
                 state_gateway.set_palette_and_marker_map(locked_palette, locked_marker_map)
+                # Override marker size so plot functions use the export value
+                state_gateway.set_plot_marker_size(point_size_for_export)
 
                 # Preserve visible marginal KDE when current interactive figure uses marginal axes.
                 if original_has_marginal_axes:
@@ -217,6 +220,7 @@ class ExportPanelImageExportMixin:
                 self._attach_preview_label_state(export_fig)
                 return export_fig
         finally:
+            state_gateway.set_plot_marker_size(original_marker_size)
             state_gateway.set_figure_axes(original_fig, original_ax)
             state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
             state_gateway.set_show_marginal_kde(original_show_marginal_kde)
