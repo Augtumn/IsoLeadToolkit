@@ -15,6 +15,72 @@ from data.loader import read_data_frame
 logger = logging.getLogger(__name__)
 
 
+def hydrate_state_from_dataframe(
+    df: pd.DataFrame,
+    file_path: str,
+    sheet_name: str | None = None,
+) -> bool:
+    """Validate, clean, and hydrate global state from a DataFrame.
+
+    Pure data processing — no UI dependencies. Can be called from any context
+    (UI dialog, CLI, test, API) once a DataFrame is available.
+
+    Args:
+        df: The loaded DataFrame.
+        file_path: Path to the source file.
+        sheet_name: Optional sheet name for Excel files.
+
+    Returns:
+        True when state is hydrated successfully, False on validation failure.
+    """
+    try:
+        if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
+            state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
+
+        state_gateway.reset_column_selection()
+
+        for col in app_state.data_cols:
+            if col not in df.columns:
+                logger.error("Missing data column: %s", col)
+                return False
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                logger.error("Data column '%s' is not numeric", col)
+                return False
+            logger.debug("Data column '%s' is numeric: OK", col)
+
+        valid_group_cols: list[str] = []
+        for col in app_state.group_cols:
+            if col not in df.columns:
+                logger.warning("Skipping missing group column: %s", col)
+            else:
+                valid_group_cols.append(col)
+        state_gateway.set_group_data_columns(valid_group_cols, app_state.data_cols)
+
+        logger.info("Before cleanup: %s rows", len(df))
+        df = df.dropna(subset=app_state.data_cols).copy()
+
+        for col in app_state.group_cols:
+            if col in df.columns:
+                df[col] = df[col].replace(["——", "", "—", "null", "nan"], "Unknown")
+                df[col] = df[col].fillna("Unknown")
+
+        state_gateway.set_dataframe_and_source(
+            df.reset_index(drop=True),
+            file_path=file_path,
+            sheet_name=sheet_name,
+        )
+        state_gateway.bump_data_version()
+        state_gateway.clear_selection()
+        logger.info("Loaded %s valid samples", len(app_state.df_global))
+
+        return True
+
+    except Exception as exc:
+        logger.error("State hydration from DataFrame failed: %s", exc)
+        traceback.print_exc()
+        return False
+
+
 def load_dataset(
     *,
     show_file_dialog: bool = True,
@@ -151,47 +217,13 @@ def load_dataset(
             state_gateway.set_group_data_columns([], [])
             state_gateway.set_preserve_import_render_mode(False)
 
-        if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
-            state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
-
-        state_gateway.reset_column_selection()
-
-        for col in app_state.data_cols:
-            if col not in df.columns:
-                logger.error("Missing data column: %s", col)
-                return False
-            if not pd.api.types.is_numeric_dtype(df[col]):
-                logger.error("Data column '%s' is not numeric", col)
-                return False
-            logger.debug("Data column '%s' is numeric: OK", col)
-
-        valid_group_cols: list[str] = []
-        for col in app_state.group_cols:
-            if col not in df.columns:
-                logger.warning("Skipping missing group column: %s", col)
-            else:
-                valid_group_cols.append(col)
-        state_gateway.set_group_data_columns(valid_group_cols, app_state.data_cols)
-
         if progress:
             progress.update_message("Cleaning data...")
 
-        logger.info("Before cleanup: %s rows", len(df))
-        df = df.dropna(subset=app_state.data_cols).copy()
-
-        for col in app_state.group_cols:
-            if col in df.columns:
-                df[col] = df[col].replace(["——", "", "—", "null", "nan"], "Unknown")
-                df[col] = df[col].fillna("Unknown")
-
-        state_gateway.set_dataframe_and_source(
-            df.reset_index(drop=True),
-            file_path=excel_file,
-            sheet_name=sheet_name if sheet_name else None,
-        )
-        state_gateway.bump_data_version()
-        state_gateway.clear_selection()
-        logger.info("Loaded %s valid samples", len(app_state.df_global))
+        if not hydrate_state_from_dataframe(df, excel_file, sheet_name if sheet_name else None):
+            if progress:
+                progress.close()
+            return False
 
         if progress:
             progress.close()

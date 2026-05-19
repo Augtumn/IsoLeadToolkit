@@ -20,6 +20,7 @@ __all__ = [
 	"SelectionInteractionUseCase",
 	"SelectedIsochronUseCase",
 	"TooltipContentUseCase",
+	"hydrate_state_from_dataframe",
 	"load_dataset",
 	"save_export_figure",
 ]
@@ -38,6 +39,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 	"export_to_origin": ("export_origin", "export_to_origin"),
 	"RenderPlotUseCase": ("render_plot", "RenderPlotUseCase"),
 	"load_dataset": ("load_dataset", "load_dataset"),
+	"hydrate_state_from_dataframe": ("load_dataset", "hydrate_state_from_dataframe"),
 	"SelectionInteractionUseCase": ("selection_interaction", "SelectionInteractionUseCase"),
 	"SelectedIsochronUseCase": ("selected_isochron", "SelectedIsochronUseCase"),
 	"TooltipContentUseCase": ("tooltip_content", "TooltipContentUseCase"),
