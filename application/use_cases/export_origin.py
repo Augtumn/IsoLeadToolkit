@@ -199,7 +199,7 @@ def _extract_pb_evolution_overlay_data(
     if getattr(app_state, "show_model_curves", True):
         curves: list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]] = []
         try:
-            t_vals = np.linspace(0, 4500, 300)
+            t_vals = np.linspace(0, 4500, 500)
             mc = geochemistry.calculate_modelcurve(t_vals, params=params)
             if actual_algorithm == "PB_EVOL_76":
                 x_col, y_col = "Pb206_204", "Pb207_204"
@@ -327,41 +327,38 @@ def _build_origin_project(
         gl.rescale()
 
         # ---- overlay layers ----
-        # Paleoisochrons with known slope + intercept are rendered as Origin
-        # function plots via plotxy.  Other overlays use worksheet data.
+        # All overlays use data-based plots (worksheet columns) for reliability.
         for curves in overlay_data.values():
             for x_arr, y_arr, curve_label, style in curves:
-                slope = style.get("slope")
-                intercept = style.get("intercept")
-                if slope is not None and intercept is not None:
-                    # --- function plot ---
-                    color = style.get("color", "#94a3b8")
-                    width = style.get("width", 0.9)
+                name = _origin_sheet_name(curve_label, "OV_", sheet_names)
+                try:
+                    owks = wb.add_sheet(name)
+                    owks.from_list(0, x_arr.tolist(), "X")
+                    owks.from_list(1, y_arr.tolist(), "Y")
+
+                    # Add curve equation as worksheet comment
+                    slope = style.get("slope")
+                    intercept = style.get("intercept")
+                    if slope is not None and intercept is not None:
+                        eq_text = f"y = {slope:.6f} * x + {intercept:.6f}"
+                    else:
+                        eq_text = curve_label
                     try:
-                        op.lt_exec(f'plotxy formula:="y={slope}*x+{intercept}" plot:=200')
-                        plot_idx += 1
-                        op.lt_exec(
-                            f'set %C -c {color.replace("#", "0x")} -w {int(width * 1000)}'
-                        )
-                        legend_entries.append(f"\\l({plot_idx}) {curve_label}")
-                    except Exception as err:
-                        logger.debug("Function plot failed for %s: %s", curve_label, err)
-                        continue
-                else:
-                    # --- data plot ---
-                    name = _origin_sheet_name(curve_label, "OV_", sheet_names)
-                    try:
-                        owks = wb.add_sheet(name)
-                        owks.from_list(0, x_arr.tolist(), "X")
-                        owks.from_list(1, y_arr.tolist(), "Y")
-                        line = gl.add_plot(owks, coly=1, colx=0, type="l")
-                        line.color = style.get("color", "#000000")
-                        if style.get("width"):
-                            line.width = style["width"]
-                        plot_idx += 1
-                        legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
-                    except Exception as err:
-                        logger.debug("Skipping overlay %s: %s", curve_label, err)
+                        owks.cols = 2
+                        owks.labels("Comments")  # enable comments column if possible
+                        # Set comment on first cell of Y column
+                        owks.set_cell(0, 2, eq_text)
+                    except Exception:
+                        pass  # comments are nice-to-have
+
+                    line = gl.add_plot(owks, coly=1, colx=0, type="l")
+                    line.color = style.get("color", "#000000")
+                    if style.get("width"):
+                        line.width = style["width"]
+                    plot_idx += 1
+                    legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
+                except Exception as err:
+                    logger.debug("Skipping overlay %s: %s", curve_label, err)
 
         # ---- legend ----
         if legend_entries:
