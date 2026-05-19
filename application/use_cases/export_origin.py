@@ -593,7 +593,10 @@ def _build_origin_project(
             return False
 
         # ── graph ─────────────────────────────────────────────────
-        gp = op.new_graph(template="scatter")
+        if is_ternary:
+            gp = op.new_graph(template="ternary")
+        else:
+            gp = op.new_graph(template="scatter")
         gl = gp[0]
 
         legend_entries: list[str] = []
@@ -606,7 +609,7 @@ def _build_origin_project(
             wks, sheet_name = entry
             try:
                 if is_ternary:
-                    plot = gl.add_plot(wks, coly=1, colx=0, type="s")
+                    plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="t")
                 elif group.get("z"):
                     plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 else:
@@ -722,10 +725,19 @@ def _build_origin_project(
                 logger.debug("Failed to set custom legend: %s", err)
 
         # ── axis labels and title ─────────────────────────────────
-        if axis_labels.get("x"):
-            gl.axis("x").title = axis_labels["x"]
-        if axis_labels.get("y"):
-            gl.axis("y").title = axis_labels["y"]
+        if is_ternary:
+            ternary_cols = axis_labels.get("ternary_cols", ["Top", "Left", "Right"])
+            # Origin ternary uses axis names "x", "y", "z" for top/left/right
+            for axis_name, label in zip(["x", "y", "z"], ternary_cols):
+                try:
+                    gl.axis(axis_name).title = label
+                except Exception:
+                    pass
+        else:
+            if axis_labels.get("x"):
+                gl.axis("x").title = axis_labels["x"]
+            if axis_labels.get("y"):
+                gl.axis("y").title = axis_labels["y"]
         if title:
             try:
                 gl.set_str("title", title)
@@ -786,6 +798,9 @@ def export_to_origin(file_path: str) -> bool:
     elif mode == "TERNARY":
         scatter_groups = _extract_ternary_data(ax)
         is_ternary = True
+        axis_labels = {
+            "ternary_cols": getattr(app_state, "selected_ternary_cols", ["Top", "Left", "Right"]),
+        }
     else:
         # 2D axes for: UMAP, tSNE, PCA, RobustPCA, V1V2, 2D,
         # PB_EVOL_76, PB_EVOL_86, PLUMBOTECTONICS_76,
