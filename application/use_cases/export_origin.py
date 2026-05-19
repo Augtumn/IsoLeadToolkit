@@ -200,12 +200,16 @@ def _extract_pb_evolution_overlay_data(
         curves: list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]] = []
         try:
             t_vals = np.linspace(0, 4500, 300)
-            x_vals, y_vals = geochemistry.calculate_modelcurve(
-                t_vals, params=params, algorithm=actual_algorithm,
-            )
+            mc = geochemistry.calculate_modelcurve(t_vals, params=params)
+            if actual_algorithm == "PB_EVOL_76":
+                x_col, y_col = "Pb206_204", "Pb207_204"
+            else:
+                x_col, y_col = "Pb206_204", "Pb208_204"
+            x_vals = np.asarray(mc[x_col])
+            y_vals = np.asarray(mc[y_col])
             if x_vals is not None and y_vals is not None:
                 curves.append((
-                    np.asarray(x_vals), np.asarray(y_vals),
+                    x_vals, y_vals,
                     str(params.get("model_name", "Model")),
                     {"color": "#64748b", "width": 1.2},
                 ))
