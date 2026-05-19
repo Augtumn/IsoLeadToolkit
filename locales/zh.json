@@ -321,6 +321,8 @@
   "Options shared by both algorithms, including point styling and grouping.": "适用于两种算法的选项，包括点样式和分组配置。",
   "Please select at least one sample before exporting.": "请先在可视化中选择至少一个样本。",
   "Point Size": "点大小",
+  "Data Point Size": "数据点大小",
+  "Legend Marker Size": "图例标记大小",
   "Point size": "点大小",
   "Point Alpha": "点透明度",
   "Figure Width": "图宽",

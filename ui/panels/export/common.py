@@ -471,7 +471,7 @@ class ExportPanelCommonMixin:
         export_fig,
         profile: dict,
         legend_size_override: int | None = None,
-        point_size_override: int | None = None,
+        legend_marker_override: int | None = None,
     ) -> None:
         """Rebuild legends with preset-specific style so size is deterministic."""
         if export_fig is None:
@@ -480,7 +480,7 @@ class ExportPanelCommonMixin:
         legend_size = float(legend_size_override if legend_size_override is not None else legend_style.get('fontsize', 8.0))
         title_size = float(legend_style.get('title_fontsize', legend_size + 0.5))
         marker_scale = float(legend_style.get('markerscale', 0.9))
-        point_size_for_legend = float(point_size_override if point_size_override is not None else profile.get('point_size', 50))
+        legend_marker_size = float(legend_marker_override if legend_marker_override is not None else profile.get('point_size', 50))
         handlelength = float(legend_style.get('handlelength', 1.2))
         handletextpad = float(legend_style.get('handletextpad', 0.5))
         labelspacing = float(legend_style.get('labelspacing', 0.3))
@@ -559,7 +559,7 @@ class ExportPanelCommonMixin:
                 if rebuilt_legend is not None:
                     rebuilt_legend.set_title("")
                     rebuilt_legend.get_title().set_visible(False)
-                    self._apply_legend_marker_size_from_point(rebuilt_legend, point_size_for_legend)
+                    self._apply_legend_marker_size_from_point(rebuilt_legend, legend_marker_size)
             except Exception:
                 try:
                     # Fallback for older Matplotlib versions lacking title_fontsize.
@@ -569,7 +569,7 @@ class ExportPanelCommonMixin:
                         rebuilt_legend.get_title().set_fontsize(title_size)
                         rebuilt_legend.set_title("")
                         rebuilt_legend.get_title().set_visible(False)
-                        self._apply_legend_marker_size_from_point(rebuilt_legend, point_size_for_legend)
+                        self._apply_legend_marker_size_from_point(rebuilt_legend, legend_marker_size)
                 except Exception:
                     pass
 

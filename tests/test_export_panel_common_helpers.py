@@ -95,7 +95,7 @@ def test_normalize_export_legends_collapses_near_point_bbox_anchor() -> None:
     axis = _FakeAxis(points=((0.2, 0.3), (0.2 + 1e-12, 0.3 + 1e-12)))
     fig = SimpleNamespace(axes=[axis])
 
-    panel._normalize_export_legends(fig, profile={"legend": {}}, legend_size_override=8, point_size_override=50)
+    panel._normalize_export_legends(fig, profile={"legend": {}}, legend_size_override=8, legend_marker_override=50)
 
     assert axis.legend_kwargs is not None
     assert axis.legend_kwargs["bbox_to_anchor"] == (0.2, 0.3)
@@ -106,7 +106,7 @@ def test_normalize_export_legends_keeps_bbox_extent_for_area_anchor() -> None:
     axis = _FakeAxis(points=((0.2, 0.3), (0.5, 0.6)))
     fig = SimpleNamespace(axes=[axis])
 
-    panel._normalize_export_legends(fig, profile={"legend": {}}, legend_size_override=8, point_size_override=50)
+    panel._normalize_export_legends(fig, profile={"legend": {}}, legend_size_override=8, legend_marker_override=50)
 
     assert axis.legend_kwargs is not None
     assert axis.legend_kwargs["bbox_to_anchor"] == (0.2, 0.3, 0.3, 0.3)

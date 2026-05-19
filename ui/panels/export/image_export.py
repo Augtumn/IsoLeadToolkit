@@ -139,6 +139,7 @@ class ExportPanelImageExportMixin:
         label_size_for_export: int | None = None,
         title_size_for_export: int | None = None,
         tick_size_for_export: int | None = None,
+        legend_marker_size: int | None = None,
     ):
         """Create an offscreen figure rendered with current mode and export profile."""
         import matplotlib.pyplot as plt
@@ -211,7 +212,7 @@ class ExportPanelImageExportMixin:
                     export_fig,
                     profile,
                     legend_size_override=legend_size_for_export,
-                    point_size_override=point_size_for_export,
+                    legend_marker_override=legend_marker_size,
                 )
                 self._attach_preview_label_state(export_fig)
                 return export_fig
@@ -323,11 +324,11 @@ class ExportPanelImageExportMixin:
                 parent_layout.addLayout(row)
                 return slider, spin
 
-            # Row 2: DPI + Point Size
+            # Row 2: DPI + Data Point Size + Legend Marker Scale
             row2 = QHBoxLayout()
             dpi_slider, dpi_spin = _add_slider_spin(row2, translate("DPI"), "DPI", 72, 1200, 25, params['dpi'])
-            ps_slider, ps_spin = _add_slider_spin(row2, translate("Point Size"), "Point Size", 1, 50, 1, point_size_for_export)
-            ls_slider, ls_spin = _add_slider_spin(row2, translate("Legend Size"), "Legend Size", 1, 15, 1, legend_size_for_export)
+            ps_slider, ps_spin = _add_slider_spin(row2, translate("Data Point Size"), "Data Point Size", 1, 80, 1, point_size_for_export)
+            lms_slider, lms_spin = _add_slider_spin(row2, translate("Legend Marker Size"), "Legend Marker Size", 1, 80, 1, point_size_for_export)
             control_layout.addLayout(row2)
 
             # Row 3: Label / Title / Tick sizes
@@ -381,6 +382,7 @@ class ExportPanelImageExportMixin:
                 'profile': profile,
                 'params': dict(params),
                 'point_size': point_size_for_export,
+                'legend_marker_size': point_size_for_export,
                 'legend_size': legend_size_for_export,
                 'label_size': label_size_for_export,
                 'title_size': title_size_for_export,
@@ -430,6 +432,7 @@ class ExportPanelImageExportMixin:
                         state['label_size'],
                         state['title_size'],
                         state['tick_size'],
+                        legend_marker_size=state['legend_marker_size'],
                     )
                     state['preview_fig'] = new_fig
                     new_ax = new_fig.axes[0] if new_fig.axes else None
@@ -517,6 +520,7 @@ class ExportPanelImageExportMixin:
                 spin.valueChanged.connect(_spin_changed)            # spin: apply immediately
 
             _wire_pair(ps_slider, ps_spin, 'point_size')
+            _wire_pair(lms_slider, lms_spin, 'legend_marker_size')
             _wire_pair(ls_slider, ls_spin, 'legend_size')
             _wire_pair(lab_slider, lab_spin, 'label_size')
             _wire_pair(tit_slider, tit_spin, 'title_size')

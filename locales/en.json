@@ -238,6 +238,8 @@
   "Select the worksheet that contains the measurements you want to analyze.": "Select the worksheet that contains the measurements you want to analyze.",
   "Please select a sheet.": "Please select a sheet.",
   "Point Size": "Point Size",
+  "Data Point Size": "Data Point Size",
+  "Legend Marker Size": "Legend Marker Size",
   "Point size": "Point size",
   "Point Alpha": "Point Alpha",
   "Figure Width": "Figure Width",
