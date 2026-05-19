@@ -4,9 +4,8 @@ Qt5 文件选择对话框
 import os
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                               QLabel, QPushButton,
-                              QComboBox, QFileDialog, QWidget,
+                              QComboBox, QFileDialog,
                               QSizePolicy, QGroupBox)
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
 from core import translate, available_languages, set_language, app_state, state_gateway

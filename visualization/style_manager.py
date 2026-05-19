@@ -7,7 +7,6 @@ import logging
 import os
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 from matplotlib import font_manager, rcParams
 
 from core import CONFIG

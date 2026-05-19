@@ -22,11 +22,7 @@ from typing import Any
 import threading
 
 import numpy as np
-from scipy import optimize
-try:
-    from scipy.stats import chi2
-except Exception:
-    chi2 = None
+
 
 # =============================================================================
 # 1. 物理常数与参考值定义

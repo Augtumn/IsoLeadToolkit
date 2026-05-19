@@ -4,7 +4,6 @@ import logging
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                               QLabel, QTableWidget, QTableWidgetItem, QMessageBox,
                               QHeaderView, QSizePolicy, QGroupBox)
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 import numpy as np
 

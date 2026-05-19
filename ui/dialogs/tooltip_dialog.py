@@ -4,7 +4,6 @@
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                               QLabel, QListWidget, QListWidgetItem, QMessageBox,
                               QSizePolicy, QGroupBox)
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
 from core import app_state, translate

@@ -4,9 +4,9 @@ from typing import Any
 
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                               QLabel, QTableWidget, QTableWidgetItem, QMessageBox,
-                              QHeaderView, QSizePolicy, QGroupBox, QComboBox,
-                              QDoubleSpinBox, QGridLayout, QTextEdit, QFileDialog,
-                              QRadioButton, QButtonGroup)
+                              QHeaderView, QGroupBox, QComboBox,
+                              QDoubleSpinBox, QGridLayout, QFileDialog,
+                              QRadioButton)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 import numpy as np

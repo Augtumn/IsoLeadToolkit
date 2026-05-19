@@ -4,7 +4,7 @@ Qt5 2D 列选择对话框
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                               QLabel, QPushButton,
                               QListWidget, QListWidgetItem,
-                              QWidget, QSizePolicy, QMessageBox,
+                              QSizePolicy, QMessageBox,
                               QGroupBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont

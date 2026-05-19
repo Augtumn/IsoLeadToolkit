@@ -5,9 +5,8 @@ import pandas as pd
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                               QLabel, QPushButton,
                               QListWidget, QListWidgetItem,
-                              QWidget, QSizePolicy, QMessageBox,
+                              QSizePolicy, QMessageBox,
                               QGroupBox)
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
 from core import translate

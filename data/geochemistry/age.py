@@ -9,12 +9,6 @@ from scipy import optimize
 
 from .engine import (
     engine,
-    A0,
-    B0,
-    A1_SK,
-    B1_SK,
-    T_EARTH_CANON,
-    T_SK_STAGE2,
     EPSILON,
 )
 

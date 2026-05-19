@@ -4,8 +4,8 @@ Qt5 三元图列选择对话框
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                               QLabel, QPushButton,
                               QListWidget, QListWidgetItem,
-                              QWidget, QSizePolicy, QMessageBox,
-                              QGroupBox, QDoubleSpinBox, QCheckBox)
+                              QSizePolicy, QMessageBox,
+                              QGroupBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 

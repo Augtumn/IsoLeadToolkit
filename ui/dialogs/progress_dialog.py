@@ -2,11 +2,8 @@
 Qt5 进度对话框
 """
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QLabel,
-                              QProgressBar, QFrame)
+                              QProgressBar)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
-
-from core import translate
 
 
 class Qt5ProgressDialog(QDialog):

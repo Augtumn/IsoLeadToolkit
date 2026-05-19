@@ -16,7 +16,6 @@ from .engine import (
     LAMBDA_235,
     LAMBDA_232,
     A0,
-    B0,
     C0,
     A1_SK,
     B1_SK,

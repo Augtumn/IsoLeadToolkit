@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from core import CONFIG, app_state
+from core import app_state
 
 logger = logging.getLogger(__name__)
 
