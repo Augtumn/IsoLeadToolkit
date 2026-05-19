@@ -184,6 +184,54 @@ class ExportPanelCommonMixin:
         """Return export profile for a journal preset."""
         return build_image_export_profile(preset_key)
 
+    @staticmethod
+    def _profile_default_params(profile: dict) -> dict:
+        """Compute all export parameter defaults from a journal profile dict."""
+        legend_style = dict(profile.get('legend', {}) or {})
+        legend_fontsize = float(legend_style.get('fontsize', 8.0))
+        return {
+            'point_size': int(profile.get('point_size', 60)),
+            'legend_size': int(round(legend_fontsize)),
+            'label_size': int(round(legend_fontsize + 2.0)),
+            'title_size': int(round(legend_fontsize + 3.0)),
+            'tick_size': int(round(legend_fontsize - 0.5)),
+            'dpi': int(profile.get('dpi', 400)),
+            'tight_bbox': True,
+            'transparent': False,
+            'pad_inches': 0.02,
+            'image_ext': 'png',
+        }
+
+    def _get_image_export_params(self, profile: dict, *, overrides: dict | None = None) -> dict:
+        """Return a unified dict of all export parameters.
+
+        Resolution order: explicit *overrides* > panel widgets (if present) > profile defaults.
+        When *overrides* is provided (e.g. from the preview dialog), panel widgets are ignored.
+        """
+        defaults = self._profile_default_params(profile)
+
+        if overrides is not None:
+            # Merge overrides over defaults (all values from dialog).
+            params = dict(defaults)
+            params.update(overrides)
+            return params
+
+        # Fallback: resolve from panel widgets when they exist, otherwise use defaults.
+        preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
+        params = dict(defaults)
+        params['preset_key'] = str(preset_key)
+        params['image_ext'] = self.image_format_combo.currentData() if self.image_format_combo is not None else defaults['image_ext']
+        params['point_size'] = int(self.image_point_size_spin.value()) if self.image_point_size_spin is not None else defaults['point_size']
+        params['legend_size'] = int(self.image_legend_size_spin.value()) if self.image_legend_size_spin is not None else defaults['legend_size']
+        params['label_size'] = int(self.image_label_size_spin.value()) if self.image_label_size_spin is not None else defaults['label_size']
+        params['title_size'] = int(self.image_title_size_spin.value()) if self.image_title_size_spin is not None else defaults['title_size']
+        params['tick_size'] = int(self.image_tick_size_spin.value()) if self.image_tick_size_spin is not None else defaults['tick_size']
+        params['dpi'] = int(self.image_dpi_spin.value()) if self.image_dpi_spin is not None else defaults['dpi']
+        params['tight_bbox'] = bool(self.image_tight_bbox_check.isChecked()) if self.image_tight_bbox_check is not None else defaults['tight_bbox']
+        params['transparent'] = bool(self.image_transparent_check.isChecked()) if self.image_transparent_check is not None else defaults['transparent']
+        params['pad_inches'] = float(self.image_pad_inches_spin.value()) if self.image_pad_inches_spin is not None else defaults['pad_inches']
+        return params
+
     def _resolve_export_point_size(self, profile: dict) -> int:
         """Resolve point size from UI override or profile default."""
         point_size = int(profile.get('point_size', 60))
@@ -222,22 +270,40 @@ class ExportPanelCommonMixin:
             default_size = int(self.image_tick_size_spin.value())
         return default_size
 
-    def _resolve_export_save_options(self, profile: dict) -> dict:
-        """Collect figure save options from export controls."""
-        dpi_override = int(self.image_dpi_spin.value()) if self.image_dpi_spin is not None else None
-        use_tight_bbox = bool(self.image_tight_bbox_check.isChecked()) if self.image_tight_bbox_check is not None else True
-        transparent = bool(self.image_transparent_check.isChecked()) if self.image_transparent_check is not None else False
-        preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
-        image_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
-        point_size = int(self.image_point_size_spin.value()) if self.image_point_size_spin is not None else None
-        legend_size = int(self.image_legend_size_spin.value()) if self.image_legend_size_spin is not None else None
-        pad_inches = 0.02
-        if self.image_pad_inches_spin is not None:
-            pad_inches = float(self.image_pad_inches_spin.value())
+    def _resolve_export_save_options(self, profile: dict, *, overrides: dict | None = None) -> dict:
+        """Collect figure save options from export controls.
 
-        label_size = int(self.image_label_size_spin.value()) if self.image_label_size_spin is not None else None
-        title_size = int(self.image_title_size_spin.value()) if self.image_title_size_spin is not None else None
-        tick_size = int(self.image_tick_size_spin.value()) if self.image_tick_size_spin is not None else None
+        When *overrides* is provided, panel widget values are ignored.
+        """
+        if overrides is not None:
+            dpi_override = int(overrides.get('dpi', profile.get('dpi', 400)))
+            use_tight_bbox = bool(overrides.get('tight_bbox', True))
+            transparent = bool(overrides.get('transparent', False))
+            pad_inches = float(overrides.get('pad_inches', 0.02))
+        else:
+            dpi_override = int(self.image_dpi_spin.value()) if self.image_dpi_spin is not None else None
+            use_tight_bbox = bool(self.image_tight_bbox_check.isChecked()) if self.image_tight_bbox_check is not None else True
+            transparent = bool(self.image_transparent_check.isChecked()) if self.image_transparent_check is not None else False
+            pad_inches = 0.02
+            if self.image_pad_inches_spin is not None:
+                pad_inches = float(self.image_pad_inches_spin.value())
+
+        if overrides is not None:
+            preset_key = str(overrides.get('preset_key', 'science_single'))
+            image_ext = str(overrides.get('image_ext', 'png'))
+            point_size = int(overrides.get('point_size', profile.get('point_size', 60)))
+            legend_size = int(overrides.get('legend_size', 8))
+            label_size = int(overrides.get('label_size', 10))
+            title_size = int(overrides.get('title_size', 12))
+            tick_size = int(overrides.get('tick_size', 9))
+        else:
+            preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
+            image_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
+            point_size = int(self.image_point_size_spin.value()) if self.image_point_size_spin is not None else None
+            legend_size = int(self.image_legend_size_spin.value()) if self.image_legend_size_spin is not None else None
+            label_size = int(self.image_label_size_spin.value()) if self.image_label_size_spin is not None else None
+            title_size = int(self.image_title_size_spin.value()) if self.image_title_size_spin is not None else None
+            tick_size = int(self.image_tick_size_spin.value()) if self.image_tick_size_spin is not None else None
 
         state_gateway.set_export_image_options(
             preset_key=str(preset_key),

@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import logging
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -15,47 +18,21 @@ from PyQt5.QtWidgets import (
     QSlider,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from core import app_state, state_gateway, translate
 
 logger = logging.getLogger(__name__)
 
+_PREVIEW_DEBOUNCE_MS = 400
+
 
 class ExportPanelImageExportMixin:
     """Image export methods for ExportPanel."""
 
     def _on_image_preset_changed(self):
-        """Sync export point size input with the selected preset defaults."""
-        if self.image_preset_combo is None or self.image_point_size_spin is None:
-            return
-        preset_key = self.image_preset_combo.currentData() or 'science_single'
-        profile = self._image_export_profile(str(preset_key))
-        self.image_point_size_spin.blockSignals(True)
-        self.image_point_size_spin.setValue(int(profile.get('point_size', 60)))
-        self.image_point_size_spin.blockSignals(False)
-        if self.image_legend_size_spin is not None:
-            default_legend_size = int(round(float((profile.get('legend', {}) or {}).get('fontsize', 8.0))))
-            self.image_legend_size_spin.blockSignals(True)
-            self.image_legend_size_spin.setValue(default_legend_size)
-            self.image_legend_size_spin.blockSignals(False)
-        if self.image_dpi_spin is not None:
-            self.image_dpi_spin.blockSignals(True)
-            self.image_dpi_spin.setValue(int(profile.get('dpi', 400)))
-            self.image_dpi_spin.blockSignals(False)
-        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
-        if self.image_label_size_spin is not None:
-            self.image_label_size_spin.blockSignals(True)
-            self.image_label_size_spin.setValue(int(round(legend_fontsize + 2.0)))
-            self.image_label_size_spin.blockSignals(False)
-        if self.image_title_size_spin is not None:
-            self.image_title_size_spin.blockSignals(True)
-            self.image_title_size_spin.setValue(int(round(legend_fontsize + 3.0)))
-            self.image_title_size_spin.blockSignals(False)
-        if self.image_tick_size_spin is not None:
-            self.image_tick_size_spin.blockSignals(True)
-            self.image_tick_size_spin.setValue(int(round(legend_fontsize - 0.5)))
-            self.image_tick_size_spin.blockSignals(False)
+        """Update style source label when preset changes."""
         self._update_style_source_label()
 
     def _is_scienceplots_available(self) -> bool:
@@ -77,7 +54,7 @@ class ExportPanelImageExportMixin:
         self.image_style_source_label.setText(text)
 
     def _on_export_image_clicked(self):
-        """Export figure directly without opening preview dialog."""
+        """Export figure directly using profile defaults (no panel param widgets)."""
         import matplotlib.pyplot as plt
 
         if getattr(app_state, 'df_global', None) is None or len(app_state.df_global) == 0:
@@ -89,7 +66,19 @@ class ExportPanelImageExportMixin:
 
         preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
         profile = self._image_export_profile(str(preset_key))
-        preferred_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
+        # Use profile defaults since panel parameter widgets have been removed.
+        params = self._profile_default_params(profile)
+        params['preset_key'] = str(preset_key)
+        # Resolve default sizes from profile.
+        point_size_for_export = int(profile.get('point_size', 60))
+        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
+        legend_size_for_export = int(round(legend_fontsize))
+        label_size_for_export = int(round(legend_fontsize + 2.0))
+        title_size_for_export = int(round(legend_fontsize + 3.0))
+        tick_size_for_export = int(round(legend_fontsize - 0.5))
+        image_ext = str(params.get('image_ext', 'png'))
+        save_options = self._resolve_export_save_options(profile, overrides=params)
+
         filters = (
             "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"
             "SVG Files (*.svg);;EPS Files (*.eps);;All Files (*.*)"
@@ -103,13 +92,7 @@ class ExportPanelImageExportMixin:
         if not file_path:
             return
 
-        file_path, image_ext = self._normalize_export_target(file_path, str(preferred_ext))
-        point_size_for_export = self._resolve_export_point_size(profile)
-        legend_size_for_export = self._resolve_export_legend_size(profile)
-        label_size_for_export = self._resolve_export_label_size(profile)
-        title_size_for_export = self._resolve_export_title_size(profile)
-        tick_size_for_export = self._resolve_export_tick_size(profile)
-        save_options = self._resolve_export_save_options(profile)
+        file_path, image_ext = self._normalize_export_target(file_path, str(image_ext))
 
         export_fig = None
         try:
@@ -235,7 +218,7 @@ class ExportPanelImageExportMixin:
                 logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
 
     def _on_preview_image_clicked(self):
-        """Preview export result in a separate dialog before saving."""
+        """Preview export result with full parameter adjustment in a separate dialog."""
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 
@@ -248,12 +231,16 @@ class ExportPanelImageExportMixin:
 
         preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
         profile = self._image_export_profile(str(preset_key))
-        point_size_for_export = self._resolve_export_point_size(profile)
-        legend_size_for_export = self._resolve_export_legend_size(profile)
-        label_size_for_export = self._resolve_export_label_size(profile)
-        title_size_for_export = self._resolve_export_title_size(profile)
-        tick_size_for_export = self._resolve_export_tick_size(profile)
-        image_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
+        defaults = self._profile_default_params(profile)
+        params = dict(defaults)
+        params['preset_key'] = str(preset_key)
+        point_size_for_export = int(profile.get('point_size', 60))
+        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
+        legend_size_for_export = int(round(legend_fontsize))
+        label_size_for_export = int(round(legend_fontsize + 2.0))
+        title_size_for_export = int(round(legend_fontsize + 3.0))
+        tick_size_for_export = int(round(legend_fontsize - 0.5))
+        image_ext = str(params.get('image_ext', 'png'))
 
         try:
             preview_fig = self._create_export_figure(
@@ -269,175 +256,321 @@ class ExportPanelImageExportMixin:
 
             dialog = QDialog(self)
             dialog.setWindowTitle(translate("Export Preview"))
-            dialog.resize(min(1400, preview_width_px + 120), min(1000, preview_height_px + 180))
+            dialog.resize(min(1400, preview_width_px + 120), min(1000, preview_height_px + 350))
 
-            layout = QVBoxLayout(dialog)
+            main_layout = QVBoxLayout(dialog)
 
-            # Keep preview controls in dialog so users can fine-tune before exporting.
-            control_row = QHBoxLayout()
-            point_size_label = QLabel(translate("Point Size"))
-            point_size_slider = QSlider(Qt.Horizontal)
-            point_size_slider.setRange(1, 50)
-            point_size_slider.setValue(int(point_size_for_export))
-            point_size_spin = QSpinBox()
-            point_size_spin.setRange(1, 50)
-            point_size_spin.setValue(int(point_size_for_export))
+            # ── Control panel ──────────────────────────────────────
+            control_widget = QWidget()
+            control_layout = QVBoxLayout(control_widget)
+            control_layout.setContentsMargins(4, 4, 4, 4)
+            control_layout.setSpacing(4)
 
-            control_row.addWidget(point_size_label)
-            control_row.addWidget(point_size_slider, 1)
-            control_row.addWidget(point_size_spin)
-            layout.addLayout(control_row)
+            # Row 1: Preset + Format
+            row1 = QHBoxLayout()
+            row1.addWidget(QLabel(translate("Journal Preset")))
+            preset_combo = QComboBox()
+            preset_combo.addItem(translate("Science Single Column"), 'science_single')
+            preset_combo.addItem(translate("IEEE Single Column"), 'ieee_single')
+            preset_combo.addItem(translate("Nature Double Column"), 'nature_double')
+            preset_combo.addItem(translate("Presentation"), 'presentation')
+            idx = preset_combo.findData(str(preset_key))
+            if idx >= 0:
+                preset_combo.setCurrentIndex(idx)
+            row1.addWidget(preset_combo)
 
-            legend_control_row = QHBoxLayout()
-            legend_size_label = QLabel(translate("Legend Size"))
-            legend_size_slider = QSlider(Qt.Horizontal)
-            legend_size_slider.setRange(1, 15)
-            legend_size_slider.setValue(int(legend_size_for_export))
-            legend_size_spin = QSpinBox()
-            legend_size_spin.setRange(1, 15)
-            legend_size_spin.setValue(int(legend_size_for_export))
-            legend_control_row.addWidget(legend_size_label)
-            legend_control_row.addWidget(legend_size_slider, 1)
-            legend_control_row.addWidget(legend_size_spin)
-            layout.addLayout(legend_control_row)
+            row1.addSpacing(12)
+            row1.addWidget(QLabel(translate("Image Format")))
+            format_combo = QComboBox()
+            format_combo.addItem("PNG", "png")
+            format_combo.addItem("TIFF", "tiff")
+            format_combo.addItem("PDF", "pdf")
+            format_combo.addItem("SVG", "svg")
+            format_combo.addItem("EPS", "eps")
+            fidx = format_combo.findData(str(image_ext))
+            if fidx >= 0:
+                format_combo.setCurrentIndex(fidx)
+            row1.addWidget(format_combo)
+            row1.addStretch()
+            control_layout.addLayout(row1)
 
+            # Helper: slider + spin pair
+            def _add_slider_spin(parent_layout, label_text, min_val, max_val, step, init_val):
+                row = QHBoxLayout()
+                row.addWidget(QLabel(label_text))
+                slider = QSlider(Qt.Horizontal)
+                slider.setRange(min_val, max_val)
+                slider.setSingleStep(step)
+                slider.setValue(int(init_val))
+                spin = QSpinBox()
+                spin.setRange(min_val, max_val)
+                spin.setSingleStep(step)
+                spin.setValue(int(init_val))
+                row.addWidget(slider, 1)
+                row.addWidget(spin)
+                parent_layout.addLayout(row)
+                return slider, spin
+
+            # Row 2: DPI + Point Size
+            row2 = QHBoxLayout()
+            dpi_slider, dpi_spin = _add_slider_spin(row2, translate("DPI"), 72, 1200, 25, params['dpi'])
+            ps_slider, ps_spin = _add_slider_spin(row2, translate("Point Size"), 1, 50, 1, point_size_for_export)
+            ls_slider, ls_spin = _add_slider_spin(row2, translate("Legend Size"), 1, 15, 1, legend_size_for_export)
+            control_layout.addLayout(row2)
+
+            # Row 3: Label / Title / Tick sizes
+            row3 = QHBoxLayout()
+            lab_slider, lab_spin = _add_slider_spin(row3, translate("Label Font"), 4, 24, 1, label_size_for_export)
+            tit_slider, tit_spin = _add_slider_spin(row3, translate("Title Font"), 4, 24, 1, title_size_for_export)
+            tck_slider, tck_spin = _add_slider_spin(row3, translate("Tick Font"), 4, 24, 1, tick_size_for_export)
+            control_layout.addLayout(row3)
+
+            # Row 4: Tight BBox + Padding + Transparent
+            row4 = QHBoxLayout()
+            tight_bbox_check = QCheckBox(translate("Tight BBox"))
+            tight_bbox_check.setChecked(bool(params['tight_bbox']))
+            row4.addWidget(tight_bbox_check)
+
+            row4.addWidget(QLabel(translate("Padding")))
+            pad_spin = QDoubleSpinBox()
+            pad_spin.setRange(0.0, 1.0)
+            pad_spin.setSingleStep(0.01)
+            pad_spin.setDecimals(2)
+            pad_spin.setValue(float(params['pad_inches']))
+            pad_spin.setEnabled(tight_bbox_check.isChecked())
+            tight_bbox_check.toggled.connect(pad_spin.setEnabled)
+            row4.addWidget(pad_spin)
+
+            transparent_check = QCheckBox(translate("Transparent"))
+            transparent_check.setChecked(bool(params['transparent']))
+            row4.addWidget(transparent_check)
+            row4.addStretch()
+            control_layout.addLayout(row4)
+
+            main_layout.addWidget(control_widget)
+
+            # ── Canvas and toolbar ─────────────────────────────────
             canvas = FigureCanvasQTAgg(preview_fig)
             canvas.setFixedSize(preview_width_px, preview_height_px)
             toolbar = NavigationToolbar2QT(canvas, dialog)
-            layout.addWidget(toolbar)
+            main_layout.addWidget(toolbar)
 
             scroll_area = QScrollArea(dialog)
             scroll_area.setWidget(canvas)
             scroll_area.setWidgetResizable(False)
-            layout.addWidget(scroll_area)
+            main_layout.addWidget(scroll_area)
 
             main_preview_ax = preview_fig.axes[0] if preview_fig.axes else None
 
-            # Reposition overlay labels whenever preview viewport changes.
-            refresh_guard = {'busy': False}
+            # ── State references for closures ──────────────────────
+            state = {
+                'preview_fig': preview_fig,
+                'canvas': canvas,
+                'profile': profile,
+                'params': dict(params),
+                'point_size': point_size_for_export,
+                'legend_size': legend_size_for_export,
+                'label_size': label_size_for_export,
+                'title_size': title_size_for_export,
+                'tick_size': tick_size_for_export,
+                'main_ax': main_preview_ax,
+                'axis_callbacks': [],
+                'canvas_callbacks': [],
+                'debounce_timer': QTimer(dialog),
+                'refreshing': False,
+            }
+            state['debounce_timer'].setSingleShot(True)
+            state['debounce_timer'].setInterval(_PREVIEW_DEBOUNCE_MS)
 
-            def _refresh_preview_labels_now():
-                if refresh_guard['busy'] or main_preview_ax is None:
+            # ── Re-render: full figure regen via _create_export_figure ──
+            def _do_refresh():
+                if state['refreshing']:
                     return
-                refresh_guard['busy'] = True
+                state['refreshing'] = True
                 try:
-                    self._refresh_preview_overlay_labels(preview_fig, main_preview_ax)
-                    canvas.draw_idle()
-                finally:
-                    refresh_guard['busy'] = False
+                    old_fig = state['preview_fig']
+                    old_ax = state['main_ax']
 
-            axis_callback_ids = []
-            canvas_callback_ids = []
-            if main_preview_ax is not None:
-                try:
-                    axis_callback_ids.append(main_preview_ax.callbacks.connect('xlim_changed', lambda _ax: _refresh_preview_labels_now()))
-                    axis_callback_ids.append(main_preview_ax.callbacks.connect('ylim_changed', lambda _ax: _refresh_preview_labels_now()))
-                except Exception:
-                    axis_callback_ids = []
-            try:
-                canvas_callback_ids.append(canvas.mpl_connect('button_release_event', lambda _evt: _refresh_preview_labels_now()))
-            except Exception:
-                canvas_callback_ids = []
-
-            _refresh_preview_labels_now()
-
-            def _apply_preview_point_size(new_size: int):
-                size_value = float(new_size)
-                if main_preview_ax is None:
-                    return
-                for collection in main_preview_ax.collections:
-                    if not hasattr(collection, 'get_sizes') or not hasattr(collection, 'set_sizes'):
-                        continue
-                    if not hasattr(collection, 'get_offsets'):
-                        continue
-                    try:
-                        offsets = collection.get_offsets()
-                        n_offsets = len(offsets) if offsets is not None else 0
-                        if n_offsets <= 0:
-                            continue
-                        # Update scatter-like collections only; avoid touching KDE artists.
-                        collection.set_sizes([size_value] * n_offsets)
-                    except Exception:
-                        continue
-                for ax in preview_fig.axes:
-                    legend = None
-                    try:
-                        legend = ax.get_legend()
-                    except Exception:
-                        legend = None
-                    if legend is None:
-                        continue
-                    self._apply_legend_marker_size_from_point(legend, size_value)
-                canvas.draw_idle()
-
-            def _on_slider_changed(value: int):
-                point_size_spin.blockSignals(True)
-                point_size_spin.setValue(value)
-                point_size_spin.blockSignals(False)
-                if self.image_point_size_spin is not None:
-                    self.image_point_size_spin.blockSignals(True)
-                    self.image_point_size_spin.setValue(value)
-                    self.image_point_size_spin.blockSignals(False)
-                _apply_preview_point_size(value)
-
-            def _on_spin_changed(value: int):
-                point_size_slider.blockSignals(True)
-                point_size_slider.setValue(value)
-                point_size_slider.blockSignals(False)
-                if self.image_point_size_spin is not None:
-                    self.image_point_size_spin.blockSignals(True)
-                    self.image_point_size_spin.setValue(value)
-                    self.image_point_size_spin.blockSignals(False)
-                _apply_preview_point_size(value)
-
-            point_size_slider.valueChanged.connect(_on_slider_changed)
-            point_size_spin.valueChanged.connect(_on_spin_changed)
-
-            def _apply_preview_legend_size(new_size: int):
-                legend_size = float(new_size)
-                for ax in preview_fig.axes:
-                    legend = None
-                    try:
-                        legend = ax.get_legend()
-                    except Exception:
-                        legend = None
-                    if legend is None:
-                        continue
-                    for text in legend.get_texts():
+                    # Disconnect old callbacks
+                    for cid in state['axis_callbacks']:
                         try:
-                            text.set_fontsize(legend_size)
+                            if old_ax is not None:
+                                old_ax.callbacks.disconnect(cid)
+                        except Exception:
+                            pass
+                    state['axis_callbacks'] = []
+                    for cid in state['canvas_callbacks']:
+                        try:
+                            state['canvas'].mpl_disconnect(cid)
+                        except Exception:
+                            pass
+                    state['canvas_callbacks'] = []
+
+                    # Apply current DPI to the profile for figure creation
+                    import copy
+                    effective_profile = dict(state['profile'])
+                    effective_profile['dpi'] = int(state['params'].get('dpi', effective_profile.get('dpi', 400)))
+
+                    new_fig = self._create_export_figure(
+                        effective_profile,
+                        state['point_size'],
+                        state['legend_size'],
+                        state['label_size'],
+                        state['title_size'],
+                        state['tick_size'],
+                    )
+                    state['preview_fig'] = new_fig
+                    new_ax = new_fig.axes[0] if new_fig.axes else None
+                    state['main_ax'] = new_ax
+
+                    # Update canvas size to match new figure
+                    new_w = int(round(float(effective_profile['figsize'][0]) * float(state['params']['dpi'])))
+                    new_h = int(round(float(effective_profile['figsize'][1]) * float(state['params']['dpi'])))
+                    state['canvas'].figure = new_fig
+                    state['canvas'].setFixedSize(new_w, new_h)
+
+                    # Re-register overlay label callbacks
+                    if new_ax is not None:
+                        try:
+                            cid1 = new_ax.callbacks.connect('xlim_changed', lambda _ax: _refresh_labels_preview())
+                            cid2 = new_ax.callbacks.connect('ylim_changed', lambda _ax: _refresh_labels_preview())
+                            state['axis_callbacks'] = [cid1, cid2]
                         except Exception:
                             pass
                     try:
-                        legend.set_title("")
-                        legend.get_title().set_visible(False)
+                        cid3 = state['canvas'].mpl_connect('button_release_event', lambda _evt: _refresh_labels_preview())
+                        state['canvas_callbacks'] = [cid3]
                     except Exception:
                         pass
-                canvas.draw_idle()
 
-            def _on_legend_slider_changed(value: int):
-                legend_size_spin.blockSignals(True)
-                legend_size_spin.setValue(value)
-                legend_size_spin.blockSignals(False)
-                if self.image_legend_size_spin is not None:
-                    self.image_legend_size_spin.blockSignals(True)
-                    self.image_legend_size_spin.setValue(value)
-                    self.image_legend_size_spin.blockSignals(False)
-                _apply_preview_legend_size(value)
+                    _refresh_labels_preview()
+                    state['canvas'].draw_idle()
 
-            def _on_legend_spin_changed(value: int):
-                legend_size_slider.blockSignals(True)
-                legend_size_slider.setValue(value)
-                legend_size_slider.blockSignals(False)
-                if self.image_legend_size_spin is not None:
-                    self.image_legend_size_spin.blockSignals(True)
-                    self.image_legend_size_spin.setValue(value)
-                    self.image_legend_size_spin.blockSignals(False)
-                _apply_preview_legend_size(value)
+                    try:
+                        plt.close(old_fig)
+                    except Exception:
+                        pass
+                except Exception as err:
+                    logger.warning("Preview re-render failed: %s", err)
+                finally:
+                    state['refreshing'] = False
 
-            legend_size_slider.valueChanged.connect(_on_legend_slider_changed)
-            legend_size_spin.valueChanged.connect(_on_legend_spin_changed)
+            def _schedule_refresh():
+                state['debounce_timer'].stop()
+                state['debounce_timer'].timeout.disconnect()
+                state['debounce_timer'].timeout.connect(_do_refresh)
+                state['debounce_timer'].start()
 
+            def _refresh_labels_preview():
+                try:
+                    self._refresh_preview_overlay_labels(state['preview_fig'], state['main_ax'])
+                except Exception:
+                    pass
+
+            # Initial label refresh
+            _refresh_labels_preview()
+
+            if main_preview_ax is not None:
+                try:
+                    cid1 = main_preview_ax.callbacks.connect('xlim_changed', lambda _ax: _refresh_labels_preview())
+                    cid2 = main_preview_ax.callbacks.connect('ylim_changed', lambda _ax: _refresh_labels_preview())
+                    state['axis_callbacks'] = [cid1, cid2]
+                except Exception:
+                    pass
+            try:
+                cid3 = canvas.mpl_connect('button_release_event', lambda _evt: _refresh_labels_preview())
+                state['canvas_callbacks'] = [cid3]
+            except Exception:
+                pass
+
+            # ── Wire slider ↔ spin bi-directional sync ─────────────
+            def _wire_pair(slider, spin, state_key):
+                def _slider_changed(v):
+                    spin.blockSignals(True)
+                    spin.setValue(v)
+                    spin.blockSignals(False)
+                    state[state_key] = v
+                    _schedule_refresh()
+
+                def _spin_changed(v):
+                    slider.blockSignals(True)
+                    slider.setValue(v)
+                    slider.blockSignals(False)
+                    state[state_key] = v
+                    _schedule_refresh()
+
+                slider.valueChanged.connect(_slider_changed)
+                spin.valueChanged.connect(_spin_changed)
+
+            _wire_pair(dpi_slider, dpi_spin, 'dpi')  # store in state for reuse
+            _wire_pair(ps_slider, ps_spin, 'point_size')
+            _wire_pair(ls_slider, ls_spin, 'legend_size')
+            _wire_pair(lab_slider, lab_spin, 'label_size')
+            _wire_pair(tit_slider, tit_spin, 'title_size')
+            _wire_pair(tck_slider, tck_spin, 'tick_size')
+
+            # DPI goes into params dict for save
+            def _dpi_changed(v):
+                state['params']['dpi'] = v
+            dpi_slider.valueChanged.connect(_dpi_changed)
+            dpi_spin.valueChanged.connect(_dpi_changed)
+
+            def _format_changed(idx):
+                ext = format_combo.itemData(idx) or 'png'
+                state['params']['image_ext'] = str(ext)
+            format_combo.currentIndexChanged.connect(_format_changed)
+
+            def _tight_changed(checked):
+                state['params']['tight_bbox'] = bool(checked)
+                # tight_bbox only affects save, no re-render needed
+            tight_bbox_check.toggled.connect(_tight_changed)
+
+            def _transparent_changed(checked):
+                state['params']['transparent'] = bool(checked)
+            transparent_check.toggled.connect(_transparent_changed)
+
+            def _pad_changed(v):
+                state['params']['pad_inches'] = float(v)
+            pad_spin.valueChanged.connect(_pad_changed)
+
+            def _preset_changed(idx):
+                new_preset_key = preset_combo.itemData(idx) or 'science_single'
+                state['params']['preset_key'] = str(new_preset_key)
+                new_profile = self._image_export_profile(str(new_preset_key))
+                state['profile'] = new_profile
+                new_defaults = self._profile_default_params(new_profile)
+                legend_fs = float((new_profile.get('legend', {}) or {}).get('fontsize', 8.0))
+
+                # Reset all controls to new preset defaults
+                _block_and_set(dpi_slider, dpi_spin, new_defaults['dpi'])
+                _block_and_set(ps_slider, ps_spin, new_defaults['point_size'])
+                _block_and_set(ls_slider, ls_spin, new_defaults['legend_size'])
+                _block_and_set(lab_slider, lab_spin, new_defaults['label_size'])
+                _block_and_set(tit_slider, tit_spin, new_defaults['title_size'])
+                _block_and_set(tck_slider, tck_spin, new_defaults['tick_size'])
+
+                # Reset state
+                state['point_size'] = new_defaults['point_size']
+                state['legend_size'] = new_defaults['legend_size']
+                state['label_size'] = new_defaults['label_size']
+                state['title_size'] = new_defaults['title_size']
+                state['tick_size'] = new_defaults['tick_size']
+                state['params'].update(new_defaults)
+                state['params']['preset_key'] = str(new_preset_key)
+                state['params']['dpi'] = new_defaults['dpi']
+
+                _schedule_refresh()
+            preset_combo.currentIndexChanged.connect(_preset_changed)
+
+            def _block_and_set(slider, spin, value):
+                slider.blockSignals(True)
+                spin.blockSignals(True)
+                slider.setValue(int(value))
+                spin.setValue(int(value))
+                slider.blockSignals(False)
+                spin.blockSignals(False)
+
+            # ── Save ───────────────────────────────────────────────
             def _save_preview_image():
                 filters = (
                     "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"
@@ -451,11 +584,11 @@ class ExportPanelImageExportMixin:
                 )
                 if not file_path:
                     return
-                file_path, export_ext = self._normalize_export_target(file_path, str(image_ext))
-                save_options = self._resolve_export_save_options(profile)
+                file_path, export_ext = self._normalize_export_target(file_path, str(state['params'].get('image_ext', 'png')))
+                save_options = self._resolve_export_save_options(state['profile'], overrides=state['params'])
                 try:
                     self._save_export_figure(
-                        preview_fig,
+                        state['preview_fig'],
                         file_path,
                         export_ext,
                         export_dpi=int(save_options['dpi']),
@@ -479,29 +612,33 @@ class ExportPanelImageExportMixin:
             save_button = button_box.button(QDialogButtonBox.Save)
             if save_button is not None:
                 save_button.setText(translate("Save"))
-            if save_button is not None:
                 save_button.clicked.connect(_save_preview_image)
             close_button = button_box.button(QDialogButtonBox.Close)
             if close_button is not None:
                 close_button.setText(translate("Close"))
                 close_button.clicked.connect(dialog.reject)
-            layout.addWidget(button_box)
+            main_layout.addWidget(button_box)
 
+            # ── Cleanup ────────────────────────────────────────────
             def _cleanup_preview(_result):
                 try:
-                    if main_preview_ax is not None:
-                        for cid in axis_callback_ids:
+                    state['debounce_timer'].stop()
+                    if state['main_ax'] is not None:
+                        for cid in state['axis_callbacks']:
                             try:
-                                main_preview_ax.callbacks.disconnect(cid)
+                                state['main_ax'].callbacks.disconnect(cid)
                             except Exception:
                                 pass
-                    for cid in canvas_callback_ids:
+                    for cid in state['canvas_callbacks']:
                         try:
-                            canvas.mpl_disconnect(cid)
+                            state['canvas'].mpl_disconnect(cid)
                         except Exception:
                             pass
                 finally:
-                    plt.close(preview_fig)
+                    try:
+                        plt.close(state['preview_fig'])
+                    except Exception:
+                        pass
 
             dialog.finished.connect(_cleanup_preview)
             dialog.exec_()
