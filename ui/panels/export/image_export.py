@@ -380,6 +380,7 @@ class ExportPanelImageExportMixin:
             state = {
                 'preview_fig': preview_fig,
                 'canvas': canvas,
+                'toolbar': toolbar,
                 'profile': profile,
                 'params': dict(params),
                 'point_size': point_size_for_export,
@@ -462,10 +463,16 @@ class ExportPanelImageExportMixin:
                     _refresh_labels_preview()
                     state['canvas'].draw_idle()
 
-                    try:
-                        plt.close(old_fig)
-                    except Exception:
-                        pass
+                    # Replace toolbar to keep it connected to the new figure
+                    if state['toolbar'] is not None:
+                        try:
+                            main_layout.removeWidget(state['toolbar'])
+                            state['toolbar'].setParent(None)
+                            state['toolbar'].deleteLater()
+                        except Exception:
+                            pass
+                    state['toolbar'] = NavigationToolbar2QT(state['canvas'], dialog)
+                    main_layout.insertWidget(1, state['toolbar'])  # after control_widget
                 except Exception as err:
                     logger.warning("Preview re-render failed: %s", err)
                 finally:
