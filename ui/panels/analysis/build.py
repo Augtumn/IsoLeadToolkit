@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, translate
 from ui.icons import apply_color_swatch
+from ui.widgets import labeled_checkbox
 
 
 class AnalysisPanelBuildMixin:
@@ -91,10 +92,9 @@ class AnalysisPanelBuildMixin:
         kde_layout = QVBoxLayout()
 
         kde_row = QHBoxLayout()
-        self.tools_kde_check = QCheckBox(translate("Show Kernel Density"))
-        self.tools_kde_check.setProperty('translate_key', 'Show Kernel Density')
-        self.tools_kde_check.setChecked(getattr(app_state, 'show_kde', False))
-        self.tools_kde_check.stateChanged.connect(self._on_kde_change)
+        _, self.tools_kde_check = labeled_checkbox("Show Kernel Density",
+                                                   getattr(app_state, 'show_kde', False),
+                                                   self._on_kde_change)
         kde_row.addWidget(self.tools_kde_check)
 
         kde_swatch = QLabel()
@@ -107,10 +107,9 @@ class AnalysisPanelBuildMixin:
         kde_layout.addLayout(kde_row)
 
         mkde_row = QHBoxLayout()
-        self.tools_marginal_kde_check = QCheckBox(translate("Show Marginal KDE"))
-        self.tools_marginal_kde_check.setProperty('translate_key', 'Show Marginal KDE')
-        self.tools_marginal_kde_check.setChecked(getattr(app_state, 'show_marginal_kde', False))
-        self.tools_marginal_kde_check.stateChanged.connect(self._on_marginal_kde_change)
+        _, self.tools_marginal_kde_check = labeled_checkbox("Show Marginal KDE",
+                                                            getattr(app_state, 'show_marginal_kde', False),
+                                                            self._on_marginal_kde_change)
         mkde_row.addWidget(self.tools_marginal_kde_check)
 
         mkde_swatch = QLabel()
