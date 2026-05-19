@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import app_state, translate
-from ui.widgets import labeled_checkbox, labeled_combo, labeled_double_spin, labeled_spin
+
 
 
 class DisplayBuildMixin:
@@ -400,9 +400,11 @@ class DisplayBuildMixin:
 
         figure_grid = make_group("Figure")
         row = 0
-        _, self.figure_dpi_spin = labeled_spin("Figure DPI", 50, 600,
-                                               int(getattr(app_state, 'plot_dpi', 130)),
-                                               self._on_style_change)
+        self.figure_dpi_spin = QSpinBox()
+        self.figure_dpi_spin.setRange(50, 600)
+        self.figure_dpi_spin.setSingleStep(1)
+        self.figure_dpi_spin.setValue(int(getattr(app_state, 'plot_dpi', 130)))
+        self.figure_dpi_spin.valueChanged.connect(self._on_style_change)
         self.figure_dpi_spin.setToolTip(translate("图形分辨率（每英寸点数）。较高值产生更清晰的图像。"))
         row = add_row(figure_grid, "Figure DPI", self.figure_dpi_spin, row)
 
@@ -418,10 +420,10 @@ class DisplayBuildMixin:
 
         grid_grid = make_group("Grid")
         row = 0
-        _, self.grid_check = labeled_checkbox("Show Grid",
-                                              getattr(app_state, 'plot_style_grid', False),
-                                              self._on_style_change)
+        self.grid_check = QCheckBox(translate("Show Grid"))
         self.grid_check.setProperty('translate_key', 'Show Grid')
+        self.grid_check.setChecked(getattr(app_state, 'plot_style_grid', False))
+        self.grid_check.stateChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Show Grid", self.grid_check, row)
 
         grid_color_editor, self.grid_color_edit = self._create_color_picker(
@@ -429,22 +431,29 @@ class DisplayBuildMixin:
         )
         row = add_row(grid_grid, "Grid Color", grid_color_editor, row)
 
-        _, self.grid_width_spin = labeled_double_spin("Grid Linewidth", 0.1, 3.0,
-                                                       float(getattr(app_state, 'grid_linewidth', 0.6)),
-                                                       self._on_style_change, step=0.1)
+        self.grid_width_spin = QDoubleSpinBox()
+        self.grid_width_spin.setRange(0.1, 3.0)
+        self.grid_width_spin.setSingleStep(0.1)
+        self.grid_width_spin.setDecimals(2)
+        self.grid_width_spin.setValue(float(getattr(app_state, 'grid_linewidth', 0.6)))
+        self.grid_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Grid Linewidth", self.grid_width_spin, row)
 
-        _, self.grid_alpha_spin = labeled_double_spin("Grid Alpha", 0.0, 1.0,
-                                                      float(getattr(app_state, 'grid_alpha', 0.7)),
-                                                      self._on_style_change, step=0.05)
+        self.grid_alpha_spin = QDoubleSpinBox()
+        self.grid_alpha_spin.setRange(0.0, 1.0)
+        self.grid_alpha_spin.setSingleStep(0.05)
+        self.grid_alpha_spin.setDecimals(2)
+        self.grid_alpha_spin.setValue(float(getattr(app_state, 'grid_alpha', 0.7)))
+        self.grid_alpha_spin.valueChanged.connect(self._on_style_change)
         self.grid_alpha_spin.setToolTip(translate("网格线透明度。0 为完全透明，1 为完全不透明。"))
         row = add_row(grid_grid, "Grid Alpha", self.grid_alpha_spin, row)
 
         grid_style_items = ['-', '--', '-.', ':']
         grid_style_default = getattr(app_state, 'grid_linestyle', '--')
-        _, self.grid_style_combo = labeled_combo("Grid Style", grid_style_items,
-                                                  max(0, grid_style_items.index(grid_style_default)),
-                                                  self._on_style_change)
+        self.grid_style_combo = QComboBox()
+        self.grid_style_combo.addItems(grid_style_items)
+        self.grid_style_combo.setCurrentIndex(max(0, grid_style_items.index(grid_style_default)))
+        self.grid_style_combo.currentTextChanged.connect(self._on_style_change)
         self.grid_style_combo.setToolTip(translate("网格线样式：实线(-)、虚线(--)、点划线(-.)、点线(:)。"))
         row = add_row(grid_grid, "Grid Style", self.grid_style_combo, row)
 
@@ -459,30 +468,38 @@ class DisplayBuildMixin:
         )
         row = add_row(grid_grid, "Minor Grid Color", minor_grid_editor, row)
 
-        _, self.minor_grid_width_spin = labeled_double_spin("Minor Grid Linewidth", 0.1, 2.0,
-                                                           float(getattr(app_state, 'minor_grid_linewidth', 0.4)),
-                                                           self._on_style_change, step=0.1)
+        self.minor_grid_width_spin = QDoubleSpinBox()
+        self.minor_grid_width_spin.setRange(0.1, 2.0)
+        self.minor_grid_width_spin.setSingleStep(0.1)
+        self.minor_grid_width_spin.setDecimals(2)
+        self.minor_grid_width_spin.setValue(float(getattr(app_state, 'minor_grid_linewidth', 0.4)))
+        self.minor_grid_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid Linewidth", self.minor_grid_width_spin, row)
 
-        _, self.minor_grid_alpha_spin = labeled_double_spin("Minor Grid Alpha", 0.0, 1.0,
-                                                         float(getattr(app_state, 'minor_grid_alpha', 0.4)),
-                                                         self._on_style_change, step=0.05)
+        self.minor_grid_alpha_spin = QDoubleSpinBox()
+        self.minor_grid_alpha_spin.setRange(0.0, 1.0)
+        self.minor_grid_alpha_spin.setSingleStep(0.05)
+        self.minor_grid_alpha_spin.setDecimals(2)
+        self.minor_grid_alpha_spin.setValue(float(getattr(app_state, 'minor_grid_alpha', 0.4)))
+        self.minor_grid_alpha_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid Alpha", self.minor_grid_alpha_spin, row)
 
         minor_grid_style_items = ['-', '--', '-.', ':']
         minor_grid_style_default = getattr(app_state, 'minor_grid_linestyle', ':')
-        _, self.minor_grid_style_combo = labeled_combo("Minor Grid Style", minor_grid_style_items,
-                                                        max(0, minor_grid_style_items.index(minor_grid_style_default)),
-                                                        self._on_style_change)
+        self.minor_grid_style_combo = QComboBox()
+        self.minor_grid_style_combo.addItems(minor_grid_style_items)
+        self.minor_grid_style_combo.setCurrentIndex(max(0, minor_grid_style_items.index(minor_grid_style_default)))
+        self.minor_grid_style_combo.currentTextChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid Style", self.minor_grid_style_combo, row)
 
         tick_grid = make_group("Ticks")
         row = 0
         tick_dir_items = ['out', 'in', 'inout']
         tick_dir_default = getattr(app_state, 'tick_direction', 'out')
-        _, self.tick_dir_combo = labeled_combo("Tick Direction", tick_dir_items,
-                                                max(0, tick_dir_items.index(tick_dir_default)),
-                                                self._on_style_change)
+        self.tick_dir_combo = QComboBox()
+        self.tick_dir_combo.addItems(tick_dir_items)
+        self.tick_dir_combo.setCurrentIndex(max(0, tick_dir_items.index(tick_dir_default)))
+        self.tick_dir_combo.currentTextChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Tick Direction", self.tick_dir_combo, row)
 
         tick_color_editor, self.tick_color_edit = self._create_color_picker(
@@ -490,14 +507,20 @@ class DisplayBuildMixin:
         )
         row = add_row(tick_grid, "Tick Color", tick_color_editor, row)
 
-        _, self.tick_length_spin = labeled_double_spin("Tick Length", 0.0, 12.0,
-                                                      float(getattr(app_state, 'tick_length', 4.0)),
-                                                      self._on_style_change, step=0.5)
+        self.tick_length_spin = QDoubleSpinBox()
+        self.tick_length_spin.setRange(0.0, 12.0)
+        self.tick_length_spin.setSingleStep(0.5)
+        self.tick_length_spin.setDecimals(2)
+        self.tick_length_spin.setValue(float(getattr(app_state, 'tick_length', 4.0)))
+        self.tick_length_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Tick Length", self.tick_length_spin, row)
 
-        _, self.tick_width_spin = labeled_double_spin("Tick Width", 0.2, 3.0,
-                                                     float(getattr(app_state, 'tick_width', 0.8)),
-                                                     self._on_style_change, step=0.1)
+        self.tick_width_spin = QDoubleSpinBox()
+        self.tick_width_spin.setRange(0.2, 3.0)
+        self.tick_width_spin.setSingleStep(0.1)
+        self.tick_width_spin.setDecimals(2)
+        self.tick_width_spin.setValue(float(getattr(app_state, 'tick_width', 0.8)))
+        self.tick_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Tick Width", self.tick_width_spin, row)
 
         self.minor_ticks_check = QCheckBox()
@@ -505,21 +528,30 @@ class DisplayBuildMixin:
         self.minor_ticks_check.stateChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Minor Ticks", self.minor_ticks_check, row)
 
-        _, self.minor_tick_length_spin = labeled_double_spin("Minor Tick Length", 0.0, 8.0,
-                                                           float(getattr(app_state, 'minor_tick_length', 2.5)),
-                                                           self._on_style_change, step=0.5)
+        self.minor_tick_length_spin = QDoubleSpinBox()
+        self.minor_tick_length_spin.setRange(0.0, 8.0)
+        self.minor_tick_length_spin.setSingleStep(0.5)
+        self.minor_tick_length_spin.setDecimals(2)
+        self.minor_tick_length_spin.setValue(float(getattr(app_state, 'minor_tick_length', 2.5)))
+        self.minor_tick_length_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Minor Tick Length", self.minor_tick_length_spin, row)
 
-        _, self.minor_tick_width_spin = labeled_double_spin("Minor Tick Width", 0.2, 2.0,
-                                                         float(getattr(app_state, 'minor_tick_width', 0.6)),
-                                                         self._on_style_change, step=0.1)
+        self.minor_tick_width_spin = QDoubleSpinBox()
+        self.minor_tick_width_spin.setRange(0.2, 2.0)
+        self.minor_tick_width_spin.setSingleStep(0.1)
+        self.minor_tick_width_spin.setDecimals(2)
+        self.minor_tick_width_spin.setValue(float(getattr(app_state, 'minor_tick_width', 0.6)))
+        self.minor_tick_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Minor Tick Width", self.minor_tick_width_spin, row)
 
         spine_grid = make_group("Spines")
         row = 0
-        _, self.axis_linewidth_spin = labeled_double_spin("Axis Line Width", 0.2, 3.0,
-                                                          float(getattr(app_state, 'axis_linewidth', 1.0)),
-                                                          self._on_style_change, step=0.1)
+        self.axis_linewidth_spin = QDoubleSpinBox()
+        self.axis_linewidth_spin.setRange(0.2, 3.0)
+        self.axis_linewidth_spin.setSingleStep(0.1)
+        self.axis_linewidth_spin.setDecimals(2)
+        self.axis_linewidth_spin.setValue(float(getattr(app_state, 'axis_linewidth', 1.0)))
+        self.axis_linewidth_spin.valueChanged.connect(self._on_style_change)
         row = add_row(spine_grid, "Axis Line Width", self.axis_linewidth_spin, row)
 
         axis_color_editor, self.axis_line_color_edit = self._create_color_picker(
@@ -546,14 +578,18 @@ class DisplayBuildMixin:
 
         weight_items = ['normal', 'bold']
         label_weight_default = getattr(app_state, 'label_weight', 'normal')
-        _, self.label_weight_combo = labeled_combo("Label Weight", weight_items,
-                                                    max(0, weight_items.index(label_weight_default)),
-                                                    self._on_style_change)
+        self.label_weight_combo = QComboBox()
+        self.label_weight_combo.addItems(weight_items)
+        self.label_weight_combo.setCurrentIndex(max(0, weight_items.index(label_weight_default)))
+        self.label_weight_combo.currentTextChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Label Weight", self.label_weight_combo, row)
 
-        _, self.label_pad_spin = labeled_double_spin("Label Pad", 0.0, 30.0,
-                                                   float(getattr(app_state, 'label_pad', 6.0)),
-                                                   self._on_style_change, step=1.0)
+        self.label_pad_spin = QDoubleSpinBox()
+        self.label_pad_spin.setRange(0.0, 30.0)
+        self.label_pad_spin.setSingleStep(1.0)
+        self.label_pad_spin.setDecimals(2)
+        self.label_pad_spin.setValue(float(getattr(app_state, 'label_pad', 6.0)))
+        self.label_pad_spin.valueChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Label Pad", self.label_pad_spin, row)
 
         title_color_editor, self.title_color_edit = self._create_color_picker(
@@ -563,14 +599,18 @@ class DisplayBuildMixin:
 
         weight_items2 = ['normal', 'bold']
         title_weight_default = getattr(app_state, 'title_weight', 'bold')
-        _, self.title_weight_combo = labeled_combo("Title Weight", weight_items2,
-                                                    max(0, weight_items2.index(title_weight_default)),
-                                                    self._on_style_change)
+        self.title_weight_combo = QComboBox()
+        self.title_weight_combo.addItems(weight_items2)
+        self.title_weight_combo.setCurrentIndex(max(0, weight_items2.index(title_weight_default)))
+        self.title_weight_combo.currentTextChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Title Weight", self.title_weight_combo, row)
 
-        _, self.title_pad_spin = labeled_double_spin("Title Pad", 0.0, 40.0,
-                                                     float(getattr(app_state, 'title_pad', 20.0)),
-                                                     self._on_style_change, step=1.0)
+        self.title_pad_spin = QDoubleSpinBox()
+        self.title_pad_spin.setRange(0.0, 40.0)
+        self.title_pad_spin.setSingleStep(1.0)
+        self.title_pad_spin.setDecimals(2)
+        self.title_pad_spin.setValue(float(getattr(app_state, 'title_pad', 20.0)))
+        self.title_pad_spin.valueChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Title Pad", self.title_pad_spin, row)
 
         label_layout_grid = make_group("Label Layout (adjustText)")
@@ -579,46 +619,69 @@ class DisplayBuildMixin:
         force_static = getattr(app_state, 'adjust_text_force_static', (0.4, 0.6))
         expand = getattr(app_state, 'adjust_text_expand', (1.08, 1.20))
 
-        _, self.adjust_force_text_x_spin = labeled_double_spin("Adjust Force Text X", 0.0, 3.0,
-                                                               float(force_text[0]),
-                                                               self._on_style_change, step=0.05, decimals=2)
+        self.adjust_force_text_x_spin = QDoubleSpinBox()
+        self.adjust_force_text_x_spin.setRange(0.0, 3.0)
+        self.adjust_force_text_x_spin.setSingleStep(0.05)
+        self.adjust_force_text_x_spin.setDecimals(2)
+        self.adjust_force_text_x_spin.setValue(float(force_text[0]))
+        self.adjust_force_text_x_spin.valueChanged.connect(self._on_style_change)
         self.adjust_force_text_x_spin.setToolTip(translate("标签排斥力强度。较大值使标签更分散。"))
         row = add_row(label_layout_grid, "Adjust Force Text X", self.adjust_force_text_x_spin, row)
 
-        _, self.adjust_force_text_y_spin = labeled_double_spin("Adjust Force Text Y", 0.0, 3.0,
-                                                               float(force_text[1]),
-                                                               self._on_style_change, step=0.05, decimals=2)
+        self.adjust_force_text_y_spin = QDoubleSpinBox()
+        self.adjust_force_text_y_spin.setRange(0.0, 3.0)
+        self.adjust_force_text_y_spin.setSingleStep(0.05)
+        self.adjust_force_text_y_spin.setDecimals(2)
+        self.adjust_force_text_y_spin.setValue(float(force_text[1]))
+        self.adjust_force_text_y_spin.valueChanged.connect(self._on_style_change)
         self.adjust_force_text_y_spin.setToolTip(translate("标签排斥力强度。较大值使标签更分散。"))
         row = add_row(label_layout_grid, "Adjust Force Text Y", self.adjust_force_text_y_spin, row)
 
-        _, self.adjust_force_static_x_spin = labeled_double_spin("Adjust Force Static X", 0.0, 3.0,
-                                                                float(force_static[0]),
-                                                                self._on_style_change, step=0.05, decimals=2)
+        self.adjust_force_static_x_spin = QDoubleSpinBox()
+        self.adjust_force_static_x_spin.setRange(0.0, 3.0)
+        self.adjust_force_static_x_spin.setSingleStep(0.05)
+        self.adjust_force_static_x_spin.setDecimals(2)
+        self.adjust_force_static_x_spin.setValue(float(force_static[0]))
+        self.adjust_force_static_x_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Force Static X", self.adjust_force_static_x_spin, row)
 
-        _, self.adjust_force_static_y_spin = labeled_double_spin("Adjust Force Static Y", 0.0, 3.0,
-                                                                float(force_static[1]),
-                                                                self._on_style_change, step=0.05, decimals=2)
+        self.adjust_force_static_y_spin = QDoubleSpinBox()
+        self.adjust_force_static_y_spin.setRange(0.0, 3.0)
+        self.adjust_force_static_y_spin.setSingleStep(0.05)
+        self.adjust_force_static_y_spin.setDecimals(2)
+        self.adjust_force_static_y_spin.setValue(float(force_static[1]))
+        self.adjust_force_static_y_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Force Static Y", self.adjust_force_static_y_spin, row)
 
-        _, self.adjust_expand_x_spin = labeled_double_spin("Adjust Expand X", 1.0, 2.5,
-                                                         float(expand[0]),
-                                                         self._on_style_change, step=0.02, decimals=2)
+        self.adjust_expand_x_spin = QDoubleSpinBox()
+        self.adjust_expand_x_spin.setRange(1.0, 2.5)
+        self.adjust_expand_x_spin.setSingleStep(0.02)
+        self.adjust_expand_x_spin.setDecimals(2)
+        self.adjust_expand_x_spin.setValue(float(expand[0]))
+        self.adjust_expand_x_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Expand X", self.adjust_expand_x_spin, row)
 
-        _, self.adjust_expand_y_spin = labeled_double_spin("Adjust Expand Y", 1.0, 2.5,
-                                                         float(expand[1]),
-                                                         self._on_style_change, step=0.02, decimals=2)
+        self.adjust_expand_y_spin = QDoubleSpinBox()
+        self.adjust_expand_y_spin.setRange(1.0, 2.5)
+        self.adjust_expand_y_spin.setSingleStep(0.02)
+        self.adjust_expand_y_spin.setDecimals(2)
+        self.adjust_expand_y_spin.setValue(float(expand[1]))
+        self.adjust_expand_y_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Expand Y", self.adjust_expand_y_spin, row)
 
-        _, self.adjust_iter_lim_spin = labeled_spin("Adjust Iteration Limit", 10, 1000,
-                                                    int(getattr(app_state, 'adjust_text_iter_lim', 120)),
-                                                    self._on_style_change)
+        self.adjust_iter_lim_spin = QSpinBox()
+        self.adjust_iter_lim_spin.setRange(10, 1000)
+        self.adjust_iter_lim_spin.setSingleStep(1)
+        self.adjust_iter_lim_spin.setValue(int(getattr(app_state, 'adjust_text_iter_lim', 120)))
+        self.adjust_iter_lim_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Iteration Limit", self.adjust_iter_lim_spin, row)
 
-        _, self.adjust_time_lim_spin = labeled_double_spin("Adjust Time Limit (s)", 0.05, 2.0,
-                                                        float(getattr(app_state, 'adjust_text_time_lim', 0.25)),
-                                                        self._on_style_change, step=0.05, decimals=2)
+        self.adjust_time_lim_spin = QDoubleSpinBox()
+        self.adjust_time_lim_spin.setRange(0.05, 2.0)
+        self.adjust_time_lim_spin.setSingleStep(0.05)
+        self.adjust_time_lim_spin.setDecimals(2)
+        self.adjust_time_lim_spin.setValue(float(getattr(app_state, 'adjust_text_time_lim', 0.25)))
+        self.adjust_time_lim_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Time Limit (s)", self.adjust_time_lim_spin, row)
 
         axes_group.setLayout(axes_layout)

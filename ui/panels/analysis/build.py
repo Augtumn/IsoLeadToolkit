@@ -92,10 +92,10 @@ class AnalysisPanelBuildMixin:
         kde_layout = QVBoxLayout()
 
         kde_row = QHBoxLayout()
-        _, self.tools_kde_check = labeled_checkbox("Show Kernel Density",
+        kde_check_row, self.tools_kde_check = labeled_checkbox("Show Kernel Density",
                                                    getattr(app_state, 'show_kde', False),
                                                    self._on_kde_change)
-        kde_row.addWidget(self.tools_kde_check)
+        kde_row.addWidget(kde_check_row)
 
         kde_swatch = QLabel()
         kde_swatch.setFixedSize(16, 16)
@@ -107,10 +107,10 @@ class AnalysisPanelBuildMixin:
         kde_layout.addLayout(kde_row)
 
         mkde_row = QHBoxLayout()
-        _, self.tools_marginal_kde_check = labeled_checkbox("Show Marginal KDE",
+        mkde_check_row, self.tools_marginal_kde_check = labeled_checkbox("Show Marginal KDE",
                                                             getattr(app_state, 'show_marginal_kde', False),
                                                             self._on_marginal_kde_change)
-        mkde_row.addWidget(self.tools_marginal_kde_check)
+        mkde_row.addWidget(mkde_check_row)
 
         mkde_swatch = QLabel()
         mkde_swatch.setFixedSize(16, 16)
