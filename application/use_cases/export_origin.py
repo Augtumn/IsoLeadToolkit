@@ -609,7 +609,7 @@ def _build_origin_project(
             wks, sheet_name = entry
             try:
                 if is_ternary:
-                    plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="t")
+                    plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 elif group.get("z"):
                     plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 else:
