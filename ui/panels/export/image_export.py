@@ -331,11 +331,12 @@ class ExportPanelImageExportMixin:
             lms_slider, lms_spin = _add_slider_spin(row2, translate("Legend Marker Size"), "Legend Marker Size", 1, 80, 1, point_size_for_export)
             control_layout.addLayout(row2)
 
-            # Row 3: Label / Title / Tick sizes
+            # Row 3: Label / Title / Tick / Legend Font sizes
             row3 = QHBoxLayout()
             lab_slider, lab_spin = _add_slider_spin(row3, translate("Label Font Size"), "Label Font Size", 4, 24, 1, label_size_for_export)
             tit_slider, tit_spin = _add_slider_spin(row3, translate("Title Font Size"), "Title Font Size", 4, 24, 1, title_size_for_export)
             tck_slider, tck_spin = _add_slider_spin(row3, translate("Tick Font Size"), "Tick Font Size", 4, 24, 1, tick_size_for_export)
+            ls_slider, ls_spin = _add_slider_spin(row3, translate("Legend Size"), "Legend Size", 1, 20, 1, legend_size_for_export)
             control_layout.addLayout(row3)
 
             # Row 4: Tight BBox + Padding + Transparent
@@ -575,6 +576,7 @@ class ExportPanelImageExportMixin:
                 # Reset all controls to new preset defaults
                 _block_and_set(dpi_slider, dpi_spin, new_defaults['dpi'])
                 _block_and_set(ps_slider, ps_spin, new_defaults['point_size'])
+                _block_and_set(lms_slider, lms_spin, new_defaults['point_size'])
                 _block_and_set(ls_slider, ls_spin, new_defaults['legend_size'])
                 _block_and_set(lab_slider, lab_spin, new_defaults['label_size'])
                 _block_and_set(tit_slider, tit_spin, new_defaults['title_size'])
