@@ -580,6 +580,7 @@ class DisplayBuildMixin:
         section_toolbox.addItem(presets_page, translate("Presets & Themes"))
         section_toolbox.addItem(style_page, translate("Text & Markers"))
         section_toolbox.addItem(axes_page, translate("Axes, Grid & Canvas"))
+        self._restore_toolbox_state(section_toolbox, 'display')
         layout.addWidget(section_toolbox)
 
         self._sync_color_controls_from_state()

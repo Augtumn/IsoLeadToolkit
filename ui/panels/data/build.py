@@ -188,6 +188,7 @@ class DataPanelBuildMixin:
         section_toolbox.addItem(basics_page, translate("Coloring / Grouping"))
         section_toolbox.addItem(projection_widget, translate("Render Mode"))
 
+        self._restore_toolbox_state(section_toolbox, 'data')
         layout.addWidget(section_toolbox)
         layout.addStretch()
         return widget

@@ -358,6 +358,7 @@ class AnalysisPanelBuildMixin:
         confidence_group.setLayout(confidence_layout)
         _add_group_page(confidence_group, 'Confidence Ellipse')
 
+        self._restore_toolbox_state(section_toolbox, 'analysis')
         layout.addWidget(section_toolbox)
         layout.addStretch()
         return widget

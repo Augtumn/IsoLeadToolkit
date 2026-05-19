@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QListWidget,
     QMainWindow,
+    QMenu,
     QMenuBar,
     QProgressBar,
     QPushButton,
@@ -25,7 +26,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from core import app_state, state_gateway, translate
+from core import app_state, available_languages, set_language, state_gateway, translate
 
 logger = logging.getLogger(__name__)
 QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
@@ -166,6 +167,14 @@ class MainWindowSetupMixin:
         geo_action.setShortcut(QKeySequence("Ctrl+G"))
         geo_action.triggered.connect(lambda: self._show_section_dialog("geochemistry"))
         menubar.addAction(geo_action)
+
+        menubar.addSeparator()
+
+        self.lang_menu = menubar.addMenu(translate("Language"))
+        for code, label in dict(available_languages()).items():
+            lang_action = QAction(label, self)
+            lang_action.triggered.connect(lambda checked, c=code: set_language(c))
+            self.lang_menu.addAction(lang_action)
 
         self._menu_actions = {
             "reload": reload_action,
@@ -320,6 +329,8 @@ class MainWindowSetupMixin:
             actions["legend"].setText(translate("Legend"))
         if "geochemistry" in actions:
             actions["geochemistry"].setText(translate("Geochemistry"))
+        if hasattr(self, "lang_menu"):
+            self.lang_menu.setTitle(translate("Language"))
         if self.statusBar() is not None:
             self.statusBar().showMessage(translate("Ready"))
 

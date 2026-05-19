@@ -5,7 +5,7 @@ import logging
 from typing import Callable
 
 from PyQt5.QtWidgets import QWidget, QGroupBox, QLabel, QPushButton, QCheckBox, QRadioButton
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QSettings, QTimer
 
 from core import app_state, state_gateway, translate
 
@@ -411,3 +411,36 @@ class BasePanel(QWidget):
             except Exception:
                 if self.callback:
                     self.callback()
+
+    # ------------------------------------------------------------------
+    # QToolBox 状态持久化
+    # ------------------------------------------------------------------
+
+    def _save_toolbox_state(self, toolbox, section_key):
+        """保存 QToolBox 当前展开的 section 索引到 QSettings。
+
+        Args:
+            toolbox: QToolBox 实例。
+            section_key: 唯一标识该工具箱的字符串键（如 ``'data'``、``'display'``）。
+        """
+        settings = QSettings("IsotopesAnalyse", "ToolBox")
+        settings.setValue(f"{section_key}/currentIndex", toolbox.currentIndex())
+
+    def _restore_toolbox_state(self, toolbox, section_key):
+        """从 QSettings 恢复 QToolBox 的 section 索引并连接保存信号。
+
+        在 ``build()`` 中完成所有 ``addItem()`` 调用后调用此方法。
+        它会将当前 section 恢复为上次保存的值，并自动连接
+        ``currentChanged`` 信号，以便后续切换时自动持久化。
+
+        Args:
+            toolbox: QToolBox 实例。
+            section_key: 唯一标识该工具箱的字符串键。
+        """
+        settings = QSettings("IsotopesAnalyse", "ToolBox")
+        saved_index = settings.value(f"{section_key}/currentIndex", 0, type=int)
+        if 0 <= saved_index < toolbox.count():
+            toolbox.setCurrentIndex(saved_index)
+        toolbox.currentChanged.connect(
+            lambda idx, tb=toolbox, sk=section_key: self._save_toolbox_state(tb, sk)
+        )

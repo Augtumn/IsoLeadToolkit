@@ -173,6 +173,7 @@ class GeoPanel(BasePanel):
         action_layout.addStretch()
         section_toolbox.addItem(action_page, translate('Apply Changes'))
 
+        self._restore_toolbox_state(section_toolbox, 'geo')
         layout.addWidget(section_toolbox)
 
         try:

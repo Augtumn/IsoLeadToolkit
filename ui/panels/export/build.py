@@ -223,6 +223,7 @@ class ExportPanelBuildMixin:
         image_page_layout.addStretch()
         section_toolbox.addItem(image_page, translate("Image Export"))
 
+        self._restore_toolbox_state(section_toolbox, 'export')
         layout.addWidget(section_toolbox)
 
         self._on_image_preset_changed()

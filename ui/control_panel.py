@@ -8,10 +8,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QComboBox, QFrame, QLabel
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtWidgets import QFrame, QLabel
 
-from core import app_state, available_languages, state_gateway, translate
+from core import app_state, state_gateway, translate
 from ui.panels import (
     AnalysisPanel,
     DataPanel,
@@ -31,8 +31,6 @@ def create_section_dialog(
 ) -> Any | None:
     """Create a dialog that hosts a single control section."""
     from PyQt5.QtWidgets import QApplication, QDialog, QHBoxLayout, QScrollArea, QVBoxLayout
-    from core import set_language
-
     section_key = (section_key or '').lower()
 
     section_map = {
@@ -51,7 +49,10 @@ def create_section_dialog(
     title = translate(title_key)
 
     dialog = QDialog(parent)
+    if parent is not None:
+        dialog.setWindowModality(Qt.WindowModal)
     dialog.setWindowTitle(title)
+    dialog.resize(480, 400)
 
     root = QVBoxLayout(dialog)
     header = QHBoxLayout()
@@ -59,20 +60,6 @@ def create_section_dialog(
     header.addWidget(title_label)
     header.addStretch()
 
-    lang_label = QLabel(translate("Language"))
-    header.addWidget(lang_label)
-
-    lang_combo = QComboBox()
-    lang_combo.setFixedWidth(140)
-    lang_map = dict(available_languages())
-    for code, label in lang_map.items():
-        lang_combo.addItem(label, code)
-    current_lang = getattr(app_state, 'language', None)
-    if current_lang:
-        idx = lang_combo.findData(current_lang)
-        if idx >= 0:
-            lang_combo.setCurrentIndex(idx)
-    header.addWidget(lang_combo)
     root.addLayout(header)
 
     panel = panel_cls(callback, parent=dialog)
@@ -115,27 +102,16 @@ def create_section_dialog(
             try:
                 panel._update_translations(content_widget)
                 return
-            except Exception:
+            except AttributeError:
                 logger.debug("Lightweight translation update failed, falling back to rebuild")
+            except Exception as e:
+                logger.warning("Lightweight translation update failed: %s", e)
+                return
         _rebuild_section()
 
     def _refresh_titles():
         new_title = translate(title_key)
         dialog.setWindowTitle(new_title)
-        title_label.setText(new_title)
-        lang_label.setText(translate("Language"))
-
-    def _on_language_change(_index):
-        code = lang_combo.currentData()
-        if not code:
-            return
-        set_language(code)
-        QTimer.singleShot(0, _refresh_titles)
-        QTimer.singleShot(0, _try_lightweight_update)
-
-    lang_combo.currentIndexChanged.connect(_on_language_change)
-
-    _dialog_last_lang = [getattr(app_state, 'language', None)]
 
     def _on_show(_event):
         state_gateway.set_control_panel_ref(panel)
@@ -143,40 +119,15 @@ def create_section_dialog(
             panel.update_selection_controls()
         except Exception:
             pass
-        listeners = getattr(app_state, 'language_listeners', [])
-        if _on_language_refresh not in listeners:
-            try:
-                app_state.register_language_listener(_on_language_refresh)
-            except Exception:
-                pass
-        current_lang = getattr(app_state, 'language', None)
-        if current_lang != _dialog_last_lang[0]:
-            _dialog_last_lang[0] = current_lang
-            idx = lang_combo.findData(current_lang)
-            if idx >= 0 and lang_combo.currentIndex() != idx:
-                lang_combo.blockSignals(True)
-                lang_combo.setCurrentIndex(idx)
-                lang_combo.blockSignals(False)
-            QTimer.singleShot(0, _refresh_titles)
-            QTimer.singleShot(0, _try_lightweight_update)
         QTimer.singleShot(0, _apply_adaptive_size)
 
     def _on_language_refresh():
-        current_lang = getattr(app_state, 'language', None)
-        _dialog_last_lang[0] = current_lang
-        if current_lang:
-            idx = lang_combo.findData(current_lang)
-            if idx >= 0 and lang_combo.currentIndex() != idx:
-                lang_combo.blockSignals(True)
-                lang_combo.setCurrentIndex(idx)
-                lang_combo.blockSignals(False)
         QTimer.singleShot(0, _refresh_titles)
         QTimer.singleShot(0, _try_lightweight_update)
 
     def _on_close(_event):
         if getattr(app_state, 'control_panel_ref', None) is panel:
             state_gateway.set_control_panel_ref(None)
-        _dialog_last_lang[0] = getattr(app_state, 'language', None)
         listeners = getattr(app_state, 'language_listeners', [])
         if _on_language_refresh in listeners:
             listeners.remove(_on_language_refresh)

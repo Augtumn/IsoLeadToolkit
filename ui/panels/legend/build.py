@@ -249,6 +249,7 @@ class LegendBuildMixin:
         style_group.setLayout(style_layout)
         _add_group_page(style_group, 'Inline Legend Style')
 
+        self._restore_toolbox_state(section_toolbox, 'legend')
         self.legend_nudge_step = float(getattr(app_state, 'legend_nudge_step', self.legend_nudge_step))
 
         layout.addWidget(section_toolbox)
