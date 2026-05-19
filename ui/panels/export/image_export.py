@@ -468,13 +468,8 @@ class ExportPanelImageExportMixin:
                     state['refreshing'] = False
 
             def _schedule_refresh():
-                state['debounce_timer'].stop()
-                try:
-                    state['debounce_timer'].timeout.disconnect()
-                except (TypeError, RuntimeError):
-                    pass  # first call: no previous connection
-                state['debounce_timer'].timeout.connect(_do_refresh)
-                state['debounce_timer'].start()
+                from PyQt5.QtCore import QTimer
+                QTimer.singleShot(_PREVIEW_DEBOUNCE_MS, _do_refresh)
 
             def _refresh_labels_preview():
                 try:
