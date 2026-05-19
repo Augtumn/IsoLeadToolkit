@@ -160,13 +160,23 @@ class ExportPanelImageExportMixin:
             use_scienceplots = self._is_scienceplots_available()
             style_chain = profile['styles'] if use_scienceplots else ['default']
             with plt.style.context(style_chain):
+                # Always apply font size overrides regardless of SciencePlots availability
+                rc_overrides = self._fallback_export_rc(
+                    profile,
+                    label_fontsize=label_size_for_export,
+                    title_fontsize=title_size_for_export,
+                    tick_fontsize=tick_size_for_export,
+                )
                 if not use_scienceplots:
-                    plt.rcParams.update(self._fallback_export_rc(
-                        profile,
-                        label_fontsize=label_size_for_export,
-                        title_fontsize=title_size_for_export,
-                        tick_fontsize=tick_size_for_export,
-                    ))
+                    plt.rcParams.update(rc_overrides)
+                else:
+                    # Apply font size overrides on top of SciencePlots styles
+                    plt.rcParams.update({
+                        'axes.labelsize': float(label_size_for_export) if label_size_for_export else rc_overrides.get('axes.labelsize', 10),
+                        'axes.titlesize': float(title_size_for_export) if title_size_for_export else rc_overrides.get('axes.titlesize', 12),
+                        'xtick.labelsize': float(tick_size_for_export) if tick_size_for_export else rc_overrides.get('xtick.labelsize', 9),
+                        'ytick.labelsize': float(tick_size_for_export) if tick_size_for_export else rc_overrides.get('ytick.labelsize', 9),
+                    })
                 export_fig = Figure(
                     figsize=profile['figsize'],
                     dpi=int(profile['dpi']),
