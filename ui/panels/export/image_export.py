@@ -393,6 +393,7 @@ class ExportPanelImageExportMixin:
             }
             state['debounce_timer'].setSingleShot(True)
             state['debounce_timer'].setInterval(_PREVIEW_DEBOUNCE_MS)
+            state['debounce_timer'].timeout.connect(_do_refresh)
 
             # ── Re-render: full figure regen via _create_export_figure ──
             def _do_refresh():
@@ -468,8 +469,8 @@ class ExportPanelImageExportMixin:
                     state['refreshing'] = False
 
             def _schedule_refresh():
-                from PyQt5.QtCore import QTimer
-                QTimer.singleShot(_PREVIEW_DEBOUNCE_MS, _do_refresh)
+                # Restart single-shot timer — safe, auto-cancels previous
+                state['debounce_timer'].start()
 
             def _refresh_labels_preview():
                 try:
@@ -495,22 +496,23 @@ class ExportPanelImageExportMixin:
 
             # ── Wire slider ↔ spin bi-directional sync ─────────────
             def _wire_pair(slider, spin, state_key):
+                def _apply_value(v):
+                    state[state_key] = v
+                    _schedule_refresh()
+
                 def _slider_changed(v):
                     spin.blockSignals(True)
                     spin.setValue(v)
                     spin.blockSignals(False)
-                    state[state_key] = v
-                    _schedule_refresh()
-
                 def _spin_changed(v):
                     slider.blockSignals(True)
                     slider.setValue(v)
                     slider.blockSignals(False)
-                    state[state_key] = v
-                    _schedule_refresh()
+                    _apply_value(v)
 
-                slider.valueChanged.connect(_slider_changed)
-                spin.valueChanged.connect(_spin_changed)
+                slider.valueChanged.connect(_slider_changed)       # sync spin only
+                slider.sliderReleased.connect(lambda: _apply_value(slider.value()))  # apply on release
+                spin.valueChanged.connect(_spin_changed)            # spin: apply immediately
 
             _wire_pair(ps_slider, ps_spin, 'point_size')
             _wire_pair(ls_slider, ls_spin, 'legend_size')
@@ -520,19 +522,20 @@ class ExportPanelImageExportMixin:
 
             # DPI needs bidirectional slider↔spin sync but writes to params dict
             def _wire_dpi_sync():
+                def _apply_dpi(v):
+                    state['params']['dpi'] = v
+                    _schedule_refresh()
                 def _dpi_slider_changed(v):
                     dpi_spin.blockSignals(True)
                     dpi_spin.setValue(v)
                     dpi_spin.blockSignals(False)
-                    state['params']['dpi'] = v
-                    _schedule_refresh()
                 def _dpi_spin_changed(v):
                     dpi_slider.blockSignals(True)
                     dpi_slider.setValue(v)
                     dpi_slider.blockSignals(False)
-                    state['params']['dpi'] = v
-                    _schedule_refresh()
+                    _apply_dpi(v)
                 dpi_slider.valueChanged.connect(_dpi_slider_changed)
+                dpi_slider.sliderReleased.connect(lambda: _apply_dpi(dpi_slider.value()))
                 dpi_spin.valueChanged.connect(_dpi_spin_changed)
             _wire_dpi_sync()
             state['params']['dpi'] = params['dpi']  # initial value
