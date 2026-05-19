@@ -4,8 +4,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-_ZOOM_RANGE_EPSILON: float = 1e-12
-
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from PyQt5.QtGui import QIcon
@@ -29,26 +27,6 @@ class MainWindowCanvasMixin:
         canvas = FigureCanvas(fig)
         toolbar = NavigationToolbar(canvas, self)
         toolbar.setVisible(False)  # Keep hidden; actions are extracted below
-
-        zoom_out_action = QAction(self._get_zoom_out_icon(), translate("Zoom Out"), self)
-        zoom_out_action.setToolTip(translate("Zoom Out"))
-        zoom_out_action.triggered.connect(self._zoom_out_view)
-
-        # Insert Zoom Out after matplotlib's Zoom action
-        zoom_action = None
-        actions = toolbar.actions()
-        for action in actions:
-            if "zoom" in (action.text() or "").lower():
-                zoom_action = action
-                break
-        if zoom_action is not None:
-            zoom_index = actions.index(zoom_action)
-            if zoom_index + 1 < len(actions):
-                toolbar.insertAction(actions[zoom_index + 1], zoom_out_action)
-            else:
-                toolbar.addAction(zoom_out_action)
-        else:
-            toolbar.addAction(zoom_out_action)
 
         rect_select_action = QAction(self._get_selection_icon("selection_rect.svg"), translate("Box Select"), self)
         rect_select_action.setToolTip(translate("Box Select"))
@@ -99,20 +77,6 @@ class MainWindowCanvasMixin:
 
         self._connect_event_handlers(canvas)
 
-    def _get_zoom_out_icon(self):
-        """Resolve a zoom-out icon, falling back to a standard icon."""
-        base_dir = Path(__file__).resolve().parent.parent.parent
-        svg_path = base_dir / "assets" / "icons" / "zoom_out.svg"
-        if svg_path.exists():
-            icon = QIcon(str(svg_path))
-            if not icon.isNull():
-                return icon
-        for name in ("zoom-out", "view-zoom-out", "magnifier-zoom-out"):
-            icon = QIcon.fromTheme(name)
-            if not icon.isNull():
-                return icon
-        return self.style().standardIcon(QStyle.SP_TitleBarMinButton)
-
     def _get_selection_icon(self, filename):
         """Resolve selection tool icon from assets."""
         base_dir = Path(__file__).resolve().parent.parent.parent
@@ -145,22 +109,3 @@ class MainWindowCanvasMixin:
         actions["lasso"].setChecked(lasso_checked)
         actions["rect"].blockSignals(False)
         actions["lasso"].blockSignals(False)
-
-    def _zoom_out_view(self):
-        """Zoom out the current axes view."""
-        ax = getattr(app_state, "ax", None)
-        if ax is None:
-            return
-        try:
-            xlim = ax.get_xlim()
-            ylim = ax.get_ylim()
-            x_range = xlim[1] - xlim[0]
-            y_range = ylim[1] - ylim[0]
-            if x_range < _ZOOM_RANGE_EPSILON or y_range < _ZOOM_RANGE_EPSILON:
-                return
-            ax.set_xlim([xlim[0] - x_range * 0.25, xlim[1] + x_range * 0.25])
-            ax.set_ylim([ylim[0] - y_range * 0.25, ylim[1] + y_range * 0.25])
-            if app_state.fig is not None and app_state.fig.canvas is not None:
-                app_state.fig.canvas.draw_idle()
-        except Exception:
-            pass
