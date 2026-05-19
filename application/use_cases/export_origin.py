@@ -634,36 +634,7 @@ def _build_origin_project(
                 logger.debug("Skipping scatter %s: %s", group.get("label"), err)
 
         gl.group()
-        if is_ternary:
-            # Compute ternary axis limits from data and apply local zoom
-            all_t = []; all_l = []; all_r = []
-            for g in scatter_groups:
-                all_t.extend(g.get("t", []))
-                all_l.extend(g.get("l", []))
-                all_r.extend(g.get("r", []))
-            if all_t and all_l and all_r:
-                tmn, tmx = float(np.min(all_t)), float(np.max(all_t))
-                lmn, lmx = float(np.min(all_l)), float(np.max(all_l))
-                rmn, rmx = float(np.min(all_r)), float(np.max(all_r))
-                pad = 0.08  # 8% padding
-                # for each axis, widen by pad × span, clamp to 0-1
-                t_range = max(tmx - tmn, 0.001)
-                l_range = max(lmx - lmn, 0.001)
-                r_range = max(rmx - rmn, 0.001)
-                tmn = max(0.0, tmn - t_range * pad)
-                tmx = min(1.0, tmx + t_range * pad)
-                lmn = max(0.0, lmn - l_range * pad)
-                lmx = min(1.0, lmx + l_range * pad)
-                rmn = max(0.0, rmn - r_range * pad)
-                rmx = min(1.0, rmx + r_range * pad)
-                try:
-                    gl.set_xlim(tmn, tmx)
-                    gl.set_ylim(lmn, lmx)
-                    gl.set_zlim(rmn, rmx)
-                except Exception:
-                    pass  # axis range setting is best-effort
-        else:
-            gl.rescale()
+        gl.rescale()  # Let Origin handle axis ranges (ternary geometry is coupled)
 
         # ── overlay layers ────────────────────────────────────────
         def _add_overlay_worksheets(
