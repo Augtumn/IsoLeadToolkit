@@ -1011,6 +1011,12 @@
   "PNG Files (*.png)": "PNG 文件 (*.png)",
   "PDF Files (*.pdf)": "PDF 文件 (*.pdf)",
   "SVG Files (*.svg)": "SVG 文件 (*.svg)",
-  "Chart saved to: {path}": "图表已保存至: {path}"
+  "Chart saved to: {path}": "图表已保存至: {path}",
+  "Style change undone": "已撤销样式更改",
+  "Custom": "自定义",
+  "Preset:": "预设:",
+  "Load": "加载",
+  "Save Preset": "保存预设",
+  "Preset name:": "预设名称:"
 }
 

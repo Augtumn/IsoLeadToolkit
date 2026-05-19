@@ -1011,6 +1011,12 @@
   "PNG Files (*.png)": "PNG Files (*.png)",
   "PDF Files (*.pdf)": "PDF Files (*.pdf)",
   "SVG Files (*.svg)": "SVG Files (*.svg)",
-  "Chart saved to: {path}": "Chart saved to: {path}"
+  "Chart saved to: {path}": "Chart saved to: {path}",
+  "Style change undone": "Style change undone",
+  "Custom": "Custom",
+  "Preset:": "Preset:",
+  "Load": "Load",
+  "Save Preset": "Save Preset",
+  "Preset name:": "Preset name:"
 }
 

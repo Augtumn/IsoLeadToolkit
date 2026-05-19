@@ -139,4 +139,12 @@ def create_section_dialog(
     except Exception:
         pass
 
+    # Ctrl+Z 样式撤销快捷键
+    from PyQt5.QtGui import QKeySequence
+    from PyQt5.QtWidgets import QShortcut
+    undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), dialog)
+    undo_shortcut.activated.connect(
+        lambda p=panel: p._undo_style() if hasattr(p, '_undo_style') else None
+    )
+
     return dialog

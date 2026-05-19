@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QPushButton,
     QSlider,
@@ -18,7 +19,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
-from core import app_state, state_gateway, translate
+from core import CONFIG, app_state, state_gateway, translate
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,10 @@ class _DataPanelProjectionBuild:
         Args:
             layout: The parent layout to add widgets into.
         """
+        if not hasattr(self, "spinboxes"):
+            self.spinboxes = {}
+        self._build_preset_bar(layout)
+
         self.umap_group = QGroupBox(translate("UMAP Parameters"))
         self.umap_group.setProperty("translate_key", "UMAP Parameters")
         umap_layout = QVBoxLayout()
@@ -135,6 +140,7 @@ class _DataPanelProjectionBuild:
             lambda v: self._on_tsne_param_change("random_state", v, tsne_rs_label),
         )
         tsne_layout.addWidget(tsne_rs_spin)
+        self.spinboxes["tsne_random_state"] = tsne_rs_spin
 
         self.tsne_group.setLayout(tsne_layout)
         layout.addWidget(self.tsne_group)
@@ -151,6 +157,7 @@ class _DataPanelProjectionBuild:
         n_comp_spin.setValue(app_state.pca_params.get("n_components", 2))
         self._connect_spinbox_deferred(n_comp_spin, lambda v: self._on_pca_param_change("n_components", v))
         pca_layout.addWidget(n_comp_spin)
+        self.spinboxes["pca_n_components"] = n_comp_spin
 
         pca_rs_label = QLabel(translate("random_state: {value}").format(value=app_state.pca_params.get("random_state", 42)))
         pca_layout.addWidget(pca_rs_label)
@@ -163,12 +170,13 @@ class _DataPanelProjectionBuild:
             lambda v: self._on_pca_param_change("random_state", v, pca_rs_label),
         )
         pca_layout.addWidget(pca_rs_spin)
+        self.spinboxes["pca_random_state"] = pca_rs_spin
 
-        standardize_check = QCheckBox(translate("Standardize data"))
-        standardize_check.setProperty("translate_key", "Standardize data")
-        standardize_check.setChecked(app_state.standardize_data)
-        standardize_check.stateChanged.connect(self._on_standardize_change)
-        pca_layout.addWidget(standardize_check)
+        self.standardize_check = QCheckBox(translate("Standardize data"))
+        self.standardize_check.setProperty("translate_key", "Standardize data")
+        self.standardize_check.setChecked(app_state.standardize_data)
+        self.standardize_check.stateChanged.connect(self._on_standardize_change)
+        pca_layout.addWidget(self.standardize_check)
 
         pca_tools_layout = QHBoxLayout()
 
@@ -228,6 +236,7 @@ class _DataPanelProjectionBuild:
             lambda v: self._on_robust_pca_param_change("n_components", v),
         )
         robust_pca_layout.addWidget(robust_n_comp_spin)
+        self.spinboxes["robust_pca_n_components"] = robust_n_comp_spin
 
         support_label = QLabel(
             translate("support_fraction: {value:.2f}").format(
@@ -236,16 +245,16 @@ class _DataPanelProjectionBuild:
         )
         robust_pca_layout.addWidget(support_label)
 
-        support_spin = QDoubleSpinBox()
-        support_spin.setRange(0.1, 1.0)
-        support_spin.setSingleStep(0.05)
-        support_spin.setDecimals(2)
-        support_spin.setValue(app_state.robust_pca_params.get("support_fraction", 0.75))
+        self.robust_support_spin = QDoubleSpinBox()
+        self.robust_support_spin.setRange(0.1, 1.0)
+        self.robust_support_spin.setSingleStep(0.05)
+        self.robust_support_spin.setDecimals(2)
+        self.robust_support_spin.setValue(app_state.robust_pca_params.get("support_fraction", 0.75))
         self._connect_spinbox_deferred(
-            support_spin,
+            self.robust_support_spin,
             lambda v: self._on_robust_pca_param_change("support_fraction", v, support_label)
         )
-        robust_pca_layout.addWidget(support_spin)
+        robust_pca_layout.addWidget(self.robust_support_spin)
 
         self.labels["robust_pca_support"] = support_label
 
@@ -261,6 +270,7 @@ class _DataPanelProjectionBuild:
             lambda v: self._on_robust_pca_param_change("random_state", v),
         )
         robust_pca_layout.addWidget(robust_rs_spin)
+        self.spinboxes["robust_pca_random_state"] = robust_rs_spin
 
         rpca_tools_layout = QHBoxLayout()
 
@@ -403,3 +413,191 @@ class _DataPanelProjectionBuild:
         self._refresh_ternary_limit_controls_enabled()
         self.ternary_group.setLayout(ternary_layout)
         layout.addWidget(self.ternary_group)
+
+    # ------------------------------------------------------------------ #
+    #  Projection preset save / load
+    # ------------------------------------------------------------------ #
+
+    def _preset_combo_refresh(self):
+        """Refresh the preset combo box from saved presets."""
+        if not hasattr(self, "preset_combo") or self.preset_combo is None:
+            return
+        self.preset_combo.blockSignals(True)
+        current = self.preset_combo.currentText()
+        self.preset_combo.clear()
+        self.preset_combo.addItem(translate("Custom"))
+        presets = {}
+        if hasattr(app_state, "saved_themes"):
+            presets = app_state.saved_themes.get("projection_presets", {})
+        for name in sorted(presets.keys()):
+            self.preset_combo.addItem(name)
+        idx = self.preset_combo.findText(current)
+        self.preset_combo.setCurrentText(current if idx >= 0 else translate("Custom"))
+        self.preset_combo.blockSignals(False)
+
+    def _collect_params_snapshot(self) -> dict:
+        """Snapshot current projection params from app_state for preset storage."""
+        return {
+            "algorithm": str(getattr(app_state, "algorithm", "UMAP")),
+            "umap_params": dict(getattr(app_state, "umap_params", {})),
+            "tsne_params": dict(getattr(app_state, "tsne_params", {})),
+            "pca_params": dict(getattr(app_state, "pca_params", {})),
+            "robust_pca_params": dict(getattr(app_state, "robust_pca_params", {})),
+            "standardize_data": bool(getattr(app_state, "standardize_data", False)),
+        }
+
+    def _save_preset(self):
+        """Prompt for preset name and save current projection params."""
+        if not hasattr(app_state, "saved_themes") or not app_state.saved_themes:
+            state_gateway.set_saved_themes({})
+
+        name, ok = QInputDialog.getText(
+            self,
+            translate("Save Preset"),
+            translate("Preset name:"),
+        )
+        if not ok or not name:
+            return
+
+        name = name.strip()
+        if not name:
+            return
+
+        presets_container = app_state.saved_themes
+        if "projection_presets" not in presets_container:
+            presets_container["projection_presets"] = {}
+
+        presets_container["projection_presets"][name] = self._collect_params_snapshot()
+
+        # Persist to disk alongside display themes
+        theme_file = CONFIG['temp_dir'] / 'user_themes.json'
+        try:
+            with open(theme_file, 'w', encoding='utf-8') as f:
+                import json
+                json.dump(presets_container, f, indent=2)
+        except Exception as exc:
+            logger.warning("Failed to persist projection presets: %s", exc)
+
+        self._preset_combo_refresh()
+        idx = self.preset_combo.findText(name)
+        if idx >= 0:
+            self.preset_combo.setCurrentIndex(idx)
+
+    def _apply_params_to_ui(self, snapshot: dict):
+        """Apply a parameter snapshot to all projection UI controls."""
+        params = snapshot.get("params", snapshot)
+
+        # --- UMAP ---
+        umap = params.get("umap_params", {})
+        if umap:
+            if "n_neighbors" in umap and "umap_n_neighbors" in self.sliders:
+                self.sliders["umap_n_neighbors"].setValue(umap["n_neighbors"])
+            if "min_dist" in umap and "umap_min_dist" in self.sliders:
+                self.sliders["umap_min_dist"].setValue(int(umap["min_dist"] * 100))
+            if "metric" in umap and hasattr(self, "metric_combo") and self.metric_combo:
+                self.metric_combo.setCurrentText(umap["metric"])
+
+        # --- t-SNE ---
+        tsne = params.get("tsne_params", {})
+        if tsne:
+            if "perplexity" in tsne and "tsne_perplexity" in self.sliders:
+                self.sliders["tsne_perplexity"].setValue(tsne["perplexity"])
+            if "learning_rate" in tsne and "tsne_learning_rate" in self.sliders:
+                self.sliders["tsne_learning_rate"].setValue(int(tsne["learning_rate"] / 10))
+            if "random_state" in tsne and "tsne_random_state" in self.spinboxes:
+                self.spinboxes["tsne_random_state"].setValue(tsne["random_state"])
+
+        # --- PCA ---
+        pca = params.get("pca_params", {})
+        if pca:
+            if "n_components" in pca and "pca_n_components" in self.spinboxes:
+                self.spinboxes["pca_n_components"].setValue(pca["n_components"])
+            if "random_state" in pca and "pca_random_state" in self.spinboxes:
+                self.spinboxes["pca_random_state"].setValue(pca["random_state"])
+
+        # --- Robust PCA ---
+        rpca = params.get("robust_pca_params", {})
+        if rpca:
+            if "n_components" in rpca and "robust_pca_n_components" in self.spinboxes:
+                self.spinboxes["robust_pca_n_components"].setValue(rpca["n_components"])
+            if "support_fraction" in rpca and hasattr(self, "robust_support_spin"):
+                self.robust_support_spin.setValue(rpca["support_fraction"])
+            if "random_state" in rpca and "robust_pca_random_state" in self.spinboxes:
+                self.spinboxes["robust_pca_random_state"].setValue(rpca["random_state"])
+
+        # --- Standardize checkbox ---
+        if "standardize_data" in params and hasattr(self, "standardize_check"):
+            self.standardize_check.setChecked(params["standardize_data"])
+
+    def _load_preset(self):
+        """Load the selected preset into projection controls."""
+        if not hasattr(self, "preset_combo") or self.preset_combo is None:
+            return
+        name = self.preset_combo.currentText()
+        if not name or name == translate("Custom"):
+            return
+        presets = {}
+        if hasattr(app_state, "saved_themes"):
+            presets = app_state.saved_themes.get("projection_presets", {})
+        if name not in presets:
+            return
+
+        snapshot = presets[name]
+
+        # Sync app_state directly
+        params = snapshot.get("params", snapshot)
+        algo = snapshot.get("algorithm", "")
+        if algo:
+            try:
+                state_gateway.set_algorithm(algo)
+                # Also update the algorithm combo
+                if hasattr(self, "algo_combo") and self.algo_combo is not None:
+                    self._set_combo_value(self.algo_combo, algo)
+            except Exception:
+                pass
+
+        param_setters = {
+            "umap_params": state_gateway.set_umap_params,
+            "tsne_params": state_gateway.set_tsne_params,
+            "pca_params": state_gateway.set_pca_params,
+            "robust_pca_params": state_gateway.set_robust_pca_params,
+        }
+        for key, setter in param_setters.items():
+            if key in params:
+                setter(dict(params[key]))
+
+        if "standardize_data" in params:
+            state_gateway.set_standardize_data(params["standardize_data"])
+
+        self._apply_params_to_ui(snapshot)
+
+        self._on_change()
+
+    def _build_preset_bar(self, layout):
+        """Build preset save/load combo + buttons at the top of projection params."""
+        bar = QHBoxLayout()
+        bar.setContentsMargins(0, 0, 0, 4)
+
+        preset_label = QLabel(translate("Preset:"))
+        preset_label.setProperty("translate_key", "Preset:")
+        bar.addWidget(preset_label)
+
+        self.preset_combo = QComboBox()
+        self.preset_combo.setMinimumWidth(140)
+        self.preset_combo.addItem(translate("Custom"))
+        bar.addWidget(self.preset_combo)
+
+        self.save_preset_btn = QPushButton(translate("Save"))
+        self.save_preset_btn.setProperty("translate_key", "Save")
+        self.save_preset_btn.clicked.connect(self._save_preset)
+        bar.addWidget(self.save_preset_btn)
+
+        self.load_preset_btn = QPushButton(translate("Load"))
+        self.load_preset_btn.setProperty("translate_key", "Load")
+        self.load_preset_btn.clicked.connect(self._load_preset)
+        bar.addWidget(self.load_preset_btn)
+
+        bar.addStretch()
+        layout.addLayout(bar)
+
+        self._preset_combo_refresh()

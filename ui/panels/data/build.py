@@ -50,6 +50,7 @@ class DataPanelBuildMixin(
         self.ternary_manual_limits_check = None
         self.ternary_limit_spins = {}
         self.ternary_render_margin_spin = None
+        self.spinboxes = {}
         self.geochem_plot_group = None
         self.modeling_show_model_check = None
         self.modeling_show_paleoisochron_check = None

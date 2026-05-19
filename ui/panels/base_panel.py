@@ -119,6 +119,7 @@ class BasePanel(QWidget):
         self._debounce_timers: dict[str, QTimer] = {}
         self._slider_delay_ms = 350
         self._is_initialized = False
+        self._style_snapshot: dict[str, object] = {}
 
     def build(self) -> QWidget:
         """构建面板内容，子类必须实现"""
@@ -133,6 +134,7 @@ class BasePanel(QWidget):
         self._slider_steps = {}
         self._slider_timers = {}
         self._debounce_timers = {}
+        self._style_snapshot = {}
         self._is_initialized = False
 
     def _update_translations(self, root: QWidget | None = None) -> None:
@@ -350,6 +352,13 @@ class BasePanel(QWidget):
                 style_updates.get('isochron_line_width', app_state.isochron_line_width)
             )
 
+        # ---- 保存快照（撤销用） ----
+        self._style_snapshot = {
+            key: getattr(app_state, key, None)
+            for key in style_updates
+            if hasattr(app_state, key)
+        }
+
         # ---- 提交到状态网关 ----
         if style_updates:
             state_gateway.set_panel_style_updates(style_updates)
@@ -411,6 +420,24 @@ class BasePanel(QWidget):
             except Exception:
                 if self.callback:
                     self.callback()
+
+    # ------------------------------------------------------------------
+    # 样式撤销
+    # ------------------------------------------------------------------
+
+    def _undo_style(self) -> None:
+        """Revert the last style change from snapshot, one level only."""
+        if not self._style_snapshot:
+            logger.info("No style change to undo.")
+            return
+        try:
+            state_gateway.set_panel_style_updates(self._style_snapshot)
+            self._style_snapshot = {}
+            logger.info("Style change undone")
+            if self.callback:
+                self.callback()
+        except Exception:
+            logger.exception("Failed to undo style change")
 
     # ------------------------------------------------------------------
     # QToolBox 状态持久化
