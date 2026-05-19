@@ -1,6 +1,8 @@
 """
 工具提示配置对话框
 """
+from __future__ import annotations
+
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                               QLabel, QListWidget, QListWidgetItem, QMessageBox,
                               QSizePolicy, QGroupBox)

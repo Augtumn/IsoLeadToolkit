@@ -1,4 +1,5 @@
 """Submit/validation mixin for data import dialog."""
+from __future__ import annotations
 
 import pandas as pd
 from PyQt5.QtWidgets import QMessageBox

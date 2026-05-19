@@ -1,4 +1,5 @@
 """Workflow mixin for data import dialog."""
+from __future__ import annotations
 
 import os
 

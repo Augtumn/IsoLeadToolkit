@@ -1,4 +1,6 @@
 """混合计算对话框。"""
+from __future__ import annotations
+
 import logging
 
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,

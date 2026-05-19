@@ -1,4 +1,6 @@
 """Qt5 工作表选择对话框。"""
+from __future__ import annotations
+
 import logging
 
 import pandas as pd

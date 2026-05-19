@@ -1,6 +1,8 @@
 """
 Qt5 进度对话框
 """
+from __future__ import annotations
+
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QLabel,
                               QProgressBar)
 from PyQt5.QtCore import Qt

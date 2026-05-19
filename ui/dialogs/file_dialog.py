@@ -1,6 +1,8 @@
 """
 Qt5 文件选择对话框
 """
+from __future__ import annotations
+
 import os
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                               QLabel, QPushButton,

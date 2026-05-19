@@ -1,4 +1,5 @@
 """Data loading and execution workflow for provenance ML dialog."""
+from __future__ import annotations
 
 import logging
 import os

@@ -1,6 +1,7 @@
 """
 Unified data import dialog: file, sheet, and column selection.
 """
+from __future__ import annotations
 
 from PyQt5.QtWidgets import QDialog
 

@@ -1,4 +1,5 @@
 """Provenance ML dialog base state and initialization."""
+from __future__ import annotations
 
 from pathlib import Path
 

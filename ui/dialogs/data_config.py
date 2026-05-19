@@ -1,6 +1,8 @@
 """
 Qt5 数据配置对话框
 """
+from __future__ import annotations
+
 from typing import Any
 
 import pandas as pd

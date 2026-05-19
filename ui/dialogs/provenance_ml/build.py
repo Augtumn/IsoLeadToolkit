@@ -1,4 +1,5 @@
 """UI construction and column helpers for provenance ML dialog."""
+from __future__ import annotations
 
 import numpy as np
 from PyQt5.QtCore import Qt

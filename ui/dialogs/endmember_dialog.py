@@ -1,4 +1,6 @@
 """端元识别对话框。"""
+from __future__ import annotations
+
 import logging
 from typing import Any
 
