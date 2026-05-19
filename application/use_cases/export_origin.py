@@ -226,12 +226,16 @@ def _extract_ternary_data(ax: Any) -> list[dict[str, Any]]:
         if not np.any(mask):
             continue
         cat_data = embedding[mask]
+        # Normalize ternary components to 0–1 range (t / (t+l+r))
+        t_raw, l_raw, r_raw = cat_data[:, 0], cat_data[:, 1], cat_data[:, 2]
+        from visualization.plotting.ternary import normalize_ternary_components
+        t_norm, l_norm, r_norm = normalize_ternary_components(t_raw, l_raw, r_raw)
         color = palette.get(cat, "#333333")
         groups_out.append({
             "label": cat,
-            "t": cat_data[:, 0].tolist(),
-            "l": cat_data[:, 1].tolist(),
-            "r": cat_data[:, 2].tolist(),
+            "t": t_norm.tolist(),
+            "l": l_norm.tolist(),
+            "r": r_norm.tolist(),
             "color": color,
             "marker": _origin_marker(marker_map.get(cat, "o")),
             "ternary_cols": ternary_cols,
