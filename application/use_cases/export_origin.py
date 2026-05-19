@@ -648,12 +648,11 @@ def _build_origin_project(
                 rmn = max(0.0, rmn - r_range * pad)
                 rmx = min(1.0, rmx + r_range * pad)
                 try:
-                    gl.axis("x").from_ = tmn
-                    gl.axis("x").to   = tmx
-                    gl.axis("y").from_ = lmn
-                    gl.axis("y").to   = lmx
-                    gl.axis("z").from_ = rmn
-                    gl.axis("z").to   = rmx
+                    # Use LabTalk for ternary axis range (more reliable than Python API)
+                    op.lt_exec(f'layer.x.from={tmn}; layer.x.to={tmx}')
+                    op.lt_exec(f'layer.y.from={lmn}; layer.y.to={lmx}')
+                    op.lt_exec(f'layer.z.from={rmn}; layer.z.to={rmx}')
+                    gl.rescale()
                 except Exception:
                     pass  # axis range setting is best-effort
         else:
