@@ -577,6 +577,11 @@ def _build_origin_project(
                     wks.from_list(0, group.get("t", []), group.get("ternary_cols", ["Top"])[0] if group.get("ternary_cols") else "Top")
                     wks.from_list(1, group.get("l", []), group.get("ternary_cols", ["Top", "Left"])[1] if group.get("ternary_cols") and len(group["ternary_cols"]) > 1 else "Left")
                     wks.from_list(2, group.get("r", []), group.get("ternary_cols", ["Top", "Left", "Right"])[2] if group.get("ternary_cols") and len(group["ternary_cols"]) > 2 else "Right")
+                    # Designate columns as XYZ for ternary mapping
+                    try:
+                        wks.cols_axis('xyz')
+                    except Exception:
+                        pass
                 elif group.get("z"):
                     wks.from_list(0, group["x"], "X")
                     wks.from_list(1, group["y"], "Y")
@@ -609,7 +614,7 @@ def _build_origin_project(
             wks, sheet_name = entry
             try:
                 if is_ternary:
-                    plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
+                    plot = gl.add_plot(wks, coly=1, colx=0, type="s")
                 elif group.get("z"):
                     plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 else:
@@ -648,11 +653,9 @@ def _build_origin_project(
                 rmn = max(0.0, rmn - r_range * pad)
                 rmx = min(1.0, rmx + r_range * pad)
                 try:
-                    # Use LabTalk for ternary axis range (more reliable than Python API)
-                    op.lt_exec(f'layer.x.from={tmn}; layer.x.to={tmx}')
-                    op.lt_exec(f'layer.y.from={lmn}; layer.y.to={lmx}')
-                    op.lt_exec(f'layer.z.from={rmn}; layer.z.to={rmx}')
-                    gl.rescale()
+                    gl.set_xlim(tmn, tmx)
+                    gl.set_ylim(lmn, lmx)
+                    gl.set_zlim(rmn, rmx)
                 except Exception:
                     pass  # axis range setting is best-effort
         else:
