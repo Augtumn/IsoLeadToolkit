@@ -65,8 +65,6 @@ from .source import (
 from .delta import (
     calculate_deltas,
     calculate_v1v2_coordinates,
-    calculate_delta_values,
-    calculate_v1v2,
 )
 from .isochron import (
     calculate_paleoisochron_line,
@@ -312,8 +310,6 @@ __all__ = [
     'calculate_initial_ratio_84',
     'calculate_deltas',
     'calculate_v1v2_coordinates',
-    'calculate_delta_values',
-    'calculate_v1v2',
     'calculate_paleoisochron_line',
     'calculate_isochron1_growth_curve',
     'calculate_isochron2_growth_curve',

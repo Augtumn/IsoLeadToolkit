@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from data.geochemistry.delta import calculate_deltas, calculate_v1v2
+from data.geochemistry.delta import calculate_deltas, calculate_v1v2_coordinates
 from data.geochemistry.engine import (
     E1_DEFAULT,
     E2_DEFAULT,
@@ -47,14 +47,12 @@ def test_calculate_v1v2_uses_named_regression_defaults() -> None:
     d_beta = np.array([0.5, 1.5], dtype=float)
     d_gamma = np.array([3.0, 4.0], dtype=float)
 
-    with_defaults = calculate_v1v2(d_alpha, d_beta, d_gamma)
-    with_explicit_constants = calculate_v1v2(
+    with_defaults = calculate_v1v2_coordinates(d_alpha, d_beta, d_gamma)
+    with_explicit_constants = calculate_v1v2_coordinates(
         d_alpha,
         d_beta,
         d_gamma,
-        a=REGRESSION_A,
-        b=REGRESSION_B,
-        c=REGRESSION_C,
+        params={'a': REGRESSION_A, 'b': REGRESSION_B, 'c': REGRESSION_C},
     )
 
     np.testing.assert_allclose(with_defaults[0], with_explicit_constants[0])

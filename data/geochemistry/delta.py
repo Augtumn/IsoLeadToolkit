@@ -122,25 +122,3 @@ def calculate_v1v2_coordinates(
     V2 = (np.sqrt(1 + b**2 + c**2) / np.sqrt(1 + b**2)) * d_beta_p
     
     return V1, V2
-
-def calculate_delta_values(
-    Pb206_204_S: np.ndarray | float,
-    Pb207_204_S: np.ndarray | float,
-    Pb208_204_S: np.ndarray | float,
-    t_Ma: np.ndarray | float | None,
-    params: dict[str, Any] | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Alias for calculate_deltas for backward compatibility"""
-    return calculate_deltas(Pb206_204_S, Pb207_204_S, Pb208_204_S, t_Ma, params)
-
-def calculate_v1v2(
-    d_alpha: np.ndarray,
-    d_beta: np.ndarray,
-    d_gamma: np.ndarray,
-    a: float = REGRESSION_A,
-    b: float = REGRESSION_B,
-    c: float = REGRESSION_C,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Alias for calculate_v1v2_coordinates for backward compatibility"""
-    temp_params = {'a': a, 'b': b, 'c': c}
-    return calculate_v1v2_coordinates(d_alpha, d_beta, d_gamma, params=temp_params)
