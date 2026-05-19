@@ -219,6 +219,23 @@ class DataPanelGeochemMixin:
         )
         self._on_change()
 
+    def _on_v1v2_model_change(self, index):
+        """Handle V1V2 model selection changes."""
+        combo = getattr(self, "v1v2_model_combo", None)
+        if combo is None:
+            return
+        model_name = combo.currentData()
+        if model_name not in ("V1V2 (Geokit)", "V1V2 (Zhu 1993)"):
+            return
+        try:
+            from data.geochemistry import engine
+
+            engine.load_preset(model_name)
+            if app_state.render_mode == "V1V2":
+                self._on_change()
+        except Exception:
+            pass
+
     def _on_v1v2_param_change(self):
         """Update V1V2 time parameters."""
         try:

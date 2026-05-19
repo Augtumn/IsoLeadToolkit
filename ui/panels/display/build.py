@@ -247,6 +247,7 @@ class DisplayBuildMixin:
         self.marker_size_spin = QSpinBox()
         self.marker_size_spin.setRange(1, 500)
         self.marker_size_spin.setValue(int(getattr(app_state, 'plot_marker_size', 60)))
+        self.marker_size_spin.setToolTip(translate("数据点标记大小，范围 1-2000。"))
         self.marker_size_spin.valueChanged.connect(self._on_style_change)
         marker_size_row.addWidget(self.marker_size_spin)
         marker_layout.addLayout(marker_size_row)
@@ -260,6 +261,7 @@ class DisplayBuildMixin:
         self.marker_alpha_spin.setSingleStep(0.02)
         self.marker_alpha_spin.setDecimals(2)
         self.marker_alpha_spin.setValue(float(getattr(app_state, 'plot_marker_alpha', 0.8)))
+        self.marker_alpha_spin.setToolTip(translate("数据点透明度，0 为完全透明，1 为完全不透明。"))
         self.marker_alpha_spin.valueChanged.connect(self._on_style_change)
         marker_alpha_row.addWidget(self.marker_alpha_spin)
         marker_layout.addLayout(marker_alpha_row)
@@ -322,6 +324,7 @@ class DisplayBuildMixin:
         self.figure_dpi_spin = QSpinBox()
         self.figure_dpi_spin.setRange(50, 600)
         self.figure_dpi_spin.setValue(int(getattr(app_state, 'plot_dpi', 130)))
+        self.figure_dpi_spin.setToolTip(translate("图形分辨率（每英寸点数）。较高值产生更清晰的图像。"))
         self.figure_dpi_spin.valueChanged.connect(self._on_style_change)
         row = add_row(figure_grid, "Figure DPI", self.figure_dpi_spin, row)
 
@@ -359,17 +362,20 @@ class DisplayBuildMixin:
         self.grid_alpha_spin.setRange(0.0, 1.0)
         self.grid_alpha_spin.setSingleStep(0.05)
         self.grid_alpha_spin.setValue(float(getattr(app_state, 'grid_alpha', 0.7)))
+        self.grid_alpha_spin.setToolTip(translate("网格线透明度。0 为完全透明，1 为完全不透明。"))
         self.grid_alpha_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Grid Alpha", self.grid_alpha_spin, row)
 
         self.grid_style_combo = QComboBox()
         self.grid_style_combo.addItems(['-', '--', '-.', ':'])
         self.grid_style_combo.setCurrentText(getattr(app_state, 'grid_linestyle', '--'))
+        self.grid_style_combo.setToolTip(translate("网格线样式：实线(-)、虚线(--)、点划线(-.)、点线(:)。"))
         self.grid_style_combo.currentTextChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Grid Style", self.grid_style_combo, row)
 
         self.minor_grid_check = QCheckBox()
         self.minor_grid_check.setChecked(getattr(app_state, 'minor_grid', False))
+        self.minor_grid_check.setToolTip(translate("是否显示次刻度网格线。"))
         self.minor_grid_check.stateChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid", self.minor_grid_check, row)
 
@@ -517,6 +523,7 @@ class DisplayBuildMixin:
         self.adjust_force_text_x_spin.setSingleStep(0.05)
         self.adjust_force_text_x_spin.setDecimals(2)
         self.adjust_force_text_x_spin.setValue(float(force_text[0]))
+        self.adjust_force_text_x_spin.setToolTip(translate("标签排斥力强度。较大值使标签更分散。"))
         self.adjust_force_text_x_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Force Text X", self.adjust_force_text_x_spin, row)
 
@@ -525,6 +532,7 @@ class DisplayBuildMixin:
         self.adjust_force_text_y_spin.setSingleStep(0.05)
         self.adjust_force_text_y_spin.setDecimals(2)
         self.adjust_force_text_y_spin.setValue(float(force_text[1]))
+        self.adjust_force_text_y_spin.setToolTip(translate("标签排斥力强度。较大值使标签更分散。"))
         self.adjust_force_text_y_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Force Text Y", self.adjust_force_text_y_spin, row)
 
