@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-05-19 · A8 发布工程化第一百九十五批）
+
+- A8 发布工程化 — 自动化质量门禁与性能基线落地：
+    - `scripts/release_check.py`：13 项发布就绪检查，涵盖 pytest 全量测试、4 个源码守护脚本（`--fail-on-hits`）、核心导入冒烟（`core.state` / `ui.main_window`）、SciencePlots 可用性、字体检测（primary + CJK）、构建配置（`build.spec` / `pyproject.toml`）、本地化文件（`locales/en.json` / `locales/zh.json`）、资源文件（`assets/icons/logo.png`）。
+    - `scripts/performance_baseline.py`：6 项性能度量，包括 core import 耗时、全链导入耗时（core → ui.main_window）、matplotlib 首帧渲染耗时、seaborn KDE 冷启耗时、ML 嵌入依赖导入耗时（umap + sklearn + xgboost）、pytest 测试发现耗时。
+    - 运行方式：`uv run python scripts/release_check.py`（exit 0 = 全部通过）、`uv run python scripts/performance_baseline.py`。
+- 回归保障：
+    - 守护脚本四件套全部 `TOTAL=0`。
+    - 完整测试套件（337 tests）全部通过。
+
 ## 阶段进展（2026-05-18 · 第一百九十四批）
 
 - 三元图 Gateway 方法补齐（#193）：
