@@ -157,28 +157,19 @@ class ExportPanelImageExportMixin:
         original_show_marginal_kde = bool(getattr(app_state, 'show_marginal_kde', False))
         original_has_marginal_axes = bool(original_fig is not None and len(getattr(original_fig, 'axes', [])) > 1)
         original_marker_size = int(getattr(app_state, 'plot_marker_size', 60))
+        original_font_sizes = dict(getattr(app_state, 'plot_font_sizes', {}) or {})
 
         try:
             use_scienceplots = self._is_scienceplots_available()
             style_chain = profile['styles'] if use_scienceplots else ['default']
             with plt.style.context(style_chain):
-                # Always apply font size overrides regardless of SciencePlots availability
-                rc_overrides = self._fallback_export_rc(
-                    profile,
-                    label_fontsize=label_size_for_export,
-                    title_fontsize=title_size_for_export,
-                    tick_fontsize=tick_size_for_export,
-                )
                 if not use_scienceplots:
-                    plt.rcParams.update(rc_overrides)
-                else:
-                    # Apply font size overrides on top of SciencePlots styles
-                    plt.rcParams.update({
-                        'axes.labelsize': float(label_size_for_export) if label_size_for_export else rc_overrides.get('axes.labelsize', 10),
-                        'axes.titlesize': float(title_size_for_export) if title_size_for_export else rc_overrides.get('axes.titlesize', 12),
-                        'xtick.labelsize': float(tick_size_for_export) if tick_size_for_export else rc_overrides.get('xtick.labelsize', 9),
-                        'ytick.labelsize': float(tick_size_for_export) if tick_size_for_export else rc_overrides.get('ytick.labelsize', 9),
-                    })
+                    plt.rcParams.update(self._fallback_export_rc(
+                        profile,
+                        label_fontsize=label_size_for_export,
+                        title_fontsize=title_size_for_export,
+                        tick_fontsize=tick_size_for_export,
+                    ))
                 export_fig = Figure(
                     figsize=profile['figsize'],
                     dpi=int(profile['dpi']),
@@ -190,6 +181,13 @@ class ExportPanelImageExportMixin:
                 state_gateway.set_palette_and_marker_map(locked_palette, locked_marker_map)
                 # Override marker size so plot functions use the export value
                 state_gateway.set_plot_marker_size(point_size_for_export)
+                # Override font sizes so _apply_current_style uses export values
+                state_gateway.set_plot_font_sizes({
+                    'title': int(title_size_for_export) if title_size_for_export else 12,
+                    'label': int(label_size_for_export) if label_size_for_export else 10,
+                    'tick': int(tick_size_for_export) if tick_size_for_export else 9,
+                    'legend': int(legend_size_for_export) if legend_size_for_export else 8,
+                })
 
                 # Preserve visible marginal KDE when current interactive figure uses marginal axes.
                 if original_has_marginal_axes:
@@ -221,6 +219,7 @@ class ExportPanelImageExportMixin:
                 return export_fig
         finally:
             state_gateway.set_plot_marker_size(original_marker_size)
+            state_gateway.set_plot_font_sizes(original_font_sizes)
             state_gateway.set_figure_axes(original_fig, original_ax)
             state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
             state_gateway.set_show_marginal_kde(original_show_marginal_kde)
