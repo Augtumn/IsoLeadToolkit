@@ -41,7 +41,6 @@ from .engine import (
 from .age import (
     calculate_single_stage_age,
     calculate_two_stage_age,
-    calculate_model_age,
 )
 from .source import (
     _invert_mu,
@@ -52,12 +51,6 @@ from .source import (
     calculate_source_nu,
     calculate_model_mu,
     calculate_model_kappa,
-    # Backward-compatible aliases
-    calculate_mu_sk,
-    calculate_omega_sk,
-    calculate_nu_sk,
-    calculate_mu_sk_model,
-    calculate_kappa_sk_model,
     calculate_initial_ratio_64,
     calculate_initial_ratio_74,
     calculate_initial_ratio_84,
@@ -293,18 +286,11 @@ __all__ = [
     'calculate_modelcurve',
     'calculate_single_stage_age',
     'calculate_two_stage_age',
-    'calculate_model_age',
     'calculate_source_mu',
     'calculate_source_omega',
     'calculate_source_nu',
     'calculate_model_mu',
     'calculate_model_kappa',
-    # Deprecated aliases
-    'calculate_mu_sk',
-    'calculate_omega_sk',
-    'calculate_nu_sk',
-    'calculate_mu_sk_model',
-    'calculate_kappa_sk_model',
     'calculate_initial_ratio_64',
     'calculate_initial_ratio_74',
     'calculate_initial_ratio_84',

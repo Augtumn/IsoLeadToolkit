@@ -370,9 +370,4 @@ def calculate_initial_ratio_84(
     return z_ref + omega * (e2T - e2t)
 
 
-# Backward-compatible aliases (deprecated)
-calculate_mu_sk = calculate_source_mu
-calculate_omega_sk = calculate_source_omega
-calculate_nu_sk = calculate_source_nu
-calculate_mu_sk_model = calculate_model_mu
-calculate_kappa_sk_model = calculate_model_kappa
+

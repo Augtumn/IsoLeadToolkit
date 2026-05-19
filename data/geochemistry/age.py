@@ -224,23 +224,4 @@ def calculate_two_stage_age(
 
     return np.array(results).reshape(S206.shape)
 
-def calculate_model_age(
-    Pb206_204_S: np.ndarray | float,
-    Pb207_204_S: np.ndarray | float,
-    two_stage: bool = False,
-) -> np.ndarray | float | None:
-    """
-    Calculate model age (backward compatible function)
-    
-    Args:
-        Pb206_204_S: 206Pb/204Pb ratio
-        Pb207_204_S: 207Pb/204Pb ratio
-        two_stage: If True, use two-stage model
-        
-    Returns:
-        Model age in Ma
-    """
-    if two_stage:
-        return calculate_two_stage_age(Pb206_204_S, Pb207_204_S)
-    else:
-        return calculate_single_stage_age(Pb206_204_S, Pb207_204_S)
+
