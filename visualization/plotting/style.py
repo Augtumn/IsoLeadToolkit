@@ -9,6 +9,7 @@ from .styling.core import _apply_current_style, _apply_axis_text_style, _enforce
 from .styling.legend import _legend_columns_for_layout, _legend_layout_config, _style_legend
 from .styling.overlays import refresh_overlay_styles, refresh_overlay_visibility
 
+_last_style_params: dict[str, Any] = {}
 
 def configure_constrained_layout(
     fig: Any,
@@ -105,20 +106,25 @@ def refresh_plot_style() -> None:
         resolved_edgecolor = edgecolor if show_edge else 'none'
         resolved_edgewidth = edgewidth if show_edge else 0.0
 
-        for sc in list(getattr(app_state, 'scatter_collections', [])):
-            if sc is None:
-                continue
-            try:
-                sizes = sc.get_sizes()
-                if sizes is None or len(sizes) == 0:
-                    sc.set_sizes([base_size])
-                else:
-                    sc.set_sizes([base_size] * len(sizes))
-                sc.set_alpha(base_alpha)
-                sc.set_edgecolor(resolved_edgecolor)
-                sc.set_linewidths(resolved_edgewidth)
-            except Exception:
-                pass
+        current_params = {
+            'size': base_size,
+            'alpha': base_alpha,
+            'edgecolor': resolved_edgecolor,
+            'edgewidth': resolved_edgewidth,
+        }
+
+        if current_params != _last_style_params:
+            for sc in list(getattr(app_state, 'scatter_collections', [])):
+                if sc is None:
+                    continue
+                try:
+                    sc.set_sizes(base_size)
+                    sc.set_alpha(base_alpha)
+                    sc.set_edgecolor(resolved_edgecolor)
+                    sc.set_linewidths(resolved_edgewidth)
+                except Exception:
+                    pass
+            _last_style_params.update(current_params)
     except Exception:
         pass
 
