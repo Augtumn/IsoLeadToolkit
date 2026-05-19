@@ -393,7 +393,6 @@ class ExportPanelImageExportMixin:
             }
             state['debounce_timer'].setSingleShot(True)
             state['debounce_timer'].setInterval(_PREVIEW_DEBOUNCE_MS)
-            state['debounce_timer'].timeout.connect(_do_refresh)
 
             # ── Re-render: full figure regen via _create_export_figure ──
             def _do_refresh():
@@ -467,6 +466,9 @@ class ExportPanelImageExportMixin:
                     logger.warning("Preview re-render failed: %s", err)
                 finally:
                     state['refreshing'] = False
+
+            # Connect after _do_refresh is defined
+            state['debounce_timer'].timeout.connect(_do_refresh)
 
             def _schedule_refresh():
                 # Restart single-shot timer — safe, auto-cancels previous
