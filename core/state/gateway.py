@@ -385,6 +385,9 @@ class AppStateGateway:
         transparent: bool | None = None,
         point_size: int | None = None,
         legend_size: int | None = None,
+        label_size: int | None = None,
+        title_size: int | None = None,
+        tick_size: int | None = None,
     ) -> None:
         self._dispatch(
             "SET_EXPORT_IMAGE_OPTIONS",
@@ -397,6 +400,9 @@ class AppStateGateway:
                 "transparent": transparent,
                 "point_size": point_size,
                 "legend_size": legend_size,
+                "label_size": label_size,
+                "title_size": title_size,
+                "tick_size": tick_size,
             },
         )
 

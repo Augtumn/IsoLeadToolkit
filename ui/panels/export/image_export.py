@@ -43,6 +43,19 @@ class ExportPanelImageExportMixin:
             self.image_dpi_spin.blockSignals(True)
             self.image_dpi_spin.setValue(int(profile.get('dpi', 400)))
             self.image_dpi_spin.blockSignals(False)
+        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
+        if self.image_label_size_spin is not None:
+            self.image_label_size_spin.blockSignals(True)
+            self.image_label_size_spin.setValue(int(round(legend_fontsize + 2.0)))
+            self.image_label_size_spin.blockSignals(False)
+        if self.image_title_size_spin is not None:
+            self.image_title_size_spin.blockSignals(True)
+            self.image_title_size_spin.setValue(int(round(legend_fontsize + 3.0)))
+            self.image_title_size_spin.blockSignals(False)
+        if self.image_tick_size_spin is not None:
+            self.image_tick_size_spin.blockSignals(True)
+            self.image_tick_size_spin.setValue(int(round(legend_fontsize - 0.5)))
+            self.image_tick_size_spin.blockSignals(False)
         self._update_style_source_label()
 
     def _is_scienceplots_available(self) -> bool:
@@ -93,6 +106,9 @@ class ExportPanelImageExportMixin:
         file_path, image_ext = self._normalize_export_target(file_path, str(preferred_ext))
         point_size_for_export = self._resolve_export_point_size(profile)
         legend_size_for_export = self._resolve_export_legend_size(profile)
+        label_size_for_export = self._resolve_export_label_size(profile)
+        title_size_for_export = self._resolve_export_title_size(profile)
+        tick_size_for_export = self._resolve_export_tick_size(profile)
         save_options = self._resolve_export_save_options(profile)
 
         export_fig = None
@@ -101,6 +117,9 @@ class ExportPanelImageExportMixin:
                 profile,
                 point_size_for_export,
                 legend_size_for_export,
+                label_size_for_export,
+                title_size_for_export,
+                tick_size_for_export,
             )
             self._save_export_figure(
                 export_fig,
@@ -134,6 +153,9 @@ class ExportPanelImageExportMixin:
         profile: dict,
         point_size_for_export: int,
         legend_size_for_export: int | None = None,
+        label_size_for_export: int | None = None,
+        title_size_for_export: int | None = None,
+        tick_size_for_export: int | None = None,
     ):
         """Create an offscreen figure rendered with current mode and export profile."""
         import matplotlib.pyplot as plt
@@ -156,7 +178,12 @@ class ExportPanelImageExportMixin:
             style_chain = profile['styles'] if use_scienceplots else ['default']
             with plt.style.context(style_chain):
                 if not use_scienceplots:
-                    plt.rcParams.update(self._fallback_export_rc(profile))
+                    plt.rcParams.update(self._fallback_export_rc(
+                        profile,
+                        label_fontsize=label_size_for_export,
+                        title_fontsize=title_size_for_export,
+                        tick_fontsize=tick_size_for_export,
+                    ))
                 export_fig = Figure(
                     figsize=profile['figsize'],
                     dpi=int(profile['dpi']),
@@ -223,10 +250,20 @@ class ExportPanelImageExportMixin:
         profile = self._image_export_profile(str(preset_key))
         point_size_for_export = self._resolve_export_point_size(profile)
         legend_size_for_export = self._resolve_export_legend_size(profile)
+        label_size_for_export = self._resolve_export_label_size(profile)
+        title_size_for_export = self._resolve_export_title_size(profile)
+        tick_size_for_export = self._resolve_export_tick_size(profile)
         image_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
 
         try:
-            preview_fig = self._create_export_figure(profile, point_size_for_export, legend_size_for_export)
+            preview_fig = self._create_export_figure(
+                profile,
+                point_size_for_export,
+                legend_size_for_export,
+                label_size_for_export,
+                title_size_for_export,
+                tick_size_for_export,
+            )
             preview_width_px = int(round(float(profile['figsize'][0]) * float(profile['dpi'])))
             preview_height_px = int(round(float(profile['figsize'][1]) * float(profile['dpi'])))
 

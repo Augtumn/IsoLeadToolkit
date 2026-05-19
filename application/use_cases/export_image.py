@@ -133,16 +133,29 @@ def resolve_image_save_options(
     }
 
 
-def fallback_export_rc(profile: Mapping[str, object]) -> dict[str, object]:
-    """Build fallback rcParams when SciencePlots is unavailable."""
+def fallback_export_rc(
+    profile: Mapping[str, object],
+    *,
+    label_fontsize: int | None = None,
+    title_fontsize: int | None = None,
+    tick_fontsize: int | None = None,
+) -> dict[str, object]:
+    """Build fallback rcParams when SciencePlots is unavailable.
+
+    Args:
+        profile: Export profile dict.
+        label_fontsize: Override for axes label font size. Defaults to computed from base font.
+        title_fontsize: Override for axes title font size. Defaults to computed from base font.
+        tick_fontsize: Override for tick label font size. Defaults to computed from base font.
+    """
     legend_style = dict((profile.get("legend", {}) or {}))
     base_font_size = float(legend_style.get("fontsize", 8.0))
     return {
         "font.size": base_font_size + 0.5,
-        "axes.titlesize": base_font_size + 1.8,
-        "axes.labelsize": base_font_size + 1.0,
-        "xtick.labelsize": base_font_size,
-        "ytick.labelsize": base_font_size,
+        "axes.titlesize": title_fontsize if title_fontsize is not None else base_font_size + 1.8,
+        "axes.labelsize": label_fontsize if label_fontsize is not None else base_font_size + 1.0,
+        "xtick.labelsize": tick_fontsize if tick_fontsize is not None else base_font_size,
+        "ytick.labelsize": tick_fontsize if tick_fontsize is not None else base_font_size,
         "legend.fontsize": base_font_size,
         "axes.grid": True,
         "grid.alpha": 0.22,

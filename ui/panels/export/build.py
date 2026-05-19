@@ -38,6 +38,9 @@ class ExportPanelBuildMixin:
         self.image_style_source_label = None
         self.export_image_button = None
         self.preview_image_button = None
+        self.image_label_size_spin = None
+        self.image_title_size_spin = None
+        self.image_tick_size_spin = None
         self.export_origin_button = None
         self._scienceplots_available = None
 
@@ -164,6 +167,39 @@ class ExportPanelBuildMixin:
         legend_size_row.addWidget(self.image_legend_size_spin)
         image_layout.addLayout(legend_size_row)
 
+        label_size_row = QHBoxLayout()
+        label_size_label = QLabel(translate("Label Font Size"))
+        label_size_label.setProperty('translate_key', 'Label Font Size')
+        label_size_row.addWidget(label_size_label)
+        self.image_label_size_spin = QSpinBox()
+        self.image_label_size_spin.setRange(4, 24)
+        self.image_label_size_spin.setSingleStep(1)
+        self.image_label_size_spin.setValue(10)
+        label_size_row.addWidget(self.image_label_size_spin)
+        image_layout.addLayout(label_size_row)
+
+        title_size_row = QHBoxLayout()
+        title_size_label = QLabel(translate("Title Font Size"))
+        title_size_label.setProperty('translate_key', 'Title Font Size')
+        title_size_row.addWidget(title_size_label)
+        self.image_title_size_spin = QSpinBox()
+        self.image_title_size_spin.setRange(4, 24)
+        self.image_title_size_spin.setSingleStep(1)
+        self.image_title_size_spin.setValue(12)
+        title_size_row.addWidget(self.image_title_size_spin)
+        image_layout.addLayout(title_size_row)
+
+        tick_size_row = QHBoxLayout()
+        tick_size_label = QLabel(translate("Tick Font Size"))
+        tick_size_label.setProperty('translate_key', 'Tick Font Size')
+        tick_size_row.addWidget(tick_size_label)
+        self.image_tick_size_spin = QSpinBox()
+        self.image_tick_size_spin.setRange(4, 24)
+        self.image_tick_size_spin.setSingleStep(1)
+        self.image_tick_size_spin.setValue(9)
+        tick_size_row.addWidget(self.image_tick_size_spin)
+        image_layout.addLayout(tick_size_row)
+
         bbox_row = QHBoxLayout()
         self.image_tight_bbox_check = QCheckBox(translate("Tight Bounding Box"))
         self.image_tight_bbox_check.setProperty('translate_key', 'Tight Bounding Box')
@@ -235,6 +271,15 @@ class ExportPanelBuildMixin:
             self.image_legend_size_spin.setValue(int(legend_size))
         if self.image_dpi_spin is not None:
             self.image_dpi_spin.setValue(int(export_options.get('dpi', self.image_dpi_spin.value())))
+        label_size = export_options.get('label_size')
+        if label_size is not None and self.image_label_size_spin is not None:
+            self.image_label_size_spin.setValue(int(label_size))
+        title_size = export_options.get('title_size')
+        if title_size is not None and self.image_title_size_spin is not None:
+            self.image_title_size_spin.setValue(int(title_size))
+        tick_size = export_options.get('tick_size')
+        if tick_size is not None and self.image_tick_size_spin is not None:
+            self.image_tick_size_spin.setValue(int(tick_size))
 
         layout.addStretch()
         return widget

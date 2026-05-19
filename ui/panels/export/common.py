@@ -198,6 +198,30 @@ class ExportPanelCommonMixin:
             point_size = int(self.image_legend_size_spin.value())
         return point_size
 
+    def _resolve_export_label_size(self, profile: dict) -> int:
+        """Resolve label font size from UI override or profile default."""
+        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
+        default_size = int(round(legend_fontsize + 2.0))
+        if self.image_label_size_spin is not None:
+            default_size = int(self.image_label_size_spin.value())
+        return default_size
+
+    def _resolve_export_title_size(self, profile: dict) -> int:
+        """Resolve title font size from UI override or profile default."""
+        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
+        default_size = int(round(legend_fontsize + 3.0))
+        if self.image_title_size_spin is not None:
+            default_size = int(self.image_title_size_spin.value())
+        return default_size
+
+    def _resolve_export_tick_size(self, profile: dict) -> int:
+        """Resolve tick font size from UI override or profile default."""
+        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
+        default_size = int(round(legend_fontsize - 0.5))
+        if self.image_tick_size_spin is not None:
+            default_size = int(self.image_tick_size_spin.value())
+        return default_size
+
     def _resolve_export_save_options(self, profile: dict) -> dict:
         """Collect figure save options from export controls."""
         dpi_override = int(self.image_dpi_spin.value()) if self.image_dpi_spin is not None else None
@@ -211,6 +235,10 @@ class ExportPanelCommonMixin:
         if self.image_pad_inches_spin is not None:
             pad_inches = float(self.image_pad_inches_spin.value())
 
+        label_size = int(self.image_label_size_spin.value()) if self.image_label_size_spin is not None else None
+        title_size = int(self.image_title_size_spin.value()) if self.image_title_size_spin is not None else None
+        tick_size = int(self.image_tick_size_spin.value()) if self.image_tick_size_spin is not None else None
+
         state_gateway.set_export_image_options(
             preset_key=str(preset_key),
             image_ext=str(image_ext),
@@ -220,6 +248,9 @@ class ExportPanelCommonMixin:
             transparent=transparent,
             point_size=point_size,
             legend_size=legend_size,
+            label_size=label_size,
+            title_size=title_size,
+            tick_size=tick_size,
         )
 
         return resolve_image_save_options(
@@ -232,9 +263,20 @@ class ExportPanelCommonMixin:
         )
 
     @staticmethod
-    def _fallback_export_rc(profile: dict) -> dict:
+    def _fallback_export_rc(
+        profile: dict,
+        *,
+        label_fontsize: int | None = None,
+        title_fontsize: int | None = None,
+        tick_fontsize: int | None = None,
+    ) -> dict:
         """Fallback rcParams when SciencePlots is unavailable."""
-        return fallback_export_rc(profile)
+        return fallback_export_rc(
+            profile,
+            label_fontsize=label_fontsize,
+            title_fontsize=title_fontsize,
+            tick_fontsize=tick_fontsize,
+        )
 
     @staticmethod
     def _normalize_export_target(file_path: str, preferred_ext: str) -> tuple[str, str]:
