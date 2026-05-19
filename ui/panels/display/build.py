@@ -88,6 +88,66 @@ class DisplayBuildMixin:
         self.adjust_expand_y_spin = None
         self.adjust_iter_lim_spin = None
         self.adjust_time_lim_spin = None
+        self._section_toolbox = None
+        self._search_edit = None
+        self._search_match_label = None
+
+    def _collect_widget_text(self, widget) -> str:
+        """Recursively collect display text from QLabel and QGroupBox widgets."""
+        texts = []
+        if isinstance(widget, QLabel):
+            t = widget.text()
+            if t:
+                texts.append(t)
+        elif isinstance(widget, QGroupBox):
+            t = widget.title()
+            if t:
+                texts.append(t)
+        for label in widget.findChildren(QLabel):
+            t = label.text()
+            if t:
+                texts.append(t)
+        for group in widget.findChildren(QGroupBox):
+            t = group.title()
+            if t:
+                texts.append(t)
+        return ' '.join(texts)
+
+    def _on_search_changed(self, text: str):
+        """Filter toolbox pages by search text."""
+        toolbox = self._section_toolbox
+        if toolbox is None:
+            return
+        text = text.strip()
+        if not text:
+            for i in range(toolbox.count()):
+                toolbox.setItemEnabled(i, True)
+            self._search_match_label.setText('')
+            return
+
+        match_count = 0
+        text_lower = text.lower()
+        for i in range(toolbox.count()):
+            page = toolbox.widget(i)
+            page_text = self._collect_widget_text(page).lower()
+            if text_lower in page_text:
+                toolbox.setItemEnabled(i, True)
+                match_count += 1
+            else:
+                toolbox.setItemEnabled(i, False)
+
+        if match_count == 0:
+            self._search_match_label.setText(translate("No matches"))
+        else:
+            self._search_match_label.setText(
+                translate("{n} matches").format(n=match_count)
+            )
+
+    def _clear_search(self):
+        """Clear search text and reset filter."""
+        if self._search_edit:
+            self._search_edit.clear()
+            self._search_edit.setFocus()
 
     def build(self) -> QWidget:
         widget = self._build_display_section()
@@ -101,8 +161,26 @@ class DisplayBuildMixin:
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
+        # Search/filter bar
+        search_layout = QHBoxLayout()
+        search_layout.setSpacing(4)
+        self._search_edit = QLineEdit()
+        self._search_edit.setPlaceholderText(translate("Search settings..."))
+        self._search_edit.textChanged.connect(self._on_search_changed)
+        search_layout.addWidget(self._search_edit, 1)
+
+        self._search_clear_btn = QPushButton("×")
+        self._search_clear_btn.setFixedWidth(28)
+        self._search_clear_btn.clicked.connect(self._clear_search)
+        search_layout.addWidget(self._search_clear_btn)
+
+        self._search_match_label = QLabel("")
+        search_layout.addWidget(self._search_match_label)
+        layout.addLayout(search_layout)
+
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('display_section_toolbox')
+        self._section_toolbox = section_toolbox
 
         presets_page = QWidget()
         presets_layout = QVBoxLayout(presets_page)
