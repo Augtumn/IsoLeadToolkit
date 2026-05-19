@@ -295,9 +295,11 @@ class ExportPanelImageExportMixin:
             control_layout.addLayout(row1)
 
             # Helper: slider + spin pair
-            def _add_slider_spin(parent_layout, label_text, min_val, max_val, step, init_val):
+            def _add_slider_spin(parent_layout, label_text, translate_key, min_val, max_val, step, init_val):
                 row = QHBoxLayout()
-                row.addWidget(QLabel(label_text))
+                label = QLabel(label_text)
+                label.setProperty('translate_key', translate_key)
+                row.addWidget(label)
                 slider = QSlider(Qt.Horizontal)
                 slider.setRange(min_val, max_val)
                 slider.setSingleStep(step)
@@ -313,16 +315,16 @@ class ExportPanelImageExportMixin:
 
             # Row 2: DPI + Point Size
             row2 = QHBoxLayout()
-            dpi_slider, dpi_spin = _add_slider_spin(row2, translate("DPI"), 72, 1200, 25, params['dpi'])
-            ps_slider, ps_spin = _add_slider_spin(row2, translate("Point Size"), 1, 50, 1, point_size_for_export)
-            ls_slider, ls_spin = _add_slider_spin(row2, translate("Legend Size"), 1, 15, 1, legend_size_for_export)
+            dpi_slider, dpi_spin = _add_slider_spin(row2, translate("DPI"), "DPI", 72, 1200, 25, params['dpi'])
+            ps_slider, ps_spin = _add_slider_spin(row2, translate("Point Size"), "Point Size", 1, 50, 1, point_size_for_export)
+            ls_slider, ls_spin = _add_slider_spin(row2, translate("Legend Size"), "Legend Size", 1, 15, 1, legend_size_for_export)
             control_layout.addLayout(row2)
 
             # Row 3: Label / Title / Tick sizes
             row3 = QHBoxLayout()
-            lab_slider, lab_spin = _add_slider_spin(row3, translate("Label Font"), 4, 24, 1, label_size_for_export)
-            tit_slider, tit_spin = _add_slider_spin(row3, translate("Title Font"), 4, 24, 1, title_size_for_export)
-            tck_slider, tck_spin = _add_slider_spin(row3, translate("Tick Font"), 4, 24, 1, tick_size_for_export)
+            lab_slider, lab_spin = _add_slider_spin(row3, translate("Label Font Size"), "Label Font Size", 4, 24, 1, label_size_for_export)
+            tit_slider, tit_spin = _add_slider_spin(row3, translate("Title Font Size"), "Title Font Size", 4, 24, 1, title_size_for_export)
+            tck_slider, tck_spin = _add_slider_spin(row3, translate("Tick Font Size"), "Tick Font Size", 4, 24, 1, tick_size_for_export)
             control_layout.addLayout(row3)
 
             # Row 4: Tight BBox + Padding + Transparent
@@ -502,18 +504,30 @@ class ExportPanelImageExportMixin:
                 slider.valueChanged.connect(_slider_changed)
                 spin.valueChanged.connect(_spin_changed)
 
-            _wire_pair(dpi_slider, dpi_spin, 'dpi')  # store in state for reuse
             _wire_pair(ps_slider, ps_spin, 'point_size')
             _wire_pair(ls_slider, ls_spin, 'legend_size')
             _wire_pair(lab_slider, lab_spin, 'label_size')
             _wire_pair(tit_slider, tit_spin, 'title_size')
             _wire_pair(tck_slider, tck_spin, 'tick_size')
 
-            # DPI goes into params dict for save
-            def _dpi_changed(v):
-                state['params']['dpi'] = v
-            dpi_slider.valueChanged.connect(_dpi_changed)
-            dpi_spin.valueChanged.connect(_dpi_changed)
+            # DPI needs bidirectional slider↔spin sync but writes to params dict
+            def _wire_dpi_sync():
+                def _dpi_slider_changed(v):
+                    dpi_spin.blockSignals(True)
+                    dpi_spin.setValue(v)
+                    dpi_spin.blockSignals(False)
+                    state['params']['dpi'] = v
+                    _schedule_refresh()
+                def _dpi_spin_changed(v):
+                    dpi_slider.blockSignals(True)
+                    dpi_slider.setValue(v)
+                    dpi_slider.blockSignals(False)
+                    state['params']['dpi'] = v
+                    _schedule_refresh()
+                dpi_slider.valueChanged.connect(_dpi_slider_changed)
+                dpi_spin.valueChanged.connect(_dpi_spin_changed)
+            _wire_dpi_sync()
+            state['params']['dpi'] = params['dpi']  # initial value
 
             def _format_changed(idx):
                 ext = format_combo.itemData(idx) or 'png'
