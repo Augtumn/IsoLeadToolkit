@@ -8,7 +8,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
+from PyQt5.QtWidgets import QDialog, QFileDialog, QPushButton, QVBoxLayout
 
 from core import app_state, translate
 from .data import _get_analysis_data
@@ -37,6 +37,29 @@ def _create_plot_dialog(
     fig = Figure(figsize=(width / 100.0, height / 100.0), dpi=100)
     canvas = FigureCanvas(fig)
     layout.addWidget(canvas)
+
+    save_btn = QPushButton(translate("Save"))
+
+    def _save_chart() -> None:
+        filters = ";;".join([
+            translate("PNG Files (*.png)"),
+            translate("PDF Files (*.pdf)"),
+            translate("SVG Files (*.svg)"),
+        ])
+        path, _ = QFileDialog.getSaveFileName(
+            dialog, translate("Save Chart"), "", filters,
+        )
+        if not path:
+            return
+        try:
+            fig.savefig(path, dpi=150, bbox_inches='tight')
+            logger.info(translate("Chart saved to: {path}").format(path=path))
+        except Exception as e:
+            logger.error("Failed to save chart: %s", e)
+
+    save_btn.clicked.connect(_save_chart)
+    layout.addWidget(save_btn)
+
     return dialog, fig, canvas
 
 

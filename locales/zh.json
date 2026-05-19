@@ -1006,6 +1006,11 @@
   "Configure subplots": "配置子图",
   "Save the figure": "保存图像",
   "No data loaded": "未加载数据",
-  "Samples: {n} | Mode: {mode} | Groups: {g}": "样品: {n} | 模式: {mode} | 分组: {g}"
+  "Samples: {n} | Mode: {mode} | Groups: {g}": "样品: {n} | 模式: {mode} | 分组: {g}",
+  "Save Chart": "保存图表",
+  "PNG Files (*.png)": "PNG 文件 (*.png)",
+  "PDF Files (*.pdf)": "PDF 文件 (*.pdf)",
+  "SVG Files (*.svg)": "SVG 文件 (*.svg)",
+  "Chart saved to: {path}": "图表已保存至: {path}"
 }
 

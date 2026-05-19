@@ -1006,6 +1006,11 @@
   "Configure subplots": "Configure subplots",
   "Save the figure": "Save the figure",
   "No data loaded": "No data loaded",
-  "Samples: {n} | Mode: {mode} | Groups: {g}": "Samples: {n} | Mode: {mode} | Groups: {g}"
+  "Samples: {n} | Mode: {mode} | Groups: {g}": "Samples: {n} | Mode: {mode} | Groups: {g}",
+  "Save Chart": "Save Chart",
+  "PNG Files (*.png)": "PNG Files (*.png)",
+  "PDF Files (*.pdf)": "PDF Files (*.pdf)",
+  "SVG Files (*.svg)": "SVG Files (*.svg)",
+  "Chart saved to: {path}": "Chart saved to: {path}"
 }
 
