@@ -459,7 +459,10 @@ class ExportPanelImageExportMixin:
 
             def _schedule_refresh():
                 state['debounce_timer'].stop()
-                state['debounce_timer'].timeout.disconnect()
+                try:
+                    state['debounce_timer'].timeout.disconnect()
+                except (TypeError, RuntimeError):
+                    pass  # first call: no previous connection
                 state['debounce_timer'].timeout.connect(_do_refresh)
                 state['debounce_timer'].start()
 
