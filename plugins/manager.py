@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import logging
 import sys
 from pathlib import Path
@@ -121,6 +122,16 @@ class PluginManager:
     def _extract_plugin(module: Any, name: str) -> BasePlugin | None:
         for attr_name in dir(module):
             obj = getattr(module, attr_name)
-            if isinstance(obj, type) and issubclass(obj, BasePlugin) and obj is not BasePlugin:
-                return obj()
+            if not isinstance(obj, type):
+                continue
+            if obj is BasePlugin:
+                continue
+            try:
+                if issubclass(obj, BasePlugin):
+                    return obj()
+            except TypeError:
+                # Protocols with non-method members (e.g. meta) fail
+                # issubclass() in Python ≥3.12. Fall back to duck-typing.
+                if hasattr(obj, "meta") and hasattr(obj, "validate_environment"):
+                    return obj()
         return None
