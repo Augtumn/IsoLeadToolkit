@@ -138,35 +138,24 @@ class MainWindowSetupMixin:
         exit_action.triggered.connect(self.close)
         self.file_menu.addAction(exit_action)
 
-        data_action = QAction(translate("Data"), self)
-        data_action.setShortcut(QKeySequence("Ctrl+D"))
-        data_action.triggered.connect(lambda: self._show_section_dialog("data"))
-        menubar.addAction(data_action)
+        self._menu_actions = {"reload": reload_action, "exit": exit_action}
 
-        display_action = QAction(translate("Display"), self)
-        display_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
-        display_action.triggered.connect(lambda: self._show_section_dialog("display"))
-        menubar.addAction(display_action)
+        panels_menu = menubar.addMenu(translate("Panels"))
+        self.panels_menu = panels_menu
 
-        analysis_action = QAction(translate("Analysis"), self)
-        analysis_action.setShortcut(QKeySequence("Ctrl+Shift+A"))
-        analysis_action.triggered.connect(lambda: self._show_section_dialog("analysis"))
-        menubar.addAction(analysis_action)
-
-        export_action = QAction(translate("Export"), self)
-        export_action.setShortcut(QKeySequence("Ctrl+E"))
-        export_action.triggered.connect(lambda: self._show_section_dialog("export"))
-        menubar.addAction(export_action)
-
-        legend_action = QAction(translate("Legend"), self)
-        legend_action.setShortcut(QKeySequence("Ctrl+L"))
-        legend_action.triggered.connect(lambda: self._show_section_dialog("legend"))
-        menubar.addAction(legend_action)
-
-        geo_action = QAction(translate("Geochemistry"), self)
-        geo_action.setShortcut(QKeySequence("Ctrl+G"))
-        geo_action.triggered.connect(lambda: self._show_section_dialog("geochemistry"))
-        menubar.addAction(geo_action)
+        for label, key, shortcut in [
+            ("Data", "data", "Ctrl+D"),
+            ("Display", "display", "Ctrl+Shift+D"),
+            ("Analysis", "analysis", "Ctrl+Shift+A"),
+            ("Export", "export", "Ctrl+E"),
+            ("Legend", "legend", "Ctrl+L"),
+            ("Geochemistry", "geochemistry", "Ctrl+G"),
+        ]:
+            action = QAction(translate(label), self)
+            action.setShortcut(QKeySequence(shortcut))
+            action.triggered.connect(lambda checked, k=key: self._show_section_dialog(k))
+            panels_menu.addAction(action)
+            self._menu_actions[key] = action
 
         menubar.addSeparator()
 
@@ -175,17 +164,6 @@ class MainWindowSetupMixin:
             lang_action = QAction(label, self)
             lang_action.triggered.connect(lambda checked, c=code: set_language(c))
             self.lang_menu.addAction(lang_action)
-
-        self._menu_actions = {
-            "reload": reload_action,
-            "exit": exit_action,
-            "data": data_action,
-            "display": display_action,
-            "analysis": analysis_action,
-            "export": export_action,
-            "legend": legend_action,
-            "geochemistry": geo_action,
-        }
 
         try:
             app_state.register_language_listener(self._refresh_language)
@@ -331,6 +309,8 @@ class MainWindowSetupMixin:
             actions["geochemistry"].setText(translate("Geochemistry"))
         if hasattr(self, "lang_menu"):
             self.lang_menu.setTitle(translate("Language"))
+        if hasattr(self, "panels_menu"):
+            self.panels_menu.setTitle(translate("Panels"))
         if self.statusBar() is not None:
             self.statusBar().showMessage(translate("Ready"))
 

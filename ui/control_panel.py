@@ -30,7 +30,7 @@ def create_section_dialog(
     parent: Any = None,
 ) -> Any | None:
     """Create a dialog that hosts a single control section."""
-    from PyQt5.QtWidgets import QApplication, QDialog, QHBoxLayout, QScrollArea, QVBoxLayout
+    from PyQt5.QtWidgets import QApplication, QDialog, QHBoxLayout, QPushButton, QScrollArea, QVBoxLayout
     section_key = (section_key or '').lower()
 
     section_map = {
@@ -52,6 +52,10 @@ def create_section_dialog(
     if parent is not None:
         dialog.setWindowModality(Qt.WindowModal)
     dialog.setWindowTitle(title)
+    shortcuts = {"data": "Ctrl+D", "display": "Ctrl+Shift+D", "analysis": "Ctrl+Shift+A",
+                 "export": "Ctrl+E", "legend": "Ctrl+L", "geochemistry": "Ctrl+G"}
+    shortcut = shortcuts.get(section_key, "")
+    dialog.setWindowTitle(f"{title}  ({shortcut})" if shortcut else title)
     dialog.resize(480, 400)
 
     root = QVBoxLayout(dialog)
@@ -59,6 +63,29 @@ def create_section_dialog(
     title_label = QLabel(title)
     header.addWidget(title_label)
     header.addStretch()
+
+    # Previous/Next panel navigation
+    prev_btn = QPushButton("◀")
+    prev_btn.setFixedWidth(28)
+    prev_btn.setToolTip(translate("Previous Panel"))
+    next_btn = QPushButton("▶")
+    next_btn.setFixedWidth(28)
+    next_btn.setToolTip(translate("Next Panel"))
+    section_order = ['data', 'display', 'analysis', 'export', 'legend', 'geochemistry']
+    current_idx = section_order.index(section_key) if section_key in section_order else -1
+    if current_idx >= 0:
+        prev_idx = (current_idx - 1) % len(section_order)
+        next_idx = (current_idx + 1) % len(section_order)
+        def _make_nav_handler(target_key, dlg):
+            def _handler():
+                dlg.close()
+                if parent is not None and hasattr(parent, '_show_section_dialog'):
+                    parent._show_section_dialog(target_key)
+            return _handler
+        prev_btn.clicked.connect(_make_nav_handler(section_order[prev_idx], dialog))
+        next_btn.clicked.connect(_make_nav_handler(section_order[next_idx], dialog))
+    header.addWidget(prev_btn)
+    header.addWidget(next_btn)
 
     root.addLayout(header)
 

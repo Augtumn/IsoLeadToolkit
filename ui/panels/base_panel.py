@@ -363,6 +363,17 @@ class BasePanel(QWidget):
         if style_updates:
             state_gateway.set_panel_style_updates(style_updates)
 
+        # ---- 状态栏短暂消息 ----
+        if style_updates:
+            try:
+                from PyQt5.QtWidgets import QApplication
+                for widget in QApplication.topLevelWidgets():
+                    if hasattr(widget, 'statusBar'):
+                        widget.statusBar().showMessage(translate("Settings applied"), 1500)
+                        break
+            except Exception:
+                pass
+
         # ---- fig / ax 直接样式更新 ----
         if app_state.fig is not None:
             try:
