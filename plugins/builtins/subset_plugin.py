@@ -13,6 +13,7 @@ class SubsetAnalysisPlugin(BasePlugin):
         plugin_type="analysis",
         author="IsotopesAnalyse",
         description="Subset selection and focused re-analysis",
+        source="builtin",
     )
 
     def validate_environment(self) -> tuple[bool, str]:

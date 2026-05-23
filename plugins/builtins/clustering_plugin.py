@@ -117,6 +117,7 @@ class ClusteringPlugin(BasePlugin):
         plugin_type="analysis",
         author="IsotopesAnalyse",
         description="HDBSCAN density-based clustering for outlier detection",
+        source="builtin",
     )
 
     def validate_environment(self) -> tuple[bool, str]:

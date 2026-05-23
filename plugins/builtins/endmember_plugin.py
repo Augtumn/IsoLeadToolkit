@@ -302,6 +302,7 @@ class EndmemberPlugin(BasePlugin):
         plugin_type="analysis",
         author="IsotopesAnalyse",
         description="PCA-based endmember identification with geochron filtering",
+        source="builtin",
     )
 
     def validate_environment(self) -> tuple[bool, str]:

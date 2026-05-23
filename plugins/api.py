@@ -14,6 +14,9 @@ class PluginMeta:
     plugin_type: str = ""
     author: str = ""
     description: str = ""
+    source: str = "builtin"        # "builtin" | "user" | "third_party"
+    signature: str = ""             # optional integrity hash
+    restricted: bool = False        # True = limited API access
 
 
 class PluginError(Exception):

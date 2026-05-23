@@ -373,6 +373,7 @@ class ProvenanceMLPlugin(MLClassifierPlugin):
         plugin_type="classifier",
         author="IsotopesAnalyse",
         description="XGBoost OvR provenance classification with SMOTE+DBSCAN",
+        source="builtin",
     )
 
     def __init__(self):

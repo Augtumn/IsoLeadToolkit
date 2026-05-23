@@ -74,9 +74,11 @@ class PluginManager:
         if name in self._plugins:
             return self._plugins[name]
 
-        module_path = self._resolve_module(name)
-        if module_path is None:
+        resolved = self._resolve_module(name)
+        if resolved is None:
             raise PluginLoadError(f"Plugin '{name}' not found in search paths.")
+
+        module_path, source = resolved
 
         try:
             spec = importlib.util.spec_from_file_location(
@@ -94,6 +96,22 @@ class PluginManager:
         plugin = self._extract_plugin(module, name)
         if plugin is None:
             raise PluginLoadError(f"No plugin class found in module '{name}'")
+
+        # Override meta.source based on resolved directory
+        try:
+            plugin.meta = PluginMeta(
+                name=plugin.meta.name,
+                version=plugin.meta.version,
+                api_version=plugin.meta.api_version,
+                plugin_type=plugin.meta.plugin_type,
+                author=plugin.meta.author,
+                description=plugin.meta.description,
+                source=source,
+                signature=plugin.meta.signature,
+                restricted=plugin.meta.restricted,
+            )
+        except Exception:
+            pass  # If meta is not a PluginMeta dataclass, keep as-is
 
         ok, msg = plugin.validate_environment()
         if not ok:
@@ -114,8 +132,35 @@ class PluginManager:
                 logger.warning("Skipping plugin '%s': %s", name, exc)
         return dict(self._plugins)
 
+    def unload_plugin(self, name: str) -> bool:
+        """Remove a plugin from the registry."""
+        if name not in self._plugins:
+            return False
+        del self._plugins[name]
+        self._meta.pop(name, None)
+        self._failed.pop(name, None)
+        return True
+
+    def reload_plugin(self, name: str) -> BasePlugin:
+        """Unload and reload a plugin."""
+        self.unload_plugin(name)
+        return self.load_plugin(name)
+
+    def get_status(self) -> dict:
+        """Return status of all plugins (loaded + failed)."""
+        result: dict[str, dict] = {"loaded": {}, "failed": dict(self._failed)}
+        for name, plugin in self._plugins.items():
+            result["loaded"][name] = {
+                "version": plugin.meta.version,
+                "type": plugin.meta.plugin_type,
+                "source": plugin.meta.source,
+                "restricted": plugin.meta.restricted,
+            }
+        return result
+
     # ── helpers ────────────────────────────────────────────────────
-    def _resolve_module(self, name: str) -> Path | None:
+    def _resolve_module(self, name: str) -> tuple[Path, str] | None:
+        """Resolve plugin module path. Returns (path, source) or None."""
         for directory in (_BUILTIN_DIR, _USER_PLUGIN_DIR):
             candidates = [
                 directory / name / "__init__.py",
@@ -123,7 +168,8 @@ class PluginManager:
             ]
             for candidate in candidates:
                 if candidate.exists():
-                    return candidate
+                    source = "builtin" if directory == _BUILTIN_DIR else "user"
+                    return (candidate, source)
         return None
 
     @staticmethod

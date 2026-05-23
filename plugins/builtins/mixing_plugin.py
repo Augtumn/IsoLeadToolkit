@@ -236,6 +236,7 @@ class MixingModelPlugin(BasePlugin):
         plugin_type="analysis",
         author="IsotopesAnalyse",
         description="Endmember mixing proportion solver with Monte Carlo uncertainty",
+        source="builtin",
     )
 
     def validate_environment(self) -> tuple[bool, str]:
