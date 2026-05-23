@@ -190,135 +190,8 @@ class AnalysisPanelBuildMixin:
         analysis_group.setLayout(analysis_layout)
         _add_group_page(analysis_group, 'Data Analysis')
 
-        subset_group = QGroupBox(translate("Subset Analysis"))
-        subset_group.setProperty('translate_key', 'Subset Analysis')
-        subset_layout = QVBoxLayout()
-
-        analyze_btn = QPushButton(translate("Analyze Subset"))
-        analyze_btn.setProperty('translate_key', 'Analyze Subset')
-        analyze_btn.setFixedWidth(200)
-        analyze_btn.clicked.connect(self._on_analyze_subset)
-        subset_layout.addWidget(analyze_btn, 0, Qt.AlignHCenter)
-
-        reset_btn = QPushButton(translate("Reset Data"))
-        reset_btn.setProperty('translate_key', 'Reset Data')
-        reset_btn.setFixedWidth(200)
-        reset_btn.clicked.connect(self._on_reset_data)
-        subset_layout.addWidget(reset_btn, 0, Qt.AlignHCenter)
-
-        subset_group.setLayout(subset_layout)
-        _add_group_page(subset_group, 'Subset Analysis')
-
-        mixing_group = QGroupBox(translate("Mixing Groups"))
-        mixing_group.setProperty('translate_key', 'Mixing Groups')
-        mixing_layout = QVBoxLayout()
-
-        group_name_layout = QHBoxLayout()
-        group_name_label = QLabel(translate("Group Name:"))
-        group_name_label.setProperty('translate_key', 'Group Name:')
-        group_name_layout.addWidget(group_name_label)
-        self.mixing_group_name_edit = QLineEdit()
-        self.mixing_group_name_edit.setPlaceholderText(translate("Enter group name"))
-        group_name_layout.addWidget(self.mixing_group_name_edit)
-        mixing_layout.addLayout(group_name_layout)
-
-        mixing_btn_layout = QHBoxLayout()
-
-        endmember_btn = QPushButton(translate("Set as Endmember"))
-        endmember_btn.setProperty('translate_key', 'Set as Endmember')
-        endmember_btn.setFixedWidth(170)
-        endmember_btn.clicked.connect(self._on_set_endmember)
-        mixing_btn_layout.addWidget(endmember_btn)
-
-        mixture_btn = QPushButton(translate("Set as Mixture"))
-        mixture_btn.setProperty('translate_key', 'Set as Mixture')
-        mixture_btn.setFixedWidth(170)
-        mixture_btn.clicked.connect(self._on_set_mixture)
-        mixing_btn_layout.addWidget(mixture_btn)
-
-        mixing_layout.addLayout(mixing_btn_layout)
-
-        self.mixing_status_label = QLabel(translate("No mixing groups defined"))
-        self.mixing_status_label.setWordWrap(True)
-        mixing_layout.addWidget(self.mixing_status_label)
-
-        mixing_action_layout = QHBoxLayout()
-
-        clear_mixing_btn = QPushButton(translate("Clear Mixing Groups"))
-        clear_mixing_btn.setProperty('translate_key', 'Clear Mixing Groups')
-        clear_mixing_btn.setFixedWidth(170)
-        clear_mixing_btn.clicked.connect(self._on_clear_mixing_groups)
-        mixing_action_layout.addWidget(clear_mixing_btn)
-
-        compute_mixing_btn = QPushButton(translate("Compute Mixing"))
-        compute_mixing_btn.setProperty('translate_key', 'Compute Mixing')
-        compute_mixing_btn.setFixedWidth(170)
-        compute_mixing_btn.clicked.connect(self._on_compute_mixing)
-        mixing_action_layout.addWidget(compute_mixing_btn)
-
-        mixing_layout.addLayout(mixing_action_layout)
-
-        mixing_group.setLayout(mixing_layout)
-        _add_group_page(mixing_group, 'Mixing Groups')
-
-        endmember_group = QGroupBox(translate("Endmember Identification"))
-        endmember_group.setProperty('translate_key', 'Endmember Identification')
-        endmember_layout = QVBoxLayout()
-
-        endmember_hint = QLabel(translate("Identify lead isotope endmembers using PCA."))
-        endmember_hint.setProperty('translate_key', 'Identify lead isotope endmembers using PCA.')
-        endmember_hint.setWordWrap(True)
-        endmember_layout.addWidget(endmember_hint)
-
-        endmember_btn = QPushButton(translate("Run Endmember Analysis"))
-        endmember_btn.setProperty('translate_key', 'Run Endmember Analysis')
-        endmember_btn.setFixedWidth(200)
-        endmember_btn.clicked.connect(self._on_run_endmember_analysis)
-        endmember_layout.addWidget(endmember_btn, 0, Qt.AlignHCenter)
-
-        endmember_group.setLayout(endmember_layout)
-        _add_group_page(endmember_group, 'Endmember Identification')
-
-        clustering_group = QGroupBox(translate("HDBSCAN Clustering"))
-        clustering_group.setProperty('translate_key', 'HDBSCAN Clustering')
-        clustering_layout = QVBoxLayout()
-
-        cluster_hint = QLabel(
-            translate("Cluster the current embedding (UMAP, t-SNE, PCA, etc.) using HDBSCAN.")
-        )
-        cluster_hint.setProperty(
-            'translate_key',
-            'Cluster the current embedding (UMAP, t-SNE, PCA, etc.) using HDBSCAN.',
-        )
-        cluster_hint.setWordWrap(True)
-        clustering_layout.addWidget(cluster_hint)
-
-        cluster_btn = QPushButton(translate("Run HDBSCAN Clustering"))
-        cluster_btn.setProperty('translate_key', 'Run HDBSCAN Clustering')
-        cluster_btn.setFixedWidth(200)
-        cluster_btn.clicked.connect(self._on_run_clustering)
-        clustering_layout.addWidget(cluster_btn, 0, Qt.AlignHCenter)
-
-        clustering_group.setLayout(clustering_layout)
-        _add_group_page(clustering_group, 'HDBSCAN Clustering')
-
-        provenance_group = QGroupBox(translate("Provenance ML"))
-        provenance_group.setProperty('translate_key', 'Provenance ML')
-        provenance_layout = QVBoxLayout()
-
-        provenance_hint = QLabel(translate("Run ML provenance classification using DBSCAN, SMOTE and XGBoost."))
-        provenance_hint.setProperty('translate_key', 'Run ML provenance classification using DBSCAN, SMOTE and XGBoost.')
-        provenance_hint.setWordWrap(True)
-        provenance_layout.addWidget(provenance_hint)
-
-        provenance_btn = QPushButton(translate("Run Provenance ML"))
-        provenance_btn.setProperty('translate_key', 'Run Provenance ML')
-        provenance_btn.setFixedWidth(200)
-        provenance_btn.clicked.connect(self._on_run_provenance_ml)
-        provenance_layout.addWidget(provenance_btn, 0, Qt.AlignHCenter)
-
-        provenance_group.setLayout(provenance_layout)
-        _add_group_page(provenance_group, 'Provenance ML')
+        # ── Plugin-driven analysis sections ────────────────────────
+        self._build_plugin_sections(section_toolbox, _add_group_page)
 
         confidence_group = QGroupBox(translate("Confidence Ellipse"))
         confidence_group.setProperty('translate_key', 'Confidence Ellipse')
@@ -361,3 +234,44 @@ class AnalysisPanelBuildMixin:
         layout.addWidget(section_toolbox)
         layout.addStretch()
         return widget
+
+    def _build_plugin_sections(self, section_toolbox, _add_group_page):
+        """Build analysis sections from loaded plugins."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            from plugins.registry import plugin_manager
+        except Exception as exc:
+            logger.warning("Failed to import plugin manager: %s", exc)
+            return
+
+        # Map plugin registry keys to panel callback methods.
+        # Single-action plugins get their method directly.
+        # Multi-action plugins (subset, mixing) get the panel instance.
+        callback_map = {
+            "endmember_plugin": self._on_run_endmember_analysis,
+            "clustering_plugin": self._on_run_clustering,
+            "provenance_ml_plugin": self._on_run_provenance_ml,
+            "subset_plugin": self,
+            "mixing_plugin": self,
+        }
+
+        for name, plugin in plugin_manager.plugins.items():
+            if not hasattr(plugin, 'build_ui') or not callable(plugin.build_ui):
+                continue
+
+            cb = callback_map.get(name)
+            if cb is None:
+                # Try meta.name as fallback
+                cb = callback_map.get(plugin.meta.name if hasattr(plugin, 'meta') else None)
+
+            try:
+                section = plugin.build_ui(callback=cb)
+                if section is not None:
+                    title_key = (section.property('translate_key')
+                                 or getattr(plugin.meta, 'name', None)
+                                 or name)
+                    _add_group_page(section, title_key)
+            except Exception as exc:
+                logger.warning("Failed to build UI for plugin %s: %s", name, exc)

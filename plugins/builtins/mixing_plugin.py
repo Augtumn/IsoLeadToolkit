@@ -245,6 +245,90 @@ class MixingModelPlugin(BasePlugin):
     def get_default_params(self) -> dict[str, Any]:
         return {}
 
+    def build_ui(self, parent=None, callback=None):
+        """Return the Mixing Groups QGroupBox section.
+        
+        The callback should be the panel instance providing:
+          - _on_set_endmember()
+          - _on_set_mixture()
+          - _on_clear_mixing_groups()
+          - _on_compute_mixing()
+          - mixing_group_name_edit (set on panel by this method)
+          - mixing_status_label (set on panel by this method)
+        """
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import (
+            QGroupBox, QVBoxLayout, QHBoxLayout, QLabel,
+            QLineEdit, QPushButton,
+        )
+        from core import translate
+
+        group = QGroupBox(translate("Mixing Groups"))
+        group.setProperty('translate_key', 'Mixing Groups')
+        layout = QVBoxLayout()
+
+        # Group name input
+        group_name_layout = QHBoxLayout()
+        group_name_label = QLabel(translate("Group Name:"))
+        group_name_label.setProperty('translate_key', 'Group Name:')
+        group_name_layout.addWidget(group_name_label)
+        name_edit = QLineEdit()
+        name_edit.setPlaceholderText(translate("Enter group name"))
+        group_name_layout.addWidget(name_edit)
+        layout.addLayout(group_name_layout)
+
+        # Set endmember / mixture buttons
+        btn_layout = QHBoxLayout()
+
+        endmember_btn = QPushButton(translate("Set as Endmember"))
+        endmember_btn.setProperty('translate_key', 'Set as Endmember')
+        endmember_btn.setFixedWidth(170)
+        if callback is not None:
+            endmember_btn.clicked.connect(callback._on_set_endmember)
+        btn_layout.addWidget(endmember_btn)
+
+        mixture_btn = QPushButton(translate("Set as Mixture"))
+        mixture_btn.setProperty('translate_key', 'Set as Mixture')
+        mixture_btn.setFixedWidth(170)
+        if callback is not None:
+            mixture_btn.clicked.connect(callback._on_set_mixture)
+        btn_layout.addWidget(mixture_btn)
+
+        layout.addLayout(btn_layout)
+
+        # Status label
+        status_label = QLabel(translate("No mixing groups defined"))
+        status_label.setWordWrap(True)
+        layout.addWidget(status_label)
+
+        # Clear / Compute buttons
+        action_layout = QHBoxLayout()
+
+        clear_btn = QPushButton(translate("Clear Mixing Groups"))
+        clear_btn.setProperty('translate_key', 'Clear Mixing Groups')
+        clear_btn.setFixedWidth(170)
+        if callback is not None:
+            clear_btn.clicked.connect(callback._on_clear_mixing_groups)
+        action_layout.addWidget(clear_btn)
+
+        compute_btn = QPushButton(translate("Compute Mixing"))
+        compute_btn.setProperty('translate_key', 'Compute Mixing')
+        compute_btn.setFixedWidth(170)
+        if callback is not None:
+            compute_btn.clicked.connect(callback._on_compute_mixing)
+        action_layout.addWidget(compute_btn)
+
+        layout.addLayout(action_layout)
+
+        group.setLayout(layout)
+
+        # Assign widgets to the panel instance so mixing methods can access them
+        if callback is not None:
+            callback.mixing_group_name_edit = name_edit
+            callback.mixing_status_label = status_label
+
+        return group
+
     def calculate(self, df, endmember_groups, mixture_groups, columns, **kwargs):
         return calculate_mixing(df, endmember_groups, mixture_groups, columns)
 

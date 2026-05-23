@@ -402,6 +402,31 @@ class ProvenanceMLPlugin(MLClassifierPlugin):
             "predict_threshold": 0.9,
         }
 
+    def build_ui(self, parent=None, callback=None):
+        """Return the Provenance ML QGroupBox section."""
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QLabel, QPushButton
+        from core import translate
+
+        group = QGroupBox(translate("Provenance ML"))
+        group.setProperty('translate_key', 'Provenance ML')
+        layout = QVBoxLayout()
+
+        hint = QLabel(translate("Run ML provenance classification using DBSCAN, SMOTE and XGBoost."))
+        hint.setProperty('translate_key', 'Run ML provenance classification using DBSCAN, SMOTE and XGBoost.')
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        btn = QPushButton(translate("Run Provenance ML"))
+        btn.setProperty('translate_key', 'Run Provenance ML')
+        btn.setFixedWidth(200)
+        if callback is not None:
+            btn.clicked.connect(callback)
+        layout.addWidget(btn, 0, Qt.AlignHCenter)
+
+        group.setLayout(layout)
+        return group
+
     def fit(self, training_df, region_col, feature_cols, **params):
         # Build xgb_params from the plugin params dict
         xgb_params = {}

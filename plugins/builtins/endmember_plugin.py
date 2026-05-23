@@ -311,6 +311,31 @@ class EndmemberPlugin(BasePlugin):
     def get_default_params(self) -> dict[str, Any]:
         return {"tolerance": (0.01, 0.01)}
 
+    def build_ui(self, parent=None, callback=None):
+        """Return the Endmember Identification QGroupBox section."""
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QLabel, QPushButton
+        from core import translate
+
+        group = QGroupBox(translate("Endmember Identification"))
+        group.setProperty('translate_key', 'Endmember Identification')
+        layout = QVBoxLayout()
+
+        hint = QLabel(translate("Identify lead isotope endmembers using PCA."))
+        hint.setProperty('translate_key', 'Identify lead isotope endmembers using PCA.')
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        btn = QPushButton(translate("Run Endmember Analysis"))
+        btn.setProperty('translate_key', 'Run Endmember Analysis')
+        btn.setFixedWidth(200)
+        if callback is not None:
+            btn.clicked.connect(callback)
+        layout.addWidget(btn, 0, Qt.AlignHCenter)
+
+        group.setLayout(layout)
+        return group
+
     def compute_geochron_slope(self, t_earth=None):
         """Compute geochron slope using decay constants."""
         return compute_geochron_slope(t_earth)

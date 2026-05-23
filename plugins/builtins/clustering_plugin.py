@@ -128,5 +128,35 @@ class ClusteringPlugin(BasePlugin):
     def get_default_params(self) -> dict[str, Any]:
         return {"min_cluster_size": 5, "min_samples": None}
 
+    def build_ui(self, parent=None, callback=None):
+        """Return the HDBSCAN Clustering QGroupBox section."""
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QLabel, QPushButton
+        from core import translate
+
+        group = QGroupBox(translate("HDBSCAN Clustering"))
+        group.setProperty('translate_key', 'HDBSCAN Clustering')
+        layout = QVBoxLayout()
+
+        hint = QLabel(
+            translate("Cluster the current embedding (UMAP, t-SNE, PCA, etc.) using HDBSCAN.")
+        )
+        hint.setProperty(
+            'translate_key',
+            'Cluster the current embedding (UMAP, t-SNE, PCA, etc.) using HDBSCAN.',
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        btn = QPushButton(translate("Run HDBSCAN Clustering"))
+        btn.setProperty('translate_key', 'Run HDBSCAN Clustering')
+        btn.setFixedWidth(200)
+        if callback is not None:
+            btn.clicked.connect(callback)
+        layout.addWidget(btn, 0, Qt.AlignHCenter)
+
+        group.setLayout(layout)
+        return group
+
     def run(self, *args, **kwargs):
         return run_hdbscan_clustering(*args, **kwargs)

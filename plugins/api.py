@@ -44,6 +44,11 @@ class BasePlugin(Protocol):
         """Return default parameter dict."""
         ...
 
+    def build_ui(self, parent: Any = None, callback: Any = None) -> Any | None:
+        """Optional: return a QWidget section for the analysis panel.
+        If None, this plugin does not provide panel UI."""
+        ...
+
 
 @runtime_checkable
 class MLClassifierPlugin(BasePlugin, Protocol):
