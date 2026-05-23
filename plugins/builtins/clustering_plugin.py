@@ -128,5 +128,5 @@ class ClusteringPlugin(BasePlugin):
     def get_default_params(self) -> dict[str, Any]:
         return {"min_cluster_size": 5, "min_samples": None}
 
-    def run(self, df, columns, **kwargs):
-        return run_hdbscan_clustering(df, columns, **kwargs)
+    def run(self, *args, **kwargs):
+        return run_hdbscan_clustering(*args, **kwargs)
