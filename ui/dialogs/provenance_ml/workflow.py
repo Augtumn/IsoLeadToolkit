@@ -183,14 +183,14 @@ class ProvenanceMLWorkflowMixin:
             if progress:
                 progress.update_message(translate("Preparing data..."))
 
-            from data.provenance_ml import ProvenanceMLError, run_provenance_pipeline
+            from plugins.api import PluginError as ProvenanceMLError
+            from plugins.registry import plugin_manager
 
-            result = run_provenance_pipeline(
+            provenance_plugin = plugin_manager.get("provenance_ml_plugin")
+            fit_result = provenance_plugin.fit(
                 training_df=self._training_df,
                 region_col=region_col,
                 feature_cols=train_cols,
-                target_df=df_pred,
-                target_feature_cols=pred_cols,
                 min_region_samples=int(self.min_region_spin.value()),
                 dbscan_min_region_samples=int(self.dbscan_min_region_spin.value()),
                 dbscan_eps=float(self.eps_spin.value()),
@@ -199,9 +199,28 @@ class ProvenanceMLWorkflowMixin:
                 smote_enabled=bool(self.smote_check.isChecked()),
                 smote_k_neighbors=int(self.smote_k_spin.value()),
                 smote_sampling_strategy=smote_sampling_strategy,
-                xgb_params=xgb_params,
+                xgb_n_estimators=xgb_params.get('n_estimators', 200),
+                xgb_max_depth=xgb_params.get('max_depth', 6),
                 predict_threshold=float(self.threshold_spin.value()),
             )
+            pipeline_result = fit_result['pipeline_result']
+
+            # Predict on target data
+            raw_pred = provenance_plugin.predict(df_pred)
+
+            # Combine training result with predictions into expected result dict
+            result = {
+                'training': pipeline_result['training'],
+                'models': pipeline_result['models'],
+                'model_info': pipeline_result['model_info'],
+                'predictions': {
+                    'labels': raw_pred['labels'],
+                    'max_prob': raw_pred['probabilities'],
+                    'valid_mask': raw_pred['valid_mask'],
+                    'proba': raw_pred.get('proba'),
+                    'label_order': raw_pred.get('regions', []),
+                },
+            }
 
             pred = result['predictions']
             valid_mask = pred['valid_mask']

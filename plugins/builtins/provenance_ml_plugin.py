@@ -409,6 +409,7 @@ class ProvenanceMLPlugin(MLClassifierPlugin):
         if "xgb_max_depth" in params:
             xgb_params["max_depth"] = params.pop("xgb_max_depth")
 
+        # Forward all supported params to run_provenance_pipeline
         result = run_provenance_pipeline(
             training_df,
             region_col,
@@ -416,9 +417,13 @@ class ProvenanceMLPlugin(MLClassifierPlugin):
             target_df=training_df,
             target_feature_cols=feature_cols,
             min_region_samples=params.get("min_region_samples", 5),
+            dbscan_min_region_samples=params.get("dbscan_min_region_samples", 20),
             dbscan_eps=params.get("dbscan_eps", 0.18),
+            dbscan_min_samples_ratio=params.get("dbscan_min_samples_ratio", 0.1),
             standardize=params.get("standardize", True),
             smote_enabled=params.get("smote_enabled", True),
+            smote_k_neighbors=params.get("smote_k_neighbors", 3),
+            smote_sampling_strategy=params.get("smote_sampling_strategy", 1.0),
             xgb_params=xgb_params if xgb_params else None,
             predict_threshold=params.get("predict_threshold", 0.9),
         )
@@ -445,7 +450,9 @@ class ProvenanceMLPlugin(MLClassifierPlugin):
         return {
             "labels": labels,
             "probabilities": probs,
+            "proba": proba,
             "regions": regions,
+            "valid_mask": valid_mask,
         }
 
     def predict_proba(self, df):
@@ -459,5 +466,7 @@ class ProvenanceMLPlugin(MLClassifierPlugin):
         )
         return {
             "probabilities": probs,
+            "proba": None,
             "regions": regions,
+            "valid_mask": valid_mask,
         }

@@ -310,5 +310,9 @@ class EndmemberPlugin(BasePlugin):
     def get_default_params(self) -> dict[str, Any]:
         return {"tolerance": (0.01, 0.01)}
 
+    def compute_geochron_slope(self, t_earth=None):
+        """Compute geochron slope using decay constants."""
+        return compute_geochron_slope(t_earth)
+
     def run(self, df, col_206, col_207, col_208, **kwargs):
         return run_endmember_analysis(df, col_206, col_207, col_208, **kwargs)

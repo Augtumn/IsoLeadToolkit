@@ -82,6 +82,11 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
         logger.info("Initializing Qt5 application...")
 
         try:
+            # Load plugins before any UI code accesses them
+            from plugins.registry import plugin_manager
+            plugin_manager.load_all()
+            logger.info("Plugins loaded: %s", plugin_manager.available)
+
             # Load user config early (safety net for non-main entry points)
             from core.config import load_and_merge_config
             load_and_merge_config()

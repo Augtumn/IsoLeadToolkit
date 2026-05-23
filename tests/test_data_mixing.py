@@ -5,7 +5,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from data.mixing import calculate_mixing
+from plugins.builtins.mixing_plugin import MixingModelPlugin
+
+calculate_mixing = MixingModelPlugin().calculate
 
 
 def test_calculate_mixing_recovers_simple_two_endmember_weights() -> None:

@@ -130,9 +130,10 @@ class ClusteringDialog(QDialog):
             )
             return
 
-        from data.clustering import run_hdbscan_clustering
+        from plugins.registry import plugin_manager
 
-        result = run_hdbscan_clustering(
+        _clustering_plugin = plugin_manager.get("hdbscan_clustering")
+        result = _clustering_plugin.run(
             embedding=np.asarray(embed),
             min_cluster_size=self.min_cluster_spin.value(),
             min_samples=self.min_samples_spin.value(),

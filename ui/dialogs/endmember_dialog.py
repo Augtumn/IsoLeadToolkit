@@ -137,8 +137,10 @@ class EndmemberAnalysisDialog(QDialog):
         param_layout.addWidget(self.spin_clamp_b, 1, 3)
 
         # Geochron 斜率显示
-        from data.endmember import compute_geochron_slope
-        geo_slope = compute_geochron_slope()
+        from plugins.registry import plugin_manager
+
+        _endmember_plugin = plugin_manager.get("endmember_plugin")
+        geo_slope = _endmember_plugin.compute_geochron_slope()
         param_layout.addWidget(QLabel(translate("Geochron Slope:")), 2, 0)
         self.slope_label = QLabel(f"{geo_slope:.6f}")
         param_layout.addWidget(self.slope_label, 2, 1)
@@ -258,8 +260,9 @@ class EndmemberAnalysisDialog(QDialog):
             clamp_b = np.inf
 
         try:
-            from data.endmember import run_endmember_analysis
+            from plugins.registry import plugin_manager
 
+            _endmember_plugin = plugin_manager.get("endmember_plugin")
             # 确定数据范围
             if self.radio_selected.isChecked():
                 selected = sorted(list(app_state.selected_indices))
@@ -269,7 +272,7 @@ class EndmemberAnalysisDialog(QDialog):
                 df_input = app_state.df_global
                 self._selected_original_indices = None
 
-            self._result = run_endmember_analysis(
+            self._result = _endmember_plugin.run(
                 df_input,
                 col_206, col_207, col_208,
                 tolerance=(tol_a, tol_b),

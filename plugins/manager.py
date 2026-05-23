@@ -52,7 +52,15 @@ class PluginManager:
         return name in self._plugins
 
     def get(self, name: str) -> BasePlugin | None:
-        return self._plugins.get(name)
+        # Check direct registration first (by file stem)
+        plugin = self._plugins.get(name)
+        if plugin is not None:
+            return plugin
+        # Fall back to meta.name lookup
+        for key, meta in self._meta.items():
+            if meta.name == name:
+                return self._plugins.get(key)
+        return None
 
     def get_meta(self, name: str) -> PluginMeta | None:
         return self._meta.get(name)
