@@ -1,0 +1,66 @@
+"""Plugin API — abstract interfaces, metadata, and error types."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Protocol, runtime_checkable
+
+
+@dataclass(frozen=True)
+class PluginMeta:
+    """Plugin metadata descriptor."""
+    name: str
+    version: str
+    api_version: str = "1.0"
+    plugin_type: str = ""
+    author: str = ""
+    description: str = ""
+
+
+class PluginError(Exception):
+    """Base error for plugin operations."""
+
+
+class PluginLoadError(PluginError):
+    """Raised when a plugin cannot be loaded."""
+
+
+class PluginValidationError(PluginError):
+    """Raised when a plugin fails validation."""
+
+
+@runtime_checkable
+class BasePlugin(Protocol):
+    """Minimal plugin interface — all plugins must implement this."""
+    meta: PluginMeta
+
+    def validate_environment(self) -> tuple[bool, str]:
+        """Check dependencies/env. Returns (ok, message)."""
+        ...
+
+    def get_default_params(self) -> dict[str, Any]:
+        """Return default parameter dict."""
+        ...
+
+
+@runtime_checkable
+class MLClassifierPlugin(BasePlugin, Protocol):
+    """Supervised classification plugin interface."""
+    def fit(self, x: Any, y: Any, **params: Any) -> dict[str, Any]:
+        """Train model. Returns training metadata."""
+        ...
+
+    def predict(self, x: Any) -> Any:
+        """Predict class labels."""
+        ...
+
+    def predict_proba(self, x: Any) -> Any:
+        """Predict class probabilities."""
+        ...
+
+
+@runtime_checkable
+class EmbeddingPlugin(BasePlugin, Protocol):
+    """Dimensionality reduction plugin interface."""
+    def fit_transform(self, x: Any, **params: Any) -> Any:
+        """Compute embedding. Returns ndarray (n_samples, n_components)."""
+        ...
