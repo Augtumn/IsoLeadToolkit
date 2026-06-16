@@ -106,7 +106,9 @@ class LegendActionsMixin:
     def _auto_assign_styles(self):
         try:
             logger.info('_auto_assign_styles called')
-            if not app_state.last_group_col or app_state.df_global is None:
+            if (not app_state.last_group_col
+                    or app_state.df_global is None
+                    or app_state.last_group_col not in app_state.df_global.columns):
                 logger.warning('No group column or dataframe: last_group_col=%s', app_state.last_group_col)
                 return
             raw_groups = list(app_state.available_groups or app_state.df_global[app_state.last_group_col].unique())

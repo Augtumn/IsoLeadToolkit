@@ -213,7 +213,9 @@ class MainWindowLegendActionsMixin:
         menu.exec_(QCursor.pos())
 
     def _on_group_checkbox_change(self, group, state):
-        if not app_state.last_group_col or app_state.df_global is None:
+        if (not app_state.last_group_col
+                or app_state.df_global is None
+                or app_state.last_group_col not in app_state.df_global.columns):
             return
 
         groups = list(app_state.available_groups or app_state.df_global[app_state.last_group_col].unique())
@@ -265,7 +267,11 @@ class MainWindowLegendActionsMixin:
 
             self._legend_list.clear()
 
-            has_groups = app_state.last_group_col and app_state.df_global is not None
+            has_groups = (
+                app_state.last_group_col
+                and app_state.df_global is not None
+                and app_state.last_group_col in app_state.df_global.columns
+            )
             groups = []
             if has_groups:
                 groups = list(app_state.df_global[app_state.last_group_col].unique())
