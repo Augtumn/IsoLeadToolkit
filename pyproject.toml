@@ -9,6 +9,7 @@ dependencies = [
     "numpy>=2.3.5",
     "openpyxl>=3.1.5",
     "pandas>=2.3.3",
+    "scipy>=1.14.0",
     "seaborn>=0.13.2",
     "scikit-learn>=1.5.2",
     "imbalanced-learn>=0.12.2",
@@ -22,6 +23,7 @@ dependencies = [
     "python-ternary>=1.0.8",
     "pyqt5>=5.15",
     "pyqt5-qt5>=5.15",
+    "pyqt5-sip>=12.13",
     "adjusttext>=1.3.0",
     "originpro>=1.1.15",
 ]
@@ -29,6 +31,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",
+]
+hdbscan = [
+    "hdbscan>=0.8.33",
 ]
 
 [tool.isotopesanalyse.build]
