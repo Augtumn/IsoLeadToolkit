@@ -111,55 +111,19 @@ class MixingCalculatorDialog(QDialog):
             return
 
         results = []
+        from plugins.registry import plugin_manager
+        mixing_plugin = plugin_manager.get("mixing_plugin")
+        plugin_results = mixing_plugin.calculate(
+            app_state.df_global, endmembers, mixtures, numeric_cols
+        )
 
-        # 对每个混合物计算
-        for mixture_name, mixture_indices in mixtures.items():
-            if not mixture_indices:
-                continue
-
-            # 获取混合物的平均组成
-            mixture_data = app_state.df_global.iloc[mixture_indices][numeric_cols].mean()
-
-            # 构建端元矩阵
-            endmember_names = list(endmembers.keys())
-            endmember_matrix = []
-
-            for em_name in endmember_names:
-                em_indices = endmembers[em_name]
-                if em_indices:
-                    em_data = app_state.df_global.iloc[em_indices][numeric_cols].mean()
-                    endmember_matrix.append(em_data.values)
-
-            if not endmember_matrix:
-                continue
-
-            endmember_matrix = np.array(endmember_matrix).T  # 转置为列向量
-
-            # 使用最小二乘法求解
-            try:
-                # 添加约束：比例和为1
-                A = np.vstack([endmember_matrix, np.ones(len(endmember_names))])
-                b = np.append(mixture_data.values, 1.0)
-
-                # 求解
-                proportions, residuals, rank, s = np.linalg.lstsq(A, b, rcond=None)
-
-                # 计算残差
-                predicted = endmember_matrix @ proportions
-                residual = np.sqrt(np.mean((mixture_data.values - predicted) ** 2))
-
-                # 添加结果
-                for em_name, prop in zip(endmember_names, proportions):
-                    results.append({
-                        'mixture': mixture_name,
-                        'endmember': em_name,
-                        'proportion': prop,
-                        'residual': residual
-                    })
-
-            except Exception as e:
-                logger.error("Failed to calculate mixing for %s: %s", mixture_name, e)
-                continue
+        for r in plugin_results:
+            results.append({
+                'mixture': r['mixture'],
+                'endmember': r['endmember'],
+                'proportion': r['weight'],
+                'residual': r['rmse'],
+            })
 
         # 显示结果
         self.result_table.setRowCount(len(results))
