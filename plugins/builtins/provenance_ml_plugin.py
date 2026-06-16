@@ -228,16 +228,42 @@ def train_ovr_xgboost(
         params.setdefault('n_jobs', 1)
         params.setdefault('objective', 'binary:logistic')
         params.setdefault('eval_metric', 'logloss')
-        params.setdefault('tree_method', 'exact')
+        params.setdefault('tree_method', 'hist')
 
         model = XGBClassifier(**params)
+        import time
+        t0 = time.perf_counter()
         model.fit(x_train, y_train)
+        elapsed = time.perf_counter() - t0
+
+        # Cross-validation metrics
+        cv_metrics: dict[str, float] = {}
+        try:
+            from sklearn.model_selection import StratifiedKFold, cross_val_score
+            from sklearn.metrics import make_scorer, balanced_accuracy_score, f1_score, roc_auc_score
+            cv = StratifiedKFold(n_splits=min(5, min(pos, neg)), shuffle=True, random_state=random_state)
+            cv_metrics['balanced_accuracy'] = float(
+                cross_val_score(model, x_train, y_train, cv=cv, scoring=make_scorer(balanced_accuracy_score)).mean()
+            )
+            cv_metrics['macro_f1'] = float(
+                cross_val_score(model, x_train, y_train, cv=cv, scoring=make_scorer(f1_score, average='macro')).mean()
+            )
+            if min(pos, neg) >= 5:
+                cv_metrics['auc_ovr'] = float(
+                    cross_val_score(model, x_train, y_train, cv=cv, scoring=make_scorer(roc_auc_score)).mean()
+                )
+        except Exception:
+            pass  # CV is best-effort; skip if folds too small
+
         models[label] = model
         model_info[label] = {
             'pos': pos,
             'neg': neg,
             'smote': smote_info,
             'samples_used': int(len(y_train)),
+            'training_time_s': round(elapsed, 3),
+            'tree_method': params['tree_method'],
+            'cv_metrics': cv_metrics,
         }
 
     if not models:
