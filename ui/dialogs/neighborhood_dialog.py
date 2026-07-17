@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QSlider, QDoubleSpinBox, QSpinBox, QTableWidget,
     QTableWidgetItem, QGroupBox, QMessageBox, QCheckBox, QHeaderView,
-    QLineEdit,
+    QLineEdit, QFileDialog,
 )
 from PyQt5.QtCore import Qt
 
@@ -112,6 +112,11 @@ class NeighborhoodSearchDialog(QDialog):
         apply_btn = QPushButton(translate("Apply to Data"))
         apply_btn.clicked.connect(self._apply_as_group)
         btn_row.addWidget(apply_btn)
+
+        export_btn = QPushButton(translate("Export Data"))
+        export_btn.setToolTip(translate("Export data with new group column to CSV/Excel"))
+        export_btn.clicked.connect(self._export_data)
+        btn_row.addWidget(export_btn)
 
         btn_row.addStretch()
         layout.addLayout(btn_row)
@@ -319,3 +324,27 @@ class NeighborhoodSearchDialog(QDialog):
             self, translate("Done"),
             translate("Neighborhood results added as group column: {col}").format(
                 col=col_name))
+
+    def _export_data(self):
+        """Export the current dataframe with new group column to CSV or Excel."""
+        df = getattr(app_state, 'df_global', None)
+        if df is None:
+            QMessageBox.warning(self, translate("Warning"), translate("No data to export."))
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, translate("Export Data"),
+            "", "CSV (*.csv);;Excel (*.xlsx)")
+        if not path:
+            return
+        try:
+            if path.lower().endswith('.csv'):
+                df.to_csv(path, index=False, encoding='utf-8-sig')
+            else:
+                df.to_excel(path, index=False)
+            QMessageBox.information(
+                self, translate("Done"),
+                translate("Data exported to: {path}").format(path=path))
+        except Exception as e:
+            QMessageBox.critical(
+                self, translate("Error"),
+                translate("Export failed: {error}").format(error=str(e)))
