@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QSlider, QDoubleSpinBox, QSpinBox, QTableWidget,
     QTableWidgetItem, QGroupBox, QMessageBox, QCheckBox, QHeaderView,
+    QLineEdit,
 )
 from PyQt5.QtCore import Qt
 
@@ -91,6 +92,13 @@ class NeighborhoodSearchDialog(QDialog):
 
         layout.addWidget(radius_group)
 
+        # ── Column name ─────────────────────────────────────────────
+        col_name_row = QHBoxLayout()
+        col_name_row.addWidget(QLabel(translate("Column Name:")))
+        self.col_name_edit = QLineEdit(f"_Neighbor_r{0.5:.2f}")
+        col_name_row.addWidget(self.col_name_edit, 1)
+        layout.addLayout(col_name_row)
+
         # ── Action buttons ─────────────────────────────────────────
         btn_row = QHBoxLayout()
         search_btn = QPushButton(translate("Search"))
@@ -146,6 +154,10 @@ class NeighborhoodSearchDialog(QDialog):
         self.radius_slider.valueChanged.connect(self._do_search)
         self.radius_spin.valueChanged.connect(self._do_search)
         self.min_neighbors_spin.valueChanged.connect(self._do_search)
+        # Update column name when radius changes
+        def _update_col_name(v):
+            self.col_name_edit.setText(f"_Neighbor_r{float(v):.2f}")
+        self.radius_spin.valueChanged.connect(_update_col_name)
 
         # Populate groups
         self._populate_groups()
@@ -278,7 +290,7 @@ class NeighborhoodSearchDialog(QDialog):
                     if 0 <= orig_ni < n and new_col[orig_ni] == "Other":
                         new_col[orig_ni] = f"Neighbor_{query_group}"
 
-        col_name = f"_Neighbor_r{radius:.2f}"
+        col_name = self.col_name_edit.text().strip() or f"_Neighbor_r{radius:.2f}"
         df[col_name] = new_col
 
         # Use gateway for coordinated state updates
