@@ -296,6 +296,13 @@ class NeighborhoodSearchDialog(QDialog):
         state_gateway.set_last_group_col(col_name)
         state_gateway.bump_data_version()
 
+        # Trigger plot refresh with new group column
+        try:
+            from visualization.events import on_slider_change
+            on_slider_change()
+        except Exception:
+            pass
+
         QMessageBox.information(
             self, translate("Done"),
             translate("Neighborhood results added as group column: {col}").format(
