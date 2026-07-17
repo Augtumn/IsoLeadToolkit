@@ -85,6 +85,8 @@ class MainWindowLifecycleMixin:
             self._refresh_status_info()
             if not app_state.last_group_col and app_state.group_cols:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
+            # Ensure legend callback is connected after data reload
+            state_gateway.set_legend_update_callback(self._update_legend_panel)
             if hasattr(self, "on_data_reload"):
                 self.on_data_reload()
             else:
