@@ -186,7 +186,7 @@ class NeighborhoodSearchDialog(QDialog):
         indices = getattr(app_state, 'active_subset_indices', None)
         if indices and len(indices) > 0:
             idx_list = np.array(sorted(indices))
-            emb = embedding
+            emb = embedding[idx_list]  # slice embedding to match subset
             grp = groups[idx_list]
             self._orig_indices = idx_list
         else:
