@@ -356,24 +356,33 @@ class NeighborhoodSearchDialog(QDialog):
                 translate("Export failed: {error}").format(error=str(e)))
 
     def _export_match_table(self, target):
-        """Export query-background match details (CSV path or Excel writer)."""
-        import pandas as pd
+        """Export query-background match details with full original data columns."""
         if self._result is None or not self._result.get("matches"):
             return
         rows = []
         df = app_state.df_global
+        if df is None:
+            return
+        # Drop internal grouping columns to keep only original data
+        keep_cols = [c for c in df.columns if not c.startswith("_")]
         for m in self._result["matches"]:
+            qi = m["query_index"]
+            query_row = df.iloc[qi][keep_cols].to_dict() if 0 <= qi < len(df) else {}
             for ni, dist in zip(m["neighbor_indices"], m["distances"]):
-                rows.append({
-                    "Query_Index": m["query_index"],
-                    "Query_Label": m["query_label"],
-                    "Match_Index": ni,
-                    "Distance": round(dist, 6),
-                })
+                match_row = df.iloc[ni][keep_cols].to_dict() if 0 <= ni < len(df) else {}
+                row = {}
+                for col in keep_cols:
+                    row[f"Query_{col}"] = query_row.get(col)
+                    row[f"Match_{col}"] = match_row.get(col)
+                row["Distance"] = round(float(dist), 6)
+                rows.append(row)
 
         if not rows:
             return
         match_df = pd.DataFrame(rows)
+        # Reorder: Distance last
+        cols = [c for c in match_df.columns if c != "Distance"] + ["Distance"]
+        match_df = match_df[cols]
         if isinstance(target, str):
             match_df.to_csv(target, index=False, encoding='utf-8-sig')
         else:
