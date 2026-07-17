@@ -30,3 +30,6 @@ locales/reports/untranslated.txt
 CLAUDE.md
 *.pdf
 .sisyphus/
+.github
+.omo
+.pytest_cache

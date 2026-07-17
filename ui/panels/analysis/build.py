@@ -255,6 +255,7 @@ class AnalysisPanelBuildMixin:
             "provenance_ml_plugin": self._on_run_provenance_ml,
             "subset_plugin": self,
             "mixing_plugin": self,
+            "neighborhood_plugin": self._on_run_neighborhood_search,
         }
 
         for name, plugin in plugin_manager.plugins.items():

@@ -215,6 +215,34 @@ class AnalysisPanelMixingMixin:
                 translate("Provenance ML failed: {error}").format(error=str(error)),
             )
 
+    def _on_run_neighborhood_search(self):
+        """Open neighborhood search dialog."""
+        if app_state.df_global is None:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("Please load data first."),
+            )
+            return
+        if getattr(app_state, "last_embedding", None) is None:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("No embedding data. Run a dimensionality reduction first."),
+            )
+            return
+        try:
+            from ui.dialogs.neighborhood_dialog import show_neighborhood_search
+
+            show_neighborhood_search(self)
+        except Exception as error:
+            logger.error("Neighborhood search failed: %s", error)
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Neighborhood search failed: {error}").format(error=str(error)),
+            )
+
     def _update_mixing_status(self):
         """Refresh mixing status text."""
         endmembers = getattr(app_state, 'mixing_endmembers', {})
