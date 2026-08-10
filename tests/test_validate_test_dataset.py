@@ -27,6 +27,12 @@ MODEL_MAP = {
     "PbIso": "Stacey & Kramers (2nd Stage)",
 }
 
+# Groups validated against multiple models simultaneously.
+# PbIso reference values are checked with both Stacey & Kramers stages.
+MULTI_MODELS = {
+    "PbIso": ["Stacey & Kramers (1st Stage)", "Stacey & Kramers (2nd Stage)"],
+}
+
 RULES = {
     "zhu": ["V1", "V2"],
     "geokit": ["V1", "V2"],
@@ -91,60 +97,64 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
         if group_df.empty:
             continue
 
-        engine.load_preset(model_name)
-        result = calculate_all_parameters(
-            group_df["206Pb/204Pb"].to_numpy(float),
-            group_df["207Pb/204Pb"].to_numpy(float),
-            group_df["208Pb/204Pb"].to_numpy(float),
-            calculate_ages=True,
-        )
+        model_names = MULTI_MODELS.get(group_name, [model_name])
 
-        for i, (idx, src_row) in enumerate(group_df.iterrows()):
-            excel_row = int(idx) + 2
+        for model_name in model_names:
+            engine.load_preset(model_name)
+            result = calculate_all_parameters(
+                group_df["206Pb/204Pb"].to_numpy(float),
+                group_df["207Pb/204Pb"].to_numpy(float),
+                group_df["208Pb/204Pb"].to_numpy(float),
+                calculate_ages=True,
+            )
 
-            v1_std = _to_float_or_nan(src_row.get(std_cols["V1"])) if std_cols["V1"] else float("nan")
-            v2_std = _to_float_or_nan(src_row.get(std_cols["V2"])) if std_cols["V2"] else float("nan")
-            tsk_std = _to_float_or_nan(src_row.get(std_cols["tSK"])) if std_cols["tSK"] else float("nan")
-            tcdt_std = _to_float_or_nan(src_row.get(std_cols["tCDT"])) if std_cols["tCDT"] else float("nan")
+            for i, (idx, src_row) in enumerate(group_df.iterrows()):
+                excel_row = int(idx) + 2
 
-            v1_calc = float(result["V1"][i]) if "V1" in result and np.ndim(result["V1"]) > 0 else float("nan")
-            v2_calc = float(result["V2"][i]) if "V2" in result and np.ndim(result["V2"]) > 0 else float("nan")
-            tsk_calc = float(result["tSK (Ma)"][i]) if "tSK (Ma)" in result and np.ndim(result["tSK (Ma)"]) > 0 else float("nan")
-            tcdt_calc = float(result["tCDT (Ma)"][i]) if "tCDT (Ma)" in result and np.ndim(result["tCDT (Ma)"]) > 0 else float("nan")
+                v1_std = _to_float_or_nan(src_row.get(std_cols["V1"])) if std_cols["V1"] else float("nan")
+                v2_std = _to_float_or_nan(src_row.get(std_cols["V2"])) if std_cols["V2"] else float("nan")
+                tsk_std = _to_float_or_nan(src_row.get(std_cols["tSK"])) if std_cols["tSK"] else float("nan")
+                tcdt_std = _to_float_or_nan(src_row.get(std_cols["tCDT"])) if std_cols["tCDT"] else float("nan")
 
-            v1_err = _calc_err(v1_calc, v1_std)
-            v2_err = _calc_err(v2_calc, v2_std)
-            tsk_err = _calc_err(tsk_calc, tsk_std)
-            tcdt_err = _calc_err(tcdt_calc, tcdt_std)
+                v1_calc = float(result["V1"][i]) if "V1" in result and np.ndim(result["V1"]) > 0 else float("nan")
+                v2_calc = float(result["V2"][i]) if "V2" in result and np.ndim(result["V2"]) > 0 else float("nan")
+                tsk_calc = float(result["tSK (Ma)"][i]) if "tSK (Ma)" in result and np.ndim(result["tSK (Ma)"]) > 0 else float("nan")
+                tcdt_calc = float(result["tCDT (Ma)"][i]) if "tCDT (Ma)" in result and np.ndim(result["tCDT (Ma)"]) > 0 else float("nan")
 
-            current_rule = RULES.get(group_name, [])
-            row_data: dict[str, object] = {
-                "excel_row": excel_row,
-                "group": group_name,
-                "206Pb/204Pb": float(src_row["206Pb/204Pb"]),
-                "207Pb/204Pb": float(src_row["207Pb/204Pb"]),
-                "208Pb/204Pb": float(src_row["208Pb/204Pb"]),
-                "Reference": src_row.get("Reference", ""),
-                "V1_calc": v1_calc,
-                "V1_std": v1_std,
-                "V1_err": v1_err,
-                "V1_pass_pm1": (v1_err <= tolerance) if not np.isnan(v1_err) else np.nan,
-                "V2_calc": v2_calc,
-                "V2_std": v2_std,
-                "V2_err": v2_err,
-                "V2_pass_pm1": (v2_err <= tolerance) if not np.isnan(v2_err) else np.nan,
-                "tSK_calc": tsk_calc,
-                "tSK_std": tsk_std,
-                "tSK_err": tsk_err,
-                "tSK_pass_pm1": (tsk_err <= tolerance) if not np.isnan(tsk_err) else np.nan,
-                "tCDT_calc": tcdt_calc,
-                "tCDT_std": tcdt_std,
-                "tCDT_err": tcdt_err,
-                "tCDT_pass_pm1": (tcdt_err <= tolerance) if not np.isnan(tcdt_err) else np.nan,
-                "validated_metrics": ",".join(current_rule),
-            }
-            row_data["row_pass_by_rule"] = _calc_row_pass(row_data, current_rule)
-            rows.append(row_data)
+                v1_err = _calc_err(v1_calc, v1_std)
+                v2_err = _calc_err(v2_calc, v2_std)
+                tsk_err = _calc_err(tsk_calc, tsk_std)
+                tcdt_err = _calc_err(tcdt_calc, tcdt_std)
+
+                current_rule = RULES.get(group_name, [])
+                row_data: dict[str, object] = {
+                    "excel_row": excel_row,
+                    "group": group_name,
+                    "model": model_name,
+                    "206Pb/204Pb": float(src_row["206Pb/204Pb"]),
+                    "207Pb/204Pb": float(src_row["207Pb/204Pb"]),
+                    "208Pb/204Pb": float(src_row["208Pb/204Pb"]),
+                    "Reference": src_row.get("Reference", ""),
+                    "V1_calc": v1_calc,
+                    "V1_std": v1_std,
+                    "V1_err": v1_err,
+                    "V1_pass_pm1": (v1_err <= tolerance) if not np.isnan(v1_err) else np.nan,
+                    "V2_calc": v2_calc,
+                    "V2_std": v2_std,
+                    "V2_err": v2_err,
+                    "V2_pass_pm1": (v2_err <= tolerance) if not np.isnan(v2_err) else np.nan,
+                    "tSK_calc": tsk_calc,
+                    "tSK_std": tsk_std,
+                    "tSK_err": tsk_err,
+                    "tSK_pass_pm1": (tsk_err <= tolerance) if not np.isnan(tsk_err) else np.nan,
+                    "tCDT_calc": tcdt_calc,
+                    "tCDT_std": tcdt_std,
+                    "tCDT_err": tcdt_err,
+                    "tCDT_pass_pm1": (tcdt_err <= tolerance) if not np.isnan(tcdt_err) else np.nan,
+                    "validated_metrics": ",".join(current_rule),
+                }
+                row_data["row_pass_by_rule"] = _calc_row_pass(row_data, current_rule)
+                rows.append(row_data)
 
     out = pd.DataFrame(rows).sort_values("excel_row").reset_index(drop=True)
     out.to_csv(output_path, index=False, encoding="utf-8-sig")
@@ -157,9 +167,11 @@ def _print_summary(out: pd.DataFrame) -> None:
         group_df = out[out["group"] == group_name]
         if group_df.empty:
             continue
-        passed = int(group_df["row_pass_by_rule"].sum())
-        total = len(group_df)
-        print(f"{group_name}: {passed}/{total} rows pass by rule")
+        for model_name, model_df in group_df.groupby("model", sort=True):
+            passed = int(model_df["row_pass_by_rule"].sum())
+            total = len(model_df)
+            label = group_name if len(group_df["model"].unique()) == 1 else f"{group_name} [{model_name}]"
+            print(f"{label}: {passed}/{total} rows pass by rule")
 
     print("\n=== FAIL ROWS BY RULE ===")
     fails = out[~out["row_pass_by_rule"]]
@@ -175,6 +187,8 @@ def _print_summary(out: pd.DataFrame) -> None:
         "tSK_err",
         "tCDT_err",
     ]
+    if "model" in fails.columns and len(fails["model"].unique()) > 1:
+        fail_cols = ["model"] + fail_cols
     print(fails[fail_cols].to_string(index=False))
 
 
@@ -268,11 +282,29 @@ def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
     assert set(geokit["validated_metrics"].dropna().unique()) == {"V1,V2"}
     assert set(pbiso["validated_metrics"].dropna().unique()) == {"tSK,tCDT"}
 
-    # All synthetic rows should pass (±1 tolerance vs self-computed standard)
-    failing = out[~out["row_pass_by_rule"]]
-    assert failing.empty, (
-        f"Expected all rows to pass, but {len(failing)} fail(ed):\n"
-        f"{failing[['group', 'V1_err', 'V2_err', 'tSK_err', 'tCDT_err']].to_string()}"
+    # PbIso is validated against both Stacey & Kramers stages; the synthetic
+    # reference values are generated with the 2nd Stage preset, so only the
+    # 2nd Stage rows are expected to pass (1st Stage tSK differs by model).
+    pbiso_models = set(pbiso["model"].unique())
+    assert pbiso_models == {
+        "Stacey & Kramers (1st Stage)",
+        "Stacey & Kramers (2nd Stage)",
+    }
+
+    # zhu / geokit use a single model and must all pass
+    single_model = out[out["group"].isin(["zhu", "geokit"])]
+    single_failing = single_model[~single_model["row_pass_by_rule"]]
+    assert single_failing.empty, (
+        f"Expected all zhu/geokit rows to pass, but {len(single_failing)} fail(ed):\n"
+        f"{single_failing[['group', 'V1_err', 'V2_err']].to_string()}"
+    )
+
+    # PbIso 2nd Stage rows must all pass (synthetic stds are self-consistent)
+    pbiso_sk2 = pbiso[pbiso["model"] == "Stacey & Kramers (2nd Stage)"]
+    sk2_failing = pbiso_sk2[~pbiso_sk2["row_pass_by_rule"]]
+    assert sk2_failing.empty, (
+        f"Expected all PbIso 2nd Stage rows to pass, but {len(sk2_failing)} fail(ed):\n"
+        f"{sk2_failing[['tSK_err', 'tCDT_err']].to_string()}"
     )
 
 
