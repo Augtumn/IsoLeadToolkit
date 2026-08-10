@@ -155,16 +155,18 @@ PRESET_MODELS = {
         'v1v2_formula': 'default',
     },
     "Maltese & Mezger (2020)": {
-        # BSE evolution model: initial BSE composition at t1 = 4.498 Ga
-        # From Maltese & Mezger (2020), GCA
+        # BSE evolution model: initial BSE composition at t1 = 4.5 Ga
+        # From Maltese & Mezger (2020), GCA; parameters as tabulated in
+        # PbIso (Armistead et al. 2023, Table 3: MM20 model):
+        #   T1=4500, X1=9.345, Y1=10.37, Z1=29.51, Mu1=8.63, W1=34.9515
         'age_model': 'single_stage',
-        'T1': 4498e6,
-        'T2': 4498e6,
+        'T1': 4500e6,
+        'T2': 4500e6,
         'Tsec': 0.0,
-        'a0': A0, 'b0': B0, 'c0': C0,
-        'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
+        'a0': 9.345, 'b0': 10.37, 'c0': 29.51,
+        'a1': 9.345, 'b1': 10.37, 'c1': 29.51,
         'mu_M': 8.63,
-        'omega_M': 34.8,  # kappa~4.05 -> omega ~ 34.8
+        'omega_M': 34.9515,  # PbIso MM20 W1
         'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
         'E2': E2_DEFAULT,

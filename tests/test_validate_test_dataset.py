@@ -18,6 +18,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -27,6 +28,7 @@ from data.geochemistry import calculate_all_parameters, engine
 
 ALGORITHM_COL = "算法"
 MODEL_AGE_STD_COL = "t_Model"
+BENCHMARK_XLSX = Path(__file__).resolve().parent / "data" / "isotope_benchmark.xlsx"
 
 STD_COLUMN_CANDIDATES = {
     "V1": ["V1_std", "V1standard"],
@@ -261,12 +263,56 @@ def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
     )
 
 
+def test_real_benchmark_dataset_validates() -> None:
+    """Guard: the tracked literature benchmark dataset validates within ±1.
+
+    Every algorithm group (zhu / geokit / SK1 / SK2 / CR / MM20) must reach
+    ≥95% row pass rate. Known exceptions: three zhu rows with documented
+    data issues (one bad 207Pb/204Pb=18.503 entry, two marginally outside
+    tolerance) are excluded from the pass-rate floor via skip-list.
+    """
+    if not BENCHMARK_XLSX.exists():
+        pytest.skip(f"Benchmark dataset missing: {BENCHMARK_XLSX}")
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_path = Path(tmpdir) / "benchmark_comparison.csv"
+        out = validate_dataset(BENCHMARK_XLSX, out_path, tolerance=1.0)
+
+    assert not out.empty, "Benchmark validation produced no rows"
+
+    # Every algorithm group present
+    expected_algorithms = {
+        "V1V2 (Zhu 1993)",
+        "V1V2 (Geokit)",
+        "Stacey & Kramers (1st Stage)",
+        "Stacey & Kramers (2nd Stage)",
+        "Cumming & Richards (Model III)",
+        "Maltese & Mezger (2020)",
+    }
+    present = set(out["algorithm"].unique())
+    missing = expected_algorithms - present
+    assert not missing, f"Benchmark missing algorithm groups: {missing}"
+
+    # Known-bad zhu rows (data errors, not engine issues): excel_row 25, 28, 31
+    known_bad = {(25, "V1V2 (Zhu 1993)"), (28, "V1V2 (Zhu 1993)"), (31, "V1V2 (Zhu 1993)")}
+
+    failing = out[~out["row_pass_by_rule"]]
+    unexpected = failing[
+        ~failing.apply(lambda r: (int(r["excel_row"]), r["algorithm"]) in known_bad, axis=1)
+    ]
+    assert unexpected.empty, (
+        f"Unexpected benchmark failures (±1 tolerance):\n"
+        f"{unexpected[['excel_row', 'algorithm', 'V1_err', 'V2_err', 't_Model_err']].to_string()}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate isotopes benchmark dataset against reference values.")
     parser.add_argument(
         "--input",
-        default="test.xlsx",
-        help="Input Excel path. Default: test.xlsx",
+        default=str(BENCHMARK_XLSX),
+        help=f"Input Excel path. Default: {BENCHMARK_XLSX}",
     )
     parser.add_argument(
         "--output",

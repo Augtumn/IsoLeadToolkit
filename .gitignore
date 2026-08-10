@@ -34,3 +34,6 @@ CLAUDE.md
 .omo
 .pytest_cache
 数据/
+
+# Benchmark dataset for geochemistry validation (tracked despite *.xlsx rule)
+!tests/data/*.xlsx
