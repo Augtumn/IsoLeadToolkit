@@ -1,8 +1,13 @@
-"""Validate isotope benchmark dataset with group-specific metrics.
+"""Validate isotope benchmark dataset against reference values.
 
-Rules:
-- zhu/geokit: validate only V1 and V2
-- PbIso: validate only tSK and tCDT
+Each row in the input Excel file carries an explicit algorithm name in the
+first column (``算法``); the corresponding engine preset is loaded directly
+for that row, and computed V1/V2/tSK/tCDT values are compared against the
+``*_std`` reference columns (± tolerance).
+
+Reference columns are optional per row: a row is validated against the
+metrics whose std columns are present (e.g. V1V2 rows → V1/V2, Stacey &
+Kramers rows → tSK/tCDT).
 """
 
 from __future__ import annotations
@@ -20,34 +25,21 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from data.geochemistry import calculate_all_parameters, engine
 
-
-MODEL_MAP = {
-    "zhu": "V1V2 (Zhu 1993)",
-    "geokit": "V1V2 (Geokit)",
-    "PbIso": "Stacey & Kramers (2nd Stage)",
-}
-
-# Metric-level model mapping for groups whose reference columns come from
-# different source models. PbIso reference values: tSK_std was computed with
-# the Stacey & Kramers 2nd Stage model, tCDT_std with the 1st Stage model.
-METRIC_MODELS = {
-    "PbIso": {
-        "tSK": "Stacey & Kramers (2nd Stage)",
-        "tCDT": "Stacey & Kramers (1st Stage)",
-    },
-}
-
-RULES = {
-    "zhu": ["V1", "V2"],
-    "geokit": ["V1", "V2"],
-    "PbIso": ["tSK", "tCDT"],
-}
+ALGORITHM_COL = "算法"
 
 STD_COLUMN_CANDIDATES = {
     "V1": ["V1_std", "V1standard"],
     "V2": ["V2_std", "V2standard"],
     "tSK": ["tSK_std", "tSKstandard"],
     "tCDT": ["tCDT_std", "tCDTstandard"],
+}
+
+# Metric -> calculation result key produced by calculate_all_parameters
+METRIC_RESULT_KEY = {
+    "V1": "V1",
+    "V2": "V2",
+    "tSK": "tSK (Ma)",
+    "tCDT": "tCDT (Ma)",
 }
 
 
@@ -70,21 +62,19 @@ def _calc_err(calc: float, std: float) -> float:
 
 def _calc_row_pass(row: dict[str, object], checked_metrics: list[str]) -> bool:
     checks: list[bool] = []
-    if "V1" in checked_metrics and pd.notna(row["V1_pass_pm1"]):
-        checks.append(bool(row["V1_pass_pm1"]))
-    if "V2" in checked_metrics and pd.notna(row["V2_pass_pm1"]):
-        checks.append(bool(row["V2_pass_pm1"]))
-    if "tSK" in checked_metrics and pd.notna(row["tSK_pass_pm1"]):
-        checks.append(bool(row["tSK_pass_pm1"]))
-    if "tCDT" in checked_metrics and pd.notna(row["tCDT_pass_pm1"]):
-        checks.append(bool(row["tCDT_pass_pm1"]))
+    for metric in checked_metrics:
+        pass_key = f"{metric}_pass_pm1"
+        if pd.notna(row[pass_key]):
+            checks.append(bool(row[pass_key]))
     return all(checks) if checks else True
 
 
 def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> pd.DataFrame:
     df = pd.read_excel(input_path)
 
-    required_base_columns = ["序号", "206Pb/204Pb", "207Pb/204Pb", "208Pb/204Pb"]
+    if ALGORITHM_COL not in df.columns:
+        raise ValueError(f"Missing algorithm column: {ALGORITHM_COL}")
+    required_base_columns = ["206Pb/204Pb", "207Pb/204Pb", "208Pb/204Pb"]
     missing_base = [c for c in required_base_columns if c not in df.columns]
     if missing_base:
         raise ValueError(f"Missing required columns: {missing_base}")
@@ -93,91 +83,60 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
         metric: _pick_column(df, candidates)
         for metric, candidates in STD_COLUMN_CANDIDATES.items()
     }
+    # Metrics validated for rows of each algorithm are those with a std column
+    # present AND produced by the engine for that algorithm.
+    metrics = [m for m, col in std_cols.items() if col is not None]
 
     rows: list[dict[str, object]] = []
 
-    for group_name, model_name in MODEL_MAP.items():
-        group_df = df[df["序号"].astype(str).str.strip() == group_name].copy()
-        if group_df.empty:
-            continue
+    # Group by algorithm name so each preset is loaded once per algorithm.
+    for algorithm, group_df in df.groupby(ALGORITHM_COL, sort=False):
+        try:
+            engine.load_preset(str(algorithm))
+        except Exception as exc:
+            raise ValueError(
+                f"Unknown algorithm preset: {algorithm!r} (row {int(group_df.index[0]) + 2})"
+            ) from exc
 
-        metric_models = METRIC_MODELS.get(group_name)
-
-        if metric_models:
-            # Compute each metric with its source model independently.
-            metric_calc: dict[str, np.ndarray] = {}
-            for metric, metric_model in metric_models.items():
-                engine.load_preset(metric_model)
-                result = calculate_all_parameters(
-                    group_df["206Pb/204Pb"].to_numpy(float),
-                    group_df["207Pb/204Pb"].to_numpy(float),
-                    group_df["208Pb/204Pb"].to_numpy(float),
-                    calculate_ages=True,
-                )
-                if metric == "tSK":
-                    metric_calc["tSK (Ma)"] = result["tSK (Ma)"]
-                elif metric == "tCDT":
-                    metric_calc["tCDT (Ma)"] = result["tCDT (Ma)"]
-                elif metric in result:
-                    metric_calc[metric] = result[metric]
-            model_label = "+".join(metric_models.values())
-        else:
-            engine.load_preset(model_name)
-            result = calculate_all_parameters(
-                group_df["206Pb/204Pb"].to_numpy(float),
-                group_df["207Pb/204Pb"].to_numpy(float),
-                group_df["208Pb/204Pb"].to_numpy(float),
-                calculate_ages=True,
-            )
-            metric_calc = result
-            model_label = model_name
+        result = calculate_all_parameters(
+            group_df["206Pb/204Pb"].to_numpy(float),
+            group_df["207Pb/204Pb"].to_numpy(float),
+            group_df["208Pb/204Pb"].to_numpy(float),
+            calculate_ages=True,
+        )
 
         for i, (idx, src_row) in enumerate(group_df.iterrows()):
             excel_row = int(idx) + 2
 
-            v1_std = _to_float_or_nan(src_row.get(std_cols["V1"])) if std_cols["V1"] else float("nan")
-            v2_std = _to_float_or_nan(src_row.get(std_cols["V2"])) if std_cols["V2"] else float("nan")
-            tsk_std = _to_float_or_nan(src_row.get(std_cols["tSK"])) if std_cols["tSK"] else float("nan")
-            tcdt_std = _to_float_or_nan(src_row.get(std_cols["tCDT"])) if std_cols["tCDT"] else float("nan")
-
-            v1_calc = float(metric_calc["V1"][i]) if "V1" in metric_calc and np.ndim(metric_calc["V1"]) > 0 else float("nan")
-            v2_calc = float(metric_calc["V2"][i]) if "V2" in metric_calc and np.ndim(metric_calc["V2"]) > 0 else float("nan")
-            tsk_calc = float(metric_calc["tSK (Ma)"][i]) if "tSK (Ma)" in metric_calc and np.ndim(metric_calc["tSK (Ma)"]) > 0 else float("nan")
-            tcdt_calc = float(metric_calc["tCDT (Ma)"][i]) if "tCDT (Ma)" in metric_calc and np.ndim(metric_calc["tCDT (Ma)"]) > 0 else float("nan")
-
-            v1_err = _calc_err(v1_calc, v1_std)
-            v2_err = _calc_err(v2_calc, v2_std)
-            tsk_err = _calc_err(tsk_calc, tsk_std)
-            tcdt_err = _calc_err(tcdt_calc, tcdt_std)
-
-            current_rule = RULES.get(group_name, [])
             row_data: dict[str, object] = {
                 "excel_row": excel_row,
-                "group": group_name,
-                "model": model_label,
+                "algorithm": str(algorithm),
                 "206Pb/204Pb": float(src_row["206Pb/204Pb"]),
                 "207Pb/204Pb": float(src_row["207Pb/204Pb"]),
                 "208Pb/204Pb": float(src_row["208Pb/204Pb"]),
                 "Reference": src_row.get("Reference", ""),
-                "V1_calc": v1_calc,
-                "V1_std": v1_std,
-                "V1_err": v1_err,
-                "V1_pass_pm1": (v1_err <= tolerance) if not np.isnan(v1_err) else np.nan,
-                "V2_calc": v2_calc,
-                "V2_std": v2_std,
-                "V2_err": v2_err,
-                "V2_pass_pm1": (v2_err <= tolerance) if not np.isnan(v2_err) else np.nan,
-                "tSK_calc": tsk_calc,
-                "tSK_std": tsk_std,
-                "tSK_err": tsk_err,
-                "tSK_pass_pm1": (tsk_err <= tolerance) if not np.isnan(tsk_err) else np.nan,
-                "tCDT_calc": tcdt_calc,
-                "tCDT_std": tcdt_std,
-                "tCDT_err": tcdt_err,
-                "tCDT_pass_pm1": (tcdt_err <= tolerance) if not np.isnan(tcdt_err) else np.nan,
-                "validated_metrics": ",".join(current_rule),
             }
-            row_data["row_pass_by_rule"] = _calc_row_pass(row_data, current_rule)
+            checked: list[str] = []
+            for metric in metrics:
+                std_val = _to_float_or_nan(src_row.get(std_cols[metric]))
+                calc = result.get(METRIC_RESULT_KEY[metric])
+                calc_val = (
+                    float(calc[i])
+                    if calc is not None and np.ndim(calc) > 0
+                    else float("nan")
+                )
+                err = _calc_err(calc_val, std_val)
+                row_data[f"{metric}_calc"] = calc_val
+                row_data[f"{metric}_std"] = std_val
+                row_data[f"{metric}_err"] = err
+                row_data[f"{metric}_pass_pm1"] = (
+                    (err <= tolerance) if not np.isnan(err) else np.nan
+                )
+                if not np.isnan(std_val):
+                    checked.append(metric)
+
+            row_data["validated_metrics"] = ",".join(checked)
+            row_data["row_pass_by_rule"] = _calc_row_pass(row_data, checked)
             rows.append(row_data)
 
     out = pd.DataFrame(rows).sort_values("excel_row").reset_index(drop=True)
@@ -187,13 +146,10 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
 
 def _print_summary(out: pd.DataFrame) -> None:
     print("=== RULE-BASED SUMMARY (±1) ===")
-    for group_name in ["zhu", "geokit", "PbIso"]:
-        group_df = out[out["group"] == group_name]
-        if group_df.empty:
-            continue
+    for algorithm, group_df in out.groupby("algorithm", sort=False):
         passed = int(group_df["row_pass_by_rule"].sum())
         total = len(group_df)
-        print(f"{group_name}: {passed}/{total} rows pass by rule")
+        print(f"{algorithm}: {passed}/{total} rows pass by rule")
 
     print("\n=== FAIL ROWS BY RULE ===")
     fails = out[~out["row_pass_by_rule"]]
@@ -202,13 +158,14 @@ def _print_summary(out: pd.DataFrame) -> None:
         return
     fail_cols = [
         "excel_row",
-        "group",
+        "algorithm",
         "validated_metrics",
         "V1_err",
         "V2_err",
         "tSK_err",
         "tCDT_err",
     ]
+    fail_cols = [c for c in fail_cols if c in fails.columns]
     print(fails[fail_cols].to_string(index=False))
 
 
@@ -229,7 +186,6 @@ def _make_test_dataset(tmp_path: Path) -> Path:
     are pre-computed with the same geochemistry engine so the validation can verify
     the pipeline structure without needing a real benchmark file.
     """
-    # --- pre-compute expected values for each group ---
     engine.load_preset("V1V2 (Zhu 1993)")
     rz = calculate_all_parameters(
         np.array([18.5]), np.array([15.6]), np.array([38.5]),
@@ -255,7 +211,7 @@ def _make_test_dataset(tmp_path: Path) -> Path:
     )
 
     data: dict[str, list[object]] = {
-        "序号": ["zhu", "geokit", "PbIso"],
+        ALGORITHM_COL: ["V1V2 (Zhu 1993)", "V1V2 (Geokit)", "Stacey & Kramers (1st Stage)"],
         "206Pb/204Pb": [18.5, 19.0, 17.5],
         "207Pb/204Pb": [15.6, 15.7, 15.5],
         "208Pb/204Pb": [38.5, 39.0, 38.0],
@@ -273,12 +229,12 @@ def _make_test_dataset(tmp_path: Path) -> Path:
         "tSK_std": [
             float("nan"),
             float("nan"),
-            _scalar(rp_sk2.get("tSK (Ma)")),  # tSK_std from SK2 model
+            _scalar(rp_sk1.get("tSK (Ma)")),  # tSK_std for SK1 row
         ],
         "tCDT_std": [
             float("nan"),
             float("nan"),
-            _scalar(rp_sk1.get("tCDT (Ma)")),  # tCDT_std from SK1 model
+            _scalar(rp_sk1.get("tCDT (Ma)")),  # tCDT_std for SK1 row
         ],
     }
 
@@ -296,36 +252,28 @@ def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
     assert not out.empty, "Validation output should not be empty"
     assert output_path.exists(), "Output CSV should have been written"
 
-    zhu = out[out["group"] == "zhu"]
-    geokit = out[out["group"] == "geokit"]
-    pbiso = out[out["group"] == "PbIso"]
+    zhu = out[out["algorithm"] == "V1V2 (Zhu 1993)"]
+    geokit = out[out["algorithm"] == "V1V2 (Geokit)"]
+    sk1 = out[out["algorithm"] == "Stacey & Kramers (1st Stage)"]
 
-    assert not zhu.empty, "Expected zhu group in output"
-    assert not geokit.empty, "Expected geokit group in output"
-    assert not pbiso.empty, "Expected PbIso group in output"
+    assert not zhu.empty, "Expected zhu algorithm rows in output"
+    assert not geokit.empty, "Expected geokit algorithm rows in output"
+    assert not sk1.empty, "Expected SK1 algorithm rows in output"
 
     assert set(zhu["validated_metrics"].dropna().unique()) == {"V1,V2"}
     assert set(geokit["validated_metrics"].dropna().unique()) == {"V1,V2"}
-    assert set(pbiso["validated_metrics"].dropna().unique()) == {"tSK,tCDT"}
-
-    # PbIso reference values: tSK_std from the 2nd Stage model, tCDT_std from
-    # the 1st Stage model. The synthetic stds are generated with the same
-    # metric-model mapping, so all rows must pass.
-    pbiso_models = set(pbiso["model"].unique())
-    assert pbiso_models == {
-        "Stacey & Kramers (2nd Stage)+Stacey & Kramers (1st Stage)",
-    }
+    assert set(sk1["validated_metrics"].dropna().unique()) == {"tSK,tCDT"}
 
     # All synthetic rows should pass (±1 tolerance vs self-computed standard)
     failing = out[~out["row_pass_by_rule"]]
     assert failing.empty, (
         f"Expected all rows to pass, but {len(failing)} fail(ed):\n"
-        f"{failing[['group', 'V1_err', 'V2_err', 'tSK_err', 'tCDT_err']].to_string()}"
+        f"{failing[['algorithm', 'V1_err', 'V2_err', 'tSK_err', 'tCDT_err']].to_string()}"
     )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Validate isotopes benchmark dataset by group rules.")
+    parser = argparse.ArgumentParser(description="Validate isotopes benchmark dataset against reference values.")
     parser.add_argument(
         "--input",
         default="test.xlsx",
