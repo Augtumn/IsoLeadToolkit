@@ -1047,6 +1047,11 @@
   "Done": "完成",
   "Please run the search first.": "请先运行搜索。",
   "Neighborhood results added as group column: {col}": "邻域结果已添加为分组列：{col}",
-  "Neighborhood search failed: {error}": "邻域搜索失败：{error}"
+  "Neighborhood search failed: {error}": "邻域搜索失败：{error}",
+  "Column Name:": "列名：",
+  "Export Data": "导出数据",
+  "Export data with new group column to CSV/Excel": "导出带新分组列的数据到 CSV/Excel",
+  "No data to export.": "无数据可导出。",
+  "Data exported to: {path}": "数据已导出至：{path}"
 }
 

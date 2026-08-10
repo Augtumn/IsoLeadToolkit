@@ -1047,6 +1047,11 @@
   "Done": "Done",
   "Please run the search first.": "Please run the search first.",
   "Neighborhood results added as group column: {col}": "Neighborhood results added as group column: {col}",
-  "Neighborhood search failed: {error}": "Neighborhood search failed: {error}"
+  "Neighborhood search failed: {error}": "Neighborhood search failed: {error}",
+  "Column Name:": "Column Name:",
+  "Export Data": "Export Data",
+  "Export data with new group column to CSV/Excel": "Export data with new group column to CSV/Excel",
+  "No data to export.": "No data to export.",
+  "Data exported to: {path}": "Data exported to: {path}"
 }
 

@@ -2,15 +2,14 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 
 def test_async_render_stale_token_ignored():
     """Stale embedding task token should not modify worker state."""
-    from core import app_state
+    from core import app_state, state_gateway
 
-    app_state.embedding_task_token = 999
-    app_state.embedding_task_running = True
-    app_state.embedding_worker = "mock_worker"
+    state_gateway.set_embedding_worker("mock_worker", running=True, task_token=999)
 
     from visualization.events import _on_embedding_task_finished
 
@@ -25,13 +24,20 @@ def test_async_render_stale_token_ignored():
     assert app_state.embedding_worker == "mock_worker"
 
 
-def test_embedding_task_failed_clears_worker():
-    """Matching token failure should clear worker state."""
-    from core import app_state
+def test_embedding_task_failed_clears_worker(monkeypatch: pytest.MonkeyPatch):
+    """Matching token failure should clear worker state.
 
-    app_state.embedding_task_token = 42
-    app_state.embedding_task_running = True
-    app_state.embedding_worker = "mock_worker"
+    The failure path shows a modal QMessageBox; stub it out so the
+    offscreen test environment does not block on an unclickable dialog.
+    """
+    import PyQt5.QtWidgets as QtWidgets
+
+    monkeypatch.setattr(
+        QtWidgets.QMessageBox, "warning", staticmethod(lambda *a, **k: None))
+
+    from core import app_state, state_gateway
+
+    state_gateway.set_embedding_worker("mock_worker", running=True, task_token=42)
 
     from visualization.events import _on_embedding_task_failed
 
@@ -43,11 +49,9 @@ def test_embedding_task_failed_clears_worker():
 
 def test_failed_stale_token_ignored():
     """Failed embedding with stale token should not modify state."""
-    from core import app_state
+    from core import app_state, state_gateway
 
-    app_state.embedding_task_token = 999
-    app_state.embedding_task_running = True
-    app_state.embedding_worker = "mock_worker"
+    state_gateway.set_embedding_worker("mock_worker", running=True, task_token=999)
 
     from visualization.events import _on_embedding_task_failed
 

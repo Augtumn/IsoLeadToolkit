@@ -363,12 +363,14 @@ class NeighborhoodSearchDialog(QDialog):
         df = app_state.df_global
         if df is None:
             return
+        from plugins.builtins.neighborhood_plugin import map_local_to_original
         # Drop internal grouping columns to keep only original data
         keep_cols = [c for c in df.columns if not c.startswith("_")]
         for m in self._result["matches"]:
-            qi = m["query_index"]
+            qi = map_local_to_original(m["query_index"], self._orig_indices)
             query_row = df.iloc[qi][keep_cols].to_dict() if 0 <= qi < len(df) else {}
-            for ni, dist in zip(m["neighbor_indices"], m["distances"]):
+            for ni_local, dist in zip(m["neighbor_indices"], m["distances"]):
+                ni = map_local_to_original(ni_local, self._orig_indices)
                 match_row = df.iloc[ni][keep_cols].to_dict() if 0 <= ni < len(df) else {}
                 row = {}
                 for col in keep_cols:
