@@ -2,12 +2,12 @@
 
 Each row in the input Excel file carries an explicit algorithm name in the
 first column (``算法``); the corresponding engine preset is loaded directly
-for that row, and computed V1/V2/tSK/tCDT values are compared against the
-``*_std`` reference columns (± tolerance).
+for that row, and computed V1/V2/t_Model values are compared against the
+``*_std``/``t_Model`` reference columns (± tolerance).
 
 Reference columns are optional per row: a row is validated against the
-metrics whose std columns are present (e.g. V1V2 rows → V1/V2, Stacey &
-Kramers rows → tSK/tCDT).
+metrics whose reference columns are present (e.g. V1V2 rows → V1/V2,
+Stacey & Kramers / Cumming & Richards rows → t_Model).
 """
 
 from __future__ import annotations
@@ -26,20 +26,19 @@ if str(PROJECT_ROOT) not in sys.path:
 from data.geochemistry import calculate_all_parameters, engine
 
 ALGORITHM_COL = "算法"
+MODEL_AGE_STD_COL = "t_Model"
 
 STD_COLUMN_CANDIDATES = {
     "V1": ["V1_std", "V1standard"],
     "V2": ["V2_std", "V2standard"],
-    "tSK": ["tSK_std", "tSKstandard"],
-    "tCDT": ["tCDT_std", "tCDTstandard"],
 }
 
-# Metric -> calculation result key produced by calculate_all_parameters
+# Metric -> calculation result key produced by calculate_all_parameters.
+# t_Model is the unified model-age output (one per parameter set).
 METRIC_RESULT_KEY = {
     "V1": "V1",
     "V2": "V2",
-    "tSK": "tSK (Ma)",
-    "tCDT": "tCDT (Ma)",
+    "t_Model": "t_Model (Ma)",
 }
 
 
@@ -83,8 +82,10 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
         metric: _pick_column(df, candidates)
         for metric, candidates in STD_COLUMN_CANDIDATES.items()
     }
-    # Metrics validated for rows of each algorithm are those with a std column
-    # present AND produced by the engine for that algorithm.
+    # t_Model is the unified model-age reference column.
+    std_cols["t_Model"] = MODEL_AGE_STD_COL if MODEL_AGE_STD_COL in df.columns else None
+    # Metrics validated for rows of each algorithm are those with a reference
+    # column present AND produced by the engine for that algorithm.
     metrics = [m for m, col in std_cols.items() if col is not None]
 
     rows: list[dict[str, object]] = []
@@ -162,8 +163,7 @@ def _print_summary(out: pd.DataFrame) -> None:
         "validated_metrics",
         "V1_err",
         "V2_err",
-        "tSK_err",
-        "tCDT_err",
+        "t_Model_err",
     ]
     fail_cols = [c for c in fail_cols if c in fails.columns]
     print(fails[fail_cols].to_string(index=False))
@@ -182,7 +182,7 @@ def _scalar(arr: object, default: float = float("nan")) -> float:
 def _make_test_dataset(tmp_path: Path) -> Path:
     """Create a minimal benchmark test Excel file with self-consistent expected values.
 
-    Reasonable crustal lead isotope ratios are used. Expected V1/V2/tSK/tCDT values
+    Reasonable crustal lead isotope ratios are used. Expected V1/V2/t_Model values
     are pre-computed with the same geochemistry engine so the validation can verify
     the pipeline structure without needing a real benchmark file.
     """
@@ -195,12 +195,6 @@ def _make_test_dataset(tmp_path: Path) -> Path:
     engine.load_preset("V1V2 (Geokit)")
     rg = calculate_all_parameters(
         np.array([19.0]), np.array([15.7]), np.array([39.0]),
-        calculate_ages=True,
-    )
-
-    engine.load_preset("Stacey & Kramers (2nd Stage)")
-    rp_sk2 = calculate_all_parameters(
-        np.array([17.5]), np.array([15.5]), np.array([38.0]),
         calculate_ages=True,
     )
 
@@ -226,15 +220,10 @@ def _make_test_dataset(tmp_path: Path) -> Path:
             _scalar(rg.get("V2")),
             float("nan"),
         ],
-        "tSK_std": [
+        MODEL_AGE_STD_COL: [
             float("nan"),
             float("nan"),
-            _scalar(rp_sk1.get("tSK (Ma)")),  # tSK_std for SK1 row
-        ],
-        "tCDT_std": [
-            float("nan"),
-            float("nan"),
-            _scalar(rp_sk1.get("tCDT (Ma)")),  # tCDT_std for SK1 row
+            _scalar(rp_sk1.get("t_Model (Ma)")),  # unified model age for SK1 row
         ],
     }
 
@@ -262,13 +251,13 @@ def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
 
     assert set(zhu["validated_metrics"].dropna().unique()) == {"V1,V2"}
     assert set(geokit["validated_metrics"].dropna().unique()) == {"V1,V2"}
-    assert set(sk1["validated_metrics"].dropna().unique()) == {"tSK,tCDT"}
+    assert set(sk1["validated_metrics"].dropna().unique()) == {"t_Model"}
 
     # All synthetic rows should pass (±1 tolerance vs self-computed standard)
     failing = out[~out["row_pass_by_rule"]]
     assert failing.empty, (
         f"Expected all rows to pass, but {len(failing)} fail(ed):\n"
-        f"{failing[['algorithm', 'V1_err', 'V2_err', 'tSK_err', 'tCDT_err']].to_string()}"
+        f"{failing[['algorithm', 'V1_err', 'V2_err', 't_Model_err']].to_string()}"
     )
 
 

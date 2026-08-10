@@ -19,17 +19,18 @@ _SHEET_ISOCHRON = "Isochrons"
 _SHEET_EQUATIONS = "Equations"
 
 #: Geochemistry modes whose derived parameters are appended on export.
+#: t_Model is the unified model-age column (single per parameter set).
 _GEO_CHEM_MODES: dict[str, list[str]] = {
     "V1V2": [
-        "tSK (Ma)", "tCDT (Ma)", "mu", "kappa",
+        "t_Model (Ma)", "mu", "kappa",
         "V1", "V2", "Delta_alpha", "Delta_beta", "Delta_gamma",
     ],
-    "PB_EVOL_76": ["tSK (Ma)", "mu"],
-    "PB_EVOL_86": ["tSK (Ma)", "mu", "kappa"],
-    "PB_MU_AGE": ["tSK (Ma)", "mu"],
-    "PB_KAPPA_AGE": ["tSK (Ma)", "kappa"],
-    "PLUMBOTECTONICS_76": ["tSK (Ma)", "mu"],
-    "PLUMBOTECTONICS_86": ["tSK (Ma)", "mu", "kappa"],
+    "PB_EVOL_76": ["t_Model (Ma)", "mu"],
+    "PB_EVOL_86": ["t_Model (Ma)", "mu", "kappa"],
+    "PB_MU_AGE": ["t_Model (Ma)", "mu"],
+    "PB_KAPPA_AGE": ["t_Model (Ma)", "kappa"],
+    "PLUMBOTECTONICS_76": ["t_Model (Ma)", "mu"],
+    "PLUMBOTECTONICS_86": ["t_Model (Ma)", "mu", "kappa"],
 }
 
 _PB206_COL = "206Pb/204Pb"

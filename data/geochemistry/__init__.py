@@ -187,6 +187,10 @@ def calculate_all_parameters(
     
     results['tCDT (Ma)'] = tCDT
     results['tSK (Ma)'] = tSK
+    # Unified model-age output: each parameter set yields exactly one model
+    # age, chosen by the resolved age model (two-stage → tSK, single-stage →
+    # tCDT). This is the canonical "模式年龄" column used by UI/export/validation.
+    results['t_Model (Ma)'] = t_model
     
     # 3. Delta 值计算
     E1_val = kwargs.get('E1', None)
