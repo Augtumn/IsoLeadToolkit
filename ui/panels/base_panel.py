@@ -12,14 +12,6 @@ from core import app_state, state_gateway, translate
 logger = logging.getLogger(__name__)
 
 
-def _safe_float(text, default):
-    """安全转换为 float，失败时返回默认值。"""
-    try:
-        return float(text)
-    except (TypeError, ValueError):
-        return default
-
-
 def _safe_color(widget, default):
     """从 widget 安全提取颜色值。
 
