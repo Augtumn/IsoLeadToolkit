@@ -367,10 +367,8 @@ class DataImportBuildMixin:
                 item.setText(translate("No sheet"))
 
     def _update_language_label(self, current_lang):
-        if current_lang == 'zh':
-            self.lang_label.setText("语言:")
-        else:
-            self.lang_label.setText("Language:")
+        del current_lang  # label is localized via translate(), not per-language text
+        self.lang_label.setText(translate("Language:"))
 
     def _on_language_change(self, _index):
         code = self.lang_combo.currentData()

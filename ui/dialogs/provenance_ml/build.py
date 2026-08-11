@@ -80,17 +80,17 @@ class ProvenanceMLBuildMixin:
         self.train_208_combo = QComboBox()
 
         pb_row1 = QHBoxLayout()
-        pb_row1.addWidget(QLabel("206Pb/204Pb:"))
+        pb_row1.addWidget(QLabel(translate("206Pb/204Pb:")))
         pb_row1.addWidget(self.train_206_combo, 1)
         cols_layout.addLayout(pb_row1)
 
         pb_row2 = QHBoxLayout()
-        pb_row2.addWidget(QLabel("207Pb/204Pb:"))
+        pb_row2.addWidget(QLabel(translate("207Pb/204Pb:")))
         pb_row2.addWidget(self.train_207_combo, 1)
         cols_layout.addLayout(pb_row2)
 
         pb_row3 = QHBoxLayout()
-        pb_row3.addWidget(QLabel("208Pb/204Pb:"))
+        pb_row3.addWidget(QLabel(translate("208Pb/204Pb:")))
         pb_row3.addWidget(self.train_208_combo, 1)
         cols_layout.addLayout(pb_row3)
 
@@ -132,17 +132,17 @@ class ProvenanceMLBuildMixin:
         self.pred_208_combo = QComboBox()
 
         pred_row1 = QHBoxLayout()
-        pred_row1.addWidget(QLabel("206Pb/204Pb:"))
+        pred_row1.addWidget(QLabel(translate("206Pb/204Pb:")))
         pred_row1.addWidget(self.pred_206_combo, 1)
         pred_cols_layout.addLayout(pred_row1)
 
         pred_row2 = QHBoxLayout()
-        pred_row2.addWidget(QLabel("207Pb/204Pb:"))
+        pred_row2.addWidget(QLabel(translate("207Pb/204Pb:")))
         pred_row2.addWidget(self.pred_207_combo, 1)
         pred_cols_layout.addLayout(pred_row2)
 
         pred_row3 = QHBoxLayout()
-        pred_row3.addWidget(QLabel("208Pb/204Pb:"))
+        pred_row3.addWidget(QLabel(translate("208Pb/204Pb:")))
         pred_row3.addWidget(self.pred_208_combo, 1)
         pred_cols_layout.addLayout(pred_row3)
 

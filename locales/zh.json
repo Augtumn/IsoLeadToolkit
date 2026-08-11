@@ -1067,5 +1067,10 @@
   "Settings applied": "设置已应用",
   "Shepard Diagram\\nSpearman Correlation: {value}": "Shepard Diagram\\nSpearman Correlation: {value}",
   "Tight BBox": "紧凑边界框",
-  "Transparent": "透明"
+  "Transparent": "透明",
+  "Language:": "语言：",
+  "206Pb/204Pb:": "206Pb/204Pb:",
+  "207Pb/204Pb:": "207Pb/204Pb:",
+  "208Pb/204Pb:": "208Pb/204Pb:",
+  "Default": "Default"
 }

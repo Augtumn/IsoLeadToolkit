@@ -201,7 +201,7 @@ def run_endmember_analysis(
     warnings = []
 
     if data_clean.shape[0] < 3:
-        raise ValueError("有效样品数不足 3 个，无法进行端元分析。")
+        raise ValueError("At least 3 valid samples are required for endmember analysis.")
 
     # PCA (无标准化)
     pca_result = run_endmember_pca(data_clean)
@@ -211,8 +211,8 @@ def run_endmember_analysis(
     cumulative_var = np.cumsum(pca_result['explained_variance_ratio'])
     if cumulative_var[0] < 0.95:
         warnings.append(
-            f"PC1 仅解释 {pc1_var * 100:.1f}% 的方差（累积 < 95%），"
-            f"可能存在两个以上端元。"
+            f"PC1 explains only {pc1_var * 100:.1f}% of variance (cumulative < 95%); "
+            f"more than two endmembers may be present."
         )
 
     # Geochron 斜率
@@ -242,8 +242,8 @@ def run_endmember_analysis(
     overlap = mask_a & mask_b
     if np.any(overlap):
         warnings.append(
-            f"两个端元组存在 {int(np.sum(overlap))} 个重叠样品，"
-            f"建议降低 tolerance 值。"
+            f"{int(np.sum(overlap))} overlapping samples exist between the two endmember groups; "
+            f"consider lowering the tolerance value."
         )
         # 重叠样品归入距离更近的端元
         for i in np.where(overlap)[0]:
@@ -264,7 +264,7 @@ def run_endmember_analysis(
     for gid, gname in [(0, 'A'), (1, 'B')]:
         n = int(np.sum(assignments == gid))
         if n < 2:
-            warnings.append(f"端元 {gname} 组仅有 {n} 个样品，结果可能不可靠。")
+            warnings.append(f"Endmember {gname} group has only {n} samples; results may be unreliable.")
 
     # Shapiro-Wilk 验证
     validation = validate_groups(pca_result['scores'], assignments, label_map)

@@ -72,7 +72,7 @@ class GeoPanel(BasePanel):
                 self.geo_model_combo.setCurrentText(current_model)
         except Exception as e:
             logger.warning("Failed to load geochemistry models: %s", e)
-            self.geo_model_combo.addItem("Default")
+            self.geo_model_combo.addItem(translate("Default"))
 
         self.geo_model_combo.currentTextChanged.connect(self._on_geo_model_change)
         model_select_layout.addWidget(self.geo_model_combo)

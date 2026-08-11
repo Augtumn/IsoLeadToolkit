@@ -1067,5 +1067,10 @@
   "Settings applied": "Settings applied",
   "Shepard Diagram\\nSpearman Correlation: {value}": "Shepard Diagram\\nSpearman Correlation: {value}",
   "Tight BBox": "Tight BBox",
-  "Transparent": "Transparent"
+  "Transparent": "Transparent",
+  "Language:": "Language:",
+  "206Pb/204Pb:": "206Pb/204Pb:",
+  "207Pb/204Pb:": "207Pb/204Pb:",
+  "208Pb/204Pb:": "208Pb/204Pb:",
+  "Default": "Default"
 }

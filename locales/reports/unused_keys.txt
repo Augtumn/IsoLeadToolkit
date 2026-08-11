@@ -1,0 +1,453 @@
+Potentially-unused locale keys (advisory — verify dynamic refs before deleting)
+================================================================================
+literal translate() keys: 630
+dynamic-source keys: 145
+flagged candidates: 440
+
+207Pb/204Pb - 206Pb/204Pb
+208Pb/204Pb - 206Pb/204Pb
+2D Scatter (Fast)
+2D Scatter (raw)
+3D Scatter
+3D Scatter (raw)
+Add Preset
+Adjust Expand X
+Adjust Expand Y
+Adjust Force Static X
+Adjust Force Static Y
+Adjust Force Text X
+Adjust Force Text Y
+Adjust Iteration Limit
+Adjust Time Limit (s)
+Adjust line styles for geochemical overlays.
+Adjust parameters for V1-V2 diagram calculation.
+Adjust perplexity and learning rate to refine t-SNE embeddings.
+Adjust sliders to refresh the plot automatically. Close the panel to reclaim screen space.
+Ages and time constants.
+All files
+Analysis reset to full dataset.
+Analysis restricted to {count} selected samples.
+Append
+Appended {count} records to worksheet '{sheet}'.
+Path: {path}
+Apply Factors
+Assign selected samples as endmember or mixture groups.
+Auto Center
+Available Columns (click to select)
+Axes Background
+Axis Factors
+Axis Line Color
+Axis Line Width
+Axis {axis}
+Back to previous view
+Basic plot appearance.
+Best
+Boundary Percent (%)
+CSV files
+Calculate
+Cancel Isochron Calculation
+Center Left
+Center Right
+Check updates...
+Choose a CSV or Excel file (.csv, .xlsx, .xls) that contains the isotope dataset you want to explore.
+Choose a standard parameter set.
+Choose axes for the 2D scatter
+Choose axes for the 3D scatter
+Choose grouping columns (used for coloring and filtering) and numeric data columns for embedding.
+Choose the first view after import to avoid unnecessary heavy embedding computation.
+Choose the interface language.
+Choose which groups stay visible
+Cleaning data...
+Clear all mixing groups?
+Click export has been removed. Use the control panel export instead.
+Close Panel
+Clustering result length ({n_labels}) does not match data rows ({n_rows}).
+Clusters: {n_clusters}  |  Noise points: {n_noise} ({pct:.1f}%)
+Color By
+Color Scheme
+Column selection is only available for 2D/3D/Ternary modes.
+Columns
+Columns for Mixing
+Common Settings
+Common plot layout and line styles.
+Confidence Level
+Configure Ternary Axes
+Configure data to display when hovering over points.
+Configure subplots
+Control Panel
+Control neighbourhood size and how tightly points cluster.
+Controls shown here depend on the current projection mode.
+Cumulative
+Customize data point appearance.
+Customize fonts and text sizes.
+Customize the visual appearance of the plots.
+Data Configuration
+Data Management
+Data reload cancelled.
+Dataset reloaded successfully.
+Duplicate Columns
+Each axis must use a different data column.
+Edit Equation Style
+Embedding Modes
+Embedding size does not match current data selection.
+Enable selection mode to pick samples in 2D or embedding views, then export the results.
+Endmember Group
+Endmembers: {count} | Mixtures: {count2}
+Enter a file name (without extension):
+Enter a new worksheet name:
+Equation
+Error validating columns: {error}
+Excel Workbook
+Excel files
+Export DPI
+Export Figure (SciencePlots)
+Export Plot
+Export Plot (Plotnine)
+Export Plot Settings
+Export Selected
+Export Selected Data
+Export Selected Data as CSV
+Export Selected Data as Excel
+Export to CSV
+Exported {count} records to:
+{path}
+Failed to open KDE style dialog: {error}
+Failed to open marginal KDE style dialog: {error}
+Failed to write Excel file: {error}
+Fields Must Differ
+Figure
+Figure Background
+Figure DPI
+Figure Height
+Figure Height (in)
+Figure Width
+Figure Width (in)
+File Exists
+File already exists:
+{path}
+Overwrite?
+File name cannot be empty or only invalid characters.
+Filter Legend
+Filter legend...
+Fine-tune algorithm settings and instantly preview the updated embedding.
+Focus on Selection
+Font Sizes
+Forward to next view
+General Settings
+Geochemical module not loaded.
+Geochemistry Modes
+Geochron Slope
+Grid
+Grid Alpha
+Grid Color
+Grid Linewidth
+Grid Style
+Group Visibility
+Group column
+Group name cannot be empty.
+Growth Curves
+Hide All
+Hint: Data columns must be numeric. Grouping columns can be any categorical field.
+Hybrid
+Import new data files into the application.
+Incomplete Selection
+Invalid numeric input.
+Isochron Age: {age} Ma
+Isochron Fits
+Isochron Line Width
+Isochron calculation is only available for Pb evolution plots
+Isochron calculation requires at least 2 selected points
+KDE Style
+Kappa vs Age
+Label
+Label Color
+Label Layout (adjustText)
+Label Pad
+Label Size
+Label Weight
+Language switch failed. Please try again.
+Language updated to {language}
+Lead Isotope Visualization Analysis
+Left Max
+Left Min
+Left Vertex (B)
+Legend Display Mode
+Legend Filter
+Legend Frame
+Legend Frame Alpha
+Legend Frame Edge Color
+Legend Frame Face Color
+Legend Location
+Li,2001
+Line Styles
+Lines
+Load Data
+Load New Data
+Lower Center
+Lower Crust
+Lower Left
+Lower Mantle
+Lower Right
+Mantle
+Mantle reservoir parameters.
+Marginal KDE Style
+Min-Max
+Minimum Covariance Determinant (MCD) based PCA. Resistant to outliers.
+Minor Grid
+Minor Grid Alpha
+Minor Grid Color
+Minor Grid Linewidth
+Minor Grid Style
+Minor Tick Length
+Minor Tick Width
+Minor Ticks
+Mixing Results
+Mixing calculation failed: {error}
+Mixture Group
+Mode-specific Settings
+Model Age Line Width
+Model Age Lines
+Model Curve Width
+Model Curves
+Model Selection
+Modeling
+Modern Dark
+Modern Light
+Module Outdated. Missing get_parameters().
+Mu vs Age
+No Data
+No compatible plot data found for export.
+No data is available to export.
+No data selected. Please select data points first.
+No group column selected.
+No legend data available.
+No legend entries are available yet.
+No legend entries match your search.
+No mixing results were produced.
+No samples selected
+Number of points in a neighbourhood for core points. Lower values make clustering more conservative.
+Opacity: {value:.2f}
+Open Session
+Optional overlays to improve plot interpretation.
+Options shared by both algorithms, including point styling and grouping.
+Origin export requires the originpro package. Please install it with: pip install originpro
+Orogene
+Outside Right
+Overlays
+Overwrite group '{name}'?
+PCA Embedding
+PDF Document
+PNG Image
+Padding (inch)
+Paleoisochron Width
+Paleoisochrons
+Palette
+Pan axes with left mouse, zoom with right
+Parameter a
+Parameter b
+Parameter c
+Parameters updated successfully.
+Parsing columns...
+Pb Evolution 206-207
+Pb Evolution 206-208
+Pentagon (P)
+Please define endmember groups first.
+Please define mixture groups first.
+Please keep at least one group visible.
+Please select a preset.
+Please select at least one sample before exporting.
+Please select samples first using the selection tools.
+Please select samples first.
+Please select three distinct columns.
+Plot Controls
+Plot Enhancements
+Plot Style
+Plot exported to:
+{path}
+Plotnine is not available: {error}
+Plumbotectonics 206-207
+Plumbotectonics 206-208
+Plumbotectonics Curves
+Point Alpha
+Point Size
+Point size
+Power
+Preset Model:
+Preview
+Primordial (T1/T2)
+Primordial and Two-Stage initial ratios.
+Projection
+Projection Mode
+Provenance ML Results
+Quick Actions
+RMSE
+Radioactive decay constants.
+Reading file...
+Recommend
+Refresh Legend
+Reload data...
+Replace
+Replot
+Reset
+Reset View
+Reset original view
+Reset to Defaults
+Retro Lab
+Right Max
+Right Min
+Right Vertex (C)
+Robust PCA
+Robust PCA Parameters
+SVG Image
+Samples: {n} | Mode: {mode} | Groups: {g}
+Save Session
+Save and load custom plot parameter sets (Grid, Fonts, Palette).
+Save and load custom plot themes.
+Save the figure
+Scale Factor
+Scale:
+SciencePlots is not available. Please ensure reference/SciencePlots-master/src exists or install scienceplots.
+Scientific Blue
+Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data.
+Search groups
+Sections
+Select Axis Columns
+Select Export Mode
+Select Language
+Select a color palette for the plot.
+Select a file, worksheet, and columns in one step.
+Select between UMAP or t-SNE embeddings, or display raw measurements in either 2D or 3D space.
+Select column for coloring points.
+Select one column for each axis. Columns must be unique.
+Select target workbook
+Select the overall look and feel of the application.
+Select the worksheet that contains the measurements you want to analyze.
+Select three columns to map to the vertices of the ternary plot (Top, Left, Right).
+Selected Isochron
+Selected Isochron (n={n}, R²={r2})
+Selected Samples
+Selection Mode
+Selection Required
+Selection cleared
+Selection exported to {path}
+Selection mode is only available in 2D views
+Set the confidence level for selection ellipses.
+Settings
+Sheets in {workbook}
+Shepard Diagram
+Spearman Correlation: {value}
+Show Age Isochrons
+Show All
+Show Confidence Ellipses
+Show Equation Overlays
+Show Growth Curves
+Show Isochron Fits
+Show Kernel Density
+Show Loadings
+Show Marginal KDE
+Show Model Age Curves
+Show Model Age Lines
+Show Model Curves
+Show Paleoisochrons
+Show Plumbotectonics Curves
+Show Right Spine
+Show Scree Plot
+Show Top Spine
+Showing first {max} groups only.
+Showing first {rows} rows across all columns.
+Showing first {rows} rows and {cols} columns.
+Size: {value}
+Spines
+Stacy-Kramers 2nd Stage
+Standard Principal Component Analysis settings.
+Standard Ternary Diagram (mpltern)
+Status
+Status: Selected
+Stop Drawing
+Stretch Strength
+Style
+Style Theme
+Style change undone
+T1 (1st Stage)
+T2 (Earth Age)
+Text
+Theme Management
+Tick
+Tick Color
+Tick Direction
+Tick Length
+Tick Size
+Tick Width
+Ticks
+Tight Bounding Box
+Tip: For Excel workbooks, you can pick the sheet in the next step.
+Title
+Title Color
+Title Pad
+Title Size
+Title Weight
+Toggle Selection Mode
+Toggle model curves, paleoisochrons and age lines.
+Tools
+Tools for exploring data relationships and statistics.
+Tooltip
+Tooltip Configuration
+Top
+Top Max
+Top Min
+Top Vertex (A)
+Transparent Background
+Tsec (2nd Stage)
+U Ratio (235/238)
+UMAP Embedding
+Unable to extract selected samples: {error}
+Unable to open filter dialog: {error}
+Unable to open target workbook: {error}
+Unable to reload data: {error}
+Upper Center
+Upper Crust
+Upper Left
+Upper Mantle
+Upper Right
+Use LaTeX for display, and Python expression for computation. Example: 1.0049*x+20.259
+Use Preset
+Use Real Age for Mu/Kappa
+Using Standard Ternary Plot.
+Data is plotted as relative proportions.
+V1V2 Parameters
+Visualization Controls
+Visualization Modes
+Weight
+Worksheet already exists. Please choose another name.
+Worksheet name cannot be empty.
+Worksheet name cannot exceed 31 characters.
+Worksheet name contains invalid characters: []:*?/\
+X Label
+Y Label
+ZartmanI,1981
+ZartmanII,1981
+Zoom Out
+Zoom to rectangle
+a0 (206/204)
+a1 (206/204)
+b0 (207/204)
+b1 (207/204)
+c0 (208/204)
+c1 (208/204)
+learning_rate
+min_dist
+min_dist: {value:.3f}
+n_components
+n_neighbors
+no selection
+openpyxl is required to write Excel files. Please install openpyxl.
+perplexity
+random_state
+support_fraction
+t-SNE Embedding
+{param}: {value:.3f}
+λ (232Th)
+λ (235U)
+λ (238U)
+μ (Mantle)
+ω (Mantle)

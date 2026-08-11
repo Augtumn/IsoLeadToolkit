@@ -81,17 +81,17 @@ class EndmemberAnalysisDialog(QDialog):
             numeric_cols = app_state.df_global.select_dtypes(
                 include=[np.number]).columns.tolist()
 
-        col_layout.addWidget(QLabel("206Pb/204Pb:"), 0, 0)
+        col_layout.addWidget(QLabel(translate("206Pb/204Pb:")), 0, 0)
         self.combo_206 = QComboBox()
         self.combo_206.addItems(numeric_cols)
         col_layout.addWidget(self.combo_206, 0, 1)
 
-        col_layout.addWidget(QLabel("207Pb/204Pb:"), 1, 0)
+        col_layout.addWidget(QLabel(translate("207Pb/204Pb:")), 1, 0)
         self.combo_207 = QComboBox()
         self.combo_207.addItems(numeric_cols)
         col_layout.addWidget(self.combo_207, 1, 1)
 
-        col_layout.addWidget(QLabel("208Pb/204Pb:"), 2, 0)
+        col_layout.addWidget(QLabel(translate("208Pb/204Pb:")), 2, 0)
         self.combo_208 = QComboBox()
         self.combo_208.addItems(numeric_cols)
         col_layout.addWidget(self.combo_208, 2, 1)
