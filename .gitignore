@@ -23,7 +23,7 @@ shereea/
 reference/
 test_isochron_fix.py
 ISOCHRON_FIX.md
-locales/reports/untranslated.txt
+locales/reports/
 *.log
 .cursor/
 .codex/
