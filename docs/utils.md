@@ -16,7 +16,8 @@
 ## 1. logger.py — 日志系统
 
 ### 职责
-配置旋转文件日志，重定向 stdout/stderr 到日志文件。
+配置旋转文件日志（主日志 + 错误日志），重定向 stdout/stderr 到日志文件，
+启动时归档历史日志，并提供控制台输出。
 
 ### LoggerWriter 类
 
@@ -40,21 +41,40 @@ class LoggerWriter:
 ```python
 def setup_logging(log_filename='isotopes_analyse.log',
                   max_bytes=50*1024*1024,    # 50MB
-                  backup_count=1)
+                  backup_count=2,
+                  *,
+                  archive=True,               # 启动时归档旧主日志
+                  console_level=None,          # 控制台级别，默认 INFO
+                  use_color=True)              # tty 时启用 ANSI 颜色
 ```
 
 **配置内容:**
-1. `RotatingFileHandler` — 50MB 旋转，保留 1 个备份
-2. 格式: `%(asctime)s [%(name)s:%(lineno)d] %(message)s`
-3. 日志级别可通过环境变量 `ISOTOPES_LOG_LEVEL` 配置 (默认 DEBUG)
-4. 静默 matplotlib 日志 (`WARNING` 级别)
-5. 静默 numba 日志 (`WARNING` 级别)
-6. 重定向 `sys.stdout` → LoggerWriter(INFO)
-7. 重定向 `sys.stderr` → LoggerWriter(ERROR)
+1. **主日志** `RotatingFileHandler` — 50MB 旋转，保留 2 个备份，DEBUG 级别
+2. **错误日志** `isotopes_analyse.error.log` — 独立旋转文件，仅 ERROR 及以上（事后排查）
+3. **控制台** `StreamHandler(stderr)` — 默认 INFO，tty 时带级别颜色
+4. 格式: `%(asctime)s [%(levelname)-8s] %(name)s:%(lineno)d: %(message)s`
+   （含级别名，8 字符左对齐）
+5. 日志级别可通过环境变量 `ISOTOPES_LOG_LEVEL` 配置 (默认 DEBUG)
+6. **启动归档**: `archive=True` 时把上次主日志重命名为
+   `isotopes_analyse.<YYYYMMDD-HHMMSS>.log`，最多保留 5 份历史
+7. 静默第三方噪声日志：matplotlib、matplotlib.font_manager、numba、PIL（WARNING）
+8. 重定向 `sys.stdout` → LoggerWriter(INFO)、`sys.stderr` → LoggerWriter(ERROR)
+9. handler 安装幂等（重复调用替换而非堆叠）
 
-### 日志文件位置
-- 开发环境: `项目根目录/isotopes_analyse.log`
+### 日志文件
+| 文件 | 级别 | 用途 |
+|------|------|------|
+| `isotopes_analyse.log` | DEBUG | 全量运行日志（含 print 捕获） |
+| `isotopes_analyse.error.log` | ERROR+ | 仅错误/崩溃，快速定位 |
+| `isotopes_analyse.<ts>.log` | — | 历史会话归档（启动时生成，保留 5 份） |
+
+- 开发环境: `项目根目录/`
 - 打包环境: 可执行文件同目录
+
+### 应用内日志查看器
+UI 菜单 `文件 > 查看日志...`（`ui/dialogs/log_viewer.py`）：
+- 主日志 / 错误日志切换，行数可调（50–5000 行尾部）
+- 刷新、打开文件（系统默认编辑器）、ANSI 码剥离
 
 ---
 
@@ -71,6 +91,8 @@ def setup_logging(log_filename='isotopes_analyse.log',
 logger.py (无内部依赖)
   ↑
 main.py (启动时调用 setup_logging())
+  ↑
+ui/dialogs/log_viewer.py (读取主日志/错误日志，只读)
 ```
 
 ---

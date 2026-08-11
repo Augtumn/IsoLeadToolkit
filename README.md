@@ -100,9 +100,10 @@ uv run pyinstaller build.spec     # → dist/IsotopesAnalyse/
 - 6 个分区对话框（Data / Display / Analysis / Export / Legend / Geochemistry），菜单触发
 - 快捷键：Ctrl+D / Ctrl+Shift+D / Ctrl+Shift+A / Ctrl+E / Ctrl+L / Ctrl+G
 - 状态栏实时信息（样品数 / 渲染模式 / 分组数）+ 嵌入进度条
-- 中文 / 英文实时切换（1000+ 翻译条目）
+- 中文 / 英文实时切换（1080+ 翻译条目）
 - 图例可拖拽排序、双击置顶、显隐切换
 - 显示面板搜索过滤、样式撤销（Ctrl+Z）
+- 应用内日志查看器（文件 → 查看日志），主日志 / 错误日志切换、行数可调
 
 ### 交互
 

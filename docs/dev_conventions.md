@@ -204,6 +204,7 @@ logger.info(
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
 logging.getLogger('numba').setLevel(logging.WARNING)
+logging.getLogger('PIL').setLevel(logging.WARNING)
 ```
 
 ### 4.5 Qt 调试日志（崩溃排查）
@@ -223,6 +224,24 @@ ISOTOPES_QT_DEBUG=1
 **规范**：
 - Qt 消息统一通过 `qInstallMessageHandler` 写入日志，格式为 `[QT][级别][category] ...`
 - 不在业务代码中散落 `print()` 调试输出
+
+### 4.6 日志文件体系
+
+`utils/logger.py::setup_logging()` 在启动时建立三层日志输出：
+
+| 输出 | 文件/流 | 级别 | 用途 |
+|------|---------|------|------|
+| 主日志 | `isotopes_analyse.log`（50MB 旋转，2 备份） | DEBUG | 全量运行记录 |
+| 错误日志 | `isotopes_analyse.error.log`（旋转） | ERROR+ | 事后快速定位失败 |
+| 控制台 | stderr | INFO（tty 带颜色） | 交互式观察 |
+
+**启动归档**：每次启动把上次主日志重命名为 `isotopes_analyse.<YYYYMMDD-HHMMSS>.log`，
+最多保留 5 份历史，便于回溯会话。
+
+**规范**：
+- 新功能若产生关键失败路径，确保 `logger.error/warning` 落在 ERROR 日志中（无需额外处理，级别天然分离）
+- 排查流程：`文件 > 查看日志...` 或直接看 `isotopes_analyse.error.log` 尾部
+- 级别覆盖：`ISOTOPES_LOG_LEVEL=DEBUG|INFO|WARNING|ERROR` 环境变量（默认 DEBUG）
 - 新增调试入口时同步更新 `docs/ui.md` 与 `README.md`
 
 ---
