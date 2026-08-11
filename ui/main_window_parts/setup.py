@@ -130,7 +130,13 @@ class MainWindowSetupMixin:
         exit_action.triggered.connect(self.close)
         self.file_menu.addAction(exit_action)
 
-        self._menu_actions = {"reload": reload_action, "exit": exit_action}
+        self.file_menu.addSeparator()
+
+        log_action = QAction(translate("View Log..."), self)
+        log_action.triggered.connect(self._show_log_viewer)
+        self.file_menu.addAction(log_action)
+
+        self._menu_actions = {"reload": reload_action, "exit": exit_action, "log": log_action}
 
         panels_menu = menubar.addMenu(translate("Panels"))
         self.panels_menu = panels_menu
@@ -161,6 +167,15 @@ class MainWindowSetupMixin:
             app_state.register_language_listener(self._refresh_language)
         except Exception:
             pass
+
+    def _show_log_viewer(self) -> None:
+        """Open the in-app log viewer dialog."""
+        try:
+            from ui.dialogs.log_viewer import show_log_viewer
+
+            show_log_viewer(self)
+        except Exception as err:
+            logger.warning("Failed to open log viewer: %s", err)
 
     def _setup_toolbar(self):
         """设置工具栏"""

@@ -1072,5 +1072,15 @@
   "206Pb/204Pb:": "206Pb/204Pb:",
   "207Pb/204Pb:": "207Pb/204Pb:",
   "208Pb/204Pb:": "208Pb/204Pb:",
-  "Default": "Default"
+  "Default": "Default",
+  "Log Viewer": "Log Viewer",
+  "Log Source:": "Log Source:",
+  "Main Log": "Main Log",
+  "Error Log": "Error Log",
+  "Lines:": "Lines:",
+  "Refresh": "Refresh",
+  "Open File": "Open File",
+  "No log file found.": "No log file found.",
+  "Failed to read log: {error}": "Failed to read log: {error}",
+  "View Log...": "View Log..."
 }

@@ -1072,5 +1072,15 @@
   "206Pb/204Pb:": "206Pb/204Pb:",
   "207Pb/204Pb:": "207Pb/204Pb:",
   "208Pb/204Pb:": "208Pb/204Pb:",
-  "Default": "Default"
+  "Default": "Default",
+  "Log Viewer": "日志查看器",
+  "Log Source:": "日志来源：",
+  "Main Log": "主日志",
+  "Error Log": "错误日志",
+  "Lines:": "行数：",
+  "Refresh": "刷新",
+  "Open File": "打开文件",
+  "No log file found.": "未找到日志文件。",
+  "Failed to read log: {error}": "读取日志失败：{error}",
+  "View Log...": "查看日志..."
 }
