@@ -163,3 +163,16 @@ def test_estimate_density_curve_supports_scott_and_silverman_auto_methods() -> N
     _, scott_density = scott_curve
     _, silverman_density = silverman_curve
     assert not np.allclose(scott_density, silverman_density)
+
+
+def test_lazy_import_seaborn_exposes_sns_attribute() -> None:
+    """Regression: rendering/kde.py and plot2d.py call
+    ``kde_utils.lazy_import_seaborn()`` then use ``kde_utils.sns``. The
+    helper must exist and populate the module-level ``sns`` attribute,
+    otherwise KDE overlays fail silently (AttributeError swallowed)."""
+    assert callable(kde_helpers.lazy_import_seaborn)
+
+    seaborn_mod = kde_helpers.lazy_import_seaborn()
+    assert seaborn_mod is not None
+    assert kde_helpers.sns is not None
+    assert hasattr(kde_helpers.sns, "kdeplot")

@@ -36,6 +36,28 @@ _KDE_ALLOWED_AUTO_BW_METHODS = ("scott", "silverman")
 KernelDensity = None
 _kernel_density_import_checked = False
 
+sns = None
+_seaborn_import_checked = False
+
+
+def lazy_import_seaborn():
+    """Lazy import seaborn for KDE overlay rendering.
+
+    Exposed on the ``kde_utils`` module so callers (rendering/kde.py,
+    rendering/raw/plot2d.py) can do ``kde_utils.lazy_import_seaborn()`` and
+    then use ``kde_utils.sns``. Without this the KDE overlays fail
+    silently with an AttributeError swallowed by their try/except blocks.
+    """
+    global sns, _seaborn_import_checked
+    if sns is None and not _seaborn_import_checked:
+        _seaborn_import_checked = True
+        try:
+            import seaborn as _sns
+            sns = _sns
+        except Exception as exc:
+            logger.warning("Failed to import seaborn for KDE overlays: %s", exc)
+    return sns
+
 
 def _lazy_import_kernel_density():
     """Lazy import sklearn KernelDensity for optional non-Gaussian kernels."""
