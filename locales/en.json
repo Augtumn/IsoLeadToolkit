@@ -1033,7 +1033,6 @@
   "Search Radius": "Search Radius",
   "Radius:": "Radius:",
   "Min Neighbors:": "Min Neighbors:",
-  "Search": "Search",
   "Add as group column": "Add as group column",
   "Apply to Data": "Apply to Data",
   "Query Point": "Query Point",
@@ -1052,6 +1051,21 @@
   "Export Data": "Export Data",
   "Export data with new group column to CSV/Excel": "Export data with new group column to CSV/Excel",
   "No data to export.": "No data to export.",
-  "Data exported to: {path}": "Data exported to: {path}"
+  "Data exported to: {path}": "Data exported to: {path}",
+  "Marker size (1-2000)": "Marker size (1-2000)",
+  "Point transparency (0-1)": "Point transparency (0-1)",
+  "Figure resolution (DPI)": "Figure resolution (DPI)",
+  "Grid line transparency (0-1)": "Grid line transparency (0-1)",
+  "Grid line style": "Grid line style",
+  "Show minor grid lines": "Show minor grid lines",
+  "Label repulsion strength": "Label repulsion strength",
+  "Export Data as CSV": "Export Data as CSV",
+  "Export Data as Excel": "Export Data as Excel",
+  "Next Panel": "Next Panel",
+  "Padding": "Padding",
+  "Previous Panel": "Previous Panel",
+  "Settings applied": "Settings applied",
+  "Shepard Diagram\\nSpearman Correlation: {value}": "Shepard Diagram\\nSpearman Correlation: {value}",
+  "Tight BBox": "Tight BBox",
+  "Transparent": "Transparent"
 }
-

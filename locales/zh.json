@@ -1033,7 +1033,6 @@
   "Search Radius": "搜索半径",
   "Radius:": "半径：",
   "Min Neighbors:": "最小邻居数：",
-  "Search": "搜索",
   "Add as group column": "添加为分组列",
   "Apply to Data": "应用到数据",
   "Query Point": "查询点",
@@ -1052,6 +1051,21 @@
   "Export Data": "导出数据",
   "Export data with new group column to CSV/Excel": "导出带新分组列的数据到 CSV/Excel",
   "No data to export.": "无数据可导出。",
-  "Data exported to: {path}": "数据已导出至：{path}"
+  "Data exported to: {path}": "数据已导出至：{path}",
+  "Marker size (1-2000)": "数据点标记大小，范围 1-2000。",
+  "Point transparency (0-1)": "数据点透明度，0 为完全透明，1 为完全不透明。",
+  "Figure resolution (DPI)": "图形分辨率（每英寸点数）。较高值产生更清晰的图像，但会增加文件大小。",
+  "Grid line transparency (0-1)": "网格线透明度，0 为完全透明，1 为完全不透明。",
+  "Grid line style": "网格线样式：实线(-)、虚线(--)、点划线(-.)、点线(:)。",
+  "Show minor grid lines": "是否显示次刻度网格线。",
+  "Label repulsion strength": "标签排斥力强度。较大值使标签更分散。",
+  "Export Data as CSV": "导出数据为 CSV",
+  "Export Data as Excel": "导出数据为 Excel",
+  "Next Panel": "下一个面板",
+  "Padding": "内边距",
+  "Previous Panel": "上一个面板",
+  "Settings applied": "设置已应用",
+  "Shepard Diagram\\nSpearman Correlation: {value}": "Shepard Diagram\\nSpearman Correlation: {value}",
+  "Tight BBox": "紧凑边界框",
+  "Transparent": "透明"
 }
-
