@@ -14,15 +14,32 @@ from .compute_ternary import compute_ternary_embedding
 logger = logging.getLogger(__name__)
 
 
+def _resolve_legacy_aliases(value: str) -> str | None:
+    """Map legacy render-mode/algorithm aliases to canonical names.
+
+    Shared by :func:`normalize_algorithm` and the legend module's
+    ``normalize_render_mode`` so the PB_MODELS / ISOCHRON alias mapping
+    lives in exactly one place. Returns ``None`` when *value* is not a
+    legacy alias (callers apply their own case convention).
+
+    Note: *value* must already be normalized to the caller's case
+    convention (upper for algorithms, verbatim for legend render modes).
+    """
+    if value in ('PB_MODELS_76', 'PB_MODELS_86'):
+        return 'PB_EVOL_76' if value.endswith('_76') else 'PB_EVOL_86'
+    if value in ('ISOCHRON1', 'ISOCHRON2'):
+        return 'PB_EVOL_76' if value == 'ISOCHRON1' else 'PB_EVOL_86'
+    return None
+
+
 def normalize_algorithm(algorithm: str) -> str:
     """Normalize legacy algorithm aliases to canonical names."""
     actual_algorithm = algorithm.strip().upper() if isinstance(algorithm, str) else str(algorithm)
     if actual_algorithm == 'ROBUSTPCA':
         return 'RobustPCA'
-    if actual_algorithm in ('PB_MODELS_76', 'PB_MODELS_86'):
-        return 'PB_EVOL_76' if actual_algorithm.endswith('_76') else 'PB_EVOL_86'
-    if actual_algorithm in ('ISOCHRON1', 'ISOCHRON2'):
-        return 'PB_EVOL_76' if actual_algorithm == 'ISOCHRON1' else 'PB_EVOL_86'
+    canonical = _resolve_legacy_aliases(actual_algorithm)
+    if canonical is not None:
+        return canonical
     return actual_algorithm
 
 
