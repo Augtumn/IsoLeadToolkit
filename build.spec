@@ -60,7 +60,6 @@ for pkg in (
     'seaborn',
     'scipy',
     'openpyxl',
-    'xlsxwriter',
     'python_calamine',
     'xgboost',
     'imblearn',
