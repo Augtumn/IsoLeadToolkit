@@ -328,14 +328,27 @@ class ProvenanceMLWorkflowMixin:
             full_labels[:] = self._result['full_labels']
             full_probs[:] = self._result['full_probs']
 
-        app_state.df_global[col_label] = full_labels
-        app_state.df_global[col_prob] = full_probs
+        df = app_state.df_global.copy()
+        df[col_label] = full_labels
+        df[col_prob] = full_probs
 
-        if col_label not in app_state.group_cols:
-            app_state.group_cols.append(col_label)
+        # Commit through the gateway so the StateStore snapshot stays in sync;
+        # direct app_state.df_global[...] writes bypass it and are silently
+        # lost on the next dispatch (df_global is snapshot-shared by reference).
+        state_gateway.set_dataframe_and_source(
+            df,
+            file_path=getattr(app_state, 'file_path', ''),
+            sheet_name=getattr(app_state, 'sheet_name', None),
+        )
 
+        groups = list(getattr(app_state, 'group_cols', []) or [])
+        if col_label not in groups:
+            groups.append(col_label)
+        data_cols = list(getattr(app_state, 'data_cols', []) or [])
+        state_gateway.set_group_data_columns(groups, data_cols)
         state_gateway.set_last_group_col(col_label)
         state_gateway.set_visible_groups(None)
+        state_gateway.bump_data_version()
 
         if hasattr(app_state, '_notify_listeners'):
             app_state._notify_listeners()

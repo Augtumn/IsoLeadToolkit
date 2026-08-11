@@ -366,14 +366,24 @@ class EndmemberAnalysisDialog(QDialog):
             for i, label in enumerate(result_labels):
                 full_labels[i] = display_names.get(label, label) if label else 'Unknown'
 
-        app_state.df_global[col_name] = full_labels
+        df = app_state.df_global.copy()
+        df[col_name] = full_labels
 
-        if col_name not in app_state.group_cols:
-            app_state.group_cols.append(col_name)
+        # Commit through the gateway so the StateStore snapshot stays in sync.
+        state_gateway.set_dataframe_and_source(
+            df,
+            file_path=getattr(app_state, 'file_path', ''),
+            sheet_name=getattr(app_state, 'sheet_name', None),
+        )
 
-        # 触发重绘
+        groups = list(getattr(app_state, 'group_cols', []) or [])
+        if col_name not in groups:
+            groups.append(col_name)
+        data_cols = list(getattr(app_state, 'data_cols', []) or [])
+        state_gateway.set_group_data_columns(groups, data_cols)
         state_gateway.set_last_group_col(col_name)
         state_gateway.set_visible_groups(None)
+        state_gateway.bump_data_version()
 
         if hasattr(app_state, '_notify_listeners'):
             app_state._notify_listeners()
