@@ -228,9 +228,9 @@ class DataPanelGeochemMixin:
         if model_name not in ("V1V2 (Geokit)", "V1V2 (Zhu 1993)"):
             return
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
 
-            engine.load_preset(model_name)
+            geochem_usecase.load_preset(model_name)
             if app_state.render_mode == "V1V2":
                 self._on_change()
         except Exception:
@@ -239,7 +239,7 @@ class DataPanelGeochemMixin:
     def _on_v1v2_param_change(self):
         """Update V1V2 time parameters."""
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
         except Exception:
             return
 
@@ -251,7 +251,7 @@ class DataPanelGeochemMixin:
                 params["T2"] = self.v1v2_t2_spin.value() * 1e6
 
             if params:
-                engine.update_parameters(params)
+                geochem_usecase.update_parameters(params)
                 if app_state.render_mode == "V1V2":
                     self._on_change()
         except Exception:

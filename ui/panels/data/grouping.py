@@ -31,7 +31,7 @@ class DataPanelGroupingMixin:
 
     def _sync_geochem_model_for_mode(self, mode):
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
         except Exception:
             return
 
@@ -44,17 +44,17 @@ class DataPanelGroupingMixin:
         if not target_model:
             return
 
-        current_model = getattr(engine, "current_model_name", "")
+        current_model = geochem_usecase.get_current_model_name()
         if current_model == target_model:
             return
 
         # In dialog mode, DataPanel and GeoPanel are opened separately,
         # so DataPanel may not hold a live geo_model_combo reference.
-        available_models = engine.get_available_models() if hasattr(engine, "get_available_models") else []
+        available_models = geochem_usecase.get_available_models()
         if target_model not in available_models:
             return
 
-        if engine.load_preset(target_model):
+        if geochem_usecase.load_preset(target_model):
             state_gateway.set_geo_model_name(target_model)
 
         panel = getattr(self, "geo_panel", None)

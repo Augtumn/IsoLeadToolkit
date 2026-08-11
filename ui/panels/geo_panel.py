@@ -64,8 +64,8 @@ class GeoPanel(BasePanel):
 
         self.geo_model_combo = QComboBox()
         try:
-            from data.geochemistry import engine
-            available_models = engine.get_available_models()
+            from application.use_cases import geochemistry as geochem_usecase
+            available_models = geochem_usecase.get_available_models()
             self.geo_model_combo.addItems(available_models)
             current_model = getattr(app_state, 'geo_model_name', 'Stacey & Kramers (2nd Stage)')
             if current_model in available_models:
@@ -177,9 +177,9 @@ class GeoPanel(BasePanel):
         layout.addWidget(section_toolbox)
 
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
 
-            self._update_geo_param_visibility(self.geo_model_combo.currentText(), engine.get_parameters())
+            self._update_geo_param_visibility(self.geo_model_combo.currentText(), geochem_usecase.get_parameters())
         except Exception:
             pass
 
@@ -246,10 +246,10 @@ class GeoPanel(BasePanel):
             return
 
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
 
-            if engine.load_preset(model_name):
-                current_params = engine.get_parameters()
+            if geochem_usecase.load_preset(model_name):
+                current_params = geochem_usecase.get_parameters()
 
                 for key in ('T1', 'T2', 'Tsec'):
                     if key in self.geo_params:
@@ -282,7 +282,7 @@ class GeoPanel(BasePanel):
     def _on_apply_geo_params(self):
         """应用地球化学参数"""
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
 
             params = {}
 
@@ -298,7 +298,7 @@ class GeoPanel(BasePanel):
                 if key in self.geo_params and self.geo_params[key].isVisible():
                     params[key] = self.geo_params[key].value()
 
-            engine.update_parameters(params)
+            geochem_usecase.update_parameters(params)
             logger.info("Applied geochemistry parameters")
 
             if app_state.render_mode in ('V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE'):
@@ -321,10 +321,10 @@ class GeoPanel(BasePanel):
     def _on_reset_geo_params(self):
         """重置地球化学参数为默认值"""
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
 
             model_name = self.geo_model_combo.currentText()
-            if engine.load_preset(model_name):
+            if geochem_usecase.load_preset(model_name):
                 self._on_geo_model_change(model_name)
                 QMessageBox.information(
                     self,

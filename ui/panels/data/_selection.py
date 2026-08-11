@@ -89,9 +89,9 @@ class _DataPanelSelectionBuild:
         v1v2_layout = QVBoxLayout()
 
         try:
-            from data.geochemistry import engine
+            from application.use_cases import geochemistry as geochem_usecase
 
-            params = engine.get_parameters()
+            params = geochem_usecase.get_parameters()
         except Exception:
             params = {}
 
