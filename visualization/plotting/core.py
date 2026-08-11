@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 
 from core import CONFIG, app_state, state_gateway
 from core.cache import build_embedding_cache_key
-from . import data as data_utils
 from .data import _lazy_import_ml, _get_analysis_data
 from .rendering.common.state_access import (
     _active_subset_indices,
@@ -20,7 +19,6 @@ from .rendering.common.state_access import (
 
 logger = logging.getLogger(__name__)
 
-umap = None
 Axes3D = None
 mpltern = None
 
@@ -31,12 +29,6 @@ def _build_subset_key() -> str | int:
         return 'full'
     return hash(tuple(sorted(list(subset_indices))))
 
-
-def _lazy_import_umap() -> None:
-    global umap
-    if umap is None:
-        import umap as _umap
-        umap = _umap
 
 def _lazy_import_mplot3d() -> None:
     global Axes3D
@@ -88,7 +80,7 @@ def _ensure_axes(dimensions: int | str = 2) -> Any | None:
 def get_umap_embedding(params: dict) -> np.ndarray | None:
     """Get or compute UMAP embedding with caching."""
     try:
-        _lazy_import_umap()
+        from .rendering.embedding.compute_algorithms import compute_umap_embedding
 
         subset_key = _build_subset_key()
 
@@ -102,8 +94,11 @@ def get_umap_embedding(params: dict) -> np.ndarray | None:
             logger.error("No data available for UMAP computation")
             return None
 
-        reducer = umap.UMAP(**params)
-        embedding = reducer.fit_transform(X)
+        embedding = compute_umap_embedding(X, params)
+        if embedding is None:
+            logger.error("UMAP computation failed")
+            return None
+
         app_state.embedding_cache.set(key, embedding)
         state_gateway.set_last_embedding(embedding, 'UMAP')
         return embedding
@@ -115,7 +110,7 @@ def get_umap_embedding(params: dict) -> np.ndarray | None:
 def get_tsne_embedding(params: dict) -> np.ndarray | None:
     """Get or compute t-SNE embedding with caching."""
     try:
-        _lazy_import_ml()
+        from .rendering.embedding.compute_algorithms import compute_tsne_embedding
 
         subset_key = _build_subset_key()
 
@@ -129,26 +124,11 @@ def get_tsne_embedding(params: dict) -> np.ndarray | None:
             logger.error("No data available for t-SNE computation")
             return None
 
-        n_samples = X.shape[0]
-        perplexity = float(params.get('perplexity', 30))
-        if n_samples <= 1:
-            logger.error("Not enough samples for t-SNE")
+        embedding = compute_tsne_embedding(X, params)
+        if embedding is None:
+            logger.error("t-SNE computation failed")
             return None
-        if perplexity >= n_samples:
-            perplexity = max(2, n_samples - 1)
 
-        learning_rate = max(float(params.get('learning_rate', 200)), 10)
-
-        reducer = data_utils.TSNE(
-            n_components=params.get('n_components', 2),
-            perplexity=perplexity,
-            learning_rate=learning_rate,
-            random_state=params.get('random_state', 42),
-            verbose=0,
-            n_jobs=-1
-        )
-
-        embedding = reducer.fit_transform(X)
         app_state.embedding_cache.set(key, embedding)
         state_gateway.set_last_embedding(embedding, 'tSNE')
         return embedding
@@ -160,7 +140,8 @@ def get_tsne_embedding(params: dict) -> np.ndarray | None:
 def get_pca_embedding(params: dict) -> np.ndarray | None:
     """Get or compute PCA embedding with caching."""
     try:
-        _lazy_import_ml()
+        from .rendering.embedding.compute_algorithms import compute_pca_embedding
+
         subset_key = _build_subset_key()
 
         key = build_embedding_cache_key(app_state, 'pca', params, subset_key)
@@ -173,25 +154,20 @@ def get_pca_embedding(params: dict) -> np.ndarray | None:
             logger.error("No data available for PCA computation")
             return None
 
-        scaler = data_utils.StandardScaler()
-        try:
-            X_scaled = scaler.fit_transform(X)
-            if np.isnan(X_scaled).any():
-                X_scaled = np.nan_to_num(X_scaled)
-        except Exception:
-            X_scaled = X
+        result = compute_pca_embedding(X, params)
+        if result is None:
+            logger.error("PCA computation failed")
+            return None
 
-        reducer = data_utils.PCA(
-            n_components=params.get('n_components', 2),
-            random_state=params.get('random_state', 42)
-        )
-
-        embedding = reducer.fit_transform(X_scaled)
-        state_gateway.set_pca_diagnostics(
-            last_pca_variance=reducer.explained_variance_ratio_,
-            last_pca_components=reducer.components_,
-            current_feature_names=_data_cols(),
-        )
+        embedding = result["embedding"]
+        diagnostics: dict[str, Any] = {
+            "last_pca_components": result.get("components"),
+            "current_feature_names": _data_cols(),
+        }
+        variance = result.get("variance")
+        if variance is not None:
+            diagnostics["last_pca_variance"] = variance
+        state_gateway.set_pca_diagnostics(**diagnostics)
 
         app_state.embedding_cache.set(key, embedding)
         state_gateway.set_last_embedding(embedding, 'PCA')
@@ -204,7 +180,7 @@ def get_pca_embedding(params: dict) -> np.ndarray | None:
 def get_robust_pca_embedding(params: dict) -> np.ndarray | None:
     """Get or compute Robust PCA (via MinCovDet) embedding with caching."""
     try:
-        _lazy_import_ml()
+        from .rendering.embedding.compute_algorithms import compute_robust_pca_embedding
 
         subset_key = _build_subset_key()
 
@@ -218,42 +194,21 @@ def get_robust_pca_embedding(params: dict) -> np.ndarray | None:
             logger.error("No data available for Robust PCA computation")
             return None
 
-        scaler = data_utils.StandardScaler()
-        try:
-            X_scaled = scaler.fit_transform(X)
-            if np.isnan(X_scaled).any():
-                X_scaled = np.nan_to_num(X_scaled)
-        except Exception:
-            X_scaled = X
+        result = compute_robust_pca_embedding(X, params)
+        if result is None:
+            logger.error("Robust PCA computation failed")
+            return None
 
-        if X_scaled.shape[0] <= X_scaled.shape[1]:
-            reducer = data_utils.PCA(
-                n_components=params.get('n_components', 2),
-                random_state=params.get('random_state', 42)
-            )
-            embedding = reducer.fit_transform(X_scaled)
-            state_gateway.set_pca_diagnostics(
-                last_pca_variance=reducer.explained_variance_ratio_,
-                last_pca_components=reducer.components_,
-            )
-        else:
-            support_fraction = params.get('support_fraction', 0.75)
-            mcd = data_utils.MinCovDet(random_state=params.get('random_state', 42), support_fraction=support_fraction)
-            mcd.fit(X_scaled)
-            cov = mcd.covariance_
-            mean = mcd.location_
-            eigvals, eigvecs = np.linalg.eigh(cov)
-            order = np.argsort(eigvals)[::-1]
-            eigvecs = eigvecs[:, order]
-            eigvals = eigvals[order]
-            n_components = params.get('n_components', 2)
-            components = eigvecs[:, :n_components]
-            embedding = (X_scaled - mean) @ components
-            if eigvals.sum() > 0:
-                state_gateway.set_pca_diagnostics(last_pca_variance=eigvals[:n_components] / eigvals.sum())
-            state_gateway.set_pca_diagnostics(last_pca_components=components.T)
+        embedding = result["embedding"]
+        diagnostics: dict[str, Any] = {
+            "last_pca_components": result.get("components"),
+            "current_feature_names": _data_cols(),
+        }
+        variance = result.get("variance")
+        if variance is not None:
+            diagnostics["last_pca_variance"] = variance
+        state_gateway.set_pca_diagnostics(**diagnostics)
 
-        state_gateway.set_pca_diagnostics(current_feature_names=_data_cols())
         app_state.embedding_cache.set(key, embedding)
         state_gateway.set_last_embedding(embedding, 'RobustPCA')
         return embedding

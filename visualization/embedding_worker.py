@@ -7,6 +7,13 @@ from typing import Any
 import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 
+from .plotting.rendering.embedding.compute_algorithms import (
+    compute_pca_embedding,
+    compute_robust_pca_embedding,
+    compute_tsne_embedding,
+    compute_umap_embedding,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -91,112 +98,41 @@ class EmbeddingWorker(QThread):
     def _compute_embedding(self, algorithm: str, x: np.ndarray) -> dict[str, Any] | None:
         if algorithm == "UMAP":
             self.progress.emit(self.task_token, 20, "umap_init")
-            import umap
-
-            reducer = umap.UMAP(**self.params)
             self.progress.emit(self.task_token, 40, "umap_fit")
-            embedding = reducer.fit_transform(x)
+            embedding = compute_umap_embedding(x, self.params)
             return {"embedding": embedding, "meta": {}}
 
         if algorithm == "tSNE":
             self.progress.emit(self.task_token, 20, "tsne_init")
-            from sklearn.manifold import TSNE
-
-            n_samples = x.shape[0]
-            perplexity = float(self.params.get("perplexity", 30))
-            if n_samples <= 1:
-                return None
-            if perplexity >= n_samples:
-                perplexity = max(2, n_samples - 1)
-
-            learning_rate = max(float(self.params.get("learning_rate", 200)), 10)
-            reducer = TSNE(
-                n_components=self.params.get("n_components", 2),
-                perplexity=perplexity,
-                learning_rate=learning_rate,
-                random_state=self.params.get("random_state", 42),
-                verbose=0,
-                n_jobs=-1,
-            )
             self.progress.emit(self.task_token, 45, "tsne_fit")
-            embedding = reducer.fit_transform(x)
+            embedding = compute_tsne_embedding(x, self.params)
             return {"embedding": embedding, "meta": {}}
 
         if algorithm == "PCA":
             self.progress.emit(self.task_token, 20, "pca_scale")
-            from sklearn.decomposition import PCA
-            from sklearn.preprocessing import StandardScaler
-
-            scaler = StandardScaler()
-            try:
-                x_scaled = scaler.fit_transform(x)
-                if np.isnan(x_scaled).any():
-                    x_scaled = np.nan_to_num(x_scaled)
-            except Exception:
-                x_scaled = x
-
-            reducer = PCA(
-                n_components=self.params.get("n_components", 2),
-                random_state=self.params.get("random_state", 42),
-            )
             self.progress.emit(self.task_token, 50, "pca_fit")
-            embedding = reducer.fit_transform(x_scaled)
+            result = compute_pca_embedding(x, self.params)
             return {
-                "embedding": embedding,
+                "embedding": result["embedding"],
                 "meta": {
-                    "last_pca_variance": reducer.explained_variance_ratio_,
-                    "last_pca_components": reducer.components_,
+                    "last_pca_variance": result.get("variance"),
+                    "last_pca_components": result.get("components"),
                     "current_feature_names": self.feature_names,
                 },
             }
 
         if algorithm == "RobustPCA":
             self.progress.emit(self.task_token, 20, "robust_scale")
-            from sklearn.covariance import MinCovDet
-            from sklearn.decomposition import PCA
-            from sklearn.preprocessing import StandardScaler
-
-            scaler = StandardScaler()
-            try:
-                x_scaled = scaler.fit_transform(x)
-                if np.isnan(x_scaled).any():
-                    x_scaled = np.nan_to_num(x_scaled)
-            except Exception:
-                x_scaled = x
-
-            meta: dict[str, Any] = {"current_feature_names": self.feature_names}
-            if x_scaled.shape[0] <= x_scaled.shape[1]:
-                reducer = PCA(
-                    n_components=self.params.get("n_components", 2),
-                    random_state=self.params.get("random_state", 42),
-                )
+            if x.shape[0] <= x.shape[1]:
                 self.progress.emit(self.task_token, 50, "robust_fallback_pca_fit")
-                embedding = reducer.fit_transform(x_scaled)
-                meta["last_pca_variance"] = reducer.explained_variance_ratio_
-                meta["last_pca_components"] = reducer.components_
-                return {"embedding": embedding, "meta": meta}
-
-            support_fraction = self.params.get("support_fraction", 0.75)
-            mcd = MinCovDet(
-                random_state=self.params.get("random_state", 42),
-                support_fraction=support_fraction,
-            )
-            self.progress.emit(self.task_token, 40, "robust_mcd_fit")
-            mcd.fit(x_scaled)
-
-            cov = mcd.covariance_
-            mean = mcd.location_
-            eigvals, eigvecs = np.linalg.eigh(cov)
-            order = np.argsort(eigvals)[::-1]
-            eigvecs = eigvecs[:, order]
-            eigvals = eigvals[order]
-            n_components = self.params.get("n_components", 2)
-            components = eigvecs[:, :n_components]
-            embedding = (x_scaled - mean) @ components
-
-            if eigvals.sum() > 0:
-                meta["last_pca_variance"] = eigvals[:n_components] / eigvals.sum()
-            meta["last_pca_components"] = components.T
-            return {"embedding": embedding, "meta": meta}
+            else:
+                self.progress.emit(self.task_token, 40, "robust_mcd_fit")
+            result = compute_robust_pca_embedding(x, self.params)
+            meta = {
+                "last_pca_variance": result.get("variance"),
+                "last_pca_components": result.get("components"),
+                "current_feature_names": self.feature_names,
+            }
+            return {"embedding": result["embedding"], "meta": meta}
 
         return None
