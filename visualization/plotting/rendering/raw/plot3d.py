@@ -34,7 +34,7 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
 
         missing = [col for col in data_columns if col not in df_global.columns]
         if missing:
-            logger.error(f'Missing columns for 3D plot: {missing}')
+            logger.error('Missing columns for 3D plot: %s', missing)
             return False
 
         _ensure_axes(dimensions=3)
@@ -55,7 +55,7 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             return False
 
         if group_col not in df_plot.columns:
-            logger.error(f'Column not found: {group_col}')
+            logger.error('Column not found: %s', group_col)
             return False
 
         df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
@@ -119,7 +119,7 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
                 show_marginal_kde=False,
             )
         except Exception as legend_err:
-            logger.warning(f'3D legend creation error: {legend_err}')
+            logger.warning('3D legend creation error: %s', legend_err)
 
         subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
         title = (
@@ -140,6 +140,6 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
         return True
 
     except Exception as err:
-        logger.error(f'3D plot failed: {err}')
+        logger.error('3D plot failed: %s', err)
         traceback.print_exc()
         return False
