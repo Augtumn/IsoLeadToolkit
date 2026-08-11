@@ -10,21 +10,29 @@ import pandas as pd
 from core import app_state, state_gateway
 
 from ...core import _get_pb_columns, _get_subset_dataframe
-from ...data import _get_analysis_data, _lazy_import_geochemistry
+from ...data import _lazy_import_geochemistry
 from ..common.state_access import _data_cols
 
 logger = logging.getLogger(__name__)
 
 
 def compute_v1v2_embedding() -> np.ndarray | None:
-    """Compute V1V2 embedding from selected Pb isotope columns."""
+    """Compute V1V2 embedding from selected Pb isotope columns.
+
+    Uses the raw subset values (NaN preserved, not imputed): V1V2 requires
+    physically meaningful 206Pb/204Pb, 207Pb/204Pb and 208Pb/204Pb ratios —
+    imputing missing values with 0 makes the model-age solver return NaN for
+    those rows, which silently drops the whole point from the plot. Keeping
+    NaN lets the renderer skip only the incomplete rows while preserving
+    row-count alignment with the plot dataframe.
+    """
     geochemistry, calculate_all_parameters = _lazy_import_geochemistry()
     if calculate_all_parameters is None:
         logger.error('V1V2 module not loaded')
         return None
 
-    x_data, _ = _get_analysis_data()
-    if x_data is None:
+    df_subset, _ = _get_subset_dataframe()
+    if df_subset is None:
         return None
 
     cols = _data_cols()
@@ -39,13 +47,9 @@ def compute_v1v2_embedding() -> np.ndarray | None:
         )
         return None
 
-    idx_206 = cols.index(col_206)
-    idx_207 = cols.index(col_207)
-    idx_208 = cols.index(col_208)
-
-    pb206 = x_data[:, idx_206]
-    pb207 = x_data[:, idx_207]
-    pb208 = x_data[:, idx_208]
+    pb206 = pd.to_numeric(df_subset[col_206], errors='coerce').values
+    pb207 = pd.to_numeric(df_subset[col_207], errors='coerce').values
+    pb208 = pd.to_numeric(df_subset[col_208], errors='coerce').values
 
     try:
         v1v2_params = state_gateway.get_v1v2_params()
