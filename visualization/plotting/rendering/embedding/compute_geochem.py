@@ -11,7 +11,6 @@ from core import app_state, state_gateway
 
 from ...core import _get_pb_columns, _get_subset_dataframe
 from ...data import _lazy_import_geochemistry
-from ..common.state_access import _data_cols
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +34,11 @@ def compute_v1v2_embedding() -> np.ndarray | None:
     if df_subset is None:
         return None
 
-    cols = _data_cols()
-    col_206 = '206Pb/204Pb' if '206Pb/204Pb' in cols else None
-    col_207 = '207Pb/204Pb' if '207Pb/204Pb' in cols else None
-    col_208 = '208Pb/204Pb' if '208Pb/204Pb' in cols else None
+    # Match isotope columns with the same best-effort heuristic used by the
+    # PB_EVOL / PLUMBOTECTONICS geochemistry modes, so abbreviated column
+    # names (e.g. '206/204', '207/204', '208/204') are recognized too.
+    cols = list(df_subset.columns)
+    col_206, col_207, col_208 = _get_pb_columns(cols)
 
     if not (col_206 and col_207 and col_208):
         logger.error(

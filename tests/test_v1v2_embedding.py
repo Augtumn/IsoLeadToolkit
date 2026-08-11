@@ -104,3 +104,33 @@ def test_v1v2_embedding_missing_isotope_column_returns_none() -> None:
 
     emb = compute_v1v2_embedding()
     assert emb is None
+
+
+def test_v1v2_embedding_accepts_abbreviated_column_names() -> None:
+    """Real-world datasets use '206/204' style names; they must be recognized."""
+    rng = np.random.default_rng(11)
+    n = 20
+    df = pd.DataFrame(
+        {
+            "206/204": rng.uniform(17.0, 19.0, n),
+            "207/204": rng.uniform(15.3, 15.7, n),
+            "208/204": rng.uniform(37.5, 39.5, n),
+        }
+    )
+    df["Group"] = [f"G{i % 2}" for i in range(n)]
+    state_gateway.set_dataframe_and_source(df, file_path="", sheet_name=None)
+    state_gateway.set_group_data_columns(
+        ["Group"], ["206/204", "207/204", "208/204"]
+    )
+    state_gateway.set_last_group_col("Group")
+
+    emb = compute_v1v2_embedding()
+    assert emb is not None
+    assert emb.shape == (n, 2)
+    assert np.isfinite(emb).all()
+
+    prepared = prepare_plot_dataframe("Group", "V1V2", emb)
+    assert prepared is not None
+    df_plot, cats = prepared
+    assert len(df_plot) == n
+    assert df_plot["_emb_x"].notna().sum() == n
