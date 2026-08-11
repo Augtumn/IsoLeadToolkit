@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 umap = None
 Axes3D = None
-Ellipse = None
 mpltern = None
 
 
@@ -55,12 +54,6 @@ def _lazy_import_mplot3d() -> None:
     if Axes3D is None:
         from mpl_toolkits.mplot3d import Axes3D as _Axes3D  # noqa: F401
         Axes3D = _Axes3D
-
-def _lazy_import_ellipse() -> None:
-    global Ellipse
-    if Ellipse is None:
-        from matplotlib.patches import Ellipse as _Ellipse
-        Ellipse = _Ellipse
 
 def _lazy_import_mpltern() -> None:
     global mpltern
@@ -280,26 +273,6 @@ def get_robust_pca_embedding(params: dict) -> np.ndarray | None:
         logger.exception("Robust PCA computation failed: %s", e)
         return None
 
-def get_embedding(
-    algorithm: str,
-    umap_params: dict | None = None,
-    tsne_params: dict | None = None,
-    pca_params: dict | None = None,
-    robust_pca_params: dict | None = None,
-) -> np.ndarray | None:
-    """Get embedding based on selected algorithm"""
-    if algorithm == 'UMAP':
-        return get_umap_embedding(umap_params or CONFIG['umap_params'])
-    elif algorithm == 'tSNE':
-        return get_tsne_embedding(tsne_params or CONFIG['tsne_params'])
-    elif algorithm == 'PCA':
-        return get_pca_embedding(pca_params or CONFIG.get('pca_params', {'n_components': 2, 'random_state': 42}))
-    elif algorithm == 'RobustPCA':
-        return get_robust_pca_embedding(robust_pca_params or CONFIG.get('robust_pca_params', {'n_components': 2, 'random_state': 42}))
-    else:
-        logger.error("Unknown algorithm: %s", algorithm)
-        return None
-
 def _build_group_palette(unique_cats: list[Any]) -> dict[Any, str]:
     """Build or reuse a stable group -> color mapping."""
     palette = dict(getattr(app_state, 'current_palette', {}) or {})
@@ -361,26 +334,6 @@ def _get_pb_columns(columns: list[str]) -> tuple[str | None, str | None, str | N
             col_208 = col
 
     return col_206, col_207, col_208
-
-def _find_age_column(columns: list[str]) -> str | None:
-    """Find an age column for Mu/Kappa plots."""
-    candidates = [
-        "Age (Ma)",
-        "Age(Ma)",
-        "Age_Ma",
-        "Age",
-        "age",
-        "t_ma",
-        "t"
-    ]
-    for name in candidates:
-        if name in columns:
-            return name
-    for col in columns:
-        low = str(col).lower()
-        if "age" in low:
-            return col
-    return None
 
 
 

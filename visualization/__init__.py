@@ -27,11 +27,9 @@ from .selection_overlay import draw_confidence_ellipse
 
 from .plotting import (
     plot_embedding,
-    plot_umap,
     plot_2d_data,
     plot_3d_data,
     refresh_plot_style,
-    get_embedding,
     get_umap_embedding,
     get_tsne_embedding,
     get_pca_embedding,
@@ -61,11 +59,9 @@ __all__ = [
     'draw_confidence_ellipse',
     # Plotting
     'plot_embedding',
-    'plot_umap',
     'plot_2d_data',
     'plot_3d_data',
     'refresh_plot_style',
-    'get_embedding',
     'get_umap_embedding',
     'get_tsne_embedding',
     'get_pca_embedding',

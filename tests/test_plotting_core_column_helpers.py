@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from visualization.plotting.core import _find_age_column, _get_pb_columns
+from visualization.plotting.core import _get_pb_columns
 
 
 def test_get_pb_columns_prefers_exact_names() -> None:
@@ -23,9 +23,3 @@ def test_get_pb_columns_uses_heuristic_when_exact_missing() -> None:
     assert pb206 == "sample_206_204"
     assert pb207 == "ratio_207_204"
     assert pb208 == "value_208-204"
-
-
-def test_find_age_column_prefers_known_candidates_then_heuristic() -> None:
-    assert _find_age_column(["x", "Age", "age_custom"]) == "Age"
-    assert _find_age_column(["x", "sample_age_ma"]) == "sample_age_ma"
-    assert _find_age_column(["x", "y", "z"]) is None
