@@ -256,7 +256,7 @@ class MixingModelPlugin(BasePlugin):
           - mixing_group_name_edit (set on panel by this method)
           - mixing_status_label (set on panel by this method)
         """
-        from PyQt5.QtCore import Qt
+        
         from PyQt5.QtWidgets import (
             QGroupBox, QVBoxLayout, QHBoxLayout, QLabel,
             QLineEdit, QPushButton,

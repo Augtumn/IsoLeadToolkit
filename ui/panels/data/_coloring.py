@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QGroupBox,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QVBoxLayout,
     QWidget,

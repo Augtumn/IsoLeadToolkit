@@ -15,7 +15,6 @@ from .engine import (
     GeochemistryEngine,
     engine,
     calculate_modelcurve,
-    _exp_evolution_term,
     T_EARTH_1ST,
     T_EARTH_CANON,
     T_SK_STAGE2,
@@ -32,9 +31,7 @@ from .engine import (
     OMEGA_M_DEFAULT,
     U_RATIO_NATURAL,
     EPSILON,
-    REGRESSION_A,
-    REGRESSION_B,
-    REGRESSION_C,
+
     E1_DEFAULT,
     E2_DEFAULT,
 )
@@ -45,7 +42,6 @@ from .age import (
 from .source import (
     _invert_mu,
     _invert_omega,
-    _invert_kappa,
     calculate_source_mu,
     calculate_source_omega,
     calculate_source_nu,
@@ -279,9 +275,6 @@ __all__ = [
     'MU_M_DEFAULT',
     'OMEGA_M_DEFAULT',
     'U_RATIO_NATURAL',
-    'REGRESSION_A',
-    'REGRESSION_B',
-    'REGRESSION_C',
     'E1_DEFAULT',
     'E2_DEFAULT',
     'PRESET_MODELS',

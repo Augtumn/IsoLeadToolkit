@@ -8,9 +8,6 @@ import numpy as np
 from .engine import (
     E1_DEFAULT,
     E2_DEFAULT,
-    REGRESSION_A,
-    REGRESSION_B,
-    REGRESSION_C,
     engine,
     _exp_evolution_term,
 )

@@ -8,16 +8,11 @@ _CONFIDENCE_LEVEL_2SIGMA: float = 0.95
 _CONFIDENCE_LEVEL_3SIGMA: float = 0.99
 _CONFIDENCE_EPSILON: float = 0.01
 from PyQt5.QtWidgets import (
-    QCheckBox,
-    QComboBox,
-    QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QRadioButton,
-    QSpinBox,
     QToolBox,
     QVBoxLayout,
     QWidget,

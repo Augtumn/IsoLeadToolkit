@@ -13,7 +13,7 @@ from ._coloring import _DataPanelColoringBuild
 from ._geochem import _DataPanelGeochemBuild
 from ._projection import _DataPanelProjectionBuild
 from ._selection import _DataPanelSelectionBuild
-from core import app_state, translate
+from core import translate
 
 logger = logging.getLogger(__name__)
 

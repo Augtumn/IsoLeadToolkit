@@ -1,7 +1,7 @@
 """Plugin API — abstract interfaces, metadata, and error types."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 

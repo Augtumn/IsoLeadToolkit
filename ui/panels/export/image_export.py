@@ -426,7 +426,7 @@ class ExportPanelImageExportMixin:
                     state['canvas_callbacks'] = []
 
                     # Apply current DPI to the profile for figure creation
-                    import copy
+                    
                     effective_profile = dict(state['profile'])
                     effective_profile['dpi'] = int(state['params'].get('dpi', effective_profile.get('dpi', 400)))
 
