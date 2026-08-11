@@ -12,28 +12,17 @@ from core import CONFIG, app_state, state_gateway
 from core.cache import build_embedding_cache_key
 from . import data as data_utils
 from .data import _lazy_import_ml, _get_analysis_data
+from .rendering.common.state_access import (
+    _active_subset_indices,
+    _data_cols,
+    _df_global,
+)
 
 logger = logging.getLogger(__name__)
 
 umap = None
 Axes3D = None
 mpltern = None
-
-
-def _data_state() -> Any:
-    return getattr(app_state, 'data', app_state)
-
-
-def _data_cols() -> list[str]:
-    return getattr(_data_state(), 'data_cols', app_state.data_cols)
-
-
-def _df_global() -> Any:
-    return getattr(_data_state(), 'df_global', app_state.df_global)
-
-
-def _active_subset_indices() -> Any:
-    return getattr(_data_state(), 'active_subset_indices', app_state.active_subset_indices)
 
 
 def _build_subset_key() -> str | int:

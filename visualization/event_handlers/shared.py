@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from application import (
     SelectedIsochronUseCase,
@@ -10,6 +9,10 @@ from application import (
     TooltipContentUseCase,
 )
 from core import app_state, state_gateway, translate
+from ..plotting.rendering.common.state_access import (
+    _data_state as data_state,
+    _df_global as df_global,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +26,6 @@ SELECTION_USE_CASE = SelectionInteractionUseCase(
 )
 SELECTED_ISOCHRON_USE_CASE = SelectedIsochronUseCase()
 TOOLTIP_CONTENT_USE_CASE = TooltipContentUseCase()
-
-
-def data_state() -> Any:
-    """Return layered data state when available, otherwise fallback to app_state."""
-    return getattr(app_state, 'data', app_state)
-
-
-def df_global() -> Any:
-    return getattr(data_state(), 'df_global', app_state.df_global)
 
 
 def notify_selection_ui() -> None:

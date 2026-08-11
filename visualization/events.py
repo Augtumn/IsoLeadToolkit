@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from application import RenderPlotUseCase
 from core import app_state, state_gateway
@@ -17,27 +16,15 @@ from visualization.event_handlers import (
     sync_selection_tools,
     toggle_selection_mode,
 )
+from .plotting.rendering.common.state_access import (
+    _data_cols,
+    _df_global,
+    _group_cols,
+)
 
 logger = logging.getLogger(__name__)
 
 _ASYNC_EMBEDDING_ALGORITHMS = {'UMAP', 'tSNE', 'PCA', 'RobustPCA'}
-
-
-def _data_state() -> Any:
-    """Return layered data state when available, otherwise fallback to app_state."""
-    return getattr(app_state, 'data', app_state)
-
-
-def _df_global() -> Any:
-    return getattr(_data_state(), 'df_global', app_state.df_global)
-
-
-def _data_cols() -> list[str]:
-    return getattr(_data_state(), 'data_cols', app_state.data_cols)
-
-
-def _group_cols() -> list[str]:
-    return getattr(_data_state(), 'group_cols', app_state.group_cols)
 
 
 def _sync_render_mode(render_mode: str) -> None:

@@ -8,7 +8,7 @@ from .legend import (
     _render_legend,
 )
 from .scatter import _render_scatter_groups
-from .state_access import _active_subset_indices, _data_cols, _data_state, _df_global
+from .state_access import _active_subset_indices, _data_cols, _data_state, _df_global, _group_cols
 from .title import _render_title_labels
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     '_data_cols',
     '_data_state',
     '_df_global',
+    '_group_cols',
     '_notify_legend_panel',
     '_place_inline_legend',
     '_render_legend',

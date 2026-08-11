@@ -12,16 +12,9 @@ from PyQt5.QtWidgets import QDialog, QFileDialog, QPushButton, QVBoxLayout
 
 from core import app_state, translate
 from .data import _get_analysis_data
+from .rendering.common.state_access import _data_cols
 
 logger = logging.getLogger(__name__)
-
-
-def _data_state() -> Any:
-    return getattr(app_state, 'data', app_state)
-
-
-def _data_cols() -> list[str]:
-    return getattr(_data_state(), 'data_cols', app_state.data_cols)
 
 
 def _create_plot_dialog(

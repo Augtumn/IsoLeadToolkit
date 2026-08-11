@@ -22,22 +22,6 @@ _calculate_all_parameters = None
 _geochem_checked = False
 
 
-def _data_state() -> Any:
-    return getattr(app_state, 'data', app_state)
-
-
-def _df_global() -> pd.DataFrame | None:
-    return getattr(_data_state(), 'df_global', app_state.df_global)
-
-
-def _data_cols() -> list[str]:
-    return getattr(_data_state(), 'data_cols', app_state.data_cols)
-
-
-def _active_subset_indices() -> Any:
-    return getattr(_data_state(), 'active_subset_indices', None)
-
-
 def _lazy_import_ml() -> None:
     global TSNE, PCA, MinCovDet, StandardScaler, SimpleImputer
     if PCA is None:
@@ -126,4 +110,17 @@ def _get_analysis_data() -> tuple[np.ndarray | None, list[int] | None]:
             indices = [indices[i] for i in range(len(indices)) if mask[i]]
 
     return X, indices
+
+
+# NOTE: this import deliberately lives at the end of the module. Importing
+# ``rendering.common.state_access`` triggers ``rendering/common/__init__.py``,
+# which transitively pulls in ``geochem/model_overlays.py``; that module
+# re-imports names from this one (``plotting.data``), so the import must run
+# only after every definition above already exists to avoid a
+# partially-initialized-module lookup failure.
+from .rendering.common.state_access import (
+    _active_subset_indices,
+    _data_cols,
+    _df_global,
+)
 

@@ -20,3 +20,7 @@ def _data_cols() -> list[str]:
 
 def _active_subset_indices() -> Any:
     return getattr(_data_state(), 'active_subset_indices', app_state.active_subset_indices)
+
+
+def _group_cols() -> list[str]:
+    return getattr(_data_state(), 'group_cols', app_state.group_cols)
