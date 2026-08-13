@@ -2,6 +2,19 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-14 · 遗留问题清零批，6 commits + 运维）
+
+按遗留问题清单（26 项）逐项解决：
+
+- **数据/逻辑**：PCA/RobustPCA 导出方差解释率列（`variance_ratio_PC*`）；V1V2 判别参数 a/b/c/scale 并入 param_*；`calculate_ages=False` 真正生效（V1V2 跳过两阶段年龄）；等时线 results 全链路拷贝提交；CSV 注释值转义；Origin 图例序号紧贴 add_plot 计数、paleoisochron x 范围用实际轴范围；`_hex_color`/geochem 失败日志补上下文；session 版本上限拒绝 + `umap` 归一；插件脚手架按 api 签名。
+- **导出 UI**：删除整份死代码 `export/selection.py`（与 analysis 复制分叉）；`_add_group_page` 上移 BasePanel（4 处重复 → 1 处）；QToolBox 页签与 preset 下拉随语言刷新（`toolbox_tab_keys`/`combo_item_keys` 属性机制）；originpro 可用性单缓存；导出面板补 UI 层测试（profile/save options/索引/上下文）。
+- **状态与守护**：`build_data_signature` 加列名+均值内容指纹（同形状改值也能失效缓存）；`StateStore.dispatch` 前置 diff 告警（绕过 gateway 的直写下次同步将被回滚——runtime 字段豁免）；guard 字段集补全 10 个缺失 dict 字段；gateway 守护脚本锚定仓库根（消除假 PASS）；新增快照 schema 漂移检测测试（抓到 `parent_groups`/`parent_shape_map` 漏同步并修复）。
+- **性能/体验**：新增通用 `AnalysisWorker`（QThread），provenance ML / HDBSCAN 聚类 / 端元 / 混合四个对话框计算移入后台线程（WaitCursor + 按钮禁用 + closeEvent 安全收尾）。
+- **运维**：清理遗留 worktree 与本地分支；推送 main（触发 GitHub Actions 质量门禁）；删除远端已并入的 `pyqt6`/`epic/architecture-modernization-2026q2`/`copilot-worktree-*` 分支。
+- 全套 407 测试通过、守护脚本 TOTAL=0。
+
+**遗留（有意保留）**：导出预览渲染仍在主线程（matplotlib 全局状态线程不安全，需渲染管线隔离的专项重构）；`copilot/fix-kde-issues-for-2d-plot` 与 `dev` 远端分支保留。
+
 ## 阶段进展（2026-08-14 · 导出功能审查修复批，4 commits）
 
 基于导出子系统专项审查（application 用例层 + UI 面板层，2 子代理 + 第一手核实），按 P0/P1/P2 全部修复：
