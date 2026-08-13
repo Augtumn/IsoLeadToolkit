@@ -73,7 +73,9 @@ class NeighborhoodSearchDialog(QDialog):
         self.radius_slider.setRange(1, 200)
         self.radius_slider.setValue(20)
         self.radius_spin = QDoubleSpinBox()
-        self.radius_spin.setRange(0.01, 50.0)
+        # Must match the slider mapping (1..200 → 0.005..10.0); a wider spin
+        # range silently clamps at the slider maximum.
+        self.radius_spin.setRange(0.01, 10.0)
         self.radius_spin.setSingleStep(0.05)
         self.radius_spin.setDecimals(3)
         self.radius_spin.setValue(0.5)
@@ -275,7 +277,8 @@ class NeighborhoodSearchDialog(QDialog):
         radius = self.radius_spin.value()
         matches = self._result.get("matches", [])
 
-        df = app_state.df_global
+        # Copy before mutating: df_global is store-managed state.
+        df = app_state.df_global.copy() if app_state.df_global is not None else None
         if df is None:
             return
         n = len(df)
@@ -305,6 +308,7 @@ class NeighborhoodSearchDialog(QDialog):
             file_path=getattr(app_state, 'file_path', ''),
             sheet_name=getattr(app_state, 'sheet_name', None),
         )
+        state_gateway.bump_data_version()
 
         groups = list(getattr(app_state, 'group_cols', []) or [])
         if col_name not in groups:

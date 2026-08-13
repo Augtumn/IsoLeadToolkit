@@ -140,7 +140,15 @@ class EndmemberAnalysisDialog(QDialog):
         from plugins.registry import plugin_manager
 
         _endmember_plugin = plugin_manager.get("endmember_plugin")
-        geo_slope = _endmember_plugin.compute_geochron_slope()
+        if _endmember_plugin is None:
+            logger.error("endmember_plugin is not available")
+            geo_slope = 0.0
+        else:
+            try:
+                geo_slope = _endmember_plugin.compute_geochron_slope()
+            except Exception as exc:
+                logger.warning("Failed to compute geochron slope: %s", exc)
+                geo_slope = 0.0
         param_layout.addWidget(QLabel(translate("Geochron Slope:")), 2, 0)
         self.slope_label = QLabel(f"{geo_slope:.6f}")
         param_layout.addWidget(self.slope_label, 2, 1)
@@ -385,8 +393,12 @@ class EndmemberAnalysisDialog(QDialog):
         state_gateway.set_visible_groups(None)
         state_gateway.bump_data_version()
 
-        if hasattr(app_state, '_notify_listeners'):
-            app_state._notify_listeners()
+        # Refresh the plot so the new group column takes effect immediately.
+        try:
+            from visualization.events import on_slider_change
+            on_slider_change()
+        except Exception as notify_err:
+            logger.warning("Failed to refresh plot after applying group column: %s", notify_err)
 
         QMessageBox.information(
             self, translate("Success"),

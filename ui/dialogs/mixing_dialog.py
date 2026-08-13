@@ -113,9 +113,26 @@ class MixingCalculatorDialog(QDialog):
         results = []
         from plugins.registry import plugin_manager
         mixing_plugin = plugin_manager.get("mixing_plugin")
-        plugin_results = mixing_plugin.calculate(
-            app_state.df_global, endmembers, mixtures, numeric_cols
-        )
+        if mixing_plugin is None:
+            logger.error("mixing_plugin is not available")
+            QMessageBox.critical(
+                self,
+                translate("Error"),
+                translate("Mixing plugin is not available. Check the log for details."),
+            )
+            return
+        try:
+            plugin_results = mixing_plugin.calculate(
+                app_state.df_global, endmembers, mixtures, numeric_cols
+            )
+        except Exception as exc:
+            logger.exception("Mixing calculation failed: %s", exc)
+            QMessageBox.critical(
+                self,
+                translate("Error"),
+                translate("Mixing calculation failed: {error}").format(error=exc),
+            )
+            return
 
         for r in plugin_results:
             results.append({

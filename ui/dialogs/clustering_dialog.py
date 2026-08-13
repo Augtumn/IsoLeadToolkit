@@ -1,6 +1,8 @@
 """HDBSCAN clustering parameter configuration dialog."""
 from __future__ import annotations
 
+import logging
+
 from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
@@ -18,6 +20,8 @@ from PyQt5.QtWidgets import (
 import numpy as np
 
 from core import app_state, state_gateway, translate
+
+logger = logging.getLogger(__name__)
 
 
 class ClusteringDialog(QDialog):
@@ -133,13 +137,30 @@ class ClusteringDialog(QDialog):
         from plugins.registry import plugin_manager
 
         _clustering_plugin = plugin_manager.get("hdbscan_clustering")
-        result = _clustering_plugin.run(
-            embedding=np.asarray(embed),
-            min_cluster_size=self.min_cluster_spin.value(),
-            min_samples=self.min_samples_spin.value(),
-            cluster_selection_epsilon=self.epsilon_spin.value(),
-            metric=self.metric_combo.currentText(),
-        )
+        if _clustering_plugin is None:
+            logger.error("hdbscan_clustering plugin is not available")
+            QMessageBox.critical(
+                self,
+                translate("Error"),
+                translate("Clustering plugin is not available. Check the log for details."),
+            )
+            return
+        try:
+            result = _clustering_plugin.run(
+                embedding=np.asarray(embed),
+                min_cluster_size=self.min_cluster_spin.value(),
+                min_samples=self.min_samples_spin.value(),
+                cluster_selection_epsilon=self.epsilon_spin.value(),
+                metric=self.metric_combo.currentText(),
+            )
+        except Exception as exc:
+            logger.exception("Clustering failed: %s", exc)
+            QMessageBox.critical(
+                self,
+                translate("Error"),
+                translate("Clustering failed: {error}").format(error=exc),
+            )
+            return
         if result is None:
             QMessageBox.critical(
                 self,
@@ -189,12 +210,20 @@ class ClusteringDialog(QDialog):
 
         col_label = "_HDBSCAN_Cluster"
         col_prob = "_HDBSCAN_Prob"
+        # Copy before mutating: df_global is store-managed state.
+        df = df.copy()
         df[col_label] = display_labels
         df[col_prob] = probs
 
         current_groups = list(getattr(app_state, "group_cols", []) or [])
         if col_label not in current_groups:
             current_groups.append(col_label)
+        state_gateway.set_dataframe_and_source(
+            df,
+            file_path=getattr(app_state, "file_path", ""),
+            sheet_name=getattr(app_state, "sheet_name", None),
+        )
+        state_gateway.bump_data_version()
         state_gateway.set_group_data_columns(
             current_groups,
             list(getattr(app_state, "data_cols", []) or []),

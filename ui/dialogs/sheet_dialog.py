@@ -33,6 +33,9 @@ class Qt5SheetDialog(QDialog):
             logger.error("Could not load sheets: %s", e)
             QMessageBox.critical(self, translate("Error"),
                                translate("Failed to load Excel file: {error}").format(error=str(e)))
+            # Reject immediately: without _setup_ui the dialog would show an
+            # empty window with no buttons and _ok_clicked would crash.
+            self.reject()
             return
 
         self._setup_ui()

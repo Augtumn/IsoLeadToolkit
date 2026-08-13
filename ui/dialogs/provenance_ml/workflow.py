@@ -350,8 +350,12 @@ class ProvenanceMLWorkflowMixin:
         state_gateway.set_visible_groups(None)
         state_gateway.bump_data_version()
 
-        if hasattr(app_state, '_notify_listeners'):
-            app_state._notify_listeners()
+        # Refresh the plot so the new group column takes effect immediately.
+        try:
+            from visualization.events import on_slider_change
+            on_slider_change()
+        except Exception as notify_err:
+            logger.warning("Failed to refresh plot after applying group column: %s", notify_err)
 
         QMessageBox.information(
             self,
