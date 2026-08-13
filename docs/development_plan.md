@@ -16,6 +16,8 @@
 
 **迭代（同日 +2 commits）**：① 父组行引入**形状小方块按钮**（点击弹出形状选择，支持"自动（按顺序）"与 10 种手动形状覆盖，新状态 `parent_shape_map` 接入 store/gateway/session）；② 父组下子组行**视觉缩进**（左边距 24px，替代 ↳ 前缀）；③ 面板新增 **"自动图例"**（一键重置父组形状为自动分配）与 **"图例设定..."**（打开完整图例设定对话框 Ctrl+L）按钮；i18n 各 +6 键（1099/1099）。全套 382 测试通过、守护脚本 TOTAL=0。
 
+**迭代（同日 +1 commit）**：④ **父组行可拖动**调整图中叠压——引入"父组块"概念：父组条目在 `legend_item_order` 中占一个槽位，其全部子组共享该 z-order（`_apply_legend_z_order` 跳过属于父组的子组条目）；面板重建时父组块按父组条目的 order 位置排列（`build_legend_display_entries` 纯函数，可单测）；父组双击置顶整块。新增 `tests/test_legend_display_entries.py`（3 纯函数用例 + 1 offscreen Qt z-order 用例，验证子组共享父组 z 槽、独立组低一槽）。全套 386 测试通过、守护脚本 TOTAL=0。
+
 ## 阶段进展（2026-08-12 · 全库审查修复批，16 commits）
 
 基于四专项只读审查（data/plugins、ui、visualization/utils、tests/scripts/docs/core）与第一手验证，按严重度从高到低修复 52 个文件（+759/-234），全部 372 测试通过、5 守护脚本 TOTAL=0、release_check 13/13：
