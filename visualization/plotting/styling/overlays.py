@@ -23,38 +23,36 @@ def refresh_overlay_styles() -> None:
         overlay_artists = getattr(app_state, 'overlay_artists', {})
         line_styles = getattr(app_state, 'line_styles', {})
 
-        category_to_style = {
-            'model_curves': 'model_curve',
-            'plumbotectonics_curves': 'plumbotectonics_curve',
-            'paleoisochrons': 'paleoisochron',
-            'model_age_lines': 'model_age_line',
-            'isochrons': 'isochron',
-            'growth_curves': 'growth_curve',
-        }
-
-        for category, style_key in category_to_style.items():
-            if category not in overlay_artists:
-                continue
-
-            style = line_styles.get(style_key, {})
+        # Artists are registered under singular style keys (see
+        # geochem/overlay_common._register_overlay_artist), possibly with a
+        # per-group suffix for plumbotectonics curves ('plumbotectonics_curve:0').
+        for style_key, payload in overlay_artists.items():
+            base_key = str(style_key).split(':', 1)[0]
+            style = line_styles.get(style_key) or line_styles.get(base_key, {}) or {}
             color = style.get('color')
             linewidth = style.get('linewidth', 1.0)
             linestyle = style.get('linestyle', '-')
             alpha = style.get('alpha', 0.8)
 
-            for key, artists in overlay_artists[category].items():
-                for artist in artists:
-                    try:
-                        if hasattr(artist, 'set_color') and color is not None:
-                            artist.set_color(color)
-                        if hasattr(artist, 'set_linewidth'):
-                            artist.set_linewidth(linewidth)
-                        if hasattr(artist, 'set_linestyle'):
-                            artist.set_linestyle(linestyle)
-                        if hasattr(artist, 'set_alpha'):
-                            artist.set_alpha(alpha)
-                    except Exception as e:
-                        logger.debug("Failed to update artist in %s/%s: %s", category, key, e)
+            if isinstance(payload, dict):
+                artists: list[Any] = []
+                for group_artists in payload.values():
+                    artists.extend(group_artists or [])
+            else:
+                artists = payload or []
+
+            for artist in artists:
+                try:
+                    if hasattr(artist, 'set_color') and color is not None:
+                        artist.set_color(color)
+                    if hasattr(artist, 'set_linewidth'):
+                        artist.set_linewidth(linewidth)
+                    if hasattr(artist, 'set_linestyle'):
+                        artist.set_linestyle(linestyle)
+                    if hasattr(artist, 'set_alpha'):
+                        artist.set_alpha(alpha)
+                except Exception as e:
+                    logger.debug("Failed to update artist in %s: %s", style_key, e)
 
         if app_state.fig.canvas is not None:
             app_state.fig.canvas.draw_idle()

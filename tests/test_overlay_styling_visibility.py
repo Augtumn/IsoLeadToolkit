@@ -49,13 +49,19 @@ class _DummyFigure:
 def test_refresh_overlay_styles_updates_artist_properties(monkeypatch) -> None:
     fig = _DummyFigure()
     artist = _DummyArtist()
+    group_artist = _DummyArtist()
 
     monkeypatch.setattr(app_state, "fig", fig, raising=False)
     monkeypatch.setattr(app_state, "ax", object(), raising=False)
+    # Registration shape: singular style keys mapped to artist lists, with
+    # per-group suffixes for plumbotectonics curves.
     monkeypatch.setattr(
         app_state,
         "overlay_artists",
-        {"model_curves": {"group_a": [artist]}},
+        {
+            "model_curve": [artist],
+            "plumbotectonics_curve:grp": {"grp": [group_artist]},
+        },
         raising=False,
     )
     monkeypatch.setattr(
@@ -67,7 +73,13 @@ def test_refresh_overlay_styles_updates_artist_properties(monkeypatch) -> None:
                 "linewidth": 2.5,
                 "linestyle": "--",
                 "alpha": 0.4,
-            }
+            },
+            "plumbotectonics_curve": {
+                "color": "#445566",
+                "linewidth": 3.0,
+                "linestyle": ":",
+                "alpha": 0.6,
+            },
         },
         raising=False,
     )
@@ -78,6 +90,11 @@ def test_refresh_overlay_styles_updates_artist_properties(monkeypatch) -> None:
     assert artist.linewidth == 2.5
     assert artist.linestyle == "--"
     assert artist.alpha == 0.4
+    # Per-group style key falls back to the base style entry.
+    assert group_artist.color == "#445566"
+    assert group_artist.linewidth == 3.0
+    assert group_artist.linestyle == ":"
+    assert group_artist.alpha == 0.6
     assert fig.canvas.draw_calls == 1
 
 
