@@ -2,6 +2,18 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-14 · 图例父组/子组功能，3 commits）
+
+外部图例引入父组概念：将相似子组（现有分组）拖拽归入新建父组，同一父组下数据点共用同一 marker 形状、子组保持不同颜色。
+
+- **状态层**：`app_state.parent_groups`（父组名 → 有序子组列表）接入 StateStore 快照/SET_PARENT_GROUPS dispatch/gateway `set_parent_groups`/normalizer 同步；会话 params.json 保存与恢复。
+- **渲染层**：新增 `visualization/plotting/grouping.py`（`parent_of_group`/`parent_shape`/`resolve_group_marker`，父组形状按创建顺序取自固定循环）；embedding/ternary/2D/3D 四条 scatter 渲染路径统一走 `resolve_group_marker`。
+- **图例 UI**：面板新增"新建父组"按钮（QInputDialog 命名）；父组以粗体头行显示（共享形状图标 + 子组计数 + 删除按钮），子组行加 "↳" 前缀；**拖拽子组行到父组行即归并**（LegendListWidget 记录拖动项 + dropEvent 委托）；右键菜单支持"移出父组/删除父组/新建父组"；父组内子组的 Shape 菜单锁定并提示"形状随父组"。
+- **本地化**：zh/en 各 +9 键（1093/1093）。
+- **回归**：新增 `tests/test_grouping.py`（7 用例：解析/循环/网关同步/守护扫描）与会话 parent_groups 往返用例；全套 381 测试通过、守护脚本 TOTAL=0；端到端冒烟验证（2D 渲染中 A/B 共用父组形状 o、C/D 保持 s、颜色互异）。
+
+**遗留**：父组形状目前按创建顺序自动分配（固定循环），未提供手动指定；父组内子组的颜色可选同色系渐变（当前沿用全局 palette）。
+
 ## 阶段进展（2026-08-12 · 全库审查修复批，16 commits）
 
 基于四专项只读审查（data/plugins、ui、visualization/utils、tests/scripts/docs/core）与第一手验证，按严重度从高到低修复 52 个文件（+759/-234），全部 372 测试通过、5 守护脚本 TOTAL=0、release_check 13/13：
