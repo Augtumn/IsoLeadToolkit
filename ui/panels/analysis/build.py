@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, translate
 from ui.icons import apply_color_swatch
+from ui.panels.base_panel import BasePanel
 from ui.widgets import labeled_checkbox
 
 
@@ -73,15 +74,6 @@ class AnalysisPanelBuildMixin:
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('analysis_section_toolbox')
 
-        def _add_group_page(group_widget: QGroupBox, title_key: str) -> None:
-            page = QWidget()
-            page_layout = QVBoxLayout(page)
-            page_layout.setContentsMargins(6, 6, 6, 6)
-            page_layout.setSpacing(8)
-            page_layout.addWidget(group_widget)
-            page_layout.addStretch()
-            section_toolbox.addItem(page, translate(title_key))
-
         kde_group = QGroupBox(translate("Kernel Density"))
         kde_group.setProperty('translate_key', 'Kernel Density')
         kde_layout = QVBoxLayout()
@@ -117,7 +109,7 @@ class AnalysisPanelBuildMixin:
         kde_layout.addLayout(mkde_row)
 
         kde_group.setLayout(kde_layout)
-        _add_group_page(kde_group, 'Kernel Density')
+        BasePanel.add_group_page(section_toolbox, kde_group, 'Kernel Density')
 
         equation_group = QGroupBox(translate("Equation Overlays"))
         equation_group.setProperty('translate_key', 'Equation Overlays')
@@ -134,7 +126,7 @@ class AnalysisPanelBuildMixin:
         equation_layout.addWidget(add_eq_btn)
 
         equation_group.setLayout(equation_layout)
-        _add_group_page(equation_group, 'Equation Overlays')
+        BasePanel.add_group_page(section_toolbox, equation_group, 'Equation Overlays')
 
         selection_group = QGroupBox(translate("Selection Tools"))
         selection_group.setProperty('translate_key', 'Selection Tools')
@@ -158,7 +150,7 @@ class AnalysisPanelBuildMixin:
         selection_layout.addWidget(self.selection_status_label)
 
         selection_group.setLayout(selection_layout)
-        _add_group_page(selection_group, 'Selection Tools')
+        BasePanel.add_group_page(section_toolbox, selection_group, 'Selection Tools')
 
         analysis_group = QGroupBox(translate("Data Analysis"))
         analysis_group.setProperty('translate_key', 'Data Analysis')
@@ -183,10 +175,10 @@ class AnalysisPanelBuildMixin:
         analysis_layout.addWidget(shepard_btn, 0, Qt.AlignHCenter)
 
         analysis_group.setLayout(analysis_layout)
-        _add_group_page(analysis_group, 'Data Analysis')
+        BasePanel.add_group_page(section_toolbox, analysis_group, 'Data Analysis')
 
         # ── Plugin-driven analysis sections ────────────────────────
-        self._build_plugin_sections(section_toolbox, _add_group_page)
+        self._build_plugin_sections(section_toolbox)
 
         confidence_group = QGroupBox(translate("Confidence Ellipse"))
         confidence_group.setProperty('translate_key', 'Confidence Ellipse')
@@ -229,14 +221,14 @@ class AnalysisPanelBuildMixin:
         confidence_layout.addWidget(self.confidence_99_radio)
 
         confidence_group.setLayout(confidence_layout)
-        _add_group_page(confidence_group, 'Confidence Ellipse')
+        BasePanel.add_group_page(section_toolbox, confidence_group, 'Confidence Ellipse')
 
         self._restore_toolbox_state(section_toolbox, 'analysis')
         layout.addWidget(section_toolbox)
         layout.addStretch()
         return widget
 
-    def _build_plugin_sections(self, section_toolbox, _add_group_page):
+    def _build_plugin_sections(self, section_toolbox):
         """Build analysis sections from loaded plugins."""
         import logging
         logger = logging.getLogger(__name__)
@@ -274,6 +266,6 @@ class AnalysisPanelBuildMixin:
                     title_key = (section.property('translate_key')
                                  or getattr(plugin.meta, 'name', None)
                                  or name)
-                    _add_group_page(section, title_key)
+                    BasePanel.add_group_page(section_toolbox, section, title_key)
             except Exception as exc:
                 logger.warning("Failed to build UI for plugin %s: %s", name, exc)

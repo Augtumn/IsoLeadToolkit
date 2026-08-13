@@ -51,6 +51,8 @@ class ExportPanelBuildMixin:
 
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('export_section_toolbox')
+        # Language refresh: BasePanel._update_translations re-labels the tabs.
+        section_toolbox.setProperty('toolbox_tab_keys', '["Data Export", "Image Export"]')
 
         data_export_group = QGroupBox(translate("Data Export"))
         data_export_group.setProperty('translate_key', 'Data Export')
@@ -93,6 +95,12 @@ class ExportPanelBuildMixin:
         preset_label.setProperty('translate_key', 'Journal Preset')
         preset_row.addWidget(preset_label)
         self.image_preset_combo = QComboBox()
+        # Language refresh: keys align with addItem order below.
+        self.image_preset_combo.setProperty(
+            'combo_item_keys',
+            '["Science Single Column", "IEEE Single Column", '
+            '"Nature Double Column", "Presentation"]',
+        )
         self.image_preset_combo.addItem(translate("Science Single Column"), 'science_single')
         self.image_preset_combo.addItem(translate("IEEE Single Column"), 'ieee_single')
         self.image_preset_combo.addItem(translate("Nature Double Column"), 'nature_double')

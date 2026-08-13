@@ -9,27 +9,19 @@ from core import app_state, translate
 
 logger = logging.getLogger(__name__)
 
-_origin_checked = False
-_origin_available = False
-
 
 class ExportPanelOriginExportMixin:
     """Origin export methods for ExportPanel."""
 
     @staticmethod
     def _is_origin_available() -> bool:
-        """Check if originpro can be imported (cached)."""
-        global _origin_checked, _origin_available
-        if _origin_checked:
-            return _origin_available
-        _origin_checked = True
+        """Check if originpro can be imported (single source of truth)."""
         try:
             from application.use_cases.export_origin import is_origin_available
 
-            _origin_available = is_origin_available()
+            return bool(is_origin_available())
         except Exception:
-            _origin_available = False
-        return _origin_available
+            return False
 
     def _on_export_origin_clicked(self):
         """Handle Export to Origin button click."""

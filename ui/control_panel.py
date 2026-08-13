@@ -143,7 +143,8 @@ def create_section_dialog(
     def _on_show(_event):
         state_gateway.set_control_panel_ref(panel)
         try:
-            panel.update_selection_controls()
+            if hasattr(panel, 'update_selection_controls'):
+                panel.update_selection_controls()
         except Exception:
             pass
         QTimer.singleShot(0, _apply_adaptive_size)

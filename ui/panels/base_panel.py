@@ -4,7 +4,16 @@ from __future__ import annotations
 import logging
 from typing import Callable
 
-from PyQt5.QtWidgets import QWidget, QGroupBox, QLabel, QPushButton, QCheckBox, QRadioButton
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QGroupBox,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QToolBox,
+    QWidget,
+)
 from PyQt5.QtCore import QSettings, QTimer
 
 from core import app_state, state_gateway, translate
@@ -99,6 +108,17 @@ _STYLE_WIDGET_MAP: list[tuple] = [
 class BasePanel(QWidget):
     """所有面板的基类，提供共享工具方法"""
 
+    @staticmethod
+    def add_group_page(section_toolbox, group_widget, title_key) -> None:
+        """Add a QGroupBox as a labelled toolbox page (shared by all panels)."""
+        page = QWidget()
+        page_layout = QVBoxLayout(page)
+        page_layout.setContentsMargins(6, 6, 6, 6)
+        page_layout.setSpacing(8)
+        page_layout.addWidget(group_widget)
+        page_layout.addStretch()
+        section_toolbox.addItem(page, translate(title_key))
+
     def __init__(self, callback=None, parent=None):
         super().__init__(parent)
         self.callback = callback
@@ -136,19 +156,43 @@ class BasePanel(QWidget):
         标记需要翻译的控件，语言切换时调用此方法即可就地刷新文本，
         无需销毁重建整个 UI。
 
-        支持的控件类型: QGroupBox (setTitle), QLabel/QPushButton/QCheckBox/QRadioButton (setText)。
+        支持的控件类型: QGroupBox (setTitle), QLabel/QPushButton/QCheckBox/
+        QRadioButton (setText), QToolBox (``toolbox_tab_keys`` JSON 属性),
+        QComboBox (``combo_item_keys`` JSON 属性，与 addItem 顺序一致)。
         """
+        import json as _json
+
         if root is None:
             root = self
         for child in root.findChildren(QWidget):
             key = child.property('translate_key')
-            if not key:
-                continue
-            translated_str = translate(key)
-            if isinstance(child, QGroupBox):
-                child.setTitle(translated_str)
-            elif isinstance(child, (QLabel, QPushButton, QCheckBox, QRadioButton)):
-                child.setText(translated_str)
+            if key:
+                translated_str = translate(key)
+                if isinstance(child, QGroupBox):
+                    child.setTitle(translated_str)
+                elif isinstance(child, (QLabel, QPushButton, QCheckBox, QRadioButton)):
+                    child.setText(translated_str)
+
+            if isinstance(child, QToolBox):
+                tab_keys = child.property('toolbox_tab_keys')
+                if isinstance(tab_keys, str) and tab_keys:
+                    try:
+                        keys = _json.loads(tab_keys)
+                        for idx, tab_key in enumerate(keys):
+                            if idx < child.count():
+                                child.setItemText(idx, translate(tab_key))
+                    except Exception:
+                        pass
+            elif isinstance(child, QComboBox):
+                item_keys = child.property('combo_item_keys')
+                if isinstance(item_keys, str) and item_keys:
+                    try:
+                        keys = _json.loads(item_keys)
+                        for idx, item_key in enumerate(keys):
+                            if idx < child.count():
+                                child.setItemText(idx, translate(item_key))
+                    except Exception:
+                        pass
 
     def _on_change(self):
         """参数变化回调"""

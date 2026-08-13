@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import app_state, state_gateway, translate
+from ui.panels.base_panel import BasePanel
 
 
 class LegendBuildMixin:
@@ -44,15 +45,6 @@ class LegendBuildMixin:
 
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('legend_section_toolbox')
-
-        def _add_group_page(group_widget: QGroupBox, title_key: str) -> None:
-            page = QWidget()
-            page_layout = QVBoxLayout(page)
-            page_layout.setContentsMargins(6, 6, 6, 6)
-            page_layout.setSpacing(8)
-            page_layout.addWidget(group_widget)
-            page_layout.addStretch()
-            section_toolbox.addItem(page, translate(title_key))
 
         position_group = QGroupBox(translate("Legend Position"))
         position_group.setProperty('translate_key', 'Legend Position')
@@ -130,7 +122,7 @@ class LegendBuildMixin:
         self._set_legend_outside_position_button(outside_location)
 
         position_group.setLayout(position_layout)
-        _add_group_page(position_group, 'Legend Position')
+        BasePanel.add_group_page(section_toolbox, position_group, 'Legend Position')
 
         style_group = QGroupBox(translate("Inline Legend Style"))
         style_group.setProperty('translate_key', 'Inline Legend Style')
@@ -252,7 +244,7 @@ class LegendBuildMixin:
         style_layout.addWidget(auto_btn)
 
         style_group.setLayout(style_layout)
-        _add_group_page(style_group, 'Inline Legend Style')
+        BasePanel.add_group_page(section_toolbox, style_group, 'Inline Legend Style')
 
         self._restore_toolbox_state(section_toolbox, 'legend')
         self.legend_nudge_step = float(getattr(app_state, 'legend_nudge_step', self.legend_nudge_step))
