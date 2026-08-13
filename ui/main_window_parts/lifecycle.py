@@ -41,6 +41,15 @@ class MainWindowLifecycleMixin:
         """关闭事件处理"""
         self.save_state()
 
+        # Stop background embedding work before the event loop exits so a
+        # still-running QThread is not destroyed while running.
+        try:
+            from visualization.events import shutdown_embedding_worker
+
+            shutdown_embedding_worker()
+        except Exception as exc:
+            logger.warning("Failed to stop embedding worker: %s", exc)
+
         from core import save_session_params
 
         try:

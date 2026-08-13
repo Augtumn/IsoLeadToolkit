@@ -222,8 +222,9 @@ class RenderPlotUseCase:
 
         algorithm = self._state.render_mode
         if algorithm in _ASYNC_EMBEDDING_ALGORITHMS:
-            started = self._start_async_embedding_render(group_col)
-            return started, started
+            # Returns (rendered_ok, pending_async): a cache hit renders
+            # synchronously (pending=False); otherwise a worker is started.
+            return self._start_async_embedding_render(group_col)
 
         self._cancel_embedding_task("switch_to_sync_embedding")
         logger.debug("Calling plot_embedding with algorithm=%s, group_col=%s", algorithm, group_col)

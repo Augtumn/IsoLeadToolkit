@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from application import RenderPlotUseCase
 from core import app_state, state_gateway
@@ -25,6 +26,47 @@ from .plotting.rendering.common.state_access import (
 logger = logging.getLogger(__name__)
 
 _ASYNC_EMBEDDING_ALGORITHMS = {'UMAP', 'tSNE', 'PCA', 'RobustPCA'}
+
+# Retired embedding workers kept alive until their threads actually stop.
+# Replacing app_state.embedding_worker drops the only strong reference; a
+# running QThread that gets garbage-collected aborts the process with
+# "QThread: Destroyed while thread is still running".
+_retired_workers: list[Any] = []
+
+
+def _sweep_retired_workers() -> None:
+    """Reap retired workers whose threads have finished."""
+    remaining: list[Any] = []
+    for worker in _retired_workers:
+        try:
+            if worker is not None and worker.isRunning():
+                remaining.append(worker)
+                continue
+            if worker is not None:
+                worker.wait(5000)
+                worker.deleteLater()
+        except Exception as err:
+            logger.warning('Failed to retire embedding worker: %s', err)
+    _retired_workers[:] = remaining
+
+
+def shutdown_embedding_worker() -> None:
+    """Cancel, wait for, and dispose of all embedding workers (app exit)."""
+    try:
+        _cancel_embedding_task(reason='app_shutdown')
+    except Exception:
+        pass
+    current = getattr(app_state, 'embedding_worker', None)
+    if current is not None:
+        _retired_workers.append(current)
+        state_gateway.set_embedding_worker(None, running=False)
+    _sweep_retired_workers()
+    for worker in list(_retired_workers):
+        try:
+            worker.wait(5000)
+        except Exception:
+            pass
+    _retired_workers.clear()
 
 
 def _sync_render_mode(render_mode: str) -> None:
@@ -66,18 +108,28 @@ def _on_embedding_task_progress(task_token: int, percent: int, stage: str) -> No
             pass
 
 
-def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) -> None:
-    if task_token != getattr(app_state, 'embedding_task_token', -1):
-        logger.debug('Ignore stale embedding result token=%s', task_token)
-        return
+_CACHE_ALGORITHM_NAMES = {
+    'UMAP': 'umap',
+    'tSNE': 'tsne',
+    'PCA': 'pca',
+    'RobustPCA': 'robust_pca',
+}
 
-    state_gateway.set_embedding_worker(None, running=False)
 
-    algorithm = payload.get('algorithm', app_state.render_mode)
-    if app_state.render_mode != algorithm:
-        logger.debug('Ignore embedding result due to render mode change: %s -> %s', algorithm, app_state.render_mode)
-        return
+def _embedding_cache_key(algorithm: str, params: dict) -> Any:
+    """Build the LRU cache key used by the sync embedding getters."""
+    from core.cache import build_embedding_cache_key
+    from .plotting.core import _build_subset_key
 
+    cache_name = _CACHE_ALGORITHM_NAMES.get(algorithm, str(algorithm).lower())
+    return build_embedding_cache_key(app_state, cache_name, params, _build_subset_key())
+
+
+def _render_embedding_result(group_col: str, algorithm: str, payload: dict) -> bool:
+    """Render a computed embedding and finish the render cycle.
+
+    Shared by the async worker completion path and the cache-hit fast path.
+    """
     from .plotting import plot_embedding
 
     # Use the worker's original params for the computed algorithm so the
@@ -109,6 +161,17 @@ def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) 
     )
 
     if render_ok:
+        # Populate the LRU cache so subsequent renders (including style-only
+        # slider changes) short-circuit instead of recomputing.
+        embedding = payload.get('embedding')
+        if embedding is not None:
+            try:
+                app_state.embedding_cache.set(
+                    _embedding_cache_key(algorithm, worker_params),
+                    embedding,
+                )
+            except Exception as cache_err:
+                logger.warning('Failed to cache embedding: %s', cache_err)
         refresh_selection_overlay()
         sync_selection_tools()
         _notify_selection_ui()
@@ -118,16 +181,40 @@ def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) 
         except Exception:
             pass
         state_gateway.set_initial_render_done(True)
-        logger.debug('Async embedding render completed for %s', algorithm)
+        logger.debug('Embedding render completed for %s', algorithm)
     else:
-        logger.warning('Async embedding render failed for %s', algorithm)
+        logger.warning('Embedding render failed for %s', algorithm)
+    return render_ok
+
+
+def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) -> None:
+    _sweep_retired_workers()
+    if task_token != getattr(app_state, 'embedding_task_token', -1):
+        logger.debug('Ignore stale embedding result token=%s', task_token)
+        return
+
+    finished_worker = getattr(app_state, 'embedding_worker', None)
+    state_gateway.set_embedding_worker(None, running=False)
+    if finished_worker is not None:
+        _retired_workers.append(finished_worker)
+
+    algorithm = payload.get('algorithm', app_state.render_mode)
+    if app_state.render_mode != algorithm:
+        logger.debug('Ignore embedding result due to render mode change: %s -> %s', algorithm, app_state.render_mode)
+        return
+
+    _render_embedding_result(group_col, algorithm, payload)
 
 
 def _on_embedding_task_failed(task_token: int, error_message: str) -> None:
+    _sweep_retired_workers()
     if task_token != getattr(app_state, 'embedding_task_token', -1):
         return
 
+    failed_worker = getattr(app_state, 'embedding_worker', None)
     state_gateway.set_embedding_worker(None, running=False)
+    if failed_worker is not None:
+        _retired_workers.append(failed_worker)
     logger.warning('Embedding task failed: %s', error_message)
 
     # Notify user with a visible error dialog so silent failures don't
@@ -151,25 +238,31 @@ def _on_embedding_task_failed(task_token: int, error_message: str) -> None:
 
 
 def _on_embedding_task_cancelled(task_token: int) -> None:
+    _sweep_retired_workers()
     if task_token != getattr(app_state, 'embedding_task_token', -1):
         return
 
+    cancelled_worker = getattr(app_state, 'embedding_worker', None)
     state_gateway.set_embedding_worker(None, running=False)
+    if cancelled_worker is not None:
+        _retired_workers.append(cancelled_worker)
     logger.debug('Embedding task cancelled: token=%s', task_token)
 
 
-def _start_async_embedding_render(group_col: str) -> bool:
-    """Start background embedding computation for heavy algorithms."""
+def _start_async_embedding_render(group_col: str) -> tuple[bool, bool]:
+    """Start background embedding computation for heavy algorithms.
+
+    Returns ``(rendered_ok, pending_async)``:
+    - ``(True, False)`` — a cached embedding was rendered synchronously;
+    - ``(True, True)`` — the background worker was started;
+    - ``(False, False)`` — nothing could be started.
+    """
     from .embedding_worker import EmbeddingWorker
     from .plotting.data import _get_analysis_data
 
     algorithm = app_state.render_mode
     if algorithm not in _ASYNC_EMBEDDING_ALGORITHMS:
-        return False
-
-    x_data, _ = _get_analysis_data()
-    if x_data is None:
-        return False
+        return False, False
 
     params_map = {
         'UMAP': app_state.umap_params,
@@ -179,7 +272,33 @@ def _start_async_embedding_render(group_col: str) -> bool:
     }
     params = dict(params_map.get(algorithm, {}))
 
+    # Cache fast path: identical algorithm + params + data was already
+    # computed; render it synchronously and skip the worker entirely.
+    try:
+        cached = app_state.embedding_cache.get(_embedding_cache_key(algorithm, params))
+    except Exception:
+        cached = None
+    if cached is not None:
+        logger.debug('Embedding cache hit for %s; rendering synchronously', algorithm)
+        _cancel_embedding_task(reason='cache_hit')
+        ok = _render_embedding_result(
+            group_col,
+            algorithm,
+            {'algorithm': algorithm, 'embedding': cached, 'meta': {}, 'params': params},
+        )
+        return ok, False
+
+    x_data, _ = _get_analysis_data()
+    if x_data is None:
+        return False, False
+
     _cancel_embedding_task(reason='start_new_task')
+
+    # Keep the old worker referenced until its thread actually stops;
+    # dropping the last reference while it is still running aborts Qt.
+    old_worker = getattr(app_state, 'embedding_worker', None)
+    if old_worker is not None:
+        _retired_workers.append(old_worker)
 
     task_token = int(getattr(app_state, 'embedding_task_token', 0)) + 1
 
@@ -199,7 +318,7 @@ def _start_async_embedding_render(group_col: str) -> bool:
     state_gateway.set_embedding_worker(worker, running=True, task_token=task_token)
     worker.start()
     logger.debug('Started async embedding task token=%s, algorithm=%s', task_token, algorithm)
-    return True
+    return True, True
 
 
 def _build_render_use_case() -> RenderPlotUseCase:
@@ -229,6 +348,4 @@ def on_slider_change(val=None) -> None:
         logger.debug('on_slider_change called, val=%s', val)
         _build_render_use_case().execute()
     except Exception as err:
-        logger.error('on_slider_change error: %s', err)
-        import traceback
-        traceback.print_exc()
+        logger.exception('on_slider_change error: %s', err)
