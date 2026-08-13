@@ -27,6 +27,54 @@ from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 logger = logging.getLogger(__name__)
 
 
+def build_legend_display_entries(
+    entries: list[dict[str, Any]],
+    parents: list[str],
+    child_parent: dict[str, str],
+    order_index: dict[str, int],
+) -> list[dict[str, Any]]:
+    """Build the ordered legend display list with parent-group blocks.
+
+    Each parent is rendered as a block (parent row followed by its children)
+    and the block position follows the parent's own entry in
+    ``legend_item_order`` — this is what makes dragging a parent row reorder
+    the whole parent group's stacking. Children inside a block keep their own
+    relative order; independent groups and overlays keep their positions.
+    """
+    if not parents:
+        return list(entries)
+
+    parent_blocks: list[tuple[str, list[dict[str, Any]]]] = []
+    for parent in parents:
+        block: list[dict[str, Any]] = []
+        for entry in entries:
+            if entry["type"] == "group" and child_parent.get(entry["group"]) == parent:
+                child_entry = dict(entry)
+                child_entry["in_parent"] = parent
+                block.append(child_entry)
+        # Children inside a block keep their own legend_item_order.
+        block.sort(key=lambda e: order_index.get(f"group:{e['group']}", 10_000))
+        parent_blocks.append((parent, block))
+
+    parent_blocks.sort(
+        key=lambda blk: order_index.get(f"parent:{blk[0]}", 10_000)
+    )
+
+    display_entries: list[dict[str, Any]] = []
+    placed: set[str] = set()
+    for parent, block in parent_blocks:
+        display_entries.append({"type": "parent", "key": parent, "parent": parent})
+        for child_entry in block:
+            display_entries.append(child_entry)
+            placed.add(child_entry["group"])
+    for entry in entries:
+        if entry["type"] == "group" and entry["group"] not in placed:
+            display_entries.append(entry)
+        elif entry["type"] == "overlay":
+            display_entries.append(entry)
+    return display_entries
+
+
 class MainWindowLegendActionsMixin:
     """Legend user interaction handlers and UI updates."""
 
@@ -126,6 +174,9 @@ class MainWindowLegendActionsMixin:
             self._bring_to_front(entry_key)
         elif entry_type == "overlay":
             self._bring_overlay_to_front(entry_key)
+        elif entry_type == "parent":
+            # Bring the whole parent block (all its children) to the top.
+            self._move_legend_item_to_top("parent", entry_key)
 
     def _bring_overlay_to_front(self, style_key):
         ax = getattr(app_state, "ax", None)
@@ -431,8 +482,14 @@ class MainWindowLegendActionsMixin:
         item = QListWidgetItem()
         item.setSizeHint(item_widget.sizeHint())
         self._set_legend_item_meta(item, "parent", parent)
-        # Drop target for group rows; parents themselves are not draggable.
-        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
+        # Draggable (reorder the whole parent block's stacking) and a drop
+        # target for group rows.
+        item.setFlags(
+            Qt.ItemIsEnabled
+            | Qt.ItemIsSelectable
+            | Qt.ItemIsDragEnabled
+            | Qt.ItemIsDropEnabled
+        )
         self._legend_list.addItem(item)
         self._legend_list.setItemWidget(item, item_widget)
 
@@ -548,7 +605,9 @@ class MainWindowLegendActionsMixin:
                 visible = set(app_state.visible_groups) if app_state.visible_groups is not None else set(groups)
 
             # Interleave parent rows before their children so the merge
-            # structure is visible and draggable groups can be dropped on them.
+            # structure is visible and draggable groups can be dropped on
+            # them. Parent blocks follow the parent's legend_item_order
+            # position, so dragging a parent row reorders the whole block.
             from visualization.plotting.grouping import all_parents, parent_children
 
             parents = all_parents(app_state)
@@ -556,22 +615,9 @@ class MainWindowLegendActionsMixin:
                 child_parent: dict[str, str] = {
                     child: parent for parent in parents for child in parent_children(app_state, parent)
                 }
-                display_entries: list[dict[str, Any]] = []
-                placed_groups: set[str] = set()
-                for parent in parents:
-                    display_entries.append({"type": "parent", "key": parent, "parent": parent})
-                    for entry in entries:
-                        if entry["type"] == "group" and child_parent.get(entry["group"]) == parent:
-                            child_entry = dict(entry)
-                            child_entry["in_parent"] = parent
-                            display_entries.append(child_entry)
-                            placed_groups.add(entry["group"])
-                for entry in entries:
-                    if entry["type"] == "group" and entry["group"] not in placed_groups:
-                        display_entries.append(entry)
-                    elif entry["type"] == "overlay":
-                        display_entries.append(entry)
-                entries = display_entries
+                entries = build_legend_display_entries(
+                    entries, parents, child_parent, order_index
+                )
 
             for entry in entries:
                 if entry["type"] == "parent":

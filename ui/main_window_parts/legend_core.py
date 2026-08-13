@@ -170,8 +170,31 @@ class MainWindowLegendCoreMixin:
         overlay_map = getattr(app_state, "overlay_artists", {}) or {}
         group_map = getattr(app_state, "group_to_scatter", {}) or {}
 
+        # Parent groups form stacking blocks: a parent row occupies one
+        # z-slot shared by all of its children, so dragging the parent row
+        # moves the whole merged block above/below other entries.
+        from visualization.plotting.grouping import all_parents, parent_children
+
+        child_of: dict[str, set[str]] = {
+            parent: set(parent_children(app_state, parent)) for parent in all_parents(app_state)
+        }
+        handled_children: set[str] = set()
+        for children in child_of.values():
+            handled_children |= children
+
         for entry_type, entry_key in order:
-            if entry_type == "group":
+            if entry_type == "parent":
+                for child in child_of.get(entry_key, set()):
+                    artist = group_map.get(child)
+                    if artist is not None:
+                        try:
+                            artist.set_zorder(target_z)
+                        except Exception:
+                            pass
+            elif entry_type == "group":
+                if entry_key in handled_children:
+                    # Z-order of children is decided by their parent row.
+                    continue
                 artist = group_map.get(entry_key)
                 if artist is not None:
                     try:
