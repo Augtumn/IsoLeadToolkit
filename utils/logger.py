@@ -47,10 +47,19 @@ class _ColorFormatter(logging.Formatter):
         if not self._use_color or not _stderr_is_tty():
             return super().format(record)
         color = _CONSOLE_COLORS.get(record.levelno, _RESET)
-        level = f"{color}{record.levelname:<8}{_RESET}"
-        # Inject colored level into the formatted line (first %(levelname)s).
-        msg = super().format(record)
-        return msg.replace(record.levelname, level, 1)
+        # Color only the level field: replace the FIRST occurrence anchored
+        # at the formatted level position, not arbitrary "INFO"/"ERROR"
+        # text inside the message body.
+        formatted = super().format(record)
+        level_padded = f"{record.levelname:<8}"
+        idx = formatted.find(level_padded)
+        if idx < 0:
+            return formatted
+        return (
+            formatted[:idx]
+            + f"{color}{level_padded}{_RESET}"
+            + formatted[idx + len(level_padded):]
+        )
 
 
 def _stderr_is_tty() -> bool:
@@ -94,6 +103,11 @@ class LoggerWriter:
     def fileno(self) -> int:
         """Return the file descriptor of the original stream for faulthandler compatibility."""
         return self.original_stream.fileno()
+
+    def isatty(self) -> bool:
+        """Report non-tty so third-party libraries (tqdm, rich, ...) do not
+        crash when probing sys.stdout/stderr."""
+        return False
 
     def flush(self) -> None:
         try:
