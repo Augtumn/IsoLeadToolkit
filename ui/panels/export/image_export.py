@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 
 _PREVIEW_DEBOUNCE_MS = 400
 
+_IMAGE_FILE_FILTERS = (
+    "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"
+    "SVG Files (*.svg);;EPS Files (*.eps);;All Files (*.*)"
+)
+
 
 class ExportPanelImageExportMixin:
     """Image export methods for ExportPanel."""
@@ -55,8 +60,6 @@ class ExportPanelImageExportMixin:
 
     def _on_export_image_clicked(self):
         """Export figure directly using profile defaults (no panel param widgets)."""
-        import matplotlib.pyplot as plt
-
         if getattr(app_state, 'df_global', None) is None or len(app_state.df_global) == 0:
             QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
             return
@@ -69,20 +72,16 @@ class ExportPanelImageExportMixin:
         # Use profile defaults since panel parameter widgets have been removed.
         params = self._profile_default_params(profile)
         params['preset_key'] = str(preset_key)
-        # Resolve default sizes from profile.
-        point_size_for_export = int(profile.get('point_size', 60))
-        legend_fontsize = float((profile.get('legend', {}) or {}).get('fontsize', 8.0))
-        legend_size_for_export = int(round(legend_fontsize))
-        label_size_for_export = int(round(legend_fontsize + 2.0))
-        title_size_for_export = int(round(legend_fontsize + 3.0))
-        tick_size_for_export = int(round(legend_fontsize - 0.5))
+        # Sizes/DPI come straight from the profile defaults dict (single source).
+        point_size_for_export = int(params['point_size'])
+        legend_size_for_export = int(params['legend_size'])
+        label_size_for_export = int(params['label_size'])
+        title_size_for_export = int(params['title_size'])
+        tick_size_for_export = int(params['tick_size'])
         image_ext = str(params.get('image_ext', 'png'))
         save_options = self._resolve_export_save_options(profile, overrides=params)
 
-        filters = (
-            "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"
-            "SVG Files (*.svg);;EPS Files (*.eps);;All Files (*.*)"
-        )
+        filters = _IMAGE_FILE_FILTERS
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             translate("Export Figure"),
@@ -128,7 +127,9 @@ class ExportPanelImageExportMixin:
         finally:
             if export_fig is not None:
                 try:
-                    plt.close(export_fig)
+                    # The figure is created directly via Figure(...), so it
+                    # is not registered with pyplot; clear() releases artists.
+                    export_fig.clear()
                 except Exception:
                     pass
 
@@ -160,6 +161,10 @@ class ExportPanelImageExportMixin:
         original_marker_size = int(getattr(app_state, 'plot_marker_size', 60))
         original_font_sizes = dict(getattr(app_state, 'plot_font_sizes', {}) or {})
 
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             use_scienceplots = self._is_scienceplots_available()
             style_chain = profile['styles'] if use_scienceplots else ['default']
@@ -219,6 +224,10 @@ class ExportPanelImageExportMixin:
                 self._attach_preview_label_state(export_fig)
                 return export_fig
         finally:
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
             state_gateway.set_plot_marker_size(original_marker_size)
             state_gateway.set_plot_font_sizes(original_font_sizes)
             state_gateway.set_figure_axes(original_fig, original_ax)
@@ -227,6 +236,10 @@ class ExportPanelImageExportMixin:
             state_gateway.set_marginal_axes(original_marginal_axes)
             try:
                 self._render_current_mode_sync(point_size=int(getattr(app_state, 'point_size', 60)))
+                # Restore the user's zoom/pan on the interactive canvas: the
+                # re-render above resets limits, but the captured view must
+                # be reapplied so exports do not silently reset the plot.
+                self._apply_axis_view(original_ax, original_view)
                 if app_state.fig is not None and app_state.fig.canvas is not None:
                     app_state.fig.canvas.draw_idle()
             except Exception as restore_err:
@@ -426,10 +439,16 @@ class ExportPanelImageExportMixin:
                             pass
                     state['canvas_callbacks'] = []
 
-                    # Apply current DPI to the profile for figure creation
-                    
+                    # Apply current DPI to the profile for figure creation.
+                    # Cap the preview render DPI so huge slider values do not
+                    # allocate a multi-thousand-pixel canvas; the saved file
+                    # still uses the user's requested DPI.
+                    preview_dpi = min(
+                        int(state['params'].get('dpi', effective_profile.get('dpi', 400))),
+                        300,
+                    )
                     effective_profile = dict(state['profile'])
-                    effective_profile['dpi'] = int(state['params'].get('dpi', effective_profile.get('dpi', 400)))
+                    effective_profile['dpi'] = preview_dpi
 
                     new_fig = self._create_export_figure(
                         effective_profile,
@@ -448,8 +467,7 @@ class ExportPanelImageExportMixin:
                     # preview adjustment leaks one full Figure.
                     if old_fig is not None and old_fig is not new_fig:
                         try:
-                            import matplotlib.pyplot as plt
-                            plt.close(old_fig)
+                            old_fig.clear()
                         except Exception:
                             pass
 
@@ -457,6 +475,12 @@ class ExportPanelImageExportMixin:
                     new_w = int(round(float(effective_profile['figsize'][0]) * float(state['params']['dpi'])))
                     new_h = int(round(float(effective_profile['figsize'][1]) * float(state['params']['dpi'])))
                     state['canvas'].figure = new_fig
+                    # Keep the reverse reference so code reaching the canvas
+                    # through the figure (draw paths) does not hit None.
+                    try:
+                        new_fig.canvas = state['canvas']
+                    except Exception:
+                        pass
                     state['canvas'].setFixedSize(new_w, new_h)
 
                     # Re-register overlay label callbacks
@@ -530,13 +554,17 @@ class ExportPanelImageExportMixin:
                     spin.blockSignals(True)
                     spin.setValue(v)
                     spin.blockSignals(False)
+                    # Debounced apply also covers keyboard arrows, which only
+                    # emit valueChanged (sliderReleased is mouse-only).
+                    _apply_value(v)
+
                 def _spin_changed(v):
                     slider.blockSignals(True)
                     slider.setValue(v)
                     slider.blockSignals(False)
                     _apply_value(v)
 
-                slider.valueChanged.connect(_slider_changed)       # sync spin only
+                slider.valueChanged.connect(_slider_changed)       # sync spin + debounced apply
                 slider.sliderReleased.connect(lambda: _apply_value(slider.value()))  # apply on release
                 spin.valueChanged.connect(_spin_changed)            # spin: apply immediately
 
@@ -552,15 +580,19 @@ class ExportPanelImageExportMixin:
                 def _apply_dpi(v):
                     state['params']['dpi'] = v
                     _schedule_refresh()
+
                 def _dpi_slider_changed(v):
                     dpi_spin.blockSignals(True)
                     dpi_spin.setValue(v)
                     dpi_spin.blockSignals(False)
+                    _apply_dpi(v)
+
                 def _dpi_spin_changed(v):
                     dpi_slider.blockSignals(True)
                     dpi_slider.setValue(v)
                     dpi_slider.blockSignals(False)
                     _apply_dpi(v)
+
                 dpi_slider.valueChanged.connect(_dpi_slider_changed)
                 dpi_slider.sliderReleased.connect(lambda: _apply_dpi(dpi_slider.value()))
                 dpi_spin.valueChanged.connect(_dpi_spin_changed)
@@ -604,13 +636,18 @@ class ExportPanelImageExportMixin:
 
                 # Reset state
                 state['point_size'] = new_defaults['point_size']
+                state['legend_marker_size'] = new_defaults['point_size']
                 state['legend_size'] = new_defaults['legend_size']
                 state['label_size'] = new_defaults['label_size']
                 state['title_size'] = new_defaults['title_size']
                 state['tick_size'] = new_defaults['tick_size']
-                state['params'].update(new_defaults)
+                # Only size/DPI fields follow the new preset; toggle/format
+                # choices (transparent, tight_bbox, pad, image_ext) keep the
+                # user's current values so the UI and the saved output agree.
+                for key in ('dpi', 'point_size', 'legend_size', 'label_size',
+                            'title_size', 'tick_size'):
+                    state['params'][key] = new_defaults[key]
                 state['params']['preset_key'] = str(new_preset_key)
-                state['params']['dpi'] = new_defaults['dpi']
 
                 _schedule_refresh()
             preset_combo.currentIndexChanged.connect(_preset_changed)
@@ -625,10 +662,7 @@ class ExportPanelImageExportMixin:
 
             # ── Save ───────────────────────────────────────────────
             def _save_preview_image():
-                filters = (
-                    "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"
-                    "SVG Files (*.svg);;EPS Files (*.eps);;All Files (*.*)"
-                )
+                filters = _IMAGE_FILE_FILTERS
                 file_path, _ = QFileDialog.getSaveFileName(
                     dialog,
                     translate("Save"),
@@ -655,6 +689,7 @@ class ExportPanelImageExportMixin:
                         translate("Figure exported successfully to {file}").format(file=file_path),
                     )
                 except Exception as save_err:
+                    logger.exception("Failed to save preview image: %s", save_err)
                     QMessageBox.critical(
                         dialog,
                         translate("Error"),
@@ -689,14 +724,14 @@ class ExportPanelImageExportMixin:
                             pass
                 finally:
                     try:
-                        plt.close(state['preview_fig'])
+                        state['preview_fig'].clear()
                     except Exception:
                         pass
 
             dialog.finished.connect(_cleanup_preview)
             dialog.exec_()
         except Exception as err:
-            logger.error("Failed to generate export preview: %s", err)
+            logger.exception("Failed to generate export preview: %s", err)
             QMessageBox.critical(
                 self,
                 translate("Error"),
