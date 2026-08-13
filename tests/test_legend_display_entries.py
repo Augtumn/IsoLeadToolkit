@@ -163,6 +163,61 @@ def test_reorder_legend_keys_moves_before_and_after_target() -> None:
     assert reorder_legend_keys(order, "group:A", "group:A", below=False) == order
 
 
+@pytest.mark.skipif(
+    not hasattr(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]), "QApplication"),
+    reason="PyQt5 not available",
+)
+def test_reorder_handler_updates_order_state(monkeypatch) -> None:
+    """Drag flow: startDrag records the row, dropEvent reorders the state."""
+    from PyQt5.QtCore import QMimeData, QPoint, Qt
+    from PyQt5.QtGui import QDropEvent
+    from PyQt5.QtWidgets import QApplication, QListWidgetItem
+
+    from core import state_gateway
+    from ui.main_window_parts.legend_actions import MainWindowLegendActionsMixin
+    from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin
+    from ui.main_window_parts.setup import LegendListWidget
+
+    app = QApplication.instance() or QApplication([])
+
+    class Stub(MainWindowLegendActionsMixin, MainWindowLegendCoreMixin):
+        pass
+
+    stub = Stub()
+    lst = LegendListWidget()
+    lst.resize(200, 300)
+    for key in ["A", "B", "C"]:
+        item = QListWidgetItem(key)
+        item.setData(Qt.UserRole, {"type": "group", "key": key})
+        lst.addItem(item)
+    lst._legend_reorder_handler = stub._handle_legend_reorder
+    stub._legend_list = lst
+    app.processEvents()
+
+    prev_order = getattr(app_state, "legend_item_order", None)
+    prev_ax = getattr(app_state, "ax", None)
+    try:
+        monkeypatch.setattr(app_state, "ax", None, raising=False)
+        monkeypatch.setattr(app_state, "legend_item_order", [], raising=False)
+
+        # Simulate dragging row B (index 1) onto row A (index 0).
+        lst._dragging_items = [lst.item(1)]
+        event = QDropEvent(
+            QPoint(5, 5), Qt.MoveAction, QMimeData(), Qt.LeftButton, Qt.NoModifier
+        )
+        assert stub._handle_legend_reorder(lst, event) is True
+        # The order state now reflects B above A; a panel rebuild driven by
+        # this state renders the new order.
+        assert getattr(app_state, "legend_item_order", None) == [
+            "group:B", "group:A", "group:C",
+        ]
+    finally:
+        if prev_order is not None:
+            state_gateway.set_legend_item_order(prev_order)
+        if prev_ax is not None:
+            monkeypatch.setattr(app_state, "ax", prev_ax, raising=False)
+
+
 # ---------------------------------------------------------------------------
 # _apply_legend_z_order parent-block stacking (offscreen Qt)
 # ---------------------------------------------------------------------------

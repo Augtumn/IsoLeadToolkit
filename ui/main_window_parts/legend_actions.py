@@ -499,7 +499,11 @@ class MainWindowLegendActionsMixin:
         updating the order state and rebuilding the panel, so a drop can
         never stack two rows at the same position.
         """
-        if event.source() is not list_widget:
+        source = event.source()
+        if source is not None and source is not list_widget:
+            # Drops from other widgets are not internal reorders. Synthetic
+            # events (no source) still pass; _dragging_items is only set by
+            # our own startDrag, so the guard below remains authoritative.
             return False
         dragged = getattr(list_widget, "_dragging_items", None)
         if not dragged:
@@ -535,7 +539,17 @@ class MainWindowLegendActionsMixin:
         if new_order == order_keys:
             return False
         state_gateway.set_legend_item_order(new_order)
-        self._rebuild_legend_after_reorder()
+        # Rebuild directly from the NEW order state. Do NOT go through
+        # _rebuild_legend_after_reorder here: its leading
+        # _apply_legend_z_order() would read the OLD row order from the list
+        # and write it back over the order we just set, reverting the drag.
+        title = getattr(app_state, "legend_last_title", None)
+        handles = getattr(app_state, "legend_last_handles", None)
+        labels = getattr(app_state, "legend_last_labels", None)
+        if title and handles is not None and labels is not None:
+            self._update_legend_panel(title, handles, labels)
+        else:
+            self._apply_legend_z_order()
         return True
 
     def _show_legend_context_menu(self, pos):
