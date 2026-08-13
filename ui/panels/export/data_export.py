@@ -33,8 +33,12 @@ class ExportPanelDataExportMixin:
         }
         params_attr = dr_params_map.get(render_mode)
         params = getattr(app_state, params_attr, {}) if params_attr else {}
+        # V1V2: also export the discrimination formula parameters.
+        if str(render_mode).upper() == "V1V2":
+            params = {**dict(params), **dict(getattr(app_state, "v1v2_params", {}) or {})}
         embedding = getattr(app_state, 'last_embedding', None)
         embedding_type = getattr(app_state, 'last_embedding_type', None)
+        pca_variance = getattr(app_state, 'last_pca_variance', None)
         ax = getattr(app_state, 'ax', None)
         axis_labels = {}
         if ax is not None:
@@ -59,6 +63,7 @@ class ExportPanelDataExportMixin:
             'algorithm_params': params,
             'axis_labels': axis_labels,
             'render_mode': getattr(app_state, 'render_mode', None),
+            'pca_variance': pca_variance,
         }
 
     @staticmethod

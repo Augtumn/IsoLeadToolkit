@@ -73,7 +73,8 @@ def _hex_color(color: Any) -> str:
     import matplotlib.colors as mcolors
     try:
         return mcolors.to_hex(color)
-    except Exception:
+    except Exception as err:
+        logger.debug("Unrecognized color spec %r: %s", color, err)
         return "#333333"
 
 
@@ -320,9 +321,14 @@ def _extract_isochron_lines(ax: Any) -> list[dict[str, Any]]:
 
 def _extract_pb_evolution_overlay_data(
     actual_algorithm: str,
+    xlim: tuple[float, float] = (0.0, 45.0),
 ) -> dict[str, list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]]]:
     """Recompute overlay curves for Pb evolution plots via the
-    geochemistry engine (model curves + paleoisochrons)."""
+    geochemistry engine (model curves + paleoisochrons).
+
+    *xlim* is the axis range used to sample paleoisochron lines; callers
+    pass the current plot's range so overlays match the on-screen view.
+    """
     result: dict[str, list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]]] = {}
 
     try:
@@ -335,8 +341,6 @@ def _extract_pb_evolution_overlay_data(
     except Exception as err:
         logger.warning("Failed to load geochemistry engine: %s", err)
         return result
-
-    xlim = (0, 45)
 
     # ── model curves ──────────────────────────────────────────────
     if getattr(app_state, "show_model_curves", True):
@@ -629,10 +633,12 @@ def _build_origin_project(
                     plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 else:
                     plot = gl.add_plot(wks, coly=1, colx=0, type="s")
+                # Count the layer immediately: a later style failure must not
+                # shift the legend indices (%(n,@WS) refers to the layer).
+                plot_idx += 1
                 plot.color = group.get("color", "#333333")
                 plot.symbol_kind = group.get("marker", 1)
                 plot.symbol_size = 8
-                plot_idx += 1
                 legend_entries.append(
                     f"\\l({plot_idx}) %({plot_idx},@WS)"
                 )
@@ -669,10 +675,10 @@ def _build_origin_project(
                         pass
 
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
+                    plot_idx += 1  # count the layer immediately (legend index)
                     line.color = style.get("color", "#000000")
                     if style.get("width"):
                         line.width = style["width"]
-                    plot_idx += 1
                     legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                 except Exception as err:
                     logger.debug("Skipping overlay %s: %s", curve_label, err)
@@ -708,9 +714,9 @@ def _build_origin_project(
                         pass
 
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
+                    plot_idx += 1  # count the layer immediately (legend index)
                     line.color = iso.get("color", "#ef4444")
                     line.width = iso.get("width", 1.5)
-                    plot_idx += 1
                     legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                 except Exception as err:
                     logger.debug("Skipping isochron %s: %s", iso.get("label"), err)
@@ -732,9 +738,9 @@ def _build_origin_project(
                         pass
 
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
+                    plot_idx += 1  # count the layer immediately (legend index)
                     line.color = eq.get("color", "#ef4444")
                     line.width = eq.get("width", 1.0)
-                    plot_idx += 1
                     legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                 except Exception as err:
                     logger.debug("Skipping equation %s: %s", eq.get("label"), err)
@@ -873,7 +879,12 @@ def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
     _plumbo_modes = {"PLUMBOTECTONICS_76", "PLUMBOTECTONICS_86"}
 
     if mode in _pb_geo_modes:
-        overlay_data.update(_extract_pb_evolution_overlay_data(mode))
+        try:
+            xlim = ax.get_xlim()
+            x_min, x_max = float(xlim[0]), float(xlim[1])
+        except Exception:
+            x_min, x_max = 0.0, 45.0
+        overlay_data.update(_extract_pb_evolution_overlay_data(mode, (x_min, x_max)))
         logger.info(
             "Origin export: Pb-evolution overlays — categories=%s, entries=%d",
             list(overlay_data.keys()),

@@ -114,7 +114,7 @@ def _compute_geochem_params(
                 out[col] = np.asarray(arr, dtype=float)
         return out
     except Exception as err:
-        logger.warning("Failed to compute geochem params for export: %s", err)
+        logger.warning("Failed to compute geochem params for export (mode=%s): %s", render_mode, err)
         return {}
 
 
@@ -129,6 +129,7 @@ def build_export_dataframe(
     algorithm_params: Mapping[str, object] | None,
     axis_labels: Mapping[str, str] | None = None,
     render_mode: str | None = None,
+    pca_variance: Sequence[float] | None = None,
 ) -> pd.DataFrame:
     """Create export DataFrame and append coordinate columns for every mode.
 
@@ -190,6 +191,16 @@ def build_export_dataframe(
             col_name = axis_lbl.get("z") or _dimension_label(embedding_type, 2, pca_component_indices)
 
         selected_df[col_name] = col_values
+
+    # PCA / RobustPCA: append the explained-variance ratio of the plotted
+    # components (diagnostic extra data carried in app_state.last_pca_variance).
+    if embedding_type in ("PCA", "RobustPCA") and pca_variance is not None:
+        pca_idx = list(pca_component_indices or [0, 1])
+        variance = np.asarray(pca_variance, dtype=float)
+        for dim_idx in range(min(n_dims, len(pca_idx))):
+            if dim_idx < len(variance):
+                pc = int(pca_idx[dim_idx]) + 1
+                selected_df[f"variance_ratio_PC{pc}"] = float(variance[dim_idx])
 
     for key, value in (algorithm_params or {}).items():
         selected_df[f"param_{key}"] = value
@@ -311,6 +322,14 @@ def _parse_linear_expression(expression: str) -> tuple[float | None, float | Non
     return slope, intercept
 
 
+def _csv_comment_value(value: Any) -> str:
+    """Format a value for a #-comment line, quoting commas/quotes/newlines."""
+    text = f"{value:.6f}" if isinstance(value, float) else str(value)
+    if any(ch in text for ch in ',"\n'):
+        text = '"' + text.replace('"', '""') + '"'
+    return text
+
+
 def _build_csv_with_comments(
     df: pd.DataFrame,
     file_path: str,
@@ -323,12 +342,9 @@ def _build_csv_with_comments(
         # Curve equations as header comments
         for sheet_name, cdf in curve_sheets.items():
             fh.write(f"# [{sheet_name}]\n")
-            fh.write(f"# {', '.join(cdf.columns)}\n")
+            fh.write(f"# {', '.join(str(c) for c in cdf.columns)}\n")
             for _, row in cdf.iterrows():
-                vals = ", ".join(
-                    f"{v:.6f}" if isinstance(v, float) else str(v)
-                    for v in row.values
-                )
+                vals = ", ".join(_csv_comment_value(v) for v in row.values)
                 fh.write(f"# {vals}\n")
             fh.write("#\n")
         # Data
@@ -432,6 +448,7 @@ def export_selected_data_to_file(
     preferred_format: str | None = None,
     axis_labels: Mapping[str, str] | None = None,
     render_mode: str | None = None,
+    pca_variance: Sequence[float] | None = None,
 ) -> str:
     """Build and export selected data to target file."""
     export_df = build_export_dataframe(
@@ -444,6 +461,7 @@ def export_selected_data_to_file(
         algorithm_params=algorithm_params,
         axis_labels=axis_labels,
         render_mode=render_mode,
+        pca_variance=pca_variance,
     )
     curve_sheets = _curve_sheets_for_mode(render_mode)
     return export_dataframe_to_file(
@@ -467,6 +485,7 @@ def append_selected_data_to_excel(
     sheet_name: str,
     axis_labels: Mapping[str, str] | None = None,
     render_mode: str | None = None,
+    pca_variance: Sequence[float] | None = None,
 ) -> str:
     """Append selected data to an Excel sheet and return normalized path."""
     export_df = build_export_dataframe(
@@ -479,6 +498,7 @@ def append_selected_data_to_excel(
         algorithm_params=algorithm_params,
         axis_labels=axis_labels,
         render_mode=render_mode,
+        pca_variance=pca_variance,
     )
 
     target = _excel_target(file_path)
