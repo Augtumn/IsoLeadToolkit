@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _BUILTIN_DIR = Path(__file__).resolve().parent / "builtins"
 _USER_PLUGIN_DIR = Path.home() / ".isotopes_analysis" / "plugins"
+_HOST_API_VERSION = "1.0"
 
 
 class PluginManager:
@@ -93,7 +94,11 @@ class PluginManager:
             self._failed[name] = str(exc)
             raise PluginLoadError(f"Failed to load plugin '{name}': {exc}") from exc
 
-        plugin = self._extract_plugin(module, name)
+        try:
+            plugin = self._extract_plugin(module, name)
+        except Exception as exc:
+            self._failed[name] = str(exc)
+            raise PluginLoadError(f"Failed to instantiate plugin '{name}': {exc}") from exc
         if plugin is None:
             raise PluginLoadError(f"No plugin class found in module '{name}'")
 
@@ -113,10 +118,30 @@ class PluginManager:
         except Exception:
             pass  # If meta is not a PluginMeta dataclass, keep as-is
 
-        ok, msg = plugin.validate_environment()
+        try:
+            ok, msg = plugin.validate_environment()
+        except Exception as exc:
+            self._failed[name] = str(exc)
+            raise PluginValidationError(
+                f"Plugin '{name}' environment validation failed: {exc}"
+            ) from exc
         if not ok:
             self._failed[name] = msg
             raise PluginValidationError(f"Plugin '{name}' validation failed: {msg}")
+
+        # API version compatibility gate (documented in docs/plugins.md).
+        try:
+            api_version = str(getattr(plugin.meta, 'api_version', '') or '')
+        except Exception:
+            api_version = ''
+        if api_version and api_version != _HOST_API_VERSION:
+            self._failed[name] = (
+                f"api_version {api_version} does not match host {_HOST_API_VERSION}"
+            )
+            raise PluginValidationError(
+                f"Plugin '{name}' api_version {api_version} is incompatible "
+                f"with host {_HOST_API_VERSION}"
+            )
 
         self._plugins[name] = plugin
         self._meta[name] = plugin.meta

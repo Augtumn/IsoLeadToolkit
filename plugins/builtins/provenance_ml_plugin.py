@@ -55,8 +55,12 @@ def prepare_training_data(
     original_rows = int(len(df))
     work = df[[region_col] + feature_cols].copy()
     work.replace(['', 'nan', 'NaN', None], np.nan, inplace=True)
+    # Drop missing region values BEFORE converting to str: astype(str)
+    # turns NaN into the literal 'nan', which would otherwise slip past
+    # notna() and train a phantom "nan" region.
+    work = work[work[region_col].notna()]
     work[region_col] = work[region_col].astype(str).str.strip()
-    work = work[work[region_col].notna() & (work[region_col] != '')]
+    work = work[work[region_col] != '']
     work = _coerce_numeric(work, feature_cols)
     work = work.dropna(subset=feature_cols)
     clean_rows = int(len(work))
@@ -236,21 +240,23 @@ def train_ovr_xgboost(
         model.fit(x_train, y_train)
         elapsed = time.perf_counter() - t0
 
-        # Cross-validation metrics
+        # Cross-validation metrics. Evaluate on the ORIGINAL (pre-SMOTE)
+        # samples: cross-validating the augmented set would leak synthetic
+        # samples across folds and inflate the metrics.
         cv_metrics: dict[str, float] = {}
         try:
             from sklearn.model_selection import StratifiedKFold, cross_val_score
             from sklearn.metrics import make_scorer, balanced_accuracy_score, f1_score, roc_auc_score
             cv = StratifiedKFold(n_splits=min(5, min(pos, neg)), shuffle=True, random_state=random_state)
             cv_metrics['balanced_accuracy'] = float(
-                cross_val_score(model, x_train, y_train, cv=cv, scoring=make_scorer(balanced_accuracy_score)).mean()
+                cross_val_score(model, x, y_bin, cv=cv, scoring=make_scorer(balanced_accuracy_score)).mean()
             )
             cv_metrics['macro_f1'] = float(
-                cross_val_score(model, x_train, y_train, cv=cv, scoring=make_scorer(f1_score, average='macro')).mean()
+                cross_val_score(model, x, y_bin, cv=cv, scoring=make_scorer(f1_score, average='macro')).mean()
             )
             if min(pos, neg) >= 5:
                 cv_metrics['auc_ovr'] = float(
-                    cross_val_score(model, x_train, y_train, cv=cv, scoring=make_scorer(roc_auc_score)).mean()
+                    cross_val_score(model, x, y_bin, cv=cv, scoring=make_scorer(roc_auc_score)).mean()
                 )
         except Exception:
             pass  # CV is best-effort; skip if folds too small
@@ -387,6 +393,7 @@ def run_provenance_pipeline(
             'max_prob': pred_probs,
             'proba': proba,
             'valid_mask': valid_mask,
+            'predict_threshold': predict_threshold,
         },
     }
 
