@@ -1,12 +1,12 @@
 """Display panel theme persistence and application logic."""
 from __future__ import annotations
 
-import json
 import logging
 
 from PyQt5.QtWidgets import QMessageBox, QWidget
 
-from core import CONFIG, app_state, state_gateway, translate
+from core import CONFIG, app_state, atomic_write_json, state_gateway, translate
+from core.persistence import extract_legacy_projection_presets
 from visualization.plotting.style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,19 @@ class DisplayThemeMixin:
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         if theme_file.exists():
             try:
-                with open(theme_file, 'r', encoding='utf-8') as handle:
-                    state_gateway.set_saved_themes(json.load(handle))
+                loaded, legacy_presets = extract_legacy_projection_presets()
+                if legacy_presets:
+                    # Legacy: projection parameter presets used to live inside
+                    # the theme container; migrate them once into
+                    # param_presets, which is persisted separately.
+                    merged = dict(getattr(app_state, 'param_presets', {}) or {})
+                    merged.update(legacy_presets)
+                    state_gateway.set_param_presets(merged)
+                    logger.info(
+                        "Migrated %s legacy projection presets from user_themes.json",
+                        len(legacy_presets),
+                    )
+                state_gateway.set_saved_themes(loaded or {})
             except Exception as exc:
                 logger.warning("Failed to load themes: %s", exc)
                 state_gateway.set_saved_themes({})
@@ -122,8 +133,7 @@ class DisplayThemeMixin:
 
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         try:
-            with open(theme_file, 'w', encoding='utf-8') as handle:
-                json.dump(app_state.saved_themes, handle, indent=2)
+            atomic_write_json(theme_file, app_state.saved_themes)
             QMessageBox.information(
                 self,
                 translate("Success"),
@@ -348,8 +358,7 @@ class DisplayThemeMixin:
 
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         try:
-            with open(theme_file, 'w', encoding='utf-8') as handle:
-                json.dump(app_state.saved_themes, handle, indent=2)
+            atomic_write_json(theme_file, app_state.saved_themes)
             self.theme_load_combo.setCurrentIndex(-1)
             self._refresh_theme_list()
         except Exception as exc:

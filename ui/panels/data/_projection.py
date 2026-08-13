@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
-from core import CONFIG, app_state, state_gateway, translate
+from core import app_state, state_gateway, translate
 
 logger = logging.getLogger(__name__)
 
@@ -426,9 +426,7 @@ class _DataPanelProjectionBuild:
         current = self.preset_combo.currentText()
         self.preset_combo.clear()
         self.preset_combo.addItem(translate("Custom"))
-        presets = {}
-        if hasattr(app_state, "saved_themes"):
-            presets = app_state.saved_themes.get("projection_presets", {})
+        presets = dict(getattr(app_state, "param_presets", {}) or {})
         for name in sorted(presets.keys()):
             self.preset_combo.addItem(name)
         idx = self.preset_combo.findText(current)
@@ -443,14 +441,18 @@ class _DataPanelProjectionBuild:
             "tsne_params": dict(getattr(app_state, "tsne_params", {})),
             "pca_params": dict(getattr(app_state, "pca_params", {})),
             "robust_pca_params": dict(getattr(app_state, "robust_pca_params", {})),
+            "ml_params": dict(getattr(app_state, "ml_params", {})),
+            "v1v2_params": dict(getattr(app_state, "v1v2_params", {})),
             "standardize_data": bool(getattr(app_state, "standardize_data", False)),
         }
 
     def _save_preset(self):
-        """Prompt for preset name and save current projection params."""
-        if not hasattr(app_state, "saved_themes") or not app_state.saved_themes:
-            state_gateway.set_saved_themes({})
+        """Prompt for preset name and save current projection params.
 
+        Presets live in ``app_state.param_presets`` (persisted via the
+        autosave path into ui_state.json) — they no longer share the theme
+        container ``saved_themes`` / user_themes.json.
+        """
         name, ok = QInputDialog.getText(
             self,
             translate("Save Preset"),
@@ -463,20 +465,10 @@ class _DataPanelProjectionBuild:
         if not name:
             return
 
-        presets_container = app_state.saved_themes
-        if "projection_presets" not in presets_container:
-            presets_container["projection_presets"] = {}
-
-        presets_container["projection_presets"][name] = self._collect_params_snapshot()
-
-        # Persist to disk alongside display themes
-        theme_file = CONFIG['temp_dir'] / 'user_themes.json'
-        try:
-            with open(theme_file, 'w', encoding='utf-8') as f:
-                import json
-                json.dump(presets_container, f, indent=2)
-        except Exception as exc:
-            logger.warning("Failed to persist projection presets: %s", exc)
+        presets = dict(getattr(app_state, "param_presets", {}) or {})
+        presets[name] = self._collect_params_snapshot()
+        state_gateway.set_param_presets(presets)
+        logger.info("Saved projection preset '%s' (%s presets total)", name, len(presets))
 
         self._preset_combo_refresh()
         idx = self.preset_combo.findText(name)
@@ -536,9 +528,7 @@ class _DataPanelProjectionBuild:
         name = self.preset_combo.currentText()
         if not name or name == translate("Custom"):
             return
-        presets = {}
-        if hasattr(app_state, "saved_themes"):
-            presets = app_state.saved_themes.get("projection_presets", {})
+        presets = dict(getattr(app_state, "param_presets", {}) or {})
         if name not in presets:
             return
 
@@ -561,6 +551,8 @@ class _DataPanelProjectionBuild:
             "tsne_params": state_gateway.set_tsne_params,
             "pca_params": state_gateway.set_pca_params,
             "robust_pca_params": state_gateway.set_robust_pca_params,
+            "ml_params": state_gateway.set_ml_params,
+            "v1v2_params": state_gateway.set_v1v2_params,
         }
         for key, setter in param_setters.items():
             if key in params:
