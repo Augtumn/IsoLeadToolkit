@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from core import app_state
+from core import app_state, state_gateway
 from visualization.line_styles import resolve_line_style
 
 from ..label_layout import position_curve_label
@@ -41,7 +41,13 @@ def render_isochron1_group(
     try:
         age_ma, _ = geochemistry.calculate_pbpb_age_from_ratio(slope, slope_err, params)
         if age_ma is not None and age_ma >= 0:
-            app_state.isochron_results[grp]['age_ma'] = age_ma
+            # Copy-then-submit: an in-place write here would be rolled back
+            # by the next StateStore sync, leaving export/UI without the age.
+            results = dict(getattr(app_state, 'isochron_results', {}) or {})
+            entry = dict(results.get(grp, {}) or {})
+            entry['age_ma'] = age_ma
+            results[grp] = entry
+            state_gateway.set_isochron_results(results)
     except Exception as age_err:
         logger.warning('Failed to calculate isochron age for slope %.6f: %s', slope, age_err)
 

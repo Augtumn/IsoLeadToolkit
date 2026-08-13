@@ -19,23 +19,58 @@ _SHEET_ISOCHRON = "Isochrons"
 _SHEET_EQUATIONS = "Equations"
 
 #: Geochemistry modes whose derived parameters are appended on export.
-#: t_Model is the unified model-age column (single per parameter set).
+#: Keys must match calculate_all_parameters() result keys: the source
+#: inversion returns 'mu'/'omega'/'nu'/'Init_*', while the model-reference
+#: values are 'mu_model'/'kappa_model' (kappa_model is what the
+#: PB_KAPPA_AGE / PB_EVOL_86 axes actually plot).
 _GEO_CHEM_MODES: dict[str, list[str]] = {
     "V1V2": [
-        "t_Model (Ma)", "mu", "kappa",
+        "t_Model (Ma)", "mu", "mu_model", "kappa_model",
         "V1", "V2", "Delta_alpha", "Delta_beta", "Delta_gamma",
     ],
-    "PB_EVOL_76": ["t_Model (Ma)", "mu"],
-    "PB_EVOL_86": ["t_Model (Ma)", "mu", "kappa"],
-    "PB_MU_AGE": ["t_Model (Ma)", "mu"],
-    "PB_KAPPA_AGE": ["t_Model (Ma)", "kappa"],
-    "PLUMBOTECTONICS_76": ["t_Model (Ma)", "mu"],
-    "PLUMBOTECTONICS_86": ["t_Model (Ma)", "mu", "kappa"],
+    "PB_EVOL_76": [
+        "t_Model (Ma)", "mu", "mu_model", "omega", "nu",
+        "Init_206_204", "Init_207_204", "Init_208_204",
+    ],
+    "PB_EVOL_86": [
+        "t_Model (Ma)", "mu", "mu_model", "kappa_model", "omega", "nu",
+        "Init_206_204", "Init_207_204", "Init_208_204",
+    ],
+    "PB_MU_AGE": ["t_Model (Ma)", "mu", "mu_model"],
+    "PB_KAPPA_AGE": ["t_Model (Ma)", "kappa_model"],
+    "PLUMBOTECTONICS_76": [
+        "t_Model (Ma)", "mu", "mu_model", "omega", "nu",
+        "Init_206_204", "Init_207_204", "Init_208_204",
+    ],
+    "PLUMBOTECTONICS_86": [
+        "t_Model (Ma)", "mu", "mu_model", "kappa_model", "omega", "nu",
+        "Init_206_204", "Init_207_204", "Init_208_204",
+    ],
 }
 
 _PB206_COL = "206Pb/204Pb"
 _PB207_COL = "207Pb/204Pb"
 _PB208_COL = "208Pb/204Pb"
+
+#: Modes whose plots actually carry overlay curves (paleoisochrons, isochron
+#: fits, equations). Other modes must not inherit stale curve sheets from
+#: previous geochemistry renders.
+_CURVE_EXPORT_MODES = {
+    "PB_EVOL_76",
+    "PB_EVOL_86",
+    "PLUMBOTECTONICS_76",
+    "PLUMBOTECTONICS_86",
+    "PB_MU_AGE",
+    "PB_KAPPA_AGE",
+}
+
+
+def _curve_sheets_for_mode(render_mode: str | None) -> dict[str, pd.DataFrame]:
+    """Return curve overlay sheets only for modes that plot them."""
+    mode = str(render_mode or "").strip().upper()
+    if mode not in _CURVE_EXPORT_MODES:
+        return {}
+    return collect_geochem_curve_data()
 
 
 def _compute_geochem_params(
@@ -87,7 +122,6 @@ def build_export_dataframe(
     *,
     selected_indices: Iterable[int],
     df_global: pd.DataFrame,
-    algorithm: str | None,
     embedding: Sequence[Sequence[float]] | None,
     embedding_type: str | None,
     active_subset_indices: Iterable[int] | None,
@@ -106,8 +140,22 @@ def build_export_dataframe(
     PLUMBOTECTONICS_*) derived parameters such as model age, mu, kappa,
     V1/V2, and Delta values are computed and appended automatically.
     """
-    selected_list = list(selected_indices)
+    selected_list = sorted(selected_indices)
     selected_df = df_global.iloc[selected_list].copy()
+
+    # 2D/3D raw modes plot the raw columns themselves — their axis labels
+    # are real column names. last_embedding is stale there (left over from
+    # a previous embedding render), so appending it would silently write
+    # wrong coordinates under real column names.
+    mode_upper = str(render_mode or "").strip().upper()
+    if mode_upper in ("2D", "3D"):
+        embedding = None
+
+    # ---- geochemistry derived parameters (independent of coordinates) ----
+    mode = str(render_mode or "") if render_mode else ""
+    geo_params = _compute_geochem_params(selected_df, mode)
+    for col_name, arr in geo_params.items():
+        selected_df[col_name] = arr
 
     if embedding is None or len(embedding) == 0:
         return selected_df
@@ -145,12 +193,6 @@ def build_export_dataframe(
 
     for key, value in (algorithm_params or {}).items():
         selected_df[f"param_{key}"] = value
-
-    # ---- geochemistry derived parameters ----
-    mode = str(render_mode or "") if render_mode else ""
-    geo_params = _compute_geochem_params(selected_df, mode)
-    for col_name, arr in geo_params.items():
-        selected_df[col_name] = arr
 
     return selected_df
 
@@ -224,19 +266,49 @@ def collect_geochem_curve_data() -> dict[str, pd.DataFrame]:
     if eq_overlays:
         eq_rows: list[dict[str, Any]] = []
         for i, ov in enumerate(eq_overlays):
+            expression = str(ov.get("expression", "") or "")
+            slope, intercept = _parse_linear_expression(expression)
             eq_rows.append(
                 {
                     "ID": i + 1,
-                    "Expression": ov.get("expression", ""),
-                    "Slope": ov.get("slope"),
-                    "Intercept": ov.get("intercept"),
-                    "Visible": ov.get("visible", True),
+                    "Expression": expression,
+                    "Slope": slope,
+                    "Intercept": intercept,
+                    # Overlays store their visibility under 'enabled'.
+                    "Visible": bool(ov.get("enabled", True)),
                 }
             )
         if eq_rows:
             sheets[_SHEET_EQUATIONS] = pd.DataFrame(eq_rows)
 
     return sheets
+
+
+_LINEAR_EXPRESSION_RE = None
+
+
+def _parse_linear_expression(expression: str) -> tuple[float | None, float | None]:
+    """Parse ``y = m*x + b`` style overlay expressions into (slope, intercept).
+
+    Returns (None, None) when the expression is not a simple linear form.
+    """
+    global _LINEAR_EXPRESSION_RE
+    if _LINEAR_EXPRESSION_RE is None:
+        import re
+
+        _LINEAR_EXPRESSION_RE = re.compile(
+            r"y\s*=\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)"
+            r"\s*\*?\s*x\s*([+-]\s*(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)"
+        )
+    match = _LINEAR_EXPRESSION_RE.search(str(expression))
+    if not match:
+        return None, None
+    try:
+        slope = float(match.group(1))
+        intercept = float(match.group(2).replace(" ", ""))
+    except (TypeError, ValueError):
+        return None, None
+    return slope, intercept
 
 
 def _build_csv_with_comments(
@@ -246,7 +318,8 @@ def _build_csv_with_comments(
 ) -> str:
     """Write CSV with curve equations as #-prefixed comment header lines."""
     target = _csv_target(file_path)
-    with open(target, "w", encoding="utf-8", newline="") as fh:
+    # utf-8-sig: Excel otherwise renders CJK column/group names as mojibake.
+    with open(target, "w", encoding="utf-8-sig", newline="") as fh:
         # Curve equations as header comments
         for sheet_name, cdf in curve_sheets.items():
             fh.write(f"# [{sheet_name}]\n")
@@ -286,9 +359,23 @@ def _csv_target(file_path: str) -> str:
 
 def _excel_target(file_path: str) -> str:
     target = Path(file_path)
-    if target.suffix.lower().lstrip(".") not in {"xlsx", "xls"}:
+    # openpyxl only supports .xlsx; treat any other suffix (incl. .xls) as
+    # a missing extension rather than attempting a failing write.
+    if target.suffix.lower() != ".xlsx":
         target = target.with_suffix(".xlsx") if target.suffix else Path(f"{file_path}.xlsx")
     return str(target)
+
+
+def _unique_sheet_name(sheet_name: str, existing: set[str]) -> str:
+    """Return *sheet_name*, uniquified against *existing* (Sheet -> Sheet1)."""
+    name = str(sheet_name)
+    if name not in existing:
+        return name
+    base = name
+    suffix = 1
+    while f"{base}{suffix}" in existing:
+        suffix += 1
+    return f"{base}{suffix}"
 
 
 def export_dataframe_to_file(
@@ -308,7 +395,7 @@ def export_dataframe_to_file(
     normalized_preferred = str(preferred_format or "").strip().lower().lstrip(".")
     suffix = target.suffix.lower().lstrip(".")
 
-    if suffix in {"xlsx", "xls"}:
+    if suffix == "xlsx":
         if curve:
             return _build_excel_with_curves(dataframe, file_path, curve)
         dataframe.to_excel(str(target), index=False)
@@ -317,10 +404,10 @@ def export_dataframe_to_file(
     if suffix == "csv":
         if curve:
             return _build_csv_with_comments(dataframe, file_path, curve)
-        dataframe.to_csv(str(target), index=False)
+        dataframe.to_csv(str(target), index=False, encoding="utf-8-sig")
         return str(target)
 
-    if normalized_preferred in {"xlsx", "xls"}:
+    if normalized_preferred == "xlsx":
         if curve:
             return _build_excel_with_curves(dataframe, file_path, curve)
         dataframe.to_excel(str(_excel_target(file_path)), index=False)
@@ -328,7 +415,7 @@ def export_dataframe_to_file(
 
     if curve:
         return _build_csv_with_comments(dataframe, file_path, curve)
-    dataframe.to_csv(str(_csv_target(file_path)), index=False)
+    dataframe.to_csv(str(_csv_target(file_path)), index=False, encoding="utf-8-sig")
     return str(_csv_target(file_path))
 
 
@@ -336,7 +423,6 @@ def export_selected_data_to_file(
     *,
     selected_indices: Iterable[int],
     df_global: pd.DataFrame,
-    algorithm: str | None,
     embedding: Sequence[Sequence[float]] | None,
     embedding_type: str | None,
     active_subset_indices: Iterable[int] | None,
@@ -351,7 +437,6 @@ def export_selected_data_to_file(
     export_df = build_export_dataframe(
         selected_indices=selected_indices,
         df_global=df_global,
-        algorithm=algorithm,
         embedding=embedding,
         embedding_type=embedding_type,
         active_subset_indices=active_subset_indices,
@@ -360,7 +445,7 @@ def export_selected_data_to_file(
         axis_labels=axis_labels,
         render_mode=render_mode,
     )
-    curve_sheets = collect_geochem_curve_data()
+    curve_sheets = _curve_sheets_for_mode(render_mode)
     return export_dataframe_to_file(
         dataframe=export_df,
         file_path=file_path,
@@ -373,7 +458,6 @@ def append_selected_data_to_excel(
     *,
     selected_indices: Iterable[int],
     df_global: pd.DataFrame,
-    algorithm: str | None,
     embedding: Sequence[Sequence[float]] | None,
     embedding_type: str | None,
     active_subset_indices: Iterable[int] | None,
@@ -388,7 +472,6 @@ def append_selected_data_to_excel(
     export_df = build_export_dataframe(
         selected_indices=selected_indices,
         df_global=df_global,
-        algorithm=algorithm,
         embedding=embedding,
         embedding_type=embedding_type,
         active_subset_indices=active_subset_indices,
@@ -399,13 +482,31 @@ def append_selected_data_to_excel(
     )
 
     target = _excel_target(file_path)
-    curve_sheets = collect_geochem_curve_data()
-
-    import openpyxl  # noqa: F401
+    curve_sheets = _curve_sheets_for_mode(render_mode)
 
     if Path(target).exists():
+        # Resolve sheet-name collisions up front: if_sheet_exists="new"
+        # would silently rename the sheet (Data -> Data1) while the UI
+        # reports the requested name; curve sheets would also accumulate.
+        import openpyxl
+
+        wb = openpyxl.load_workbook(target)
+        try:
+            existing = set(wb.sheetnames)
+        finally:
+            wb.close()
+        actual_sheet = _unique_sheet_name(sheet_name, existing)
+        if actual_sheet != sheet_name:
+            logger.info(
+                "Sheet '%s' already exists; appending as '%s'", sheet_name, actual_sheet
+            )
+        curve_sheets = {
+            sname: cdf
+            for sname, cdf in curve_sheets.items()
+            if sname not in existing
+        }
         with pd.ExcelWriter(target, engine="openpyxl", mode="a", if_sheet_exists="new") as writer:
-            export_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            export_df.to_excel(writer, sheet_name=actual_sheet, index=False)
             for sname, cdf in curve_sheets.items():
                 cdf.to_excel(writer, sheet_name=sname, index=False)
     else:
