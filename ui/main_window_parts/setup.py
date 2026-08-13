@@ -9,9 +9,11 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QAction,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QProgressBar,
+    QPushButton,
     QSplitter,
     QToolBar,
     QVBoxLayout,
@@ -31,11 +33,27 @@ DEFAULT_TOOLBAR_ICON_SIZE = QSize(24, 24)
 
 
 class LegendListWidget(QListWidget):
-    """Legend list widget with lightweight debug tracing for drag/drop."""
+    """Legend list widget with lightweight debug tracing for drag/drop.
+
+    Group rows can be dragged onto parent rows (drop targets) to merge them
+    into a parent group; the merge is delegated to the main window handler.
+    """
+
+    def startDrag(self, actions):
+        # Remember which rows started the drag: during an internal move the
+        # selection can change before dropEvent is delivered.
+        self._dragging_items = list(self.selectedItems())
+        super().startDrag(actions)
 
     def dropEvent(self, event):
         if QT_DEBUG_MODE:
             logger.debug("Legend dropEvent begin: count=%d", self.count())
+        handler = getattr(self, "_legend_drop_handler", None)
+        if handler is not None and handler(self, event):
+            if QT_DEBUG_MODE:
+                logger.debug("Legend dropEvent handled by parent-group handler")
+            event.acceptProposedAction()
+            return
         super().dropEvent(event)
         if QT_DEBUG_MODE:
             logger.debug("Legend dropEvent end: count=%d", self.count())
@@ -77,6 +95,18 @@ class MainWindowSetupMixin:
         legend_title = QLabel(translate("Legend"))
         legend_title.setStyleSheet("font-weight: bold;")
         legend_layout.addWidget(legend_title)
+
+        # Parent-group toolbar: create a parent, drag subgroups onto it.
+        parent_row = QWidget()
+        parent_row_layout = QHBoxLayout(parent_row)
+        parent_row_layout.setContentsMargins(0, 0, 0, 0)
+        parent_row_layout.setSpacing(4)
+        new_parent_btn = QPushButton(translate("New Parent Group"))
+        new_parent_btn.setToolTip(translate("Drag a group onto a parent to merge it"))
+        new_parent_btn.clicked.connect(self._create_parent_group)
+        parent_row_layout.addWidget(new_parent_btn, 1)
+        legend_layout.addWidget(parent_row)
+
         legend_list = LegendListWidget()
         legend_list.setSelectionMode(QAbstractItemView.SingleSelection)
         legend_list.setUniformItemSizes(False)
@@ -88,10 +118,13 @@ class MainWindowSetupMixin:
         legend_list.setAcceptDrops(True)
         legend_list.setDropIndicatorShown(True)
         legend_list.itemDoubleClicked.connect(self._on_legend_item_double_clicked)
+        legend_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        legend_list.customContextMenuRequested.connect(self._show_legend_context_menu)
         legend_layout.addWidget(legend_list, 1)
         self.legend_panel.setMinimumWidth(160)
         self._legend_title_label = legend_title
         self._legend_list = legend_list
+        legend_list._legend_drop_handler = self._handle_legend_drop
         try:
             legend_list.model().rowsMoved.connect(self._on_legend_rows_moved)
         except Exception as exc:

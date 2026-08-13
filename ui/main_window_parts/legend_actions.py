@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QCursor
@@ -191,26 +192,162 @@ class MainWindowLegendActionsMixin:
         self._refresh_plot()
 
     def _show_color_shape_menu(self, group, swatch):
+        from visualization.plotting.grouping import parent_of_group, parent_shape
+
         self._ensure_marker_shape_map()
         menu = QMenu(self)
 
+        parent = parent_of_group(app_state, group)
         color_action = QAction(translate("Color..."), self)
         color_action.triggered.connect(lambda checked=False, g=group, btn=swatch: self._pick_color(g, btn))
         menu.addAction(color_action)
 
         shape_menu = menu.addMenu(translate("Shape"))
-        current_marker = app_state.group_marker_map.get(group, getattr(app_state, "plot_marker_shape", "o"))
-        for label, value in self._marker_shape_map.items():
-            icon = self._build_marker_icon("#94a3b8", value, size=14)
-            action = QAction(icon, "", self)
-            action.setCheckable(True)
-            action.setChecked(value == current_marker)
-            action.triggered.connect(
-                lambda checked=False, g=group, v=value, btn=swatch: self._set_group_shape_value(g, v, btn)
+        if parent is not None:
+            # Children of a parent group share the parent's shape; keep the
+            # menu visible but disabled so the rule stays discoverable.
+            parent_marker = parent_shape(app_state, parent)
+            locked_action = QAction(
+                translate("Shape follows parent group ({marker})").format(marker=parent_marker),
+                self,
             )
-            shape_menu.addAction(action)
+            locked_action.setEnabled(False)
+            shape_menu.addAction(locked_action)
+        else:
+            current_marker = app_state.group_marker_map.get(group, getattr(app_state, "plot_marker_shape", "o"))
+            for label, value in self._marker_shape_map.items():
+                icon = self._build_marker_icon("#94a3b8", value, size=14)
+                action = QAction(icon, "", self)
+                action.setCheckable(True)
+                action.setChecked(value == current_marker)
+                action.triggered.connect(
+                    lambda checked=False, g=group, v=value, btn=swatch: self._set_group_shape_value(g, v, btn)
+                )
+                shape_menu.addAction(action)
 
         menu.exec_(QCursor.pos())
+
+    # ------------------------------------------------------------------
+    # Parent group management (merge subgroups under one shape)
+    # ------------------------------------------------------------------
+
+    def _current_parent_groups(self):
+        return {
+            str(k): list(v or []) for k, v in (getattr(app_state, "parent_groups", {}) or {}).items()
+        }
+
+    def _reload_legend_panel(self):
+        title = getattr(app_state, "legend_last_title", None)
+        handles = getattr(app_state, "legend_last_handles", None)
+        labels = getattr(app_state, "legend_last_labels", None)
+        if title and handles is not None and labels is not None:
+            self._update_legend_panel(title, handles, labels)
+        else:
+            self._apply_legend_z_order()
+        self._refresh_plot()
+
+    def _create_parent_group(self):
+        from PyQt5.QtWidgets import QInputDialog
+
+        name, ok = QInputDialog.getText(
+            self,
+            translate("New Parent Group"),
+            translate("Parent Group Name"),
+        )
+        if not ok:
+            return
+        name = str(name or "").strip()
+        if not name:
+            return
+        parents = self._current_parent_groups()
+        if name in parents:
+            logger.info("Parent group already exists: %s", name)
+            return
+        parents[name] = []
+        state_gateway.set_parent_groups(parents)
+        self._reload_legend_panel()
+
+    def _delete_parent_group(self, parent):
+        parents = self._current_parent_groups()
+        if parent not in parents:
+            return
+        parents.pop(parent, None)
+        state_gateway.set_parent_groups(parents)
+        self._reload_legend_panel()
+
+    def _add_group_to_parent(self, group, parent):
+        parents = self._current_parent_groups()
+        # A group can belong to only one parent.
+        for children in parents.values():
+            if group in children:
+                children.remove(group)
+        children = parents.setdefault(parent, [])
+        if group not in children:
+            children.append(group)
+        state_gateway.set_parent_groups(parents)
+
+    def _remove_group_from_parent(self, group):
+        parents = self._current_parent_groups()
+        changed = False
+        for children in parents.values():
+            if group in children:
+                children.remove(group)
+                changed = True
+        if changed:
+            state_gateway.set_parent_groups(parents)
+            self._reload_legend_panel()
+
+    def _handle_legend_drop(self, list_widget, event):
+        """Assign dragged group rows onto a parent row (drop target)."""
+        if event.source() is not list_widget:
+            return False
+        target_item = list_widget.itemAt(event.pos())
+        if target_item is None:
+            return False
+        meta = target_item.data(Qt.UserRole)
+        if not meta or meta.get("type") != "parent":
+            return False
+        dragged = getattr(list_widget, "_dragging_items", None)
+        if not dragged:
+            dragged = list(list_widget.selectedItems())
+        moved = False
+        for item in dragged:
+            item_meta = item.data(Qt.UserRole)
+            if item_meta and item_meta.get("type") == "group":
+                self._add_group_to_parent(str(item_meta.get("key")), str(meta.get("key")))
+                moved = True
+        if moved:
+            self._reload_legend_panel()
+        return moved
+
+    def _show_legend_context_menu(self, pos):
+        from PyQt5.QtWidgets import QMenu as _QMenu
+
+        item = self._legend_list.itemAt(pos)
+        meta = item.data(Qt.UserRole) if item is not None else None
+        entry_type = meta.get("type") if meta else None
+        entry_key = meta.get("key") if meta else None
+
+        menu = _QMenu(self)
+        if entry_type == "group" and entry_key is not None:
+            from visualization.plotting.grouping import parent_of_group
+
+            if parent_of_group(app_state, entry_key) is not None:
+                remove_action = menu.addAction(translate("Remove from Parent Group"))
+                remove_action.triggered.connect(
+                    lambda checked=False, g=entry_key: self._remove_group_from_parent(g)
+                )
+                menu.addSeparator()
+        elif entry_type == "parent" and entry_key is not None:
+            delete_action = menu.addAction(translate("Delete Parent Group"))
+            delete_action.triggered.connect(
+                lambda checked=False, p=entry_key: self._delete_parent_group(p)
+            )
+            menu.addSeparator()
+
+        new_action = menu.addAction(translate("New Parent Group..."))
+        new_action.triggered.connect(lambda checked=False: self._create_parent_group())
+        menu.exec_(self._legend_list.mapToGlobal(pos))
 
     def _on_group_checkbox_change(self, group, state):
         if (not app_state.last_group_col
@@ -252,6 +389,45 @@ class MainWindowLegendActionsMixin:
             except Exception as exc:
                 logger.warning("Failed to bring %s to front: %s", group, exc)
         self._move_legend_item_to_top("group", group)
+
+    def _add_parent_legend_item(self, parent):
+        """Render a parent-group row: bold header, shared-shape icon, delete."""
+        from visualization.plotting.grouping import parent_children, parent_shape
+
+        children = parent_children(app_state, parent)
+        item_widget = QWidget()
+        item_layout = QHBoxLayout()
+        item_layout.setContentsMargins(4, 2, 4, 2)
+        item_layout.setSpacing(6)
+
+        marker_icon = self._build_marker_icon("#94a3b8", parent_shape(app_state, parent), size=14)
+        icon_label = QLabel()
+        icon_label.setPixmap(marker_icon.pixmap(14, 14))
+        item_layout.addWidget(icon_label)
+
+        label = QLabel(f"{translate('Parent')}: {parent}")
+        label.setStyleSheet("font-weight: bold;")
+        item_layout.addWidget(label, 1)
+
+        count_label = QLabel(f"({len(children)})")
+        count_label.setStyleSheet("color: #64748b;")
+        item_layout.addWidget(count_label)
+
+        delete_btn = QPushButton("×")
+        delete_btn.setFixedSize(20, 20)
+        delete_btn.setToolTip(translate("Delete Parent Group"))
+        delete_btn.clicked.connect(lambda checked=False, p=parent: self._delete_parent_group(p))
+        item_layout.addWidget(delete_btn)
+
+        item_widget.setLayout(item_layout)
+
+        item = QListWidgetItem()
+        item.setSizeHint(item_widget.sizeHint())
+        self._set_legend_item_meta(item, "parent", parent)
+        # Drop target for group rows; parents themselves are not draggable.
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
+        self._legend_list.addItem(item)
+        self._legend_list.setItemWidget(item, item_widget)
 
     def _update_legend_panel(self, title, handles, labels):
         try:
@@ -304,9 +480,38 @@ class MainWindowLegendActionsMixin:
                 self._ensure_marker_shape_map()
                 visible = set(app_state.visible_groups) if app_state.visible_groups is not None else set(groups)
 
+            # Interleave parent rows before their children so the merge
+            # structure is visible and draggable groups can be dropped on them.
+            from visualization.plotting.grouping import all_parents, parent_children
+
+            parents = all_parents(app_state)
+            if parents:
+                child_parent: dict[str, str] = {
+                    child: parent for parent in parents for child in parent_children(app_state, parent)
+                }
+                display_entries: list[dict[str, Any]] = []
+                placed_groups: set[str] = set()
+                for parent in parents:
+                    display_entries.append({"type": "parent", "key": parent, "parent": parent})
+                    for entry in entries:
+                        if entry["type"] == "group" and child_parent.get(entry["group"]) == parent:
+                            child_entry = dict(entry)
+                            child_entry["in_parent"] = parent
+                            display_entries.append(child_entry)
+                            placed_groups.add(entry["group"])
+                for entry in entries:
+                    if entry["type"] == "group" and entry["group"] not in placed_groups:
+                        display_entries.append(entry)
+                    elif entry["type"] == "overlay":
+                        display_entries.append(entry)
+                entries = display_entries
+
             for entry in entries:
-                if entry["type"] == "group":
+                if entry["type"] == "parent":
+                    self._add_parent_legend_item(entry["parent"])
+                elif entry["type"] == "group":
                     group = entry["group"]
+                    in_parent = entry.get("in_parent")
                     item_widget = QWidget()
                     item_layout = QHBoxLayout()
                     item_layout.setContentsMargins(4, 2, 4, 2)
@@ -328,7 +533,11 @@ class MainWindowLegendActionsMixin:
                     checkbox.setFixedWidth(18)
                     item_layout.addWidget(checkbox)
 
-                    label = QLabel(str(group))
+                    label = QLabel(("↳ " if in_parent else "") + str(group))
+                    if in_parent:
+                        label.setToolTip(
+                            translate("In parent group {parent}").format(parent=in_parent)
+                        )
                     item_layout.addWidget(label, 1)
                     item_layout.addStretch()
 

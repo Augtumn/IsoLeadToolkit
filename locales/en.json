@@ -1082,5 +1082,14 @@
   "Open File": "Open File",
   "No log file found.": "No log file found.",
   "Failed to read log: {error}": "Failed to read log: {error}",
-  "View Log...": "View Log..."
+  "View Log...": "View Log...",
+  "New Parent Group": "New Parent Group",
+  "New Parent Group...": "New Parent Group...",
+  "Parent Group Name": "Parent Group Name",
+  "Delete Parent Group": "Delete Parent Group",
+  "Remove from Parent Group": "Remove from Parent Group",
+  "Drag a group onto a parent to merge it": "Drag a group onto a parent to merge it",
+  "Parent": "Parent",
+  "In parent group {parent}": "In parent group {parent}",
+  "Shape follows parent group ({marker})": "Shape follows parent group ({marker})"
 }

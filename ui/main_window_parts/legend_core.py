@@ -298,8 +298,10 @@ class MainWindowLegendCoreMixin:
             pass
 
     def _update_marker_swatch(self, group, swatch):
+        from visualization.plotting.grouping import resolve_group_marker
+
         color = app_state.current_palette.get(group, "#cccccc")
-        marker = app_state.group_marker_map.get(group, getattr(app_state, "plot_marker_shape", "o"))
+        marker = resolve_group_marker(app_state, group)
         icon = self._build_marker_icon(color, marker, size=16)
         swatch.setIcon(icon)
         swatch.setIconSize(QSize(16, 16))

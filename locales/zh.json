@@ -1082,5 +1082,14 @@
   "Open File": "打开文件",
   "No log file found.": "未找到日志文件。",
   "Failed to read log: {error}": "读取日志失败：{error}",
-  "View Log...": "查看日志..."
+  "View Log...": "查看日志...",
+  "New Parent Group": "新建父组",
+  "New Parent Group...": "新建父组...",
+  "Parent Group Name": "父组名称",
+  "Delete Parent Group": "删除父组",
+  "Remove from Parent Group": "移出父组",
+  "Drag a group onto a parent to merge it": "将分组拖到父组上以归并",
+  "Parent": "父组",
+  "In parent group {parent}": "位于父组 {parent}",
+  "Shape follows parent group ({marker})": "形状随父组 ({marker})"
 }
