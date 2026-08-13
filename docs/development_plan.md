@@ -18,6 +18,12 @@
 
 **迭代（同日 +1 commit）**：④ **父组行可拖动**调整图中叠压——引入"父组块"概念：父组条目在 `legend_item_order` 中占一个槽位，其全部子组共享该 z-order（`_apply_legend_z_order` 跳过属于父组的子组条目）；面板重建时父组块按父组条目的 order 位置排列（`build_legend_display_entries` 纯函数，可单测）；父组双击置顶整块。新增 `tests/test_legend_display_entries.py`（3 纯函数用例 + 1 offscreen Qt z-order 用例，验证子组共享父组 z 槽、独立组低一槽）。全套 386 测试通过、守护脚本 TOTAL=0。
 
+**迭代（同日 +1 commit）**：⑤ 统一排序——父组块/独立组/overlay 均为独立排序单元，按各自 `legend_item_order` 位置统一排序，**独立组可拖到父组块上方**（父组不再强制置顶）；块内子组保持各自顺序。新增交错排序用例。
+
+**迭代（同日 +1 commit）**：⑥ 修复父组拖父组**叠加 bug**：drop 到行正中（OnItem）且任一侧含父组行时强制转为上方插入（`_is_parent_related_drop` 守卫 + 单测）。
+
+**迭代（同日 +3 commits）**：⑦ **多级父组嵌套**——父组可拖到另一父组行正中成为其子父组（OnItem=嵌套、Above/Below=排序，含**环检测** `is_descendant`）；`grouping.py` 新增树语义（`all_parents` 仅返回顶层、`top_parent_of_group`、`descendant_groups` 递归展开、`is_parent`）；嵌套父组形状继承最顶层父（手动覆盖作用于根）；渲染递归展开（父行/子组按层级深度缩进 24px/层）、z-order 嵌套父行不占独立槽（整棵子树共享根槽）；右键菜单新增"新建子父组..."；删除父组时其子组**上移一级**；**移除面板"新建父组"与"自动图例"按钮**（创建入口改为右键菜单与拖拽嵌套），保留"图例设定"按钮。i18n +1 键（1100/1100）。新增嵌套渲染/树语义/嵌套 z-order 用例，全套 393 测试通过、守护脚本 TOTAL=0、嵌套 E2E 冒烟通过。
+
 ## 阶段进展（2026-08-12 · 全库审查修复批，16 commits）
 
 基于四专项只读审查（data/plugins、ui、visualization/utils、tests/scripts/docs/core）与第一手验证，按严重度从高到低修复 52 个文件（+759/-234），全部 372 测试通过、5 守护脚本 TOTAL=0、release_check 13/13：
