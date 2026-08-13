@@ -141,35 +141,26 @@ def test_nested_parent_block_expands_recursively() -> None:
 
 
 # ---------------------------------------------------------------------------
-# drop ambiguity guard (parent rows must never stack on other rows)
+# manual reorder (legend_item_order based, no row stacking)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not hasattr(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]), "QApplication"),
-    reason="PyQt5 not available",
-)
-def test_is_parent_related_drop_guards_stacking() -> None:
-    from PyQt5.QtCore import Qt
-    from PyQt5.QtWidgets import QApplication, QListWidgetItem
+def test_reorder_legend_keys_moves_before_and_after_target() -> None:
+    from ui.main_window_parts.legend_actions import reorder_legend_keys
 
-    from ui.main_window_parts.setup import _is_parent_related_drop
+    order = ["parent:P1", "group:A", "group:B", "overlay:iso"]
 
-    app = QApplication.instance() or QApplication([])
-
-    def item(entry_type: str) -> QListWidgetItem:
-        it = QListWidgetItem()
-        it.setData(Qt.UserRole, {"type": entry_type, "key": "k"})
-        return it
-
-    # Dragging a parent onto anything is parent-related.
-    assert _is_parent_related_drop({"type": "parent"}, [item("group")]) is True
-    # Dropping anything onto a parent row is parent-related.
-    assert _is_parent_related_drop({"type": "group"}, [item("parent")]) is True
-    # Group-over-group reorder is plain and must not be intercepted.
-    assert _is_parent_related_drop({"type": "group"}, [item("group")]) is False
-    assert _is_parent_related_drop({"type": "overlay"}, [item("group")]) is False
-    assert _is_parent_related_drop(None, []) is False
+    # Move B before P1 (drop above the first row).
+    assert reorder_legend_keys(order, "group:B", "parent:P1", below=False) == [
+        "group:B", "parent:P1", "group:A", "overlay:iso",
+    ]
+    # Move A after iso (drop below the last row).
+    assert reorder_legend_keys(order, "group:A", "overlay:iso", below=True) == [
+        "parent:P1", "group:B", "overlay:iso", "group:A",
+    ]
+    # No-op cases.
+    assert reorder_legend_keys(order, "missing:X", "group:A", below=False) == order
+    assert reorder_legend_keys(order, "group:A", "group:A", below=False) == order
 
 
 # ---------------------------------------------------------------------------

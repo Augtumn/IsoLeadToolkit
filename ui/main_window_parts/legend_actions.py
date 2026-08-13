@@ -27,6 +27,29 @@ from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 logger = logging.getLogger(__name__)
 
 
+def reorder_legend_keys(
+    order_keys: list[str],
+    src_full: str,
+    target_full: str,
+    below: bool,
+) -> list[str]:
+    """Return the reordered ``legend_item_order`` list after a drag.
+
+    *src_full* is moved to the position of *target_full* (before it, or
+    after it when *below*). Rows are identified by their full
+    ``type:key`` order keys. No-op when either key is unknown.
+    """
+    order = list(order_keys)
+    if src_full not in order or target_full not in order or src_full == target_full:
+        return order
+    order.remove(src_full)
+    idx = order.index(target_full)
+    if below:
+        idx += 1
+    order.insert(idx, src_full)
+    return order
+
+
 def build_legend_display_entries(
     entries: list[dict[str, Any]],
     top_parents: list[str],
@@ -446,7 +469,7 @@ class MainWindowLegendActionsMixin:
             # above/below drops are reorders handled by the default path.
             from PyQt5.QtWidgets import QAbstractItemView
 
-            if event.dropIndicatorPosition() != QAbstractItemView.OnItem:
+            if list_widget.dropIndicatorPosition() != QAbstractItemView.OnItem:
                 return False
             from visualization.plotting.grouping import is_descendant
 
@@ -468,6 +491,52 @@ class MainWindowLegendActionsMixin:
         if moved:
             self._reload_legend_panel()
         return moved
+
+    def _handle_legend_reorder(self, list_widget, event):
+        """Plain reorder of any row type via ``legend_item_order``.
+
+        Qt's default InternalMove drop is bypassed: rows are reordered by
+        updating the order state and rebuilding the panel, so a drop can
+        never stack two rows at the same position.
+        """
+        if event.source() is not list_widget:
+            return False
+        dragged = getattr(list_widget, "_dragging_items", None)
+        if not dragged:
+            return False
+        src_meta = dragged[0].data(Qt.UserRole) or {}
+        src_type = src_meta.get("type")
+        src_key = src_meta.get("key")
+        if not src_type or src_key is None:
+            return False
+        target_item = list_widget.itemAt(event.pos())
+        if target_item is None:
+            return False
+        target_meta = target_item.data(Qt.UserRole) or {}
+        target_type = target_meta.get("type")
+        target_key = target_meta.get("key")
+        if not target_type or target_key is None:
+            return False
+
+        src_full = self._legend_order_key(src_type, src_key)
+        target_full = self._legend_order_key(target_type, target_key)
+
+        order_keys = []
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            meta = item.data(Qt.UserRole) or {}
+            if meta.get("type") and meta.get("key") is not None:
+                order_keys.append(self._legend_order_key(meta["type"], meta["key"]))
+
+        from PyQt5.QtWidgets import QAbstractItemView
+
+        below = list_widget.dropIndicatorPosition() == QAbstractItemView.BelowItem
+        new_order = reorder_legend_keys(order_keys, src_full, target_full, below)
+        if new_order == order_keys:
+            return False
+        state_gateway.set_legend_item_order(new_order)
+        self._rebuild_legend_after_reorder()
+        return True
 
     def _show_legend_context_menu(self, pos):
         from PyQt5.QtWidgets import QMenu as _QMenu

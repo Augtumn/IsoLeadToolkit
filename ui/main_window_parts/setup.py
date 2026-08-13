@@ -32,26 +32,14 @@ QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
 DEFAULT_TOOLBAR_ICON_SIZE = QSize(24, 24)
 
 
-def _is_parent_related_drop(target_meta, dragged_items) -> bool:
-    """True when a drop 'onto' a row involves a parent group on either side.
-
-    Parent rows must never land *on* another row (that stacks two parents at
-    the same position); such drops are converted to an above-row insert.
-    """
-    if (target_meta or {}).get("type") == "parent":
-        return True
-    for item in dragged_items or []:
-        meta = item.data(Qt.UserRole) if item is not None else None
-        if (meta or {}).get("type") == "parent":
-            return True
-    return False
-
-
 class LegendListWidget(QListWidget):
     """Legend list widget with lightweight debug tracing for drag/drop.
 
-    Group rows can be dragged onto parent rows (drop targets) to merge them
-    into a parent group; the merge is delegated to the main window handler.
+    Drops are delegated to the main window handlers:
+    - ``_legend_drop_handler`` — merge groups into parents / nest parents;
+    - ``_legend_reorder_handler`` — plain reordering via legend_item_order.
+    Qt's default InternalMove drop is bypassed so rows can never stack
+    ("OnItem" ambiguity).
     """
 
     def startDrag(self, actions):
@@ -69,19 +57,12 @@ class LegendListWidget(QListWidget):
                 logger.debug("Legend dropEvent handled by parent-group handler")
             event.acceptProposedAction()
             return
-
-        # Reorder drops: a drop exactly *on* a row (OnItem) is ambiguous when
-        # a parent row is involved — QListWidget stacks the dragged row at the
-        # target position, visually merging the two parents. Force an
-        # above-row insert instead.
-        if event.dropIndicatorPosition() == QAbstractItemView.OnItem:
-            target_item = self.itemAt(event.pos())
-            if target_item is not None and _is_parent_related_drop(
-                target_item.data(Qt.UserRole),
-                getattr(self, "_dragging_items", None) or [],
-            ):
-                self.setDropIndicatorPosition(QAbstractItemView.AboveItem)
-
+        reorder = getattr(self, "_legend_reorder_handler", None)
+        if reorder is not None and reorder(self, event):
+            if QT_DEBUG_MODE:
+                logger.debug("Legend dropEvent handled by reorder handler")
+            event.acceptProposedAction()
+            return
         super().dropEvent(event)
         if QT_DEBUG_MODE:
             logger.debug("Legend dropEvent end: count=%d", self.count())
@@ -154,6 +135,7 @@ class MainWindowSetupMixin:
         self._legend_title_label = legend_title
         self._legend_list = legend_list
         legend_list._legend_drop_handler = self._handle_legend_drop
+        legend_list._legend_reorder_handler = self._handle_legend_reorder
         try:
             legend_list.model().rowsMoved.connect(self._on_legend_rows_moved)
         except Exception as exc:
