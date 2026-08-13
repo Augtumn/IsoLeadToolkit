@@ -29,37 +29,60 @@ logger = logging.getLogger(__name__)
 
 def build_legend_display_entries(
     entries: list[dict[str, Any]],
-    parents: list[str],
+    top_parents: list[str],
     child_parent: dict[str, str],
+    parent_names: set[str],
     order_index: dict[str, int],
 ) -> list[dict[str, Any]]:
-    """Build the ordered legend display list with parent-group blocks.
+    """Build the ordered legend display list with (possibly nested) parent blocks.
 
-    Every visual unit participates in one unified ordering: a parent block
-    (parent row followed by its children), an independent group, or an
-    overlay. Units are sorted by their own ``legend_item_order`` position,
-    so an independent group may be dragged above a parent block — parents
-    are not forced to the top. Children inside a block keep their own
-    relative order.
+    Every visual unit participates in one unified ordering: a TOP-LEVEL parent
+    block (its rows expanded recursively, children may themselves be parent
+    groups at deeper indentation), an independent group, or an overlay. Units
+    sort by their own ``legend_item_order`` position, so independent groups
+    may be dragged above parent blocks. Children inside a block keep their
+    own relative order.
+
+    Args:
+        entries: sorted group/overlay entries (groups carry "group" key).
+        top_parents: top-level parent names (not nested inside another parent).
+        child_parent: direct child name -> direct parent name (all levels).
+        parent_names: set of ALL parent names (nested included).
+        order_index: legend_item_order lookup.
     """
-    if not parents:
+    if not top_parents:
         return list(entries)
 
-    # Parent blocks: parent name -> ordered child entries.
-    blocks: dict[str, list[dict[str, Any]]] = {}
-    for parent in parents:
-        block: list[dict[str, Any]] = []
-        for entry in entries:
-            if entry["type"] == "group" and child_parent.get(entry["group"]) == parent:
-                child_entry = dict(entry)
-                child_entry["in_parent"] = parent
-                block.append(child_entry)
-        block.sort(key=lambda e: order_index.get(f"group:{e['group']}", 10_000))
-        blocks[parent] = block
+    by_parent: dict[str, list[str]] = {}
+    for child, parent in child_parent.items():
+        by_parent.setdefault(parent, []).append(child)
+
+    def _block(parent: str, depth: int) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = [
+            {"type": "parent", "key": parent, "parent": parent, "depth": depth}
+        ]
+        children = sorted(
+            by_parent.get(parent, []),
+            key=lambda c: order_index.get(f"group:{c}", 10_000),
+        )
+        for child in children:
+            if child in parent_names:
+                out.extend(_block(child, depth + 1))
+            else:
+                out.append(
+                    {
+                        "type": "group",
+                        "key": child,
+                        "group": child,
+                        "in_parent": parent,
+                        "depth": depth + 1,
+                    }
+                )
+        return out
 
     # Unified sort units: (order_index, unit_kind, payload).
     units: list[tuple[int, str, Any]] = []
-    for parent in parents:
+    for parent in top_parents:
         units.append((order_index.get(f"parent:{parent}", 10_000), "parent", parent))
     for entry in entries:
         if entry["type"] == "group" and entry["group"] not in child_parent:
@@ -73,8 +96,7 @@ def build_legend_display_entries(
     display_entries: list[dict[str, Any]] = []
     for _, unit_kind, payload in units:
         if unit_kind == "parent":
-            display_entries.append({"type": "parent", "key": payload, "parent": payload})
-            display_entries.extend(blocks[payload])
+            display_entries.extend(_block(payload, 0))
         else:
             display_entries.append(payload)
     return display_entries
@@ -323,11 +345,47 @@ class MainWindowLegendActionsMixin:
         state_gateway.set_parent_groups(parents)
         self._reload_legend_panel()
 
+    def _create_child_parent_group(self, container):
+        """Create a parent group nested directly under *container*."""
+        from PyQt5.QtWidgets import QInputDialog
+
+        name, ok = QInputDialog.getText(
+            self,
+            translate("New Child Parent Group"),
+            translate("Parent Group Name"),
+        )
+        if not ok:
+            return
+        name = str(name or "").strip()
+        if not name:
+            return
+        parents = self._current_parent_groups()
+        if name in parents:
+            logger.info("Parent group already exists: %s", name)
+            return
+        parents[name] = []
+        parents.setdefault(container, []).append(name)
+        state_gateway.set_parent_groups(parents)
+        self._reload_legend_panel()
+
     def _delete_parent_group(self, parent):
         parents = self._current_parent_groups()
         if parent not in parents:
             return
-        parents.pop(parent, None)
+        children = list(parents.pop(parent))
+        # Children (groups or nested parents) move up one level: into the
+        # deleted parent's own container, or to the top level.
+        container = None
+        for name, children_list in parents.items():
+            if parent in children_list:
+                container = name
+                children_list.remove(parent)
+                break
+        if container is not None:
+            target = parents.setdefault(container, [])
+            for child in children:
+                if child not in target:
+                    target.append(child)
         state_gateway.set_parent_groups(parents)
         self._reload_legend_panel()
 
@@ -354,7 +412,14 @@ class MainWindowLegendActionsMixin:
             self._reload_legend_panel()
 
     def _handle_legend_drop(self, list_widget, event):
-        """Assign dragged group rows onto a parent row (drop target)."""
+        """Handle drops that merge groups (or nested parents) into parents.
+
+        - A group row dropped on a parent row merges into that parent.
+        - A parent row dropped EXACTLY ON a parent row (OnItem) nests the
+          dragged parent under the target (cycle-checked).
+        - A parent row dropped above/below rows is a plain reorder and is
+          left to the default handling.
+        """
         if event.source() is not list_widget:
             return False
         target_item = list_widget.itemAt(event.pos())
@@ -363,15 +428,43 @@ class MainWindowLegendActionsMixin:
         meta = target_item.data(Qt.UserRole)
         if not meta or meta.get("type") != "parent":
             return False
+        target_parent = str(meta.get("key"))
         dragged = getattr(list_widget, "_dragging_items", None)
         if not dragged:
             dragged = list(list_widget.selectedItems())
+
+        dragged_meta = [
+            (item.data(Qt.UserRole) or {}) for item in dragged
+        ]
+        dragged_parents = [
+            str(m.get("key")) for m in dragged_meta if m.get("type") == "parent"
+        ]
+
         moved = False
-        for item in dragged:
-            item_meta = item.data(Qt.UserRole)
-            if item_meta and item_meta.get("type") == "group":
-                self._add_group_to_parent(str(item_meta.get("key")), str(meta.get("key")))
+        if dragged_parents:
+            # Nested parents: only a drop exactly ON the target row nests;
+            # above/below drops are reorders handled by the default path.
+            from PyQt5.QtWidgets import QAbstractItemView
+
+            if event.dropIndicatorPosition() != QAbstractItemView.OnItem:
+                return False
+            from visualization.plotting.grouping import is_descendant
+
+            for parent in dragged_parents:
+                if parent == target_parent or is_descendant(app_state, parent, target_parent):
+                    logger.warning(
+                        "Refused to nest parent '%s' under '%s' (cycle)", parent, target_parent
+                    )
+                    continue
+                self._add_group_to_parent(parent, target_parent)
                 moved = True
+        else:
+            for item in dragged:
+                item_meta = item.data(Qt.UserRole) or {}
+                if item_meta.get("type") == "group":
+                    self._add_group_to_parent(str(item_meta.get("key")), target_parent)
+                    moved = True
+
         if moved:
             self._reload_legend_panel()
         return moved
@@ -395,6 +488,10 @@ class MainWindowLegendActionsMixin:
                 )
                 menu.addSeparator()
         elif entry_type == "parent" and entry_key is not None:
+            child_action = menu.addAction(translate("New Child Parent Group..."))
+            child_action.triggered.connect(
+                lambda checked=False, p=entry_key: self._create_child_parent_group(p)
+            )
             delete_action = menu.addAction(translate("Delete Parent Group"))
             delete_action.triggered.connect(
                 lambda checked=False, p=entry_key: self._delete_parent_group(p)
@@ -446,14 +543,15 @@ class MainWindowLegendActionsMixin:
                 logger.warning("Failed to bring %s to front: %s", group, exc)
         self._move_legend_item_to_top("group", group)
 
-    def _add_parent_legend_item(self, parent):
+    def _add_parent_legend_item(self, parent, depth: int = 0):
         """Render a parent-group row: shape swatch, bold header, delete."""
         from visualization.plotting.grouping import parent_children, parent_shape
 
         children = parent_children(app_state, parent)
         item_widget = QWidget()
         item_layout = QHBoxLayout()
-        item_layout.setContentsMargins(4, 2, 4, 2)
+        # Nested parents are indented by their nesting level.
+        item_layout.setContentsMargins(4 + 24 * max(0, depth), 2, 4, 2)
         item_layout.setSpacing(6)
 
         # Shape swatch: shows the shape shared by all children of this
@@ -545,12 +643,6 @@ class MainWindowLegendActionsMixin:
 
         menu.exec_(QCursor.pos())
 
-    def _auto_assign_parent_shapes(self):
-        """Reset all parent shapes to automatic (by creation order)."""
-        if getattr(app_state, "parent_shape_map", None):
-            state_gateway.set_parent_shape_map({})
-            self._reload_legend_panel()
-
     def _open_legend_settings(self):
         """Open the full legend settings dialog (same as Ctrl+L)."""
         try:
@@ -612,28 +704,33 @@ class MainWindowLegendActionsMixin:
             # Interleave parent rows before their children so the merge
             # structure is visible and draggable groups can be dropped on
             # them. Parent blocks follow the parent's legend_item_order
-            # position, so dragging a parent row reorders the whole block.
+            # position; nested parents expand recursively inside their
+            # ancestor's block.
             from visualization.plotting.grouping import all_parents, parent_children
 
             parents = all_parents(app_state)
             if parents:
+                parent_names = set((getattr(app_state, "parent_groups", {}) or {}).keys())
                 child_parent: dict[str, str] = {
-                    child: parent for parent in parents for child in parent_children(app_state, parent)
+                    child: parent
+                    for parent in parent_names
+                    for child in parent_children(app_state, parent)
                 }
                 entries = build_legend_display_entries(
-                    entries, parents, child_parent, order_index
+                    entries, parents, child_parent, parent_names, order_index
                 )
 
             for entry in entries:
                 if entry["type"] == "parent":
-                    self._add_parent_legend_item(entry["parent"])
+                    self._add_parent_legend_item(entry["parent"], depth=entry.get("depth", 0))
                 elif entry["type"] == "group":
                     group = entry["group"]
                     in_parent = entry.get("in_parent")
+                    depth = int(entry.get("depth", 1) if in_parent else 0)
                     item_widget = QWidget()
                     item_layout = QHBoxLayout()
-                    # Children of a parent group are indented visually.
-                    left_margin = 24 if in_parent else 4
+                    # Children of a parent group are indented by nesting level.
+                    left_margin = 4 + 24 * depth
                     item_layout.setContentsMargins(left_margin, 2, 4, 2)
                     item_layout.setSpacing(6)
 

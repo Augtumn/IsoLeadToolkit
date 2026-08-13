@@ -170,13 +170,14 @@ class MainWindowLegendCoreMixin:
         overlay_map = getattr(app_state, "overlay_artists", {}) or {}
         group_map = getattr(app_state, "group_to_scatter", {}) or {}
 
-        # Parent groups form stacking blocks: a parent row occupies one
-        # z-slot shared by all of its children, so dragging the parent row
-        # moves the whole merged block above/below other entries.
-        from visualization.plotting.grouping import all_parents, parent_children
+        # Parent groups form stacking blocks: a top-level parent row occupies
+        # one z-slot shared by ALL descendant groups (nested parents expand
+        # recursively), so dragging the parent row moves the whole merged
+        # subtree above/below other entries.
+        from visualization.plotting.grouping import all_parents, descendant_groups
 
         child_of: dict[str, set[str]] = {
-            parent: set(parent_children(app_state, parent)) for parent in all_parents(app_state)
+            parent: set(descendant_groups(app_state, parent)) for parent in all_parents(app_state)
         }
         handled_children: set[str] = set()
         for children in child_of.values():
@@ -184,7 +185,11 @@ class MainWindowLegendCoreMixin:
 
         for entry_type, entry_key in order:
             if entry_type == "parent":
-                for child in child_of.get(entry_key, set()):
+                if entry_key not in child_of:
+                    # Nested parent rows are structure inside a top-level
+                    # block; they do not consume a z-slot of their own.
+                    continue
+                for child in child_of[entry_key]:
                     artist = group_map.get(child)
                     if artist is not None:
                         try:

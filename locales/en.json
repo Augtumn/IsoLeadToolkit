@@ -1097,5 +1097,6 @@
   "Reset parent shapes to automatic assignment": "Reset parent shapes to automatic assignment",
   "Open the full legend settings dialog": "Open the full legend settings dialog",
   "Parent shape (shared by subgroups)": "Parent shape (shared by subgroups)",
-  "Auto (by order)": "Auto (by order)"
+  "Auto (by order)": "Auto (by order)",
+  "New Child Parent Group...": "New Child Parent Group..."
 }

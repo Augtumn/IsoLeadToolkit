@@ -1097,5 +1097,6 @@
   "Reset parent shapes to automatic assignment": "将父组形状重置为自动分配",
   "Open the full legend settings dialog": "打开完整图例设定对话框",
   "Parent shape (shared by subgroups)": "父组形状（所有子组共用）",
-  "Auto (by order)": "自动（按顺序）"
+  "Auto (by order)": "自动（按顺序）",
+  "New Child Parent Group...": "新建子父组..."
 }

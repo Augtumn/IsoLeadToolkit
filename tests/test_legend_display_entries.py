@@ -23,6 +23,12 @@ def _entry(e_type: str, key: str) -> dict[str, Any]:
     return {"type": e_type, "key": key, "group": key} if e_type == "group" else {"type": e_type, "key": key}
 
 
+def _build(entries, parents, child_parent, order_index):
+    """Call build_legend_display_entries with a derived parent_names set."""
+    parent_names = set(parents) | set(child_parent.values())
+    return build_legend_display_entries(entries, parents, child_parent, parent_names, order_index)
+
+
 def test_display_entries_block_follows_parent_order_index() -> None:
     entries = [
         _entry("group", "A"),
@@ -35,7 +41,7 @@ def test_display_entries_block_follows_parent_order_index() -> None:
 
     # P2's order index puts it first -> its block must render first.
     order_index = {"parent:P2": 0, "parent:P1": 1, "group:A": 2, "group:B": 3, "group:C": 4, "overlay:iso": 5}
-    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    result = _build(entries, parents, child_parent, order_index)
 
     keys = [(e["type"], e["key"]) for e in result]
     assert keys == [
@@ -54,7 +60,7 @@ def test_display_entries_block_follows_parent_order_index() -> None:
 
 def test_display_entries_without_parents_passthrough() -> None:
     entries = [_entry("group", "A"), _entry("overlay", "iso")]
-    result = build_legend_display_entries(entries, [], {}, {})
+    result = _build(entries, [], {}, {})
     assert result == entries
 
 
@@ -63,7 +69,7 @@ def test_display_entries_children_keep_own_order() -> None:
     parents = ["P1"]
     child_parent = {"A": "P1", "B": "P1"}
     order_index = {"parent:P1": 0, "group:A": 1, "group:B": 2, "group:C": 3}
-    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    result = _build(entries, parents, child_parent, order_index)
     keys = [(e["type"], e["key"]) for e in result]
     # Children keep their own relative order inside the block.
     assert keys == [("parent", "P1"), ("group", "A"), ("group", "B"), ("group", "C")]
@@ -77,13 +83,13 @@ def test_independent_group_can_sort_above_parent_block() -> None:
 
     # C's order index places it FIRST — above the parent block.
     order_index = {"group:C": 0, "parent:P1": 1, "group:A": 2, "group:B": 3}
-    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    result = _build(entries, parents, child_parent, order_index)
     keys = [(e["type"], e["key"]) for e in result]
     assert keys == [("group", "C"), ("parent", "P1"), ("group", "A"), ("group", "B")]
 
     # And back: parent block above the independent group.
     order_index = {"parent:P1": 0, "group:A": 1, "group:B": 2, "group:C": 3}
-    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    result = _build(entries, parents, child_parent, order_index)
     keys = [(e["type"], e["key"]) for e in result]
     assert keys == [("parent", "P1"), ("group", "A"), ("group", "B"), ("group", "C")]
 
@@ -95,7 +101,7 @@ def test_independent_group_mixed_with_multiple_parent_blocks() -> None:
 
     # Interleave: P2 block, independent B, P1 block, independent D.
     order_index = {"parent:P2": 0, "group:C": 1, "group:B": 2, "parent:P1": 3, "group:A": 4, "group:D": 5}
-    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    result = _build(entries, parents, child_parent, order_index)
     keys = [(e["type"], e["key"]) for e in result]
     assert keys == [
         ("parent", "P2"),
@@ -105,6 +111,33 @@ def test_independent_group_mixed_with_multiple_parent_blocks() -> None:
         ("group", "A"),
         ("group", "D"),
     ]
+
+
+def test_nested_parent_block_expands_recursively() -> None:
+    """A parent nested inside another renders as an indented sub-block."""
+    entries = [_entry("group", "A"), _entry("group", "B"), _entry("group", "C")]
+    top_parents = ["root"]
+    child_parent = {"sub": "root", "A": "sub", "B": "sub", "C": "root"}
+    parent_names = {"root", "sub"}
+    order_index = {
+        "parent:root": 0, "group:sub": 1, "group:A": 2, "group:B": 3, "group:C": 4,
+    }
+    result = build_legend_display_entries(
+        entries, top_parents, child_parent, parent_names, order_index
+    )
+
+    # root -> sub(parent row) -> A, B; then C.
+    keys = [(e["type"], e["key"], e.get("depth", 0)) for e in result]
+    assert keys == [
+        ("parent", "root", 0),
+        ("parent", "sub", 1),
+        ("group", "A", 2),
+        ("group", "B", 2),
+        ("group", "C", 1),
+    ]
+    assert result[2]["in_parent"] == "sub"
+    assert result[3]["in_parent"] == "sub"
+    assert result[4]["in_parent"] == "root"
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +191,63 @@ class _Artist:
 class _Ax:
     def get_children(self) -> list[Any]:
         return []
+
+
+@pytest.mark.skipif(
+    not hasattr(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]), "QApplication"),
+    reason="PyQt5 not available",
+)
+def test_apply_legend_z_order_nested_subtree_shares_root_slot(monkeypatch) -> None:
+    """A nested parent's groups share the TOP-LEVEL parent's z-slot."""
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtWidgets import QApplication, QListWidget, QListWidgetItem
+
+    from core import state_gateway
+    from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin
+
+    app = QApplication.instance() or QApplication([])
+
+    lst = QListWidget()
+    for e_type, key in [("parent", "root"), ("parent", "sub"), ("group", "A"), ("group", "B"), ("group", "C")]:
+        item = QListWidgetItem()
+        item.setData(Qt.UserRole, {"type": e_type, "key": key})
+        lst.addItem(item)
+
+    stub = MainWindowLegendCoreMixin.__new__(MainWindowLegendCoreMixin)
+    stub._legend_list = lst
+
+    a, b, c = _Artist(), _Artist(), _Artist()
+    prev_g2s = getattr(app_state, "group_to_scatter", None)
+    prev_parents = getattr(app_state, "parent_groups", None)
+    prev_ax = getattr(app_state, "ax", None)
+    prev_fig = getattr(app_state, "fig", None)
+    prev_overlays = getattr(app_state, "overlay_artists", None)
+    prev_order = getattr(app_state, "legend_item_order", None)
+    try:
+        monkeypatch.setattr(app_state, "group_to_scatter", {"A": a, "B": b, "C": c}, raising=False)
+        state_gateway.set_parent_groups({"root": ["sub"], "sub": ["A", "B"]})
+        monkeypatch.setattr(app_state, "ax", _Ax(), raising=False)
+        monkeypatch.setattr(app_state, "fig", None, raising=False)
+        monkeypatch.setattr(app_state, "overlay_artists", {}, raising=False)
+        monkeypatch.setattr(app_state, "legend_item_order", [], raising=False)
+
+        stub._apply_legend_z_order()
+
+        # A and B (nested under sub under root) share root's single slot.
+        assert a.z == b.z, f"nested children must share the root slot, got {a.z} vs {b.z}"
+        # Independent C sits one slot lower.
+        assert c.z == a.z - 1
+    finally:
+        for attr, value in [
+            ("group_to_scatter", prev_g2s),
+            ("ax", prev_ax),
+            ("fig", prev_fig),
+            ("overlay_artists", prev_overlays),
+            ("legend_item_order", prev_order),
+        ]:
+            if value is not None:
+                monkeypatch.setattr(app_state, attr, value, raising=False)
+        state_gateway.set_parent_groups(prev_parents or {})
 
 
 @pytest.mark.skipif(
