@@ -172,17 +172,16 @@ class ProvenanceMLWorkflowMixin:
         xgb_params = params.get('xgb_params', {})
         smote_sampling_strategy = params.get('smote_sampling_strategy', 1.0)
 
-        try:
-            from ui.dialogs.progress_dialog import ProgressDialog
+        if getattr(self, "_ml_worker", None) is not None and self._ml_worker.isRunning():
+            QMessageBox.information(
+                self,
+                translate("Info"),
+                translate("A training run is already in progress."),
+            )
+            return
 
-            progress = ProgressDialog(translate("Provenance ML"), translate("Loading Data"))
-        except Exception:
-            progress = None
-
-        try:
-            if progress:
-                progress.update_message(translate("Preparing data..."))
-
+        def _fit_and_predict():
+            """Heavy computation — runs on the worker thread."""
             from plugins.api import PluginError as ProvenanceMLError
             from plugins.registry import plugin_manager
 
@@ -203,84 +202,138 @@ class ProvenanceMLWorkflowMixin:
                 xgb_max_depth=xgb_params.get('max_depth', 6),
                 predict_threshold=float(self.threshold_spin.value()),
             )
-            pipeline_result = fit_result['pipeline_result']
-
-            # Predict on target data
             raw_pred = provenance_plugin.predict(df_pred)
+            return fit_result, raw_pred
 
-            # Combine training result with predictions into expected result dict
-            result = {
-                'training': pipeline_result['training'],
-                'models': pipeline_result['models'],
-                'model_info': pipeline_result['model_info'],
-                'predictions': {
-                    'labels': raw_pred['labels'],
-                    'max_prob': raw_pred['probabilities'],
-                    'valid_mask': raw_pred['valid_mask'],
-                    'proba': raw_pred.get('proba'),
-                    'label_order': raw_pred.get('regions', []),
-                },
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication
+
+        from ui.dialogs.analysis_worker import AnalysisWorker
+
+        def _on_finished(payload):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            run_btn = getattr(self, "run_ml_button", None)
+            if run_btn is not None:
+                run_btn.setEnabled(True)
+            self._ml_worker = None
+            try:
+                self._apply_ml_result(*payload)
+            except ProvenanceMLError as exc:
+                QMessageBox.warning(
+                    self,
+                    translate("Error"),
+                    translate("ML training failed: {error}").format(error=str(exc)),
+                )
+            except Exception as exc:
+                logger.exception("Provenance ML failed: %s", exc)
+                QMessageBox.warning(
+                    self,
+                    translate("Error"),
+                    translate("ML training failed: {error}").format(error=str(exc)),
+                )
+
+        def _on_failed(message):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            run_btn = getattr(self, "run_ml_button", None)
+            if run_btn is not None:
+                run_btn.setEnabled(True)
+            self._ml_worker = None
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("ML training failed: {error}").format(error=message),
+            )
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        run_btn = getattr(self, "run_ml_button", None)
+        if run_btn is not None:
+            run_btn.setEnabled(False)
+
+        # Keep the prediction frame for the main-thread result assembly.
+        self._ml_pred_df = df_pred
+        self._ml_worker = AnalysisWorker(_fit_and_predict)
+        self._ml_worker.finished_signal.connect(_on_finished)
+        self._ml_worker.failed.connect(_on_failed)
+        self._ml_worker.start()
+
+    def _apply_ml_result(self, fit_result, raw_pred):
+        """Build the combined result on the main thread after training."""
+        from plugins.api import PluginError as ProvenanceMLError
+
+        df_pred = getattr(self, "_ml_pred_df", None)
+        if df_pred is None:
+            raise RuntimeError("Prediction data is not available")
+
+        pipeline_result = fit_result['pipeline_result']
+
+        result = {
+            'training': pipeline_result['training'],
+            'models': pipeline_result['models'],
+            'model_info': pipeline_result['model_info'],
+            'predictions': {
+                'labels': raw_pred['labels'],
+                'max_prob': raw_pred['probabilities'],
+                'valid_mask': raw_pred['valid_mask'],
+                'proba': raw_pred.get('proba'),
+                'label_order': raw_pred.get('regions', []),
+            },
+        }
+
+        pred = result['predictions']
+        valid_mask = pred['valid_mask']
+        full_labels = np.full(len(df_pred), 'Unknown', dtype=object)
+        full_probs = np.full(len(df_pred), np.nan, dtype=float)
+
+        if pred['labels']:
+            full_labels[valid_mask] = np.array(pred['labels'], dtype=object)
+            full_probs[valid_mask] = np.array(pred['max_prob'], dtype=float)
+
+        indices = (
+            self._selected_original_indices
+            if self._selected_original_indices is not None
+            else list(range(len(df_pred)))
+        )
+
+        pred_df = pd.DataFrame(
+            {
+                'Index': indices,
+                translate("Predicted Region"): full_labels,
+                translate("Predicted Probability"): full_probs,
             }
+        )
 
-            pred = result['predictions']
-            valid_mask = pred['valid_mask']
-            full_labels = np.full(len(df_pred), 'Unknown', dtype=object)
-            full_probs = np.full(len(df_pred), np.nan, dtype=float)
+        proba = pred.get('proba')
+        label_order = pred.get('label_order', [])
+        if proba is not None and len(label_order) > 0:
+            for i, label in enumerate(label_order):
+                col = f"P({label})"
+                values = np.full(len(df_pred), np.nan, dtype=float)
+                if proba.size > 0:
+                    values[valid_mask] = proba[:, i]
+                pred_df[col] = values
 
-            if pred['labels']:
-                full_labels[valid_mask] = np.array(pred['labels'], dtype=object)
-                full_probs[valid_mask] = np.array(pred['max_prob'], dtype=float)
+        result['prediction_df'] = pred_df
+        result['full_labels'] = full_labels
+        result['full_probs'] = full_probs
+        result['prediction_count'] = int(len(df_pred))
 
-            indices = (
-                self._selected_original_indices
-                if self._selected_original_indices is not None
-                else list(range(len(df_pred)))
-            )
+        self._result = result
+        state_gateway.set_ml_last_result(result)
+        state_gateway.set_ml_last_model_meta(result.get('model_info'))
 
-            pred_df = pd.DataFrame(
-                {
-                    'Index': indices,
-                    translate("Predicted Region"): full_labels,
-                    translate("Predicted Probability"): full_probs,
-                }
-            )
+        self._display_results()
 
-            proba = pred.get('proba')
-            label_order = pred.get('label_order', [])
-            if proba is not None and len(label_order) > 0:
-                for i, label in enumerate(label_order):
-                    col = f"P({label})"
-                    values = np.full(len(df_pred), np.nan, dtype=float)
-                    if proba.size > 0:
-                        values[valid_mask] = proba[:, i]
-                    pred_df[col] = values
+    def closeEvent(self, event):
+        from ui.dialogs.analysis_worker import stop_analysis_worker
 
-            result['prediction_df'] = pred_df
-            result['full_labels'] = full_labels
-            result['full_probs'] = full_probs
-            result['prediction_count'] = int(len(df_pred))
-
-            self._result = result
-            state_gateway.set_ml_last_result(result)
-            state_gateway.set_ml_last_model_meta(result.get('model_info'))
-
-            self._display_results()
-        except ProvenanceMLError as exc:
-            QMessageBox.warning(
-                self,
-                translate("Error"),
-                translate("ML training failed: {error}").format(error=str(exc)),
-            )
-        except Exception as exc:
-            logger.error("Provenance ML failed: %s", exc)
-            QMessageBox.warning(
-                self,
-                translate("Error"),
-                translate("ML training failed: {error}").format(error=str(exc)),
-            )
-        finally:
-            if progress:
-                progress.close()
+        stop_analysis_worker(getattr(self, "_ml_worker", None))
+        super().closeEvent(event)
 
     def _display_results(self):
         if self._result is None:

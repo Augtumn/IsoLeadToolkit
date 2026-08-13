@@ -164,6 +164,7 @@ class EndmemberAnalysisDialog(QDialog):
         run_btn.setFixedWidth(220)
         run_btn.clicked.connect(self._on_run_analysis)
         layout.addWidget(run_btn, 0, Qt.AlignHCenter)
+        self.run_btn = run_btn
 
         # ---- PCA 摘要 ----
         self.pca_group = QGroupBox(translate("PCA Summary"))
@@ -267,7 +268,10 @@ class EndmemberAnalysisDialog(QDialog):
         if clamp_b >= 99999.0:
             clamp_b = np.inf
 
-        try:
+        if getattr(self, "_endmember_worker", None) is not None and self._endmember_worker.isRunning():
+            return
+
+        def _run():
             from plugins.registry import plugin_manager
 
             _endmember_plugin = plugin_manager.get("endmember_plugin")
@@ -280,18 +284,52 @@ class EndmemberAnalysisDialog(QDialog):
                 df_input = app_state.df_global
                 self._selected_original_indices = None
 
-            self._result = _endmember_plugin.run(
+            return _endmember_plugin.run(
                 df_input,
                 col_206, col_207, col_208,
                 tolerance=(tol_a, tol_b),
                 clamp=(clamp_a, clamp_b),
             )
+
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication
+
+        from ui.dialogs.analysis_worker import AnalysisWorker
+
+        def _on_finished(result):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self.run_btn.setEnabled(True)
+            self._endmember_worker = None
+            self._result = result
             self._display_results()
-        except Exception as e:
-            logger.error("Endmember analysis failed: %s", e)
+
+        def _on_failed(message):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self.run_btn.setEnabled(True)
+            self._endmember_worker = None
+            logger.error("Endmember analysis failed: %s", message)
             QMessageBox.critical(
                 self, translate("Error"),
-                translate("Endmember analysis failed: {error}").format(error=str(e)))
+                translate("Endmember analysis failed: {error}").format(error=message))
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        self.run_btn.setEnabled(False)
+        self._endmember_worker = AnalysisWorker(_run)
+        self._endmember_worker.finished_signal.connect(_on_finished)
+        self._endmember_worker.failed.connect(_on_failed)
+        self._endmember_worker.start()
+
+    def closeEvent(self, event):
+        from ui.dialogs.analysis_worker import stop_analysis_worker
+
+        stop_analysis_worker(getattr(self, "_endmember_worker", None))
+        super().closeEvent(event)
 
     def _display_results(self):
         """显示分析结果"""

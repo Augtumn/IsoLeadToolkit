@@ -145,42 +145,77 @@ class ClusteringDialog(QDialog):
                 translate("Clustering plugin is not available. Check the log for details."),
             )
             return
-        try:
-            result = _clustering_plugin.run(
+
+        if getattr(self, "_cluster_worker", None) is not None and self._cluster_worker.isRunning():
+            return
+
+        def _cluster():
+            return _clustering_plugin.run(
                 embedding=np.asarray(embed),
                 min_cluster_size=self.min_cluster_spin.value(),
                 min_samples=self.min_samples_spin.value(),
                 cluster_selection_epsilon=self.epsilon_spin.value(),
                 metric=self.metric_combo.currentText(),
             )
-        except Exception as exc:
-            logger.exception("Clustering failed: %s", exc)
-            QMessageBox.critical(
-                self,
-                translate("Error"),
-                translate("Clustering failed: {error}").format(error=exc),
-            )
-            return
-        if result is None:
-            QMessageBox.critical(
-                self,
-                translate("Error"),
-                translate("Clustering failed. Check the log for details."),
-            )
-            return
 
-        self._result = result
-        self.result_label.setText(
-            translate(
-                "Clusters: {n_clusters}  |  Noise points: {n_noise} ({pct:.1f}%)"
-            ).format(
-                n_clusters=result["n_clusters"],
-                n_noise=result["n_noise"],
-                pct=100.0 * result["n_noise"] / max(1, len(result["labels"])),
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication
+
+        from ui.dialogs.analysis_worker import AnalysisWorker
+
+        def _on_finished(result):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self.run_btn.setEnabled(True)
+            self._cluster_worker = None
+            if result is None:
+                QMessageBox.critical(
+                    self,
+                    translate("Error"),
+                    translate("Clustering failed. Check the log for details."),
+                )
+                return
+            self._result = result
+            self.result_label.setText(
+                translate(
+                    "Clusters: {n_clusters}  |  Noise points: {n_noise} ({pct:.1f}%)"
+                ).format(
+                    n_clusters=result["n_clusters"],
+                    n_noise=result["n_noise"],
+                    pct=100.0 * result["n_noise"] / max(1, len(result["labels"])),
+                )
             )
-        )
-        self.result_label.setVisible(True)
-        self.apply_btn.setVisible(True)
+            self.result_label.setVisible(True)
+            self.apply_btn.setVisible(True)
+
+        def _on_failed(message):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self.run_btn.setEnabled(True)
+            self._cluster_worker = None
+            logger.error("Clustering failed: %s", message)
+            QMessageBox.critical(
+                self,
+                translate("Error"),
+                translate("Clustering failed: {error}").format(error=message),
+            )
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        self.run_btn.setEnabled(False)
+        self._cluster_worker = AnalysisWorker(_cluster)
+        self._cluster_worker.finished_signal.connect(_on_finished)
+        self._cluster_worker.failed.connect(_on_failed)
+        self._cluster_worker.start()
+
+    def closeEvent(self, event):
+        from ui.dialogs.analysis_worker import stop_analysis_worker
+
+        stop_analysis_worker(getattr(self, "_cluster_worker", None))
+        super().closeEvent(event)
 
     def _on_apply(self):
         if self._result is None:

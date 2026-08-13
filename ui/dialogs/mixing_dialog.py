@@ -79,6 +79,11 @@ class MixingCalculatorDialog(QDialog):
         button_layout.setSpacing(8)
         button_layout.addStretch()
 
+        run_btn = QPushButton(translate("Recalculate"))
+        run_btn.clicked.connect(self._calculate_mixing)
+        button_layout.addWidget(run_btn)
+        self.run_btn = run_btn
+
         export_btn = QPushButton(translate("Export Results"))
         export_btn.clicked.connect(self._export_results)
         button_layout.addWidget(export_btn)
@@ -121,34 +126,68 @@ class MixingCalculatorDialog(QDialog):
                 translate("Mixing plugin is not available. Check the log for details."),
             )
             return
-        try:
-            plugin_results = mixing_plugin.calculate(
+
+        if getattr(self, "_mixing_worker", None) is not None and self._mixing_worker.isRunning():
+            return
+
+        def _calculate():
+            return mixing_plugin.calculate(
                 app_state.df_global, endmembers, mixtures, numeric_cols
             )
-        except Exception as exc:
-            logger.exception("Mixing calculation failed: %s", exc)
+
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication
+
+        from ui.dialogs.analysis_worker import AnalysisWorker
+
+        def _on_finished(plugin_results):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self.run_btn.setEnabled(True)
+            self._mixing_worker = None
+            for r in plugin_results:
+                results.append({
+                    'mixture': r['mixture'],
+                    'endmember': r['endmember'],
+                    'proportion': r['weight'],
+                    'residual': r['rmse'],
+                })
+            # 显示结果
+            self.result_table.setRowCount(len(results))
+            for i, result in enumerate(results):
+                self.result_table.setItem(i, 0, QTableWidgetItem(result['mixture']))
+                self.result_table.setItem(i, 1, QTableWidgetItem(result['endmember']))
+                self.result_table.setItem(i, 2, QTableWidgetItem(f"{result['proportion']:.4f}"))
+                self.result_table.setItem(i, 3, QTableWidgetItem(f"{result['residual']:.4f}"))
+
+        def _on_failed(message):
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self.run_btn.setEnabled(True)
+            self._mixing_worker = None
+            logger.error("Mixing calculation failed: %s", message)
             QMessageBox.critical(
                 self,
                 translate("Error"),
-                translate("Mixing calculation failed: {error}").format(error=exc),
+                translate("Mixing calculation failed: {error}").format(error=message),
             )
-            return
 
-        for r in plugin_results:
-            results.append({
-                'mixture': r['mixture'],
-                'endmember': r['endmember'],
-                'proportion': r['weight'],
-                'residual': r['rmse'],
-            })
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        self.run_btn.setEnabled(False)
+        self._mixing_worker = AnalysisWorker(_calculate)
+        self._mixing_worker.finished_signal.connect(_on_finished)
+        self._mixing_worker.failed.connect(_on_failed)
+        self._mixing_worker.start()
 
-        # 显示结果
-        self.result_table.setRowCount(len(results))
-        for i, result in enumerate(results):
-            self.result_table.setItem(i, 0, QTableWidgetItem(result['mixture']))
-            self.result_table.setItem(i, 1, QTableWidgetItem(result['endmember']))
-            self.result_table.setItem(i, 2, QTableWidgetItem(f"{result['proportion']:.4f}"))
-            self.result_table.setItem(i, 3, QTableWidgetItem(f"{result['residual']:.4f}"))
+    def closeEvent(self, event):
+        from ui.dialogs.analysis_worker import stop_analysis_worker
+
+        stop_analysis_worker(getattr(self, "_mixing_worker", None))
+        super().closeEvent(event)
 
     def _export_results(self):
         """导出结果"""
