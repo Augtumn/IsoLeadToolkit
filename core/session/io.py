@@ -14,6 +14,19 @@ from .migration import migrate_session_data
 logger = logging.getLogger(__name__)
 
 
+def _atomic_write_json(path: Any, data: dict[str, Any]) -> None:
+    """Write JSON atomically (temp file + rename) to avoid corrupting the
+    session file when the process dies mid-write."""
+    import os
+
+    tmp_path = Path(str(path) + ".tmp")
+    with open(tmp_path, 'w', encoding='utf-8') as handle:
+        json.dump(data, handle, indent=2, ensure_ascii=False)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp_path, path)
+
+
 def save_session_params(
     algorithm: str,
     umap_params: dict[str, Any],
@@ -56,9 +69,7 @@ def save_session_params(
         
         logger.debug("Saving session params. Tooltip columns: %s", tooltip_columns)
 
-        with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as f:
-            json.dump(session_data, f, indent=2, ensure_ascii=False)
-        
+        _atomic_write_json(CONFIG['params_temp_file'], session_data)
         logger.info("Session parameters saved to %s", CONFIG['params_temp_file'])
         return True
     except Exception as e:
@@ -98,15 +109,13 @@ def load_session_params() -> dict[str, Any] | None:
         if legacy_params_file and params_file == legacy_params_file:
             # Migrate to preferred location for faster future loads.
             try:
-                with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as out:
-                    json.dump(session_data, out, indent=2, ensure_ascii=False)
+                _atomic_write_json(CONFIG['params_temp_file'], session_data)
                 logger.info("Migrated session parameters to %s", CONFIG['params_temp_file'])
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to persist migrated session parameters: %s", exc)
         elif migrated:
             try:
-                with open(CONFIG['params_temp_file'], 'w', encoding='utf-8') as out:
-                    json.dump(session_data, out, indent=2, ensure_ascii=False)
+                _atomic_write_json(CONFIG['params_temp_file'], session_data)
                 logger.info("Updated session parameters to version %s", current_version)
             except Exception:
                 logger.exception("Failed to persist migrated session parameters")
