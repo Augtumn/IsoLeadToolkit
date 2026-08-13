@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green)
-![Tests](https://img.shields.io/badge/Tests-343%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-372%20passed-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Win%20x64-lightgrey)
 
 ---
@@ -155,8 +155,8 @@ IsotopesAnalyse/
 │   ├── event_handlers/    # 选择/指针/图例事件
 │   └── plotting/        # 渲染管线 (rendering/geochem/styling)
 ├── locales/             # en.json / zh.json (1000+ 条目)
-├── scripts/             # 守护(4)/发布检查/脚手架
-├── tests/               # 57 文件, 343 用例
+├── scripts/             # 守护(5)/发布检查/脚手架
+├── tests/               # 62 文件, 372 用例
 ├── docs/                # 架构文档
 └── build.spec           # PyInstaller
 ```
@@ -166,12 +166,12 @@ IsotopesAnalyse/
 ## 开发
 
 ```bash
-uv run pytest                              # 343 测试
+uv run pytest                              # 372 测试
 uv run python scripts/release_check.py     # 13 项发布检查
 uv run python scripts/new_plugin.py name  # 创建新插件
 ```
 
-### 质量门禁（4 守护脚本，全部保持 TOTAL=0）
+### 质量门禁（5 个守护脚本，全部保持 TOTAL=0）
 
 | 脚本 | 检查内容 |
 |------|----------|

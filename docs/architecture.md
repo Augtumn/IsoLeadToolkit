@@ -6,13 +6,13 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~18,558 行 |
-| 模块数 | 5 个主模块 |
-| Python 文件数 | 47 个 |
-| 对话框数 | 11 个 |
+| Python 代码总量 | ~38,700 行 |
+| 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
+| Python 文件数 | 279 个 |
+| 对话框数 | 15+ 个 |
 | 支持算法 | UMAP, t-SNE, PCA, RobustPCA, V1V2 |
 | 图类型 | 8+ 种 |
-| 语言支持 | 中文/英文 |
+| 语言支持 | 中文/英文（1084 键） |
 
 ---
 
@@ -56,12 +56,12 @@
 ```
 Excel/CSV 文件
   → data/loader.py (加载 + 列类型检测)
-  → core/state.py (app_state.df_global)
+  → core/state/ (app_state.df_global，经 StateStore/Gateway)
   → visualization/plotting/ (嵌入计算 + 渲染)
   → matplotlib Figure (app_state.fig / app_state.ax)
   → ui/main_window.py (画布显示)
   → visualization/events.py (交互)
-  → core/session.py (会话保存)
+  → core/session/ (会话保存)
 ```
 
 ### 设计模式
@@ -79,14 +79,16 @@ Excel/CSV 文件
 
 ## 各模块文档索引
 
-| 模块 | 文档路径 | 行数 | 备注 |
+| 模块 | 文档路径 | 行数（2026-08 实测） | 备注 |
 |------|----------|------|------|
-| core/ | [docs/core.md](core.md) | 905 | 含 state/ 子包（store 1411, gateway 623, app_state 737, _normalizers 542, _views 261, _compat_builders 314, bootstrap/gateway 等） |
-| data/ | [docs/data.md](data.md) | 2,410 | |
-| ui/ | [docs/ui.md](ui.md) | 9,422 | |
-| export/专题 | [docs/export.md](export.md) | - | |
-| visualization/ | [docs/visualization.md](visualization.md) | 3,728 | |
-| utils/ | [docs/utils.md](utils.md) | 74 | |
+| core/ | [docs/core.md](core.md) | 4,807 | 含 state/ 子包（store 681, gateway 855, app_state 868, _normalizers 545, _views 326, _compat_builders 332, _dispatch_handlers 800, bootstrap 等） |
+| data/ | [docs/data.md](data.md) | 1,731 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py |
+| ui/ | [docs/ui.md](ui.md) | 13,209 | 85 文件 |
+| application/ | [docs/export.md](export.md) | 2,084 | 用例层（12 use cases） |
+| visualization/ | [docs/visualization.md](visualization.md) | 7,387 | 65 文件 |
+| utils/ | [docs/utils.md](utils.md) | 201 | |
+| plugins/ | [docs/plugins.md](plugins.md) | 1,568 | 插件系统（5 内置） |
+| tests/ | - | 6,720 | 62 文件，372 用例 |
 
 ---
 
