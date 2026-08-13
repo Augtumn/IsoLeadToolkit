@@ -119,6 +119,7 @@ class ExportPanelImageExportMixin:
                 translate("Figure exported successfully to {file}").format(file=file_path),
             )
         except Exception as export_err:
+            logger.exception("Image export failed: %s", export_err)
             QMessageBox.critical(
                 self,
                 translate("Error"),
@@ -442,6 +443,15 @@ class ExportPanelImageExportMixin:
                     state['preview_fig'] = new_fig
                     new_ax = new_fig.axes[0] if new_fig.axes else None
                     state['main_ax'] = new_ax
+
+                    # Release the previous preview figure; otherwise every
+                    # preview adjustment leaks one full Figure.
+                    if old_fig is not None and old_fig is not new_fig:
+                        try:
+                            import matplotlib.pyplot as plt
+                            plt.close(old_fig)
+                        except Exception:
+                            pass
 
                     # Update canvas size to match new figure
                     new_w = int(round(float(effective_profile['figsize'][0]) * float(state['params']['dpi'])))

@@ -1,6 +1,8 @@
 """Data export logic for export panel."""
 from __future__ import annotations
 
+import logging
+
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from application import (
@@ -9,6 +11,8 @@ from application import (
     export_selected_data_to_file,
 )
 from core import app_state, translate
+
+logger = logging.getLogger(__name__)
 
 
 class ExportPanelDataExportMixin:
@@ -109,6 +113,7 @@ class ExportPanelDataExportMixin:
                     translate("Data exported successfully to {file}").format(file=export_path),
                 )
             except Exception as err:
+                logger.exception("CSV export failed: %s", err)
                 QMessageBox.critical(
                     self,
                     translate("Error"),
@@ -147,6 +152,7 @@ class ExportPanelDataExportMixin:
                     translate("Data exported successfully to {file}").format(file=export_path),
                 )
             except Exception as err:
+                logger.exception("Excel export failed: %s", err)
                 QMessageBox.critical(
                     self,
                     translate("Error"),
@@ -202,6 +208,7 @@ class ExportPanelDataExportMixin:
                 translate("Data appended as sheet '{sheet}' to {file}").format(sheet=sheet_name, file=export_path),
             )
         except Exception as err:
+            logger.exception("Excel append export failed: %s", err)
             QMessageBox.critical(
                 self,
                 translate("Error"),
