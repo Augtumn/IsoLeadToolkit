@@ -220,10 +220,10 @@ class ProvenanceMLBuildMixin:
         param_group.setLayout(param_layout)
         layout.addWidget(param_group)
 
-        run_btn = QPushButton(translate("Run Provenance ML"))
-        run_btn.setFixedWidth(220)
-        run_btn.clicked.connect(self._on_run_ml)
-        layout.addWidget(run_btn, 0, Qt.AlignHCenter)
+        self.run_btn = QPushButton(translate("Run Provenance ML"))
+        self.run_btn.setFixedWidth(220)
+        self.run_btn.clicked.connect(self._on_run_ml)
+        layout.addWidget(self.run_btn, 0, Qt.AlignHCenter)
 
         self.result_group = QGroupBox(translate("Results"))
         result_layout = QVBoxLayout()

@@ -147,6 +147,15 @@ def create_section_dialog(
                 panel.update_selection_controls()
         except Exception:
             pass
+        # Re-register the language listener: _on_close removes it and the
+        # dialog is cached, so a reopened dialog must re-subscribe or it
+        # stops reacting to language switches.
+        listeners = getattr(app_state, 'language_listeners', [])
+        if _on_language_refresh not in listeners:
+            try:
+                app_state.register_language_listener(_on_language_refresh)
+            except Exception:
+                pass
         QTimer.singleShot(0, _apply_adaptive_size)
 
     def _on_language_refresh():
@@ -167,12 +176,18 @@ def create_section_dialog(
     except Exception:
         pass
 
-    # Ctrl+Z 样式撤销快捷键
+    # Ctrl+Z 样式撤销快捷键（输入框聚焦时让位给原生撤销）
     from PyQt5.QtGui import QKeySequence
-    from PyQt5.QtWidgets import QShortcut
+    from PyQt5.QtWidgets import QApplication, QLineEdit, QPlainTextEdit, QShortcut, QTextEdit
+
+    def _handle_undo():
+        focus = QApplication.focusWidget()
+        if isinstance(focus, (QLineEdit, QTextEdit, QPlainTextEdit)):
+            return
+        if hasattr(panel, '_undo_style'):
+            panel._undo_style()
+
     undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), dialog)
-    undo_shortcut.activated.connect(
-        lambda p=panel: p._undo_style() if hasattr(p, '_undo_style') else None
-    )
+    undo_shortcut.activated.connect(_handle_undo)
 
     return dialog

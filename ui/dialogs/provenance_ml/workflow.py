@@ -180,6 +180,19 @@ class ProvenanceMLWorkflowMixin:
             )
             return
 
+        # Snapshot widget values on the main thread; the worker closure must
+        # never touch Qt widgets (cross-thread access is undefined behavior).
+        run_params = {
+            "min_region_samples": int(self.min_region_spin.value()),
+            "dbscan_min_region_samples": int(self.dbscan_min_region_spin.value()),
+            "dbscan_eps": float(self.eps_spin.value()),
+            "dbscan_min_samples_ratio": float(self.min_samples_ratio_spin.value()),
+            "standardize": bool(self.standardize_check.isChecked()),
+            "smote_enabled": bool(self.smote_check.isChecked()),
+            "smote_k_neighbors": int(self.smote_k_spin.value()),
+            "predict_threshold": float(self.threshold_spin.value()),
+        }
+
         def _fit_and_predict():
             """Heavy computation — runs on the worker thread."""
             from plugins.api import PluginError as ProvenanceMLError
@@ -190,17 +203,10 @@ class ProvenanceMLWorkflowMixin:
                 training_df=self._training_df,
                 region_col=region_col,
                 feature_cols=train_cols,
-                min_region_samples=int(self.min_region_spin.value()),
-                dbscan_min_region_samples=int(self.dbscan_min_region_spin.value()),
-                dbscan_eps=float(self.eps_spin.value()),
-                dbscan_min_samples_ratio=float(self.min_samples_ratio_spin.value()),
-                standardize=bool(self.standardize_check.isChecked()),
-                smote_enabled=bool(self.smote_check.isChecked()),
-                smote_k_neighbors=int(self.smote_k_spin.value()),
+                **run_params,
                 smote_sampling_strategy=smote_sampling_strategy,
                 xgb_n_estimators=xgb_params.get('n_estimators', 200),
                 xgb_max_depth=xgb_params.get('max_depth', 6),
-                predict_threshold=float(self.threshold_spin.value()),
             )
             raw_pred = provenance_plugin.predict(df_pred)
             return fit_result, raw_pred
@@ -215,9 +221,8 @@ class ProvenanceMLWorkflowMixin:
                 QApplication.restoreOverrideCursor()
             except Exception:
                 pass
-            run_btn = getattr(self, "run_ml_button", None)
-            if run_btn is not None:
-                run_btn.setEnabled(True)
+            if self.run_btn is not None:
+                self.run_btn.setEnabled(True)
             self._ml_worker = None
             try:
                 self._apply_ml_result(*payload)
@@ -240,9 +245,8 @@ class ProvenanceMLWorkflowMixin:
                 QApplication.restoreOverrideCursor()
             except Exception:
                 pass
-            run_btn = getattr(self, "run_ml_button", None)
-            if run_btn is not None:
-                run_btn.setEnabled(True)
+            if self.run_btn is not None:
+                self.run_btn.setEnabled(True)
             self._ml_worker = None
             QMessageBox.warning(
                 self,
@@ -251,9 +255,8 @@ class ProvenanceMLWorkflowMixin:
             )
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
-        run_btn = getattr(self, "run_ml_button", None)
-        if run_btn is not None:
-            run_btn.setEnabled(False)
+        if self.run_btn is not None:
+            self.run_btn.setEnabled(False)
 
         # Keep the prediction frame for the main-thread result assembly.
         self._ml_pred_df = df_pred

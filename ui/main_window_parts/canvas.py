@@ -75,7 +75,11 @@ class MainWindowCanvasMixin:
         state_gateway.set_figure(fig)
         state_gateway.set_canvas(canvas)
 
-        self._connect_event_handlers(canvas)
+        # NOTE: matplotlib event handlers (hover/click/legend-click) are
+        # connected once in ui/app_parts/plotting.py::_connect_event_handlers
+        # on app_state.fig.canvas (this same canvas). Connecting them again
+        # here would double-fire every event (e.g. in-plot legend clicks and
+        # double-click selection would toggle twice = net no-op).
 
     def _get_selection_icon(self, filename):
         """Resolve selection tool icon from assets."""
@@ -101,7 +105,8 @@ class MainWindowCanvasMixin:
         if not actions:
             return
         current_tool = getattr(app_state, "selection_tool", None)
-        rect_checked = current_tool == "export"
+        # "rect" is the toolbar value; "export" is the analysis-panel alias.
+        rect_checked = current_tool in ("rect", "export")
         lasso_checked = current_tool == "lasso"
         actions["rect"].blockSignals(True)
         actions["lasso"].blockSignals(True)

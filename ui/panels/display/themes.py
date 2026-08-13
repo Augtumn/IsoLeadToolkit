@@ -171,166 +171,174 @@ class DisplayThemeMixin:
             for w in blocked_widgets:
                 w.blockSignals(True)
 
-        if self.grid_check:
-            self.grid_check.setChecked(bool(data.get('grid', False)))
-        if self.color_combo:
-            self.color_combo.setCurrentText(data.get('color_scheme', 'vibrant'))
-        else:
-            state_gateway.set_color_scheme(data.get('color_scheme', getattr(app_state, 'color_scheme', 'vibrant')))
+        try:
+            if self.grid_check:
+                self.grid_check.setChecked(bool(data.get('grid', False)))
+            if self.color_combo:
+                self.color_combo.setCurrentText(data.get('color_scheme', 'vibrant'))
+            else:
+                state_gateway.set_color_scheme(data.get('color_scheme', getattr(app_state, 'color_scheme', 'vibrant')))
 
-        primary_font = data.get('primary_font', '') or '<Default>'
-        if self.primary_font_combo:
-            self.primary_font_combo.setCurrentText(primary_font)
-        cjk_font = data.get('cjk_font', '') or '<Default>'
-        if self.cjk_font_combo:
-            self.cjk_font_combo.setCurrentText(cjk_font)
+            primary_font = data.get('primary_font', '') or '<Default>'
+            if self.primary_font_combo:
+                self.primary_font_combo.setCurrentText(primary_font)
+            cjk_font = data.get('cjk_font', '') or '<Default>'
+            if self.cjk_font_combo:
+                self.cjk_font_combo.setCurrentText(cjk_font)
 
-        sizes = data.get('font_sizes', {})
-        for key, spin in self.font_size_spins.items():
-            if key in sizes:
-                spin.setValue(int(sizes[key]))
+            sizes = data.get('font_sizes', {})
+            for key, spin in self.font_size_spins.items():
+                if key in sizes:
+                    spin.setValue(int(sizes[key]))
 
-        if self.marker_size_spin:
-            self.marker_size_spin.setValue(int(data.get('marker_size', 60)))
-        if self.marker_alpha_spin:
-            self.marker_alpha_spin.setValue(float(data.get('marker_alpha', 0.8)))
+            if self.marker_size_spin:
+                self.marker_size_spin.setValue(int(data.get('marker_size', 60)))
+            if self.marker_alpha_spin:
+                self.marker_alpha_spin.setValue(float(data.get('marker_alpha', 0.8)))
 
-        if self.figure_dpi_spin:
-            self.figure_dpi_spin.setValue(int(data.get('figure_dpi', 130)))
-        if self.figure_bg_edit:
-            self._set_color_control_value(self.figure_bg_edit, data.get('figure_bg', '#ffffff'), '#ffffff')
-        if self.axes_bg_edit:
-            self._set_color_control_value(self.axes_bg_edit, data.get('axes_bg', '#ffffff'), '#ffffff')
-        if self.grid_color_edit:
-            self._set_color_control_value(self.grid_color_edit, data.get('grid_color', '#e2e8f0'), '#e2e8f0')
-        if self.grid_width_spin:
-            self.grid_width_spin.setValue(float(data.get('grid_linewidth', 0.6)))
-        if self.grid_alpha_spin:
-            self.grid_alpha_spin.setValue(float(data.get('grid_alpha', 0.7)))
-        if self.grid_style_combo:
-            self.grid_style_combo.setCurrentText(data.get('grid_linestyle', '--'))
-        if self.tick_dir_combo:
-            self.tick_dir_combo.setCurrentText(data.get('tick_direction', 'out'))
-        if self.tick_color_edit:
-            self._set_color_control_value(self.tick_color_edit, data.get('tick_color', '#1f2937'), '#1f2937')
-        if self.tick_length_spin:
-            self.tick_length_spin.setValue(float(data.get('tick_length', 4.0)))
-        if self.tick_width_spin:
-            self.tick_width_spin.setValue(float(data.get('tick_width', 0.8)))
-        if self.minor_ticks_check:
-            self.minor_ticks_check.setChecked(bool(data.get('minor_ticks', False)))
-        if self.minor_tick_length_spin:
-            self.minor_tick_length_spin.setValue(float(data.get('minor_tick_length', 2.5)))
-        if self.minor_tick_width_spin:
-            self.minor_tick_width_spin.setValue(float(data.get('minor_tick_width', 0.6)))
-        if self.axis_linewidth_spin:
-            self.axis_linewidth_spin.setValue(float(data.get('axis_linewidth', 1.0)))
-        if self.axis_line_color_edit:
-            self._set_color_control_value(self.axis_line_color_edit, data.get('axis_line_color', '#1f2937'), '#1f2937')
-        if self.show_top_spine_check:
-            self.show_top_spine_check.setChecked(bool(data.get('show_top_spine', True)))
-        if self.show_right_spine_check:
-            self.show_right_spine_check.setChecked(bool(data.get('show_right_spine', True)))
-        if self.minor_grid_check:
-            self.minor_grid_check.setChecked(bool(data.get('minor_grid', False)))
-        if self.minor_grid_color_edit:
-            self._set_color_control_value(self.minor_grid_color_edit, data.get('minor_grid_color', '#e2e8f0'), '#e2e8f0')
-        if self.minor_grid_width_spin:
-            self.minor_grid_width_spin.setValue(float(data.get('minor_grid_linewidth', 0.4)))
-        if self.minor_grid_alpha_spin:
-            self.minor_grid_alpha_spin.setValue(float(data.get('minor_grid_alpha', 0.4)))
-        if self.minor_grid_style_combo:
-            self.minor_grid_style_combo.setCurrentText(data.get('minor_grid_linestyle', ':'))
-        if self.scatter_edge_check:
-            self.scatter_edge_check.setChecked(bool(data.get('scatter_show_edge', True)))
-        if self.scatter_edgecolor_edit:
-            self._set_color_control_value(self.scatter_edgecolor_edit, data.get('scatter_edgecolor', '#1e293b'), '#1e293b')
-        if self.scatter_edgewidth_spin:
-            self.scatter_edgewidth_spin.setValue(float(data.get('scatter_edgewidth', 0.4)))
-        if self.model_curve_width_spin:
-            self.model_curve_width_spin.setValue(float(data.get('model_curve_width', 1.2)))
-        if self.paleoisochron_width_spin:
-            self.paleoisochron_width_spin.setValue(float(data.get('paleoisochron_width', 0.9)))
-        if self.model_age_width_spin:
-            self.model_age_width_spin.setValue(float(data.get('model_age_line_width', 0.7)))
-        if self.isochron_width_spin:
-            self.isochron_width_spin.setValue(float(data.get('isochron_line_width', 1.5)))
-        if 'line_styles' in data:
-            state_gateway.set_line_styles(data.get('line_styles', {}))
-        if self.label_color_edit:
-            self._set_color_control_value(self.label_color_edit, data.get('label_color', '#1f2937'), '#1f2937')
-        if self.label_weight_combo:
-            self.label_weight_combo.setCurrentText(data.get('label_weight', 'normal'))
-        if self.label_pad_spin:
-            self.label_pad_spin.setValue(float(data.get('label_pad', 6.0)))
-        if self.title_color_edit:
-            self._set_color_control_value(self.title_color_edit, data.get('title_color', '#111827'), '#111827')
-        if self.title_weight_combo:
-            self.title_weight_combo.setCurrentText(data.get('title_weight', 'bold'))
-        if self.title_pad_spin:
-            self.title_pad_spin.setValue(float(data.get('title_pad', 20.0)))
-        if self.legend_frame_on_check:
-            self.legend_frame_on_check.setChecked(bool(data.get('legend_frame_on', True)))
-        if self.legend_frame_alpha_spin:
-            self.legend_frame_alpha_spin.setValue(float(data.get('legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA)))
-        if self.legend_frame_face_edit:
-            self.legend_frame_face_edit.setText(data.get('legend_frame_facecolor', '#ffffff'))
-        if self.legend_frame_edge_edit:
-            self.legend_frame_edge_edit.setText(data.get('legend_frame_edgecolor', '#cbd5f5'))
+            if self.figure_dpi_spin:
+                self.figure_dpi_spin.setValue(int(data.get('figure_dpi', 130)))
+            if self.figure_bg_edit:
+                self._set_color_control_value(self.figure_bg_edit, data.get('figure_bg', '#ffffff'), '#ffffff')
+            if self.axes_bg_edit:
+                self._set_color_control_value(self.axes_bg_edit, data.get('axes_bg', '#ffffff'), '#ffffff')
+            if self.grid_color_edit:
+                self._set_color_control_value(self.grid_color_edit, data.get('grid_color', '#e2e8f0'), '#e2e8f0')
+            if self.grid_width_spin:
+                self.grid_width_spin.setValue(float(data.get('grid_linewidth', 0.6)))
+            if self.grid_alpha_spin:
+                self.grid_alpha_spin.setValue(float(data.get('grid_alpha', 0.7)))
+            if self.grid_style_combo:
+                self.grid_style_combo.setCurrentText(data.get('grid_linestyle', '--'))
+            if self.tick_dir_combo:
+                self.tick_dir_combo.setCurrentText(data.get('tick_direction', 'out'))
+            if self.tick_color_edit:
+                self._set_color_control_value(self.tick_color_edit, data.get('tick_color', '#1f2937'), '#1f2937')
+            if self.tick_length_spin:
+                self.tick_length_spin.setValue(float(data.get('tick_length', 4.0)))
+            if self.tick_width_spin:
+                self.tick_width_spin.setValue(float(data.get('tick_width', 0.8)))
+            if self.minor_ticks_check:
+                self.minor_ticks_check.setChecked(bool(data.get('minor_ticks', False)))
+            if self.minor_tick_length_spin:
+                self.minor_tick_length_spin.setValue(float(data.get('minor_tick_length', 2.5)))
+            if self.minor_tick_width_spin:
+                self.minor_tick_width_spin.setValue(float(data.get('minor_tick_width', 0.6)))
+            if self.axis_linewidth_spin:
+                self.axis_linewidth_spin.setValue(float(data.get('axis_linewidth', 1.0)))
+            if self.axis_line_color_edit:
+                self._set_color_control_value(self.axis_line_color_edit, data.get('axis_line_color', '#1f2937'), '#1f2937')
+            if self.show_top_spine_check:
+                self.show_top_spine_check.setChecked(bool(data.get('show_top_spine', True)))
+            if self.show_right_spine_check:
+                self.show_right_spine_check.setChecked(bool(data.get('show_right_spine', True)))
+            if self.minor_grid_check:
+                self.minor_grid_check.setChecked(bool(data.get('minor_grid', False)))
+            if self.minor_grid_color_edit:
+                self._set_color_control_value(self.minor_grid_color_edit, data.get('minor_grid_color', '#e2e8f0'), '#e2e8f0')
+            if self.minor_grid_width_spin:
+                self.minor_grid_width_spin.setValue(float(data.get('minor_grid_linewidth', 0.4)))
+            if self.minor_grid_alpha_spin:
+                self.minor_grid_alpha_spin.setValue(float(data.get('minor_grid_alpha', 0.4)))
+            if self.minor_grid_style_combo:
+                self.minor_grid_style_combo.setCurrentText(data.get('minor_grid_linestyle', ':'))
+            if self.scatter_edge_check:
+                self.scatter_edge_check.setChecked(bool(data.get('scatter_show_edge', True)))
+            if self.scatter_edgecolor_edit:
+                self._set_color_control_value(self.scatter_edgecolor_edit, data.get('scatter_edgecolor', '#1e293b'), '#1e293b')
+            if self.scatter_edgewidth_spin:
+                self.scatter_edgewidth_spin.setValue(float(data.get('scatter_edgewidth', 0.4)))
+            if self.model_curve_width_spin:
+                self.model_curve_width_spin.setValue(float(data.get('model_curve_width', 1.2)))
+            if self.paleoisochron_width_spin:
+                self.paleoisochron_width_spin.setValue(float(data.get('paleoisochron_width', 0.9)))
+            if self.model_age_width_spin:
+                self.model_age_width_spin.setValue(float(data.get('model_age_line_width', 0.7)))
+            if self.isochron_width_spin:
+                self.isochron_width_spin.setValue(float(data.get('isochron_line_width', 1.5)))
+            if 'line_styles' in data:
+                state_gateway.set_line_styles(data.get('line_styles', {}))
+            if self.label_color_edit:
+                self._set_color_control_value(self.label_color_edit, data.get('label_color', '#1f2937'), '#1f2937')
+            if self.label_weight_combo:
+                self.label_weight_combo.setCurrentText(data.get('label_weight', 'normal'))
+            if self.label_pad_spin:
+                self.label_pad_spin.setValue(float(data.get('label_pad', 6.0)))
+            if self.title_color_edit:
+                self._set_color_control_value(self.title_color_edit, data.get('title_color', '#111827'), '#111827')
+            if self.title_weight_combo:
+                self.title_weight_combo.setCurrentText(data.get('title_weight', 'bold'))
+            if self.title_pad_spin:
+                self.title_pad_spin.setValue(float(data.get('title_pad', 20.0)))
+            if self.legend_frame_on_check:
+                self.legend_frame_on_check.setChecked(bool(data.get('legend_frame_on', True)))
+            if self.legend_frame_alpha_spin:
+                self.legend_frame_alpha_spin.setValue(float(data.get('legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA)))
+            if self.legend_frame_face_edit:
+                self.legend_frame_face_edit.setText(data.get('legend_frame_facecolor', '#ffffff'))
+            if self.legend_frame_edge_edit:
+                self.legend_frame_edge_edit.setText(data.get('legend_frame_edgecolor', '#cbd5f5'))
 
-        def _pair(value, fallback):
-            if isinstance(value, (list, tuple)) and len(value) >= 2:
-                try:
-                    return float(value[0]), float(value[1])
-                except Exception:
-                    return fallback
-            if isinstance(value, (int, float)):
-                scalar = float(value)
-                return scalar, scalar
-            return fallback
+            def _pair(value, fallback):
+                if isinstance(value, (list, tuple)) and len(value) >= 2:
+                    try:
+                        return float(value[0]), float(value[1])
+                    except Exception:
+                        return fallback
+                if isinstance(value, (int, float)):
+                    scalar = float(value)
+                    return scalar, scalar
+                return fallback
 
-        adjust_force_text = _pair(
-            data.get('adjust_text_force_text', getattr(app_state, 'adjust_text_force_text', (0.8, 1.0))),
-            (0.8, 1.0),
-        )
-        adjust_force_static = _pair(
-            data.get('adjust_text_force_static', getattr(app_state, 'adjust_text_force_static', (0.4, 0.6))),
-            (0.4, 0.6),
-        )
-        adjust_expand = _pair(
-            data.get('adjust_text_expand', getattr(app_state, 'adjust_text_expand', (1.08, 1.20))),
-            (1.08, 1.20),
-        )
-        if self.adjust_force_text_x_spin:
-            self.adjust_force_text_x_spin.setValue(float(adjust_force_text[0]))
-        if self.adjust_force_text_y_spin:
-            self.adjust_force_text_y_spin.setValue(float(adjust_force_text[1]))
-        if self.adjust_force_static_x_spin:
-            self.adjust_force_static_x_spin.setValue(float(adjust_force_static[0]))
-        if self.adjust_force_static_y_spin:
-            self.adjust_force_static_y_spin.setValue(float(adjust_force_static[1]))
-        if self.adjust_expand_x_spin:
-            self.adjust_expand_x_spin.setValue(float(adjust_expand[0]))
-        if self.adjust_expand_y_spin:
-            self.adjust_expand_y_spin.setValue(float(adjust_expand[1]))
-        if self.adjust_iter_lim_spin:
-            self.adjust_iter_lim_spin.setValue(int(data.get('adjust_text_iter_lim', getattr(app_state, 'adjust_text_iter_lim', 120))))
-        if self.adjust_time_lim_spin:
-            self.adjust_time_lim_spin.setValue(float(data.get('adjust_text_time_lim', getattr(app_state, 'adjust_text_time_lim', 0.25))))
+            adjust_force_text = _pair(
+                data.get('adjust_text_force_text', getattr(app_state, 'adjust_text_force_text', (0.8, 1.0))),
+                (0.8, 1.0),
+            )
+            adjust_force_static = _pair(
+                data.get('adjust_text_force_static', getattr(app_state, 'adjust_text_force_static', (0.4, 0.6))),
+                (0.4, 0.6),
+            )
+            adjust_expand = _pair(
+                data.get('adjust_text_expand', getattr(app_state, 'adjust_text_expand', (1.08, 1.20))),
+                (1.08, 1.20),
+            )
+            if self.adjust_force_text_x_spin:
+                self.adjust_force_text_x_spin.setValue(float(adjust_force_text[0]))
+            if self.adjust_force_text_y_spin:
+                self.adjust_force_text_y_spin.setValue(float(adjust_force_text[1]))
+            if self.adjust_force_static_x_spin:
+                self.adjust_force_static_x_spin.setValue(float(adjust_force_static[0]))
+            if self.adjust_force_static_y_spin:
+                self.adjust_force_static_y_spin.setValue(float(adjust_force_static[1]))
+            if self.adjust_expand_x_spin:
+                self.adjust_expand_x_spin.setValue(float(adjust_expand[0]))
+            if self.adjust_expand_y_spin:
+                self.adjust_expand_y_spin.setValue(float(adjust_expand[1]))
+            if self.adjust_iter_lim_spin:
+                self.adjust_iter_lim_spin.setValue(int(data.get('adjust_text_iter_lim', getattr(app_state, 'adjust_text_iter_lim', 120))))
+            if self.adjust_time_lim_spin:
+                self.adjust_time_lim_spin.setValue(float(data.get('adjust_text_time_lim', getattr(app_state, 'adjust_text_time_lim', 0.25))))
 
-        legend_outside = data.get('legend_location', None)
-        legend_inside = data.get('legend_position', None)
+            legend_outside = data.get('legend_location', None)
+            legend_inside = data.get('legend_position', None)
 
-        if legend_outside not in {'outside_left', 'outside_right'}:
-            legend_outside = None
+            if legend_outside not in {'outside_left', 'outside_right'}:
+                legend_outside = None
 
-        state_gateway.set_legend_location(legend_outside)
-        state_gateway.set_legend_position(legend_inside)
-        self._set_legend_position_button(legend_inside, legend_outside)
-
-        for w in blocked_widgets:
-            w.blockSignals(False)
-
+            state_gateway.set_legend_location(legend_outside)
+            state_gateway.set_legend_position(legend_inside)
+            self._set_legend_position_button(legend_inside, legend_outside)
+        except Exception as exc:
+            logger.warning("Failed to apply theme '%s': %s", name, exc)
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Failed to apply theme: {error}").format(error=exc),
+            )
+            return
+        finally:
+            for w in blocked_widgets:
+                w.blockSignals(False)
         self._on_style_change()
 
     def _delete_theme(self):

@@ -149,14 +149,17 @@ class ClusteringDialog(QDialog):
         if getattr(self, "_cluster_worker", None) is not None and self._cluster_worker.isRunning():
             return
 
+        # Snapshot widget values on the main thread; the worker closure must
+        # never touch Qt widgets (cross-thread access is undefined behavior).
+        run_params = {
+            "min_cluster_size": self.min_cluster_spin.value(),
+            "min_samples": self.min_samples_spin.value(),
+            "cluster_selection_epsilon": self.epsilon_spin.value(),
+            "metric": self.metric_combo.currentText(),
+        }
+
         def _cluster():
-            return _clustering_plugin.run(
-                embedding=np.asarray(embed),
-                min_cluster_size=self.min_cluster_spin.value(),
-                min_samples=self.min_samples_spin.value(),
-                cluster_selection_epsilon=self.epsilon_spin.value(),
-                metric=self.metric_combo.currentText(),
-            )
+            return _clustering_plugin.run(embedding=np.asarray(embed), **run_params)
 
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication

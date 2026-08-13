@@ -34,11 +34,10 @@ class LegendActionsMixin:
                 return
         state_gateway.set_color_scheme(palette_name)
         self._last_palette_name = palette_name
-        try:
-            from visualization import refresh_plot_style
-            refresh_plot_style()
-        except Exception:
-            self._on_change()
+        # Palette changes only take effect at full-render time (the group
+        # palette is rebuilt from the color scheme during rendering); a
+        # style-only refresh would leave the scatter colors unchanged.
+        self._on_change()
 
     def _on_shape_set_change(self, _index):
         if self.auto_shape_set_combo is None:
@@ -66,6 +65,12 @@ class LegendActionsMixin:
         else:
             state_gateway.set_legend_position(position)
             self._set_legend_inside_position_button(position)
+        # Inside and outside positions are mutually exclusive: selecting an
+        # inline position must clear the outside location (and vice versa),
+        # otherwise both an inline and a docked legend render at once.
+        if getattr(app_state, 'legend_location', None) is not None:
+            state_gateway.set_legend_location(None)
+            self._set_legend_outside_position_button(None)
         self._on_change()
 
     def _on_legend_outside_position_change(self, position):
@@ -76,6 +81,10 @@ class LegendActionsMixin:
         else:
             state_gateway.set_legend_location(position)
             self._set_legend_outside_position_button(position)
+        # Mutually exclusive with the inline position group.
+        if getattr(app_state, 'legend_position', None) is not None:
+            state_gateway.set_legend_position(None)
+            self._set_legend_inside_position_button(None)
         self._on_change()
 
     def _on_legend_columns_change(self, columns):

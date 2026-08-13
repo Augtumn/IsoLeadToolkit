@@ -111,10 +111,10 @@ class MainWindowSetupMixin:
         settings_layout = QHBoxLayout(settings_row)
         settings_layout.setContentsMargins(0, 0, 0, 0)
         settings_layout.setSpacing(4)
-        settings_btn = QPushButton(translate("Legend Settings..."))
-        settings_btn.setToolTip(translate("Open the full legend settings dialog"))
-        settings_btn.clicked.connect(self._open_legend_settings)
-        settings_layout.addWidget(settings_btn, 1)
+        self.legend_settings_btn = QPushButton(translate("Legend Settings..."))
+        self.legend_settings_btn.setToolTip(translate("Open the full legend settings dialog"))
+        self.legend_settings_btn.clicked.connect(self._open_legend_settings)
+        settings_layout.addWidget(self.legend_settings_btn, 1)
         legend_layout.addWidget(settings_row)
 
         legend_list = LegendListWidget()
@@ -362,6 +362,14 @@ class MainWindowSetupMixin:
             actions["reload"].setText(translate("Reload Data"))
         if "exit" in actions:
             actions["exit"].setText(translate("Exit"))
+        if "log" in actions:
+            actions["log"].setText(translate("View Log..."))
+        if "export_session" in actions:
+            actions["export_session"].setText(translate("Export Session..."))
+        if "import_session" in actions:
+            actions["import_session"].setText(translate("Import Session..."))
+        if hasattr(self, "legend_settings_btn") and self.legend_settings_btn is not None:
+            self.legend_settings_btn.setText(translate("Legend Settings..."))
         if "data" in actions:
             actions["data"].setText(translate("Data"))
         if "display" in actions:

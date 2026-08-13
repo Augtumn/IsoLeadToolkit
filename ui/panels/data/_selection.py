@@ -161,5 +161,10 @@ class _DataPanelSelectionBuild:
 
         self._refresh_2d_axis_combos()
 
+        # Connect after populating so programmatic fills do not fire the
+        # handler; changing the axis must persist the selection and re-render.
+        self.xaxis_combo.currentIndexChanged.connect(self._on_2d_axis_change)
+        self.yaxis_combo.currentIndexChanged.connect(self._on_2d_axis_change)
+
         self.twod_group.setLayout(twod_layout)
         layout.addWidget(self.twod_group)

@@ -171,8 +171,16 @@ class GeoPanel(BasePanel):
             from application.use_cases import geochemistry as geochem_usecase
 
             self._update_geo_param_visibility(self.geo_model_combo.currentText(), geochem_usecase.get_parameters())
-        except Exception:
-            pass
+
+            # Engine/UI sync: the persisted model may differ from the engine's
+            # current preset (the engine singleton starts on defaults). Load
+            # the selected preset and populate the spins so "Apply Changes"
+            # uses the model the combo claims (no render during construction).
+            current_model = self.geo_model_combo.currentText()
+            if current_model and current_model != geochem_usecase.get_current_model_name():
+                self._on_geo_model_change(current_model, trigger_render=False)
+        except Exception as exc:
+            logger.warning("Failed to sync geochemistry model state: %s", exc)
 
         layout.addStretch()
         return widget
@@ -231,7 +239,7 @@ class GeoPanel(BasePanel):
 
     # ------ 事件处理 ------
 
-    def _on_geo_model_change(self, model_name):
+    def _on_geo_model_change(self, model_name, trigger_render=True):
         """地球化学模型选择变化"""
         if not model_name:
             return
@@ -259,7 +267,11 @@ class GeoPanel(BasePanel):
                 state_gateway.set_geo_model_name(model_name)
                 logger.info("Loaded Geochemistry Model: %s", model_name)
 
-                if app_state.render_mode in ('V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE'):
+                if (
+                    trigger_render
+                    and app_state.render_mode
+                    in ('V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE')
+                ):
                     self._on_change()
 
         except Exception as e:

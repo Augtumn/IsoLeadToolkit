@@ -222,13 +222,3 @@ class MainWindowLifecycleMixin:
         dialog.show()
         dialog.raise_()
         dialog.activateWindow()
-
-    def _connect_event_handlers(self, canvas):
-        """连接事件处理器"""
-        from visualization.events import on_click, on_hover, on_legend_click
-
-        canvas.mpl_connect("motion_notify_event", on_hover)
-        canvas.mpl_connect("button_press_event", on_click)
-        canvas.mpl_connect("button_press_event", on_legend_click)
-
-        logger.info("Event handlers connected successfully")

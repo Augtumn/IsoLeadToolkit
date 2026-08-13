@@ -271,18 +271,20 @@ class EndmemberAnalysisDialog(QDialog):
         if getattr(self, "_endmember_worker", None) is not None and self._endmember_worker.isRunning():
             return
 
+        # Decide the input scope on the main thread; the worker closure must
+        # not read Qt widgets or mutate shared state from the worker thread.
+        if self.radio_selected.isChecked():
+            selected = sorted(list(app_state.selected_indices))
+            df_input = app_state.df_global.iloc[selected].reset_index(drop=True)
+            self._selected_original_indices = selected
+        else:
+            df_input = app_state.df_global
+            self._selected_original_indices = None
+
         def _run():
             from plugins.registry import plugin_manager
 
             _endmember_plugin = plugin_manager.get("endmember_plugin")
-            # 确定数据范围
-            if self.radio_selected.isChecked():
-                selected = sorted(list(app_state.selected_indices))
-                df_input = app_state.df_global.iloc[selected].reset_index(drop=True)
-                self._selected_original_indices = selected
-            else:
-                df_input = app_state.df_global
-                self._selected_original_indices = None
 
             return _endmember_plugin.run(
                 df_input,

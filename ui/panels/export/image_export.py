@@ -443,11 +443,11 @@ class ExportPanelImageExportMixin:
                     # Cap the preview render DPI so huge slider values do not
                     # allocate a multi-thousand-pixel canvas; the saved file
                     # still uses the user's requested DPI.
+                    effective_profile = dict(state['profile'])
                     preview_dpi = min(
                         int(state['params'].get('dpi', effective_profile.get('dpi', 400))),
                         300,
                     )
-                    effective_profile = dict(state['profile'])
                     effective_profile['dpi'] = preview_dpi
 
                     new_fig = self._create_export_figure(
