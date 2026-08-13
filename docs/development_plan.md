@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-14 · 导出功能审查修复批，4 commits）
+
+基于导出子系统专项审查（application 用例层 + UI 面板层，2 子代理 + 第一手核实），按 P0/P1/P2 全部修复：
+
+- **P0 数据正确性**：① 2D/3D 导出忽略陈旧 `last_embedding`（白名单，防"真实列名+错坐标"）；② 等时线 `age_ma` 改拷贝后整体提交（此前被 store 回滚致导出 Age 列恒空）；③ `_GEO_CHEM_MODES` 键修复（`kappa`→`kappa_model`）+ 补全 `mu_model`/`omega`/`nu`/`Init_206/207/208_204`；④ Equations sheet 解析 expression 得 Slope/Intercept + `visible`→`enabled`；修复"embedding 为空时 geochem 额外参数不导出"的提前返回缺陷。
+- **P1**：追加 Excel 冲突 sheet 自动改名（Data→Data1，记日志）且曲线 sheet 去重；导出行序 `sorted()`；TERNARY Origin 轴标签不再被覆盖；Origin 提取阶段整体 try 包围 + age_str 安全格式化 + sheet 名清理 `[]*?\`；导出/预览后恢复主画布视图（`_apply_axis_view`）+ WaitCursor + 预览渲染 DPI 上限 300 + `new_fig.canvas` 反向引用；预览换 preset 同步 `legend_marker_size` 且 params 只更新尺寸字段（控件选择保留）；`.xls` 目标统一改写为 `.xlsx`；CSV 改 `utf-8-sig`（Excel 中文不乱码）；曲线 sheet 按 geochem 模式限定（UMAP 不再携带残留覆盖层）。
+- **P2 清理**：`algorithm` 死参数全链移除；common.py 6 个零调用解析方法删除；`data_export._build_export_df` 删除；导出面板补 `_is_initialized`；`_on_export_image_clicked` 字号公式统一走 `_profile_default_params`；文件过滤器常量；预览保存补日志；`.opju` 后缀替换而非追加。
+- **测试**：+7 用例（2D/3D 白名单、kappa_model 导出、CSV BOM、append 改名、表达式解析、sheet 去重、行序）。全套 401 测试通过、守护脚本 TOTAL=0。
+
 ## 阶段进展（2026-08-14 · 图例父组/子组功能，3 commits）
 
 外部图例引入父组概念：将相似子组（现有分组）拖拽归入新建父组，同一父组下数据点共用同一 marker 形状、子组保持不同颜色。
