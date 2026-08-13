@@ -525,8 +525,14 @@ def _extract_equation_overlays(
 # ═══════════════════════════════════════════════════════════════════════
 
 def _origin_sheet_name(label: str, prefix: str, used: set[str], max_len: int = 28) -> str:
-    """Generate a unique sheet name from *label* with optional *prefix*."""
-    base = str(label).replace("/", "_").replace(" ", "_").replace(":", "_")[:max_len]
+    """Generate a unique, Origin-safe sheet name from *label* with prefix."""
+    # Origin forbids [] * ? \ in sheet names; strip them along with
+    # whitespace and punctuation that confuse worksheet naming.
+    base = "".join(
+        ch for ch in str(label).replace("/", "_").replace(":", "_").replace(" ", "_")
+        if ch not in "[]*?\\"
+    )[:max_len]
+    base = base or "Sheet"
     name = f"{prefix}{base}"
     suffix = 1
     while name in used:
@@ -677,7 +683,17 @@ def _build_origin_project(
         # ── TASK 2: isochron line overlay sheets ─────────────────
         if isochron_lines:
             for iso in isochron_lines:
-                age_str = f"{iso['age']:.0f}Ma" if iso.get("age") is not None else iso["group"]
+                try:
+                    age_val = iso.get("age")
+                    if age_val is not None:
+                        try:
+                            age_str = f"{float(age_val):.0f}Ma"
+                        except (TypeError, ValueError):
+                            age_str = str(age_val)
+                    else:
+                        age_str = str(iso.get("group", "iso"))
+                except Exception:
+                    age_str = "iso"
                 name = _origin_sheet_name(f"{age_str}", "ISO_", sheet_names)
                 try:
                     owks = wb.add_sheet(name)
@@ -795,6 +811,16 @@ def export_to_origin(file_path: str) -> bool:
         logger.warning("No axes available for Origin export.")
         return False
 
+    try:
+        return _extract_and_build_origin_project(file_path, ax)
+    except Exception as err:
+        # Extraction must never crash the app: log and report failure.
+        logger.warning("Origin export failed during extraction: %s", err)
+        return False
+
+
+def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
+    """Extract plot data for the current render mode and build the project."""
     mode = str(getattr(app_state, "render_mode", "UMAP")).upper()
     logger.info("Origin export: render_mode=%s", mode)
 
@@ -807,9 +833,6 @@ def export_to_origin(file_path: str) -> bool:
     elif mode == "TERNARY":
         scatter_groups = _extract_ternary_data(ax)
         is_ternary = True
-        axis_labels = {
-            "ternary_cols": getattr(app_state, "selected_ternary_cols", ["Top", "Left", "Right"]),
-        }
     else:
         # 2D axes for: UMAP, tSNE, PCA, RobustPCA, V1V2, 2D,
         # PB_EVOL_76, PB_EVOL_86, PLUMBOTECTONICS_76,
@@ -831,6 +854,12 @@ def export_to_origin(file_path: str) -> bool:
         "x": str(ax.get_xlabel() or ""),
         "y": str(ax.get_ylabel() or ""),
     }
+    if is_ternary:
+        # Merge, do not overwrite: the ternary branch above set the user's
+        # ternary column names and they must reach _build_origin_project.
+        axis_labels["ternary_cols"] = getattr(
+            app_state, "selected_ternary_cols", ["Top", "Left", "Right"]
+        )
 
     # ── overlay data ──────────────────────────────────────────────
     overlay_data: dict[str, list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]]] = {}
