@@ -69,6 +69,7 @@ class MainWindowLifecycleMixin:
                 language=app_state.language,
                 tooltip_columns=getattr(app_state, "tooltip_columns", None),
                 ui_theme=getattr(app_state, "ui_theme", "Modern Light"),
+                parent_groups=getattr(app_state, "parent_groups", {}) or {},
             )
         except Exception as e:
             logger.warning("Failed to save session: %s", e)

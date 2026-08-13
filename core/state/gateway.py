@@ -839,6 +839,9 @@ class AppStateGateway:
     def set_visible_groups(self, groups: list[str] | None) -> None:
         self._dispatch("SET_VISIBLE_GROUPS", groups=groups)
 
+    def set_parent_groups(self, mapping: dict[str, list[str]]) -> None:
+        self._dispatch("SET_PARENT_GROUPS", mapping=dict(mapping or {}))
+
     def set_active_subset_indices(self, indices: Any) -> None:
         self._dispatch("SET_ACTIVE_SUBSET_INDICES", indices=indices)
 

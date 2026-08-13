@@ -44,6 +44,7 @@ def save_session_params(
     language: str | None = None,
     tooltip_columns: list[str] | None = None,
     ui_theme: str | None = None,
+    parent_groups: dict[str, list[str]] | None = None,
 ) -> bool:
     """
     Save current session parameters to temporary file
@@ -65,7 +66,10 @@ def save_session_params(
             'selected_3d_cols': selected_3d_cols or [],
             'language': language,
             'tooltip_columns': tooltip_columns,
-            'ui_theme': ui_theme
+            'ui_theme': ui_theme,
+            'parent_groups': {
+                str(k): list(v or []) for k, v in (parent_groups or {}).items()
+            },
         }
         
         logger.debug("Saving session params. Tooltip columns: %s", tooltip_columns)

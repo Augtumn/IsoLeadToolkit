@@ -47,6 +47,10 @@ class AppState:
             'scale': 1.0
         }
 
+        # Parent-group overlay: parent name -> ordered child group names.
+        # Children of one parent share a marker shape and keep distinct colors.
+        self.parent_groups: dict[str, list[str]] = {}
+
         # --- Sub-state objects ---
         self.overlay = OverlayState()
         self.legend = LegendState()

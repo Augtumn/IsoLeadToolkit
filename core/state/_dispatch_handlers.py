@@ -801,6 +801,12 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
     elif action_type == "SET_VISIBLE_GROUPS":
         store._snapshot["visible_groups"] = _normalize_visible_groups(action.get("groups"))
 
+    elif action_type == "SET_PARENT_GROUPS":
+        store._snapshot["parent_groups"] = {
+            str(k): [str(v) for v in list(vs or [])]
+            for k, vs in (action.get("mapping") or {}).items()
+        }
+
     elif action_type == "SET_EXPORT_IMAGE_OPTIONS":
         merged = dict(store._snapshot["export_image_options"])
         payload = dict(action.get("options") or {})

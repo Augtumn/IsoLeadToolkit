@@ -28,6 +28,7 @@ def test_save_session_params_roundtrip(tmp_path: Path, monkeypatch) -> None:
         file_path="C:/data/sample.xlsx",
         render_mode="UMAP",
         language="zh",
+        parent_groups={"coins": ["A", "B"], "silver": []},
     )
     assert ok is True
     assert params_file.exists()
@@ -41,6 +42,24 @@ def test_save_session_params_roundtrip(tmp_path: Path, monkeypatch) -> None:
     assert loaded["point_size"] == 80
     assert loaded["file_path"] == "C:/data/sample.xlsx"
     assert loaded["language"] == "zh"
+    assert loaded["parent_groups"] == {"coins": ["A", "B"], "silver": []}
+
+
+def test_save_session_params_default_parent_groups(tmp_path: Path, monkeypatch) -> None:
+    params_file = tmp_path / "params.json"
+    monkeypatch.setitem(CONFIG, "params_temp_file", params_file)
+
+    ok = save_session_params(
+        algorithm="UMAP",
+        umap_params={},
+        tsne_params={},
+        point_size=60,
+        group_col="Province",
+    )
+    assert ok is True
+    loaded = load_session_params()
+    assert loaded is not None
+    assert loaded["parent_groups"] == {}
 
 
 def test_atomic_write_json_replaces_existing_file(tmp_path: Path) -> None:

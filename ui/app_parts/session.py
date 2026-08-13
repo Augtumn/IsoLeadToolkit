@@ -75,6 +75,14 @@ class Qt5AppSessionMixin:
         state_gateway.set_ui_theme(session_data.get("ui_theme") or "Modern Light")
         logger.info("Restored UI theme: %s", app_state.ui_theme)
 
+        saved_parents = session_data.get("parent_groups") or {}
+        if saved_parents:
+            state_gateway.set_parent_groups(saved_parents)
+            logger.info(
+                "Restored parent groups: %s",
+                {k: len(list(v or [])) for k, v in saved_parents.items()},
+            )
+
         session_group_col = session_data.get("group_col")
         if session_group_col and session_group_col in app_state.group_cols:
             state_gateway.set_last_group_col(session_group_col)
