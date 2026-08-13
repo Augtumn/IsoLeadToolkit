@@ -110,6 +110,15 @@ def load_session_params() -> dict[str, Any] | None:
 
         current_version = int(CONFIG.get('session_version', 1))
         version = int(session_data.get('session_version', 1))
+        if version > current_version:
+            # A file from a FUTURE app version may carry incompatible
+            # structure; refuse to load it instead of guessing.
+            logger.warning(
+                "Session version %s is newer than supported %s; ignoring session",
+                version,
+                current_version,
+            )
+            return None
         if version < current_version:
             logger.info("Session data version %s -> %s", version, current_version)
 

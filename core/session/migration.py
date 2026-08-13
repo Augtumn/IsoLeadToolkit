@@ -23,6 +23,8 @@ def _normalize_algorithm(value: Any) -> str:
         return 'UMAP'
     value_str = str(value).strip()
     lowered = value_str.lower()
+    if lowered in ('umap', 'umap-learn', 'umap_learn'):
+        return 'UMAP'
     if lowered in ('tsne', 't-sne', 't_sne', 'tsne '):
         return 'tSNE'
     if lowered in ('pca',):

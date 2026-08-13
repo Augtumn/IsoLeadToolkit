@@ -167,7 +167,12 @@ def calculate_all_parameters(
     else:
         tCDT = calculate_single_stage_age(Pb206, Pb207)
 
-    tSK = calculate_two_stage_age(Pb206, Pb207)
+    if calculate_ages:
+        tSK = calculate_two_stage_age(Pb206, Pb207)
+    else:
+        # Callers that only need single-stage quantities (V1V2 discrimination)
+        # skip the two-stage age; degrade to tCDT so t_model/t_input stay finite.
+        tSK = tCDT
 
     t_model = tSK if is_two_stage else tCDT
 

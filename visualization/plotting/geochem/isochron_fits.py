@@ -120,7 +120,8 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
 
             if not hasattr(app_state, 'isochron_results'):
                 state_gateway.set_isochron_results({})
-            app_state.isochron_results[grp] = {
+            results = dict(getattr(app_state, 'isochron_results', {}) or {})
+            results[grp] = {
                 'slope': slope,
                 'intercept': intercept,
                 'slope_err': slope_err,
@@ -128,7 +129,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
                 'n_points': len(x_grp),
                 'mswd': fit.get('mswd', None),
             }
-            state_gateway.set_isochron_results(app_state.isochron_results)
+            state_gateway.set_isochron_results(results)
 
             x_min_g, x_max_g = np.min(x_grp), np.max(x_grp)
             if x_max_g == x_min_g:

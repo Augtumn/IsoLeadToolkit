@@ -47,8 +47,9 @@ class {class_name}(BasePlugin):
     def get_default_params(self) -> dict[str, Any]:
         return {{}}
     
-    def run(self, *args, **kwargs):
-        return {{"status": "ok"}}
+    def build_ui(self, parent=None, callback=None):
+        """Optional: return a QWidget shown in the analysis panel, or None."""
+        return None
 '''
     plugin_file.write_text(template)
     print(f"Plugin created: {plugin_file}")
