@@ -32,6 +32,21 @@ QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
 DEFAULT_TOOLBAR_ICON_SIZE = QSize(24, 24)
 
 
+def _is_parent_related_drop(target_meta, dragged_items) -> bool:
+    """True when a drop 'onto' a row involves a parent group on either side.
+
+    Parent rows must never land *on* another row (that stacks two parents at
+    the same position); such drops are converted to an above-row insert.
+    """
+    if (target_meta or {}).get("type") == "parent":
+        return True
+    for item in dragged_items or []:
+        meta = item.data(Qt.UserRole) if item is not None else None
+        if (meta or {}).get("type") == "parent":
+            return True
+    return False
+
+
 class LegendListWidget(QListWidget):
     """Legend list widget with lightweight debug tracing for drag/drop.
 
@@ -54,6 +69,19 @@ class LegendListWidget(QListWidget):
                 logger.debug("Legend dropEvent handled by parent-group handler")
             event.acceptProposedAction()
             return
+
+        # Reorder drops: a drop exactly *on* a row (OnItem) is ambiguous when
+        # a parent row is involved — QListWidget stacks the dragged row at the
+        # target position, visually merging the two parents. Force an
+        # above-row insert instead.
+        if event.dropIndicatorPosition() == QAbstractItemView.OnItem:
+            target_item = self.itemAt(event.pos())
+            if target_item is not None and _is_parent_related_drop(
+                target_item.data(Qt.UserRole),
+                getattr(self, "_dragging_items", None) or [],
+            ):
+                self.setDropIndicatorPosition(QAbstractItemView.AboveItem)
+
         super().dropEvent(event)
         if QT_DEBUG_MODE:
             logger.debug("Legend dropEvent end: count=%d", self.count())

@@ -70,6 +70,38 @@ def test_display_entries_children_keep_own_order() -> None:
 
 
 # ---------------------------------------------------------------------------
+# drop ambiguity guard (parent rows must never stack on other rows)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(
+    not hasattr(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]), "QApplication"),
+    reason="PyQt5 not available",
+)
+def test_is_parent_related_drop_guards_stacking() -> None:
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtWidgets import QApplication, QListWidgetItem
+
+    from ui.main_window_parts.setup import _is_parent_related_drop
+
+    app = QApplication.instance() or QApplication([])
+
+    def item(entry_type: str) -> QListWidgetItem:
+        it = QListWidgetItem()
+        it.setData(Qt.UserRole, {"type": entry_type, "key": "k"})
+        return it
+
+    # Dragging a parent onto anything is parent-related.
+    assert _is_parent_related_drop({"type": "parent"}, [item("group")]) is True
+    # Dropping anything onto a parent row is parent-related.
+    assert _is_parent_related_drop({"type": "group"}, [item("parent")]) is True
+    # Group-over-group reorder is plain and must not be intercepted.
+    assert _is_parent_related_drop({"type": "group"}, [item("group")]) is False
+    assert _is_parent_related_drop({"type": "overlay"}, [item("group")]) is False
+    assert _is_parent_related_drop(None, []) is False
+
+
+# ---------------------------------------------------------------------------
 # _apply_legend_z_order parent-block stacking (offscreen Qt)
 # ---------------------------------------------------------------------------
 
