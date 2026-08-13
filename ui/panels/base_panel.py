@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QRadioButton,
     QToolBox,
+    QVBoxLayout,
     QWidget,
 )
 from PyQt5.QtCore import QSettings, QTimer
