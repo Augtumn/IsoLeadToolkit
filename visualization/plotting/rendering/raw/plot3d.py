@@ -8,6 +8,7 @@ import pandas as pd
 from core import app_state, state_gateway
 
 from ...core import _build_group_palette, _ensure_axes
+from ...grouping import resolve_group_marker
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
 from ..common.legend import _place_inline_legend
 from ..common.state_access import _active_subset_indices, _df_global
@@ -80,10 +81,7 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
 
             marker_size = getattr(app_state, 'plot_marker_size', size)
             marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.85)
-            marker_shape = app_state.group_marker_map.get(
-                cat,
-                getattr(app_state, 'plot_marker_shape', 'o'),
-            )
+            marker_shape = resolve_group_marker(app_state, cat)
             show_edge = bool(getattr(app_state, 'scatter_show_edge', True))
             edge_color = getattr(app_state, 'scatter_edgecolor', '#1e293b') if show_edge else 'none'
             edge_width = getattr(app_state, 'scatter_edgewidth', 0.4) if show_edge else 0.0

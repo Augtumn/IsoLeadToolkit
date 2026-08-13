@@ -11,6 +11,7 @@ from core import app_state, state_gateway
 from ... import kde as kde_utils
 from ...core import _build_group_palette, _ensure_axes
 from ...geochem.equation_overlays import _draw_equation_overlays
+from ...grouping import resolve_group_marker
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
 from ..common.legend import _place_inline_legend
 from ..common.state_access import _active_subset_indices, _df_global
@@ -186,10 +187,7 @@ def _render_2d_scatter_groups(
 
         marker_size = getattr(app_state, 'plot_marker_size', size)
         marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
-        marker_shape = app_state.group_marker_map.get(
-            cat,
-            getattr(app_state, 'plot_marker_shape', 'o'),
-        )
+        marker_shape = resolve_group_marker(app_state, cat)
         sc = app_state.ax.scatter(
             xs,
             ys,

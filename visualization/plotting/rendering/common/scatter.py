@@ -9,6 +9,7 @@ import pandas as pd
 
 from core import app_state
 
+from ...grouping import resolve_group_marker
 from ...ternary import prepare_ternary_components
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def _render_scatter_groups(
 
                 marker_size = getattr(app_state, 'plot_marker_size', size)
                 marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
-                marker_shape = app_state.group_marker_map.get(cat, getattr(app_state, 'plot_marker_shape', 'o'))
+                marker_shape = resolve_group_marker(app_state, cat)
                 color = palette_map.get(cat, '#333333')
 
                 sc = app_state.ax.scatter(
@@ -105,7 +106,7 @@ def _render_scatter_groups(
 
                 marker_size = getattr(app_state, 'plot_marker_size', size)
                 marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
-                marker_shape = app_state.group_marker_map.get(cat, getattr(app_state, 'plot_marker_shape', 'o'))
+                marker_shape = resolve_group_marker(app_state, cat)
 
                 color = palette_map.get(cat, '#333333')
                 sc = app_state.ax.scatter(
