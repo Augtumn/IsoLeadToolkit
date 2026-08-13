@@ -505,6 +505,9 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.parent_shape_map = {
         str(k): str(v) for k, v in (snapshot["parent_shape_map"] or {}).items()
     }
+    state.param_presets = {
+        str(k): dict(v or {}) for k, v in (snapshot["param_presets"] or {}).items()
+    }
     state.mixing_endmembers = dict(snapshot["mixing_endmembers"])
     state.mixing_mixtures = dict(snapshot["mixing_mixtures"])
     state.ternary_ranges = dict(snapshot["ternary_ranges"])

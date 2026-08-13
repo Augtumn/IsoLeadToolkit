@@ -2,6 +2,17 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-14 · 持久化统一批，persistence_plan.md 全量实施）
+
+按 `docs/persistence_plan.md` 逐项落地（P1-P7 全部解决）：
+
+- **统一持久化包**：新增 `core/persistence/`（`paths.py` 路径、`atomic.py` 原子写+损坏隔离、`schema.py` 白名单、`cache.py` npz 缓存、`__init__.py` 门面 `save_all/load_all/install_autosave`）；`StateStore.restore_snapshot`（白名单校验 + set/tuple 归一）；gateway 补 `snapshot()/restore_snapshot()/enable_autosave()`。
+- **自动保存 + 崩溃恢复**：dispatch 钩子防抖（默认 30s，`config.json: autosave_interval` 可调；关键操作即时保存）；`last_exit_ok` 标记 + 启动一次性崩溃提示（zh/en 各 +2 键）；closeEvent 统一走 `save_all` + `mark_clean_exit`。
+- **ui_state.json**：~120 个用户可配置字段落盘（样式/图例/等时线/三元/KDE/调色板/形状集/最近文件/导出选项/show_tooltip）；`params.json` 补 `saved_at`；`max_recent_files` 配置化；数据加载后恢复（避免列选择重置清掉 visible_groups）。
+- **参数预设迁移（§8.5）**：投影预设从 `saved_themes["projection_presets"]`（user_themes.json 寄生+绕过 gateway）迁入独立 `param_presets`（store/dispatch/gateway/normalizer 全链），启动与主题面板双路径迁移旧数据；`_projection.py` 不再手写 json.dump；主题文件改原子写。
+- **可选嵌入缓存持久化**：`config.json: cache_persist`（默认 false）；npz 原子写 + schema 版本 + 每键数据签名校验（不匹配即丢）+ 4 条/50MB 上限 + 异步线程写。
+- **测试**：+11 用例（`tests/test_persistence.py` 7 例：往返/白名单/防抖/标记/缓存签名/迁移/类型归一；schema guard 补白名单与高价值字段守卫）。全套 407+ 测试通过、守护脚本 TOTAL=0。
+
 ## 阶段进展（2026-08-14 · 遗留问题清零批，6 commits + 运维）
 
 按遗留问题清单（26 项）逐项解决：

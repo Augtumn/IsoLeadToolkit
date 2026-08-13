@@ -842,8 +842,28 @@ class AppStateGateway:
     def set_parent_groups(self, mapping: dict[str, list[str]]) -> None:
         self._dispatch("SET_PARENT_GROUPS", mapping=dict(mapping or {}))
 
+    def restore_snapshot(self, payload: dict) -> None:
+        """Bulk-restore whitelisted persisted fields (startup only)."""
+        self._store.restore_snapshot(payload)
+
+    def snapshot(self) -> dict:
+        """Return a shallow copy of the tracked state domains."""
+        return self._store.snapshot()
+
+    def enable_autosave(self, interval: float | None = None) -> None:
+        """Attach the debounced persistence hook to the dispatch loop.
+
+        ``interval`` defaults to the ``autosave_interval`` config value.
+        """
+        from ..persistence import install_autosave
+
+        install_autosave(self._store, interval=interval)
+
     def set_parent_shape_map(self, mapping: dict[str, str]) -> None:
         self._dispatch("SET_PARENT_SHAPE_MAP", mapping=dict(mapping or {}))
+
+    def set_param_presets(self, presets: dict[str, dict]) -> None:
+        self._dispatch("SET_PARAM_PRESETS", presets=dict(presets or {}))
 
     def set_active_subset_indices(self, indices: Any) -> None:
         self._dispatch("SET_ACTIVE_SUBSET_INDICES", indices=indices)

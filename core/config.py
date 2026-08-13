@@ -44,6 +44,14 @@ CONFIG = {
     'params_temp_file': PARAMS_TEMP_FILE,
     'session_version': 2,
     'embedding_cache_size': 8,
+    #: Opt-in: persist the embedding LRU cache across runs (ui_state.json
+    #: stores everything else; the cache holds large numpy arrays).
+    'cache_persist': False,
+    #: Autosave debounce (seconds); 0 disables the time-based lazy save
+    #: (immediate actions and the dispatch-count net still apply).
+    'autosave_interval': 30,
+    #: Cap for the recent-files list.
+    'max_recent_files': 8,
     'locales_dir': LOCALES_DIR,
     'umap_params': {
         'n_neighbors': 10,
@@ -124,6 +132,9 @@ _CONFIG_SCHEMA: dict[str, tuple] = {
     'figure_dpi': (int, None),
     'savefig_dpi': (int, None),
     'figure_size': ((list, tuple), 2),
+    'cache_persist': (bool, None),
+    'autosave_interval': ((int, float), None),
+    'max_recent_files': (int, None),
 }
 
 _MERGEABLE_KEYS: frozenset[str] = frozenset({

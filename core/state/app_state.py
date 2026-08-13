@@ -52,6 +52,8 @@ class AppState:
         self.parent_groups: dict[str, list[str]] = {}
         # Manual per-parent shape overrides; empty = auto-assign by order.
         self.parent_shape_map: dict[str, str] = {}
+        # Named algorithm-parameter presets (UMAP/tSNE/PCA/RobustPCA/ml/V1V2).
+        self.param_presets: dict[str, dict[str, Any]] = {}
 
         # --- Sub-state objects ---
         self.overlay = OverlayState()

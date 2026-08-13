@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from core.persistence.schema import EXCLUDED_FIELDS, validate_schema
 from core.state import StateStore, app_state
 from core.state.store import _warn_direct_mutations
 from tests.test_state_store import _snapshot_state
@@ -21,6 +22,29 @@ def test_store_snapshot_schema_matches_test_snapshot() -> None:
         "test_state_store._snapshot_state() is missing keys also present in "
         f"StateStore.snapshot(): {sorted(missing_in_test)}"
     )
+
+
+def test_persistence_schema_whitelist_matches_snapshot() -> None:
+    """The persistence white lists must cover exactly the live snapshot.
+
+    Every persisted/excluded field must exist in StateStore.snapshot(); no
+    field may be both persisted and excluded. This keeps the hand-maintained
+    schema from silently drifting away from the real state.
+    """
+    problems = validate_schema(set(app_state.state_store.snapshot()))
+    assert not problems, "\n".join(problems)
+
+
+def test_persistence_schema_covers_user_facing_config() -> None:
+    """Spot-check high-value fields are persisted (not silently dropped)."""
+    from core.persistence.schema import SESSION_FIELDS, UI_STATE_FIELDS
+
+    assert {"mixing_endmembers", "mixing_mixtures", "equation_overlays"} <= UI_STATE_FIELDS
+    assert {"pca_params", "robust_pca_params", "ml_params", "v1v2_params"} <= SESSION_FIELDS
+    assert {"custom_palettes", "custom_shape_sets", "param_presets"} <= UI_STATE_FIELDS
+    assert {"parent_groups", "parent_shape_map"} <= SESSION_FIELDS
+    # Runtime-only fields must stay excluded.
+    assert {"df_global", "last_embedding", "overlay_artists"} <= EXCLUDED_FIELDS
 
 
 def test_warn_direct_mutations_flags_bypassed_writes(caplog) -> None:

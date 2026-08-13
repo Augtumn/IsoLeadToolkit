@@ -14,7 +14,10 @@ from PyQt5.QtWidgets import QApplication
 from core import (
     CONFIG,
     app_state,
+    consume_exit_marker,
+    load_persistent_cache,
     state_gateway,
+    translate,
 )
 from ui.app_parts import Qt5AppPlottingMixin, Qt5AppSessionMixin, Qt5AppStyleMixin
 from ui.main_window import Qt5MainWindow
@@ -76,6 +79,7 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
         self.main_window = None
         self.translator = None
         self._style_filter = None
+        self._previous_exit_clean = True
 
     def run(self):
         """运行应用程序"""
@@ -90,6 +94,11 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
             # Load user config early (safety net for non-main entry points)
             from core.config import load_and_merge_config
             load_and_merge_config()
+
+            # 加载用户 config 后检测上次退出是否正常（崩溃恢复提示）
+            self._previous_exit_clean = consume_exit_marker()
+            if not self._previous_exit_clean:
+                logger.warning("Previous session ended unexpectedly; crash recovery notice will be shown")
 
             # 高 DPI 设置
             QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
@@ -133,6 +142,17 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
 
             logger.info("Data loaded successfully.")
 
+            # 数据加载后恢复用户配置状态（样式/图例/预设/最近文件）并启动
+            # 自动保存——须在 load_dataset 之后，否则其列选择重置会清掉
+            # 恢复的 visible_groups 等字段。
+            self._restore_ui_state()
+            state_gateway.enable_autosave()
+
+            # 预载持久化嵌入缓存（opt-in，按数据签名校验）
+            restored_cache = load_persistent_cache(app_state)
+            if restored_cache:
+                logger.info("Prewarmed embedding cache with %s entries", restored_cache)
+
             # 确保 last_group_col 已设置
             if not app_state.last_group_col and app_state.group_cols:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
@@ -171,6 +191,22 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
             # 显示窗口
             logger.info("Showing windows...")
             self.main_window.show()
+
+            # 上次异常退出时给出一次性恢复提示
+            if not self._previous_exit_clean:
+                try:
+                    from PyQt5.QtWidgets import QMessageBox
+
+                    QMessageBox.warning(
+                        self.main_window,
+                        translate("Previous session ended unexpectedly"),
+                        translate(
+                            "Session settings are now saved automatically every 30 seconds; "
+                            "some changes from the last run may have been lost."
+                        ),
+                    )
+                except Exception:
+                    logger.exception("Failed to show crash recovery notice")
 
             # 事件循环
             result = self.app.exec_()

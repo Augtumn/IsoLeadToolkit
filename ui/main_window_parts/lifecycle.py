@@ -50,28 +50,14 @@ class MainWindowLifecycleMixin:
         except Exception as exc:
             logger.warning("Failed to stop embedding worker: %s", exc)
 
-        from core import save_session_params
+        from core import mark_clean_exit, save_all
 
         try:
-            save_session_params(
-                algorithm=app_state.algorithm,
-                umap_params=app_state.umap_params,
-                tsne_params=app_state.tsne_params,
-                point_size=app_state.point_size,
-                group_col=app_state.last_group_col or "Province",
-                group_cols=app_state.group_cols,
-                data_cols=app_state.data_cols,
-                file_path=app_state.file_path,
-                sheet_name=app_state.sheet_name,
-                render_mode=app_state.render_mode,
-                selected_2d_cols=getattr(app_state, "selected_2d_cols", []),
-                selected_3d_cols=app_state.selected_3d_cols,
-                language=app_state.language,
-                tooltip_columns=getattr(app_state, "tooltip_columns", None),
-                ui_theme=getattr(app_state, "ui_theme", "Modern Light"),
-                parent_groups=getattr(app_state, "parent_groups", {}) or {},
-                parent_shape_map=getattr(app_state, "parent_shape_map", {}) or {},
-            )
+            if save_all(state_gateway):
+                mark_clean_exit()
+                logger.info("Session + UI state saved on exit")
+            else:
+                logger.warning("Failed to save state on exit")
         except Exception as e:
             logger.warning("Failed to save session: %s", e)
 

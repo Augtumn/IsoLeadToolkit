@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ..config import CONFIG
 from ._normalizers import (
     _normalize_active_subset_indices,
     _normalize_adjust_text_iter_lim,
@@ -584,7 +585,9 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         store._snapshot["legend_last_labels"] = action.get("labels")
 
     elif action_type == "SET_RECENT_FILES":
-        store._snapshot["recent_files"] = list(action.get("files") or [])
+        files = [str(f) for f in list(action.get("files") or [])]
+        cap = int(CONFIG.get("max_recent_files", 8) or 8)
+        store._snapshot["recent_files"] = files[:cap]
 
     elif action_type == "SET_LINE_STYLES":
         store._snapshot["line_styles"] = dict(action.get("line_styles") or {})
@@ -810,6 +813,11 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
     elif action_type == "SET_PARENT_SHAPE_MAP":
         store._snapshot["parent_shape_map"] = {
             str(k): str(v) for k, v in (action.get("mapping") or {}).items()
+        }
+
+    elif action_type == "SET_PARAM_PRESETS":
+        store._snapshot["param_presets"] = {
+            str(k): dict(v or {}) for k, v in (action.get("presets") or {}).items()
         }
 
     elif action_type == "SET_EXPORT_IMAGE_OPTIONS":

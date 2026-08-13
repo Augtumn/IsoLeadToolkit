@@ -179,6 +179,9 @@ def _snapshot_state() -> dict[str, Any]:
         "parent_shape_map": {
             str(k): str(v) for k, v in (getattr(app_state, "parent_shape_map", {}) or {}).items()
         },
+        "param_presets": {
+            str(k): dict(v or {}) for k, v in (getattr(app_state, "param_presets", {}) or {}).items()
+        },
         "mixing_endmembers": dict(getattr(app_state, "mixing_endmembers", {}) or {}),
         "mixing_mixtures": dict(getattr(app_state, "mixing_mixtures", {}) or {}),
         "ternary_ranges": dict(getattr(app_state, "ternary_ranges", {}) or {}),
@@ -387,6 +390,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_legend_item_order(snapshot["legend_item_order"])
     state_gateway.set_parent_groups(snapshot["parent_groups"])
     state_gateway.set_parent_shape_map(snapshot["parent_shape_map"])
+    state_gateway.set_param_presets(snapshot["param_presets"])
     state_gateway.set_mixing_endmembers(snapshot["mixing_endmembers"])
     state_gateway.set_mixing_mixtures(snapshot["mixing_mixtures"])
     state_gateway.set_ternary_ranges(snapshot["ternary_ranges"])

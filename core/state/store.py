@@ -133,6 +133,7 @@ class StateStore:
 
     def __init__(self, state: Any) -> None:
         self._state = state
+        self._dispatch_hook = None
         self._snapshot: dict[str, Any] = {
             "render_mode": str(getattr(state, "render_mode", "UMAP")),
             "algorithm": str(getattr(state, "algorithm", "UMAP")),
@@ -446,6 +447,9 @@ class StateStore:
             "parent_shape_map": {
                 str(k): str(v) for k, v in (getattr(state, "parent_shape_map", {}) or {}).items()
             },
+            "param_presets": {
+                str(k): dict(v or {}) for k, v in (getattr(state, "param_presets", {}) or {}).items()
+            },
             "mixing_endmembers": dict(getattr(state, "mixing_endmembers", {}) or {}),
             "mixing_mixtures": dict(getattr(state, "mixing_mixtures", {}) or {}),
             "ternary_ranges": dict(getattr(state, "ternary_ranges", {}) or {}),
@@ -513,7 +517,49 @@ class StateStore:
         _warn_direct_mutations(self._state, self._snapshot)
         dispatch_action(self, action)
         self._sync_state()
+        hook = self._dispatch_hook
+        if callable(hook):
+            try:
+                hook(str(action.get("type", "")))
+            except Exception:
+                logger.exception("Dispatch hook failed for action %s", action.get("type"))
         return self.snapshot()
+
+    def restore_snapshot(self, payload: dict[str, Any]) -> None:
+        """Bulk-restore persisted fields without going through the gateway.
+
+        Used by the persistence layer on startup (see docs/persistence_plan.md
+        §4). Only whitelisted, persisted fields are accepted so a hand-edited
+        file can never smuggle junk into the live snapshot.
+        """
+        from ..persistence.schema import SESSION_FIELDS, UI_STATE_FIELDS
+
+        allowed = SESSION_FIELDS | UI_STATE_FIELDS
+        accepted = {key: value for key, value in payload.items() if key in allowed}
+        skipped = sorted(set(payload) - allowed)
+        if skipped:
+            logger.warning(
+                "Ignored %s non-persisted key(s) during snapshot restore: %s",
+                len(skipped),
+                ", ".join(skipped),
+            )
+        if not accepted:
+            return
+        # JSON round-trips sets/tuples as lists; restore their native types
+        # so the mutation-diff check does not flag a false divergence.
+        for key in ("hidden_groups",):
+            if key in accepted and accepted[key] is not None:
+                accepted[key] = set(accepted[key])
+        for key in (
+            "legend_offset",
+            "adjust_text_force_text",
+            "adjust_text_force_static",
+            "adjust_text_expand",
+        ):
+            if key in accepted and accepted[key] is not None:
+                accepted[key] = tuple(accepted[key])
+        self._snapshot.update(accepted)
+        self._sync_state()
 
     def snapshot(self) -> dict[str, Any]:
         """Return shallow-copied tracked domains."""
@@ -683,6 +729,9 @@ class StateStore:
             },
             "parent_shape_map": {
                 str(k): str(v) for k, v in (self._snapshot["parent_shape_map"] or {}).items()
+            },
+            "param_presets": {
+                str(k): dict(v or {}) for k, v in (self._snapshot["param_presets"] or {}).items()
             },
             "mixing_endmembers": dict(self._snapshot["mixing_endmembers"]),
             "mixing_mixtures": dict(self._snapshot["mixing_mixtures"]),

@@ -44,6 +44,18 @@ class Qt5AppSessionMixin:
             state_gateway.set_umap_params({**dict(app_state.umap_params), **saved_umap})
         if saved_tsne:
             state_gateway.set_tsne_params({**dict(app_state.tsne_params), **saved_tsne})
+        saved_pca = session_data.get("pca_params") or {}
+        if saved_pca:
+            state_gateway.set_pca_params({**dict(app_state.pca_params), **saved_pca})
+        saved_rpca = session_data.get("robust_pca_params") or {}
+        if saved_rpca:
+            state_gateway.set_robust_pca_params({**dict(app_state.robust_pca_params), **saved_rpca})
+        saved_ml = session_data.get("ml_params") or {}
+        if saved_ml:
+            state_gateway.set_ml_params({**dict(app_state.ml_params), **saved_ml})
+        saved_v1v2 = session_data.get("v1v2_params") or {}
+        if saved_v1v2:
+            state_gateway.set_v1v2_params({**dict(app_state.v1v2_params), **saved_v1v2})
         state_gateway.set_point_size(session_data.get("point_size", app_state.point_size))
 
         preserve_import_mode = bool(getattr(app_state, "preserve_import_render_mode", False))
@@ -86,10 +98,41 @@ class Qt5AppSessionMixin:
         if saved_shapes:
             state_gateway.set_parent_shape_map(saved_shapes)
 
-        session_group_col = session_data.get("group_col")
+        session_group_col = session_data.get("group_col") or session_data.get("last_group_col")
         if session_group_col and session_group_col in app_state.group_cols:
             state_gateway.set_last_group_col(session_group_col)
             logger.info("Group column restored from session: %s", app_state.last_group_col)
+
+    def _restore_ui_state(self):
+        """Restore user-configuration state (styles, legend, presets, ...).
+
+        Reads ui_state.json and bulk-restores it through the StateStore so
+        every restore goes through the same snapshot/sync machinery instead
+        of dozens of gateway calls. Also migrates legacy projection presets
+        out of the theme container (persistence plan §8.5).
+        """
+        from core import (
+            extract_legacy_projection_presets,
+            load_ui_state,
+            state_gateway,
+        )
+
+        ui_payload = load_ui_state() or {}
+        themes, legacy_presets = extract_legacy_projection_presets()
+        if legacy_presets:
+            existing = dict(ui_payload.get("param_presets") or {})
+            ui_payload["param_presets"] = {**existing, **legacy_presets}
+            logger.info(
+                "Migrated %s legacy projection presets from user_themes.json",
+                len(legacy_presets),
+            )
+        if themes:
+            state_gateway.set_saved_themes(themes)
+        if ui_payload:
+            state_gateway.restore_snapshot(ui_payload)
+            logger.info("UI state restored (%s fields)", len(ui_payload))
+        else:
+            logger.info("No UI state to restore")
 
     def _validate_render_mode(self):
         """Validate render mode against currently loaded numeric columns."""
