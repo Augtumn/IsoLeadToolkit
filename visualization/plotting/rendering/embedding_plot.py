@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import traceback
 
 import numpy as np
 
@@ -74,17 +73,6 @@ def plot_embedding(
         # Apply style before clearing
         _apply_current_style()
 
-        app_state.ax.clear()
-        try:
-            if actual_algorithm != 'TERNARY':
-                # Reset any prior aspect/scale settings (e.g., ternary plots) for 2D
-                app_state.ax.set_aspect('auto')
-                app_state.ax.set_autoscale_on(True)
-        except Exception:
-            pass
-        _enforce_plot_style(app_state.ax)
-        app_state.clear_plot_state()
-
         umap_params, tsne_params, pca_params, robust_pca_params = resolve_embedding_params(
             umap_params,
             tsne_params,
@@ -114,8 +102,23 @@ def plot_embedding(
 
         prepared = prepare_plot_dataframe(group_col, actual_algorithm, embedding)
         if prepared is None:
+            logger.error("Failed to prepare plot dataframe for %s", algorithm)
             return False
         df_plot, unique_cats = prepared
+
+        # Clear the axes only once rendering is known to be feasible: if a
+        # later step fails, the previous plot and its interaction state stay
+        # consistent on canvas instead of a cleared axes with dead mappings.
+        try:
+            if actual_algorithm != 'TERNARY':
+                # Reset any prior aspect/scale settings (e.g., ternary plots) for 2D
+                app_state.ax.set_aspect('auto')
+                app_state.ax.set_autoscale_on(True)
+        except Exception:
+            pass
+        app_state.ax.clear()
+        _enforce_plot_style(app_state.ax)
+        app_state.clear_plot_state()
 
         new_palette = _build_group_palette(unique_cats)
 
@@ -160,6 +163,11 @@ def plot_embedding(
         )
         show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
         if scatters is None:
+            logger.warning("No scatter groups rendered for %s", algorithm)
+            try:
+                app_state.fig.canvas.draw_idle()
+            except Exception:
+                pass
             return False
 
         kde_utils.clear_marginal_axes()
@@ -202,6 +210,11 @@ def plot_embedding(
         return True
 
     except Exception as err:
-        logger.error("Plot update failed: %s", err)
-        traceback.print_exc()
+        logger.exception("Plot update failed for %s: %s", algorithm, err)
+        # Keep the canvas consistent with current state after a failed render.
+        try:
+            if app_state.fig is not None and app_state.fig.canvas is not None:
+                app_state.fig.canvas.draw_idle()
+        except Exception:
+            pass
         return False

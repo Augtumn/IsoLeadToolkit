@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import traceback
 
 import pandas as pd
 
@@ -108,6 +107,10 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
 
         if not app_state.scatter_collections:
             logger.error('No points were plotted in 3D')
+            try:
+                app_state.fig.canvas.draw_idle()
+            except Exception:
+                pass
             return False
 
         try:
@@ -140,6 +143,10 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
         return True
 
     except Exception as err:
-        logger.error('3D plot failed: %s', err)
-        traceback.print_exc()
+        logger.exception('3D plot failed: %s', err)
+        try:
+            if app_state.fig is not None and app_state.fig.canvas is not None:
+                app_state.fig.canvas.draw_idle()
+        except Exception:
+            pass
         return False

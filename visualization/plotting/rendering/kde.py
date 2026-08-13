@@ -61,22 +61,40 @@ def _render_kde_overlay(
                 y_cart = (np.sqrt(3.0) / 2.0) * t_norm
 
                 kde_style = _resolve_kde_style('kde')
+                kde_fill = bool(kde_style.get('fill', True))
+                kde_kwargs: dict[str, Any] = {
+                    'levels': int(kde_style.get('levels', 10)),
+                    'fill': kde_fill,
+                    'alpha': float(kde_style.get('alpha', 0.6)),
+                    'warn_singular': False,
+                    'legend': False,
+                    'zorder': 1,
+                }
+                if not kde_fill:
+                    # seaborn warns when 'linewidth' is passed to filled
+                    # contours; only pass 'linewidths' for line-only contours.
+                    kde_kwargs['linewidths'] = float(kde_style.get('linewidth', 1.0))
                 kde_utils.sns.kdeplot(
                     x=x_cart,
                     y=y_cart,
                     color=new_palette[cat],
                     ax=app_state.ax,
-                    levels=int(kde_style.get('levels', 10)),
-                    fill=bool(kde_style.get('fill', True)),
-                    alpha=float(kde_style.get('alpha', 0.6)),
-                    linewidth=float(kde_style.get('linewidth', 1.0)),
-                    warn_singular=False,
-                    legend=False,
-                    zorder=1,
+                    **kde_kwargs,
                 )
         else:
             logger.info("Generating KDE for %s...", actual_algorithm)
             kde_style = _resolve_kde_style('kde')
+            kde_fill = bool(kde_style.get('fill', True))
+            kde_kwargs = {
+                'levels': int(kde_style.get('levels', 10)),
+                'fill': kde_fill,
+                'alpha': float(kde_style.get('alpha', 0.6)),
+                'warn_singular': False,
+                'legend': False,
+                'zorder': 1,
+            }
+            if not kde_fill:
+                kde_kwargs['linewidths'] = float(kde_style.get('linewidth', 1.0))
             kde_utils.sns.kdeplot(
                 data=df_plot,
                 x='_emb_x',
@@ -84,13 +102,7 @@ def _render_kde_overlay(
                 hue=group_col,
                 palette=new_palette,
                 ax=app_state.ax,
-                levels=int(kde_style.get('levels', 10)),
-                fill=bool(kde_style.get('fill', True)),
-                alpha=float(kde_style.get('alpha', 0.6)),
-                linewidth=float(kde_style.get('linewidth', 1.0)),
-                warn_singular=False,
-                legend=False,
-                zorder=1,
+                **kde_kwargs,
             )
     except Exception as kde_err:
         logger.warning("Failed to render KDE: %s", kde_err)

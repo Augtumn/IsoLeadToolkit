@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import traceback
 from typing import Any
 
 import pandas as pd
@@ -137,21 +136,26 @@ def _render_2d_kde(
     try:
         kde_utils.lazy_import_seaborn()
         kde_style = _resolve_kde_style('kde')
-        kde_utils.sns.kdeplot(
-            data=df_plot,
-            x=data_columns[0],
-            y=data_columns[1],
-            hue=group_col,
-            palette=app_state.current_palette,
-            ax=app_state.ax,
-            levels=int(kde_style.get('levels', 10)),
-            fill=bool(kde_style.get('fill', True)),
-            alpha=float(kde_style.get('alpha', 0.6)),
-            linewidth=float(kde_style.get('linewidth', 1.0)),
-            warn_singular=False,
-            legend=False,
-            zorder=1,
-        )
+        kde_fill = bool(kde_style.get('fill', True))
+        kde_kwargs: dict[str, Any] = {
+            'data': df_plot,
+            'x': data_columns[0],
+            'y': data_columns[1],
+            'hue': group_col,
+            'palette': app_state.current_palette,
+            'ax': app_state.ax,
+            'levels': int(kde_style.get('levels', 10)),
+            'fill': kde_fill,
+            'alpha': float(kde_style.get('alpha', 0.6)),
+            'warn_singular': False,
+            'legend': False,
+            'zorder': 1,
+        }
+        if not kde_fill:
+            # seaborn warns when 'linewidth' is passed to filled contours;
+            # only pass 'linewidths' for line-only contours.
+            kde_kwargs['linewidths'] = float(kde_style.get('linewidth', 1.0))
+        kde_utils.sns.kdeplot(**kde_kwargs)
     except Exception as err:
         logger.warning('Failed to render KDE: %s', err)
 
@@ -377,6 +381,10 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
 
         if not scatters and not show_kde:
             logger.error('No points were plotted in 2D')
+            try:
+                app_state.fig.canvas.draw_idle()
+            except Exception:
+                pass
             return False
 
         kde_utils.clear_marginal_axes()
@@ -401,6 +409,10 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
         return True
 
     except Exception as err:
-        logger.error('2D plot failed: %s', err)
-        traceback.print_exc()
+        logger.exception('2D plot failed: %s', err)
+        try:
+            if app_state.fig is not None and app_state.fig.canvas is not None:
+                app_state.fig.canvas.draw_idle()
+        except Exception:
+            pass
         return False
