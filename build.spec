@@ -9,7 +9,10 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(spec_path)) if spec_path and os.p
 
 # Build: python -m PyInstaller build.spec
 
-datas = [('locales', 'locales')]
+datas = [
+    ('locales', 'locales'),
+    ('assets', 'assets'),
+]
 binaries = []
 hiddenimports = [
     'sklearn.utils._cython_blas',

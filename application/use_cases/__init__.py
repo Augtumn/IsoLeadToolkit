@@ -23,6 +23,11 @@ __all__ = [
 	"hydrate_state_from_dataframe",
 	"load_dataset",
 	"save_export_figure",
+	"get_available_models",
+	"get_current_model_name",
+	"get_parameters",
+	"load_preset",
+	"update_parameters",
 ]
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
@@ -43,6 +48,11 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 	"SelectionInteractionUseCase": ("selection_interaction", "SelectionInteractionUseCase"),
 	"SelectedIsochronUseCase": ("selected_isochron", "SelectedIsochronUseCase"),
 	"TooltipContentUseCase": ("tooltip_content", "TooltipContentUseCase"),
+	"get_available_models": ("geochemistry", "get_available_models"),
+	"get_current_model_name": ("geochemistry", "get_current_model_name"),
+	"get_parameters": ("geochemistry", "get_parameters"),
+	"load_preset": ("geochemistry", "load_preset"),
+	"update_parameters": ("geochemistry", "update_parameters"),
 }
 
 
