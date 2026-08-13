@@ -134,7 +134,7 @@ def compute_geochem_embedding(actual_algorithm: str) -> np.ndarray | None:
         if actual_algorithm == 'PB_MU_AGE':
             embedding = np.column_stack((t_ma, geochemistry.calculate_model_mu(pb206, pb207, t_ma)))
         else:
-            embedding = np.column_stack((t_ma, geochemistry.calculate_model_kappa(pb208, pb206, t_ma)))
+            embedding = np.column_stack((t_ma, geochemistry.calculate_model_kappa(pb206, pb208, t_ma)))
     else:
         if actual_algorithm in ('PB_EVOL_76', 'PLUMBOTECTONICS_76'):
             embedding = np.column_stack((pb206, pb207))

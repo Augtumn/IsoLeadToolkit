@@ -15,9 +15,13 @@ from .engine import engine, EPSILON
 
 
 def _safe_denominator(values: np.ndarray | float) -> np.ndarray:
-    """Apply shared denominator floor for scalar/array-like values."""
+    """Apply shared denominator floor for scalar/array-like values.
+
+    Preserves the sign of tiny values so small negative denominators do not
+    flip the sign of the quotient near singularities.
+    """
     arr = np.asarray(values, dtype=float)
-    return np.where(np.abs(arr) < EPSILON, EPSILON, arr)
+    return np.where(np.abs(arr) < EPSILON, np.copysign(EPSILON, arr), arr)
 
 def _prepare_age(t_Ma: np.ndarray | float | None) -> np.ndarray:
     """年龄预处理: Ma → 年, 处理 None 和异常值."""
@@ -282,8 +286,8 @@ def calculate_model_mu(
 
 
 def calculate_model_kappa(
-    Pb208_204_S: np.ndarray | float,
     Pb206_204_S: np.ndarray | float,
+    Pb208_204_S: np.ndarray | float,
     t_Ma: np.ndarray | float | None,
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
@@ -294,6 +298,11 @@ def calculate_model_kappa(
     - two_stage: (T1, a1, c1)
     - single_stage: (T2, a0, c0)
     适用于任何已配置的地球化学模型。
+
+    Args:
+        Pb206_204_S: 样品 206Pb/204Pb 比值
+        Pb208_204_S: 样品 208Pb/204Pb 比值
+        t_Ma: 样品年龄 (Ma)
 
     Returns:
         np.ndarray: 源区 Kappa 值 (232Th/238U)
@@ -361,7 +370,7 @@ def calculate_initial_ratio_84(
     if params is None:
         params = engine.params
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
-    kappa = calculate_model_kappa(Pb208_204_S, Pb206_204_S, t_Ma, params)
+    kappa = calculate_model_kappa(Pb206_204_S, Pb208_204_S, t_Ma, params)
     omega = kappa * mu
     _, _, z_ref, t_ref = _model_reference_params(params)
     t = np.asarray(t_Ma) * 1e6

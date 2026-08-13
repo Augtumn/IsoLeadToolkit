@@ -2,6 +2,7 @@
 """Model age calculations."""
 from __future__ import annotations
 
+import math
 from typing import Any, Callable
 
 import numpy as np
@@ -22,8 +23,16 @@ _SOLVER_ZERO_EPSILON: float = 1e-15
 
 
 def _safe_scalar_denominator(value: float) -> float:
-    """Apply shared scalar denominator floor to avoid division singularity."""
-    return EPSILON if abs(value) < EPSILON else float(value)
+    """Apply shared scalar denominator floor to avoid division singularity.
+
+    Preserves the sign of tiny values: flipping small negative denominators
+    to +EPSILON changes the sign of the quotient and can manufacture
+    spurious model ages or ±1e50 μ/ω near t ≈ T.
+    """
+    value = float(value)
+    if abs(value) < EPSILON:
+        return math.copysign(EPSILON, value)
+    return value
 
 
 def _solve_age_scipy(

@@ -2,6 +2,7 @@
 """Isochron utilities and regression helpers."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import numpy as np
@@ -31,6 +32,8 @@ from .engine import (
     _exp_evolution_term,
 )
 from .age import _solve_age_scipy
+
+logger = logging.getLogger(__name__)
 
 
 _SOURCE_DEN_FLOOR = max(EPSILON, 1e-15)
@@ -235,6 +238,24 @@ def york_regression(
     else:
         rxy = np.asarray(rxy, dtype=float)
 
+    # Drop non-finite rows up front: polyfit and the weighted sums would
+    # otherwise silently produce nan slope/intercept.
+    finite = (
+        np.isfinite(x)
+        & np.isfinite(y)
+        & np.isfinite(sx)
+        & np.isfinite(sy)
+        & np.isfinite(rxy)
+    )
+    if not np.all(finite):
+        dropped = int(np.sum(~finite))
+        logger.warning("York regression dropped %d non-finite rows", dropped)
+        x = x[finite]
+        y = y[finite]
+        sx = sx[finite]
+        sy = sy[finite]
+        rxy = rxy[finite]
+
     if x.size < 2:
         raise ValueError("At least two points are required for York regression.")
 
@@ -265,7 +286,12 @@ def york_regression(
         U = x - Xbar
         V = y - Ybar
         B = W * (U / wY + b * V / wX - (b * U + V) * rxy / A)
-        b = np.nansum(W * B * V) / np.nansum(W * B * U)
+        w_sum = np.nansum(W * B * U)
+        if w_sum == 0 or not np.isfinite(w_sum):
+            raise ValueError("Degenerate York regression weights (zero denominator).")
+        b = np.nansum(W * B * V) / w_sum
+        if not np.isfinite(b):
+            raise ValueError("York regression produced a non-finite slope.")
         if b != 0 and (bold / b - 1) ** 2 < tol:
             break
 

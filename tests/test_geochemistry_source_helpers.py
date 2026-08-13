@@ -12,9 +12,12 @@ def test_safe_denominator_applies_epsilon_floor() -> None:
 
     safe = source_module._safe_denominator(values)
 
+    # Floor preserves the sign of tiny values: flipping small negative
+    # denominators to +EPSILON would invert the quotient's sign near
+    # singularities and manufacture spurious μ/ω values.
     np.testing.assert_allclose(
         safe,
-        np.array([source_module.EPSILON, source_module.EPSILON, source_module.EPSILON, source_module.EPSILON * 2.0]),
+        np.array([source_module.EPSILON, source_module.EPSILON, -source_module.EPSILON, source_module.EPSILON * 2.0]),
         rtol=0.0,
         atol=0.0,
     )

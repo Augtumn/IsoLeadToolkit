@@ -200,6 +200,11 @@ def calculate_all_parameters(
     else:
         # 单阶段逻辑: Geokit 用 T1 计算年龄，但 Delta 地幔参考采用 T2 口径
         t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, params=params_calc, initial_age=params_calc.get('T2'))
+        if t_calc is None:
+            # Scalar solve failed; degrade to the CDT model age instead of
+            # crashing in np.maximum below.
+            logger.warning("Single-stage age solve failed; falling back to tCDT")
+            t_calc = tCDT
         if is_geokit or params_calc.get('v1v2_formula') == 'zhu1993':
             t_calc = np.maximum(t_calc, 0)
         t_mantle = params_calc.get('T2') if is_geokit else None
@@ -241,13 +246,21 @@ def calculate_all_parameters(
 
     mu_val = _invert_mu(Pb206, Pb207, t_input, X_ref, Y_ref, T_ref, params_calc)
     omega_val = _invert_omega(Pb208, t_input, Z_ref, T_ref, params_calc)
+    if mu_val is None:
+        # Solver failure: degrade to NaN instead of crashing downstream in
+        # calculate_source_nu / initial-ratio inversion.
+        logger.warning("Mu inversion failed; using NaN for affected samples")
+        mu_val = np.nan
+    if omega_val is None:
+        logger.warning("Omega inversion failed; using NaN for affected samples")
+        omega_val = np.nan
     results['mu'] = mu_val
     results['nu'] = calculate_source_nu(mu_val, params=params_calc)
     results['omega'] = omega_val
 
     # 5.2 模型参考参数（按 age_model 自动选择参考参数）
     mu_model = calculate_model_mu(Pb206, Pb207, t_input, params=params_calc)
-    kappa_model = calculate_model_kappa(Pb208, Pb206, t_input, params=params_calc)
+    kappa_model = calculate_model_kappa(Pb206, Pb208, t_input, params=params_calc)
     results['mu_model'] = mu_model
     results['kappa_model'] = kappa_model
     results['omega_model'] = kappa_model * mu_model
