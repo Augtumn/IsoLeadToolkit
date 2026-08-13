@@ -444,4 +444,4 @@ class DataImportBuildMixin:
             return
         display_path = os.path.basename(file_path)
         directory = os.path.dirname(file_path)
-        self.file_label.setText(f"{display_path}\\n{directory}")
+        self.file_label.setText(f"{display_path}\n{directory}")

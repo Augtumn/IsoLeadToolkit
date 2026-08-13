@@ -214,9 +214,15 @@ class AnalysisPanelBuildMixin:
         else:
             self.confidence_95_radio.setChecked(True)
 
-        self.confidence_68_radio.toggled.connect(lambda: self._on_confidence_change(_CONFIDENCE_LEVEL_1SIGMA))
-        self.confidence_95_radio.toggled.connect(lambda: self._on_confidence_change(_CONFIDENCE_LEVEL_2SIGMA))
-        self.confidence_99_radio.toggled.connect(lambda: self._on_confidence_change(_CONFIDENCE_LEVEL_3SIGMA))
+        self.confidence_68_radio.toggled.connect(
+            lambda checked: self._on_confidence_change(_CONFIDENCE_LEVEL_1SIGMA) if checked else None
+        )
+        self.confidence_95_radio.toggled.connect(
+            lambda checked: self._on_confidence_change(_CONFIDENCE_LEVEL_2SIGMA) if checked else None
+        )
+        self.confidence_99_radio.toggled.connect(
+            lambda checked: self._on_confidence_change(_CONFIDENCE_LEVEL_3SIGMA) if checked else None
+        )
 
         confidence_layout.addWidget(self.confidence_68_radio)
         confidence_layout.addWidget(self.confidence_95_radio)

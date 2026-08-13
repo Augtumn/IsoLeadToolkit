@@ -36,6 +36,27 @@ def _strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
 
 
+def _read_tail(path: Path, num_lines: int) -> str:
+    """Return the last *num_lines* lines of a possibly large file."""
+    if num_lines <= 0:
+        return path.read_text(encoding="utf-8", errors="replace")
+    chunk_size = 8192
+    buffer = b""
+    with open(path, "rb") as handle:
+        # Seek backwards in chunks until we have enough newlines or reach
+        # the start of the file.
+        size = handle.seek(0, os.SEEK_END)
+        pos = size
+        while pos > 0 and buffer.count(b"\n") <= num_lines:
+            read_len = min(chunk_size, pos)
+            pos -= read_len
+            handle.seek(pos)
+            buffer = handle.read(read_len) + buffer
+    text = buffer.decode("utf-8", errors="replace")
+    lines = text.splitlines()
+    return "\n".join(lines[-num_lines:])
+
+
 def _resolve_log_paths() -> tuple[Path | None, Path | None]:
     """Resolve main and error log paths (CWD-relative like setup_logging)."""
     main_path = Path(DEFAULT_LOG_FILENAME)
@@ -130,16 +151,21 @@ class Qt5LogViewerDialog(QDialog):
             self.text_edit.setPlainText(translate("No log file found."))
             self.path_label.setText("")
             return
+        limit = self.lines_spin.value()
         try:
-            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+            if limit > 0:
+                # Read only the tail: the main log can reach 50 MB, and
+                # reading + splitting the whole file on every refresh is
+                # wasteful.
+                tail_text = _read_tail(path, limit)
+            else:
+                tail_text = path.read_text(encoding="utf-8", errors="replace")
         except OSError as err:
             self.text_edit.setPlainText(
                 translate("Failed to read log: {error}").format(error=str(err))
             )
             return
-        limit = self.lines_spin.value()
-        tail = lines[-limit:] if limit > 0 else lines
-        self.text_edit.setPlainText(_strip_ansi("\n".join(tail)))
+        self.text_edit.setPlainText(_strip_ansi(tail_text))
         self.path_label.setText(str(path.resolve()))
 
     def _open_file(self) -> None:

@@ -39,6 +39,12 @@ class Qt5AppPlottingMixin:
                     if getattr(app_state, "paleo_label_refreshing", False):
                         state_gateway.set_paleo_label_refreshing(False)
                         return
+                    # Skip the label-reposition cycle entirely unless overlay
+                    # labels actually exist; otherwise every draw doubles
+                    # itself with a second draw_idle.
+                    if not getattr(app_state, 'paleoisochron_label_data', []) \
+                            and not getattr(app_state, 'plumbotectonics_label_data', []):
+                        return
                     from visualization.plotting import refresh_paleoisochron_labels
 
                     refresh_paleoisochron_labels()

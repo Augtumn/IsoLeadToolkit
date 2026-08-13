@@ -168,7 +168,8 @@ class Qt5FileDialog(QDialog):
         """语言变化处理"""
         code = self.lang_combo.currentData()
         if code and set_language(code):
-            state_gateway.set_language_code(code)
+            # set_language() already dispatches SET_LANGUAGE_CODE and
+            # notifies listeners; only refresh the dialog text here.
             self._apply_translations()
 
     def closeEvent(self, event):
