@@ -571,6 +571,14 @@ class MainWindowLegendActionsMixin:
                 )
                 menu.addSeparator()
         elif entry_type == "parent" and entry_key is not None:
+            from visualization.plotting.grouping import parent_of_group
+
+            if parent_of_group(app_state, entry_key) is not None:
+                remove_action = menu.addAction(translate("Remove from Parent Group"))
+                remove_action.triggered.connect(
+                    lambda checked=False, p=entry_key: self._remove_group_from_parent(p)
+                )
+                menu.addSeparator()
             child_action = menu.addAction(translate("New Child Parent Group..."))
             child_action.triggered.connect(
                 lambda checked=False, p=entry_key: self._create_child_parent_group(p)
@@ -656,6 +664,18 @@ class MainWindowLegendActionsMixin:
         count_label = QLabel(f"({len(children)})")
         count_label.setStyleSheet("color: #64748b;")
         item_layout.addWidget(count_label)
+
+        # Eject button: only for parents nested inside another parent.
+        from visualization.plotting.grouping import parent_of_group
+
+        if parent_of_group(app_state, parent) is not None:
+            eject_btn = QPushButton("⇱")
+            eject_btn.setFixedSize(20, 20)
+            eject_btn.setToolTip(translate("Remove from Parent Group"))
+            eject_btn.clicked.connect(
+                lambda checked=False, p=parent: self._remove_group_from_parent(p)
+            )
+            item_layout.addWidget(eject_btn)
 
         delete_btn = QPushButton("×")
         delete_btn.setFixedSize(20, 20)

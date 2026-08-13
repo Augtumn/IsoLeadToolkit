@@ -243,6 +243,60 @@ class _Ax:
     not hasattr(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]), "QApplication"),
     reason="PyQt5 not available",
 )
+def test_remove_nested_parent_from_parent(monkeypatch) -> None:
+    """Ejecting a nested parent keeps it as a top-level parent with subtree."""
+    from PyQt5.QtWidgets import QApplication, QListWidget
+
+    from core import state_gateway
+    from ui.main_window_parts.legend_actions import MainWindowLegendActionsMixin
+    from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin
+
+    app = QApplication.instance() or QApplication([])
+
+    class Stub(MainWindowLegendActionsMixin, MainWindowLegendCoreMixin):
+        def _refresh_plot(self):
+            pass
+
+    stub = Stub()
+    lst = QListWidget()
+    stub._legend_list = lst
+
+    prev_parents = getattr(app_state, "parent_groups", None)
+    prev_ax = getattr(app_state, "ax", None)
+    prev_fig = getattr(app_state, "fig", None)
+    prev_overlays = getattr(app_state, "overlay_artists", None)
+    try:
+        monkeypatch.setattr(app_state, "ax", None, raising=False)
+        monkeypatch.setattr(app_state, "fig", None, raising=False)
+        monkeypatch.setattr(app_state, "overlay_artists", {}, raising=False)
+        state_gateway.set_parent_groups({"B": ["A", "y"], "A": ["x"]})
+
+        # A is nested inside B before the eject.
+        from visualization.plotting.grouping import parent_of_group
+
+        assert parent_of_group(app_state, "A") == "B"
+
+        stub._remove_group_from_parent("A")
+
+        # A is ejected from B but remains a parent group with its subtree.
+        assert app_state.parent_groups == {"B": ["y"], "A": ["x"]}
+        assert parent_of_group(app_state, "A") is None
+        assert parent_of_group(app_state, "x") == "A"
+    finally:
+        if prev_parents is not None:
+            state_gateway.set_parent_groups(prev_parents)
+        if prev_ax is not None:
+            monkeypatch.setattr(app_state, "ax", prev_ax, raising=False)
+        if prev_fig is not None:
+            monkeypatch.setattr(app_state, "fig", prev_fig, raising=False)
+        if prev_overlays is not None:
+            monkeypatch.setattr(app_state, "overlay_artists", prev_overlays, raising=False)
+
+
+@pytest.mark.skipif(
+    not hasattr(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]), "QApplication"),
+    reason="PyQt5 not available",
+)
 def test_apply_legend_z_order_nested_subtree_shares_root_slot(monkeypatch) -> None:
     """A nested parent's groups share the TOP-LEVEL parent's z-slot."""
     from PyQt5.QtCore import Qt
