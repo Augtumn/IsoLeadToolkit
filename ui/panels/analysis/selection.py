@@ -83,8 +83,27 @@ class AnalysisPanelSelectionMixin:
             pass
         self.update_selection_controls()
 
+    def _require_selection_available(self) -> bool:
+        """Warn when selection tools cannot run; return True when OK."""
+        if getattr(app_state, "df_global", None) is None:
+            QMessageBox.warning(
+                self, translate("Warning"), translate("Please load data first.")
+            )
+            return False
+        if app_state.render_mode == "3D":
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("Selection mode is only available in 2D views"),
+            )
+            return False
+        return True
+
     def _on_toggle_selection(self):
         """Toggle export selection mode."""
+        if not self._require_selection_available():
+            self._sync_selection_buttons()
+            return
         try:
             from visualization.events import toggle_selection_mode
 
@@ -108,6 +127,9 @@ class AnalysisPanelSelectionMixin:
 
     def _on_toggle_lasso_selection(self):
         """Toggle lasso selection mode."""
+        if not self._require_selection_available():
+            self._sync_selection_buttons()
+            return
         try:
             from visualization.events import toggle_selection_mode
 
@@ -117,7 +139,7 @@ class AnalysisPanelSelectionMixin:
         self._sync_selection_buttons()
 
     def _on_analyze_subset(self):
-        """Analyze selected subset."""
+        """Analyze selected subset (delegates to the subset plugin)."""
         if not app_state.selected_indices:
             QMessageBox.warning(
                 self,
@@ -126,19 +148,69 @@ class AnalysisPanelSelectionMixin:
             )
             return
 
-        QMessageBox.information(
-            self,
-            translate("Info"),
-            translate("Subset analysis will be implemented."),
-        )
+        from plugins.registry import plugin_manager
+
+        subset_plugin = plugin_manager.get("subset_analysis")
+        if subset_plugin is None:
+            logger.error("subset_analysis plugin is not available")
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Subset analysis plugin is not available."),
+            )
+            return
+        try:
+            result = subset_plugin.apply_subset(sorted(app_state.selected_indices))
+            logger.info("Subset applied: %s", result)
+            from visualization.events import on_slider_change
+
+            on_slider_change()
+            QMessageBox.information(
+                self,
+                translate("Success"),
+                translate("Subset applied: {count} samples.").format(
+                    count=result.get("active_subset_size", 0)
+                ),
+            )
+        except Exception as exc:
+            logger.exception("Failed to apply subset: %s", exc)
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Failed to apply subset: {error}").format(error=exc),
+            )
 
     def _on_reset_data(self):
-        """Reset data placeholder."""
-        QMessageBox.information(
-            self,
-            translate("Info"),
-            translate("Data reset will be implemented."),
-        )
+        """Reset the active subset (delegates to the subset plugin)."""
+        from plugins.registry import plugin_manager
+
+        subset_plugin = plugin_manager.get("subset_analysis")
+        if subset_plugin is None:
+            logger.error("subset_analysis plugin is not available")
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Subset analysis plugin is not available."),
+            )
+            return
+        try:
+            result = subset_plugin.clear_subset()
+            logger.info("Subset cleared: %s", result)
+            from visualization.events import on_slider_change
+
+            on_slider_change()
+            QMessageBox.information(
+                self,
+                translate("Success"),
+                translate("Subset cleared."),
+            )
+        except Exception as exc:
+            logger.exception("Failed to reset subset: %s", exc)
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("Failed to reset subset: {error}").format(error=exc),
+            )
 
     def _on_tooltip_change(self, state):
         """Handle tooltip visibility change."""

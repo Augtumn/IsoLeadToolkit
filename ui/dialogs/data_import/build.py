@@ -117,11 +117,13 @@ class DataImportBuildMixin:
 
         cancel_button = QPushButton(translate("Cancel"))
         cancel_button.clicked.connect(self.reject)
+        cancel_button.setAutoDefault(False)
         self.cancel_btn = cancel_button
         footer_layout.addWidget(cancel_button)
 
         apply_button = QPushButton(translate("Apply"))
         apply_button.clicked.connect(self._ok_clicked)
+        apply_button.setDefault(True)
         self.apply_btn = apply_button
         footer_layout.addWidget(apply_button)
 
@@ -159,6 +161,7 @@ class DataImportBuildMixin:
         group_layout.addLayout(button_row)
 
         recent_label = QLabel(translate("Recent Files"))
+        recent_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         recent_label.setStyleSheet("font-weight: bold;")
         self.recent_label = recent_label
         group_layout.addWidget(recent_label)

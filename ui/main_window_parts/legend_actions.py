@@ -318,7 +318,8 @@ class MainWindowLegendActionsMixin:
             current_marker = app_state.group_marker_map.get(group, getattr(app_state, "plot_marker_shape", "o"))
             for label, value in self._marker_shape_map.items():
                 icon = self._build_marker_icon("#94a3b8", value, size=14)
-                action = QAction(icon, "", self)
+                action = QAction(icon, label, self)
+                action.setToolTip(label)
                 action.setCheckable(True)
                 action.setChecked(value == current_marker)
                 action.triggered.connect(
@@ -658,10 +659,12 @@ class MainWindowLegendActionsMixin:
         item_layout.addWidget(shape_btn)
 
         label = QLabel(f"{translate('Parent')}: {parent}")
+        label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         label.setStyleSheet("font-weight: bold;")
         item_layout.addWidget(label, 1)
 
         count_label = QLabel(f"({len(children)})")
+        count_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         count_label.setStyleSheet("color: #64748b;")
         item_layout.addWidget(count_label)
 
@@ -706,6 +709,7 @@ class MainWindowLegendActionsMixin:
         icon = self._build_marker_icon("#94a3b8", marker, size=16)
         swatch.setIcon(icon)
         swatch.setIconSize(QSize(16, 16))
+        swatch.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         swatch.setStyleSheet("border: 1px solid #111827; border-radius: 3px; background: transparent;")
 
     def _set_parent_shape(self, parent, marker):
@@ -736,7 +740,12 @@ class MainWindowLegendActionsMixin:
 
         for value in PARENT_SHAPE_CYCLE:
             icon = self._build_marker_icon("#94a3b8", value, size=14)
-            action = QAction(icon, "", self)
+            label = next(
+                (k for k, v in self._marker_shape_map.items() if v == value),
+                value,
+            )
+            action = QAction(icon, label, self)
+            action.setToolTip(label)
             action.setCheckable(True)
             action.setChecked(value == current)
             action.triggered.connect(
@@ -764,6 +773,11 @@ class MainWindowLegendActionsMixin:
 
             if self._legend_title_label is not None:
                 self._legend_title_label.setText(str(title))
+
+            # Preserve the scroll position across rebuilds (checkbox toggles
+            # rebuild the whole list and would otherwise reset the view).
+            scrollbar = self._legend_list.verticalScrollBar()
+            previous_scroll = scrollbar.value() if scrollbar is not None else 0
 
             self._legend_list.clear()
 
@@ -877,6 +891,8 @@ class MainWindowLegendActionsMixin:
                         fallback=entry.get("fallback"),
                     )
             self._apply_legend_z_order()
+            if scrollbar is not None:
+                scrollbar.setValue(previous_scroll)
         except Exception as exc:
             import traceback
 

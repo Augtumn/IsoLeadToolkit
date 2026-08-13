@@ -333,6 +333,7 @@ class MainWindowLegendCoreMixin:
         icon = self._build_marker_icon(color, marker, size=16)
         swatch.setIcon(icon)
         swatch.setIconSize(QSize(16, 16))
+        swatch.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         swatch.setStyleSheet("border: 1px solid #111827; border-radius: 3px; background: transparent;")
 
     def _sync_legend_panel_ui(self, refresh=False):

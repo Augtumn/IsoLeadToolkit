@@ -93,7 +93,6 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
     label_pos_combo = None
     if style_key == 'isochron':
         label_group = QGroupBox(translate("Label Display"))
-        label_group.setProperty('translate_key', 'Label Display')
         label_layout = QVBoxLayout(label_group)
         label_layout.setContentsMargins(8, 6, 8, 6)
         label_layout.setSpacing(4)
@@ -102,8 +101,8 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         label_items = [
             ('show_age', translate("Age")),
             ('show_n_points', translate("Sample Count (n)")),
-            ('show_mswd', 'MSWD'),
-            ('show_r_squared', 'R²'),
+            ('show_mswd', translate("MSWD")),
+            ('show_r_squared', translate("R²")),
             ('show_slope', translate("Slope")),
             ('show_intercept', translate("Intercept")),
         ]
@@ -117,7 +116,6 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
 
     if style_key in getattr(app_state, 'line_styles', {}):
         label_settings = QGroupBox(translate("Curve Label Settings"))
-        label_settings.setProperty('translate_key', 'Curve Label Settings')
         label_layout = QVBoxLayout(label_settings)
         label_layout.setContentsMargins(8, 6, 8, 6)
         label_layout.setSpacing(6)
@@ -198,8 +196,10 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
     btn_row.addStretch()
     cancel_btn = QPushButton(translate("Cancel"))
     cancel_btn.clicked.connect(dialog.reject)
+    cancel_btn.setAutoDefault(False)
     btn_row.addWidget(cancel_btn)
     save_btn = QPushButton(translate("Save"))
+    save_btn.setDefault(True)
 
     def _apply():
         # Copy-then-submit: mutating app_state.line_styles in place is
@@ -261,8 +261,8 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
     btn_row.addWidget(save_btn)
     layout.addLayout(btn_row)
 
-    dialog.exec_()
-    return True
+    # Return whether the user actually saved (not just closed the dialog).
+    return dialog.exec_() == QDialog.Accepted
 
 
 __all__ = ["open_line_style_dialog"]

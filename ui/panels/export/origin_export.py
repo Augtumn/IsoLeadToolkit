@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 from core import app_state, translate
 
@@ -53,9 +55,8 @@ class ExportPanelOriginExportMixin:
         )
         if not file_path:
             return
-        from pathlib import Path as _Path
 
-        target = _Path(file_path)
+        target = Path(file_path)
         if target.suffix.lower() != ".opju":
             # Replace any stray extension instead of appending a second one.
             file_path = str(target.with_suffix(".opju"))
@@ -63,7 +64,12 @@ class ExportPanelOriginExportMixin:
         try:
             from application.use_cases.export_origin import export_to_origin
 
-            ok = export_to_origin(file_path)
+            # Origin COM automation can take seconds; show a wait cursor.
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                ok = export_to_origin(file_path)
+            finally:
+                QApplication.restoreOverrideCursor()
         except Exception as export_err:
             logger.exception("Origin export failed")
             QMessageBox.critical(

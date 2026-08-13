@@ -100,6 +100,9 @@ class LegendActionsMixin:
         state_gateway.set_legend_nudge_step(step)
 
     def _nudge_legend(self, dx, dy):
+        if getattr(app_state, "fig", None) is None or getattr(app_state, "ax", None) is None:
+            logger.warning("Nudge ignored: no plot figure is initialized")
+            return
         current = getattr(app_state, 'legend_offset', (0.0, 0.0))
         try:
             new_offset = (float(current[0]) + float(dx), float(current[1]) + float(dy))

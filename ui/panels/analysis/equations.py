@@ -439,7 +439,8 @@ class AnalysisPanelEquationMixin:
             state_gateway.set_line_styles(current_styles)
 
             if swatch is not None:
-                apply_color_swatch(swatch, '#e2e8f0')
+                # Reflect the actual style color (KDE styles carry a color).
+                apply_color_swatch(swatch, style_ref.get('color') or '#e2e8f0')
             dialog.accept()
             self._on_change()
 
@@ -532,6 +533,7 @@ class AnalysisPanelEquationMixin:
             _clear_layout(list_container_layout)
 
             existing_label = QLabel(translate("Existing Equations"))
+            existing_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
             existing_label.setStyleSheet("font-weight: bold;")
             list_container_layout.addWidget(existing_label)
 
@@ -544,6 +546,7 @@ class AnalysisPanelEquationMixin:
                 list_container_layout.addWidget(empty_label)
 
             preset_label = QLabel(translate("Preset Equations"))
+            preset_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
             preset_label.setStyleSheet("font-weight: bold; margin-top: 6px;")
             list_container_layout.addWidget(preset_label)
 

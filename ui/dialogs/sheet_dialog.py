@@ -33,10 +33,12 @@ class Qt5SheetDialog(QDialog):
             logger.error("Could not load sheets: %s", e)
             QMessageBox.critical(self, translate("Error"),
                                translate("Failed to load Excel file: {error}").format(error=str(e)))
-            # Reject immediately: without _setup_ui the dialog would show an
-            # empty window with no buttons and _ok_clicked would crash.
-            self.reject()
+            # Mark construction as failed: a pre-show reject() does NOT stop
+            # exec_() from showing an empty dialog, so the getter checks this
+            # flag and skips exec_() entirely.
+            self._failed = True
             return
+        self._failed = False
 
         self._setup_ui()
 
@@ -92,10 +94,12 @@ class Qt5SheetDialog(QDialog):
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setAutoDefault(False)
         footer_layout.addWidget(cancel_btn)
 
         continue_btn = QPushButton(translate("Continue"))
         continue_btn.clicked.connect(self._ok_clicked)
+        continue_btn.setDefault(True)
         footer_layout.addWidget(continue_btn)
 
         layout.addLayout(footer_layout)
@@ -115,6 +119,8 @@ class Qt5SheetDialog(QDialog):
 def get_sheet_selection(file_path: str, default_sheet: str | None = None) -> str | None:
     """获取工作表选择"""
     dialog = Qt5SheetDialog(file_path, default_sheet)
+    if getattr(dialog, "_failed", False):
+        return None
     if dialog.exec_() == Qt5SheetDialog.Accepted:
         return dialog.result
     return None

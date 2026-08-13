@@ -81,20 +81,24 @@ class TooltipConfigDialog(QDialog):
 
         select_all_btn = QPushButton(translate("Select all"))
         select_all_btn.clicked.connect(self._select_all)
+        select_all_btn.setAutoDefault(False)
         button_layout.addWidget(select_all_btn)
 
         clear_btn = QPushButton(translate("Clear"))
         clear_btn.clicked.connect(self._clear_selection)
+        clear_btn.setAutoDefault(False)
         button_layout.addWidget(clear_btn)
 
         button_layout.addStretch()
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setAutoDefault(False)
         button_layout.addWidget(cancel_btn)
 
         ok_btn = QPushButton(translate("OK"))
         ok_btn.clicked.connect(self._ok_clicked)
+        ok_btn.setDefault(True)
         button_layout.addWidget(ok_btn)
 
         layout.addLayout(button_layout)

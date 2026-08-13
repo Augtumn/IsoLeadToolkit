@@ -5,11 +5,7 @@ import logging
 
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
-from application import (
-    append_selected_data_to_excel,
-    build_export_dataframe,
-    export_selected_data_to_file,
-)
+from application import append_selected_data_to_excel
 from core import app_state, translate
 
 logger = logging.getLogger(__name__)
@@ -97,11 +93,8 @@ class ExportPanelDataExportMixin:
 
         if file_path:
             try:
-                export_path = export_selected_data_to_file(
-                    selected_indices=indices,
-                    file_path=file_path,
-                    preferred_format='csv',
-                    **self._current_export_context(),
+                export_path = self._run_data_export(
+                    indices, file_path, 'csv',
                 )
                 QMessageBox.information(
                     self,
@@ -115,6 +108,24 @@ class ExportPanelDataExportMixin:
                     translate("Error"),
                     translate("Failed to export data: {error}").format(error=str(err)),
                 )
+
+    def _run_data_export(self, indices, file_path, preferred_format):
+        """Run a synchronous data export under a wait cursor."""
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication
+
+        from application.use_cases import export_selected_data_to_file
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            return export_selected_data_to_file(
+                selected_indices=indices,
+                file_path=file_path,
+                preferred_format=preferred_format,
+                **self._current_export_context(),
+            )
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def _on_export_excel(self):
         """导出Excel"""
@@ -136,11 +147,8 @@ class ExportPanelDataExportMixin:
 
         if file_path:
             try:
-                export_path = export_selected_data_to_file(
-                    selected_indices=indices,
-                    file_path=file_path,
-                    preferred_format='xlsx',
-                    **self._current_export_context(),
+                export_path = self._run_data_export(
+                    indices, file_path, 'xlsx',
                 )
                 QMessageBox.information(
                     self,
@@ -191,12 +199,19 @@ class ExportPanelDataExportMixin:
         sheet_name = sheet_name.strip()
 
         try:
-            export_path = append_selected_data_to_excel(
-                selected_indices=indices,
-                file_path=file_path,
-                sheet_name=sheet_name,
-                **self._current_export_context(),
-            )
+            from PyQt5.QtCore import Qt
+            from PyQt5.QtWidgets import QApplication
+
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                export_path = append_selected_data_to_excel(
+                    selected_indices=indices,
+                    file_path=file_path,
+                    sheet_name=sheet_name,
+                    **self._current_export_context(),
+                )
+            finally:
+                QApplication.restoreOverrideCursor()
 
             QMessageBox.information(
                 self,

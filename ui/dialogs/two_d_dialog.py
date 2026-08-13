@@ -31,9 +31,12 @@ class Qt5TwoDDialog(QDialog):
                 translate("Error"),
                 translate("Need at least 2 numeric columns for 2D plot.")
             )
-            self.reject()
+            # A pre-show reject() does NOT stop exec_() from showing an empty
+            # dialog; the getter checks this flag and skips exec_().
+            self._failed = True
             return
 
+        self._failed = False
         self._setup_ui()
 
         # 如果已有选择，恢复
@@ -107,16 +110,19 @@ class Qt5TwoDDialog(QDialog):
 
         clear_btn = QPushButton(translate("Clear"))
         clear_btn.clicked.connect(self._clear_selection)
+        clear_btn.setAutoDefault(False)
         footer_layout.addWidget(clear_btn)
 
         footer_layout.addStretch()
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setAutoDefault(False)
         footer_layout.addWidget(cancel_btn)
 
         ok_btn = QPushButton(translate("OK"))
         ok_btn.clicked.connect(self._ok_clicked)
+        ok_btn.setDefault(True)
         footer_layout.addWidget(ok_btn)
 
         layout.addLayout(footer_layout)
@@ -179,6 +185,8 @@ class Qt5TwoDDialog(QDialog):
 def get_2d_column_selection() -> list[str] | None:
     """获取 2D 列选择"""
     dialog = Qt5TwoDDialog()
+    if getattr(dialog, "_failed", False):
+        return None
     if dialog.exec_() == Qt5TwoDDialog.Accepted:
         return dialog.result
     return None

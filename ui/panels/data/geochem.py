@@ -123,8 +123,10 @@ class DataPanelGeochemMixin:
             state_gateway.set_mu_kappa_age_col(None)
         else:
             state_gateway.set_mu_kappa_age_col(selection)
+            # A real age column is now available; keep the user's intent to
+            # use real ages instead of silently unchecking the option.
+            state_gateway.set_use_real_age_for_mu_kappa(True)
 
-        state_gateway.set_use_real_age_for_mu_kappa(False)
         self._sync_geochem_toggle_widgets(
             app_state.use_real_age_for_mu_kappa,
             getattr(self, "modeling_use_real_age_check", None),
@@ -312,7 +314,9 @@ class DataPanelGeochemMixin:
             logger.warning("Failed to refresh plot: %s", refresh_err)
 
         self._update_isochron_btn_text()
-        self._on_isochron_settings()
+        # Note: no forced _on_isochron_settings() here — error settings were
+        # already validated before computing (_ensure_isochron_error_settings)
+        # and popping a modal again after every calculation is disruptive.
 
     def _update_isochron_btn_text(self):
         """Update isochron button text by visibility state."""

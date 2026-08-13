@@ -38,6 +38,14 @@ class Qt5FileDialog(QDialog):
             self.selected_file = default_file
             self._update_file_display(default_file)
 
+    def closeEvent(self, event):
+        """Unregister the language listener so closed dialogs do not linger."""
+        try:
+            app_state.unregister_language_listener(self._apply_translations)
+        except Exception:
+            pass
+        super().closeEvent(event)
+
     def _setup_ui(self):
         """设置 UI"""
         self.setWindowTitle(translate("Select Data File"))
@@ -119,10 +127,12 @@ class Qt5FileDialog(QDialog):
 
         self.cancel_btn = QPushButton(translate("Cancel"))
         self.cancel_btn.clicked.connect(self.reject)
+        self.cancel_btn.setAutoDefault(False)
         footer_layout.addWidget(self.cancel_btn)
 
         self.continue_btn = QPushButton(translate("Continue"))
         self.continue_btn.clicked.connect(self._ok_clicked)
+        self.continue_btn.setDefault(True)
         footer_layout.addWidget(self.continue_btn)
 
         layout.addLayout(footer_layout)

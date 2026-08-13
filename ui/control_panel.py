@@ -87,6 +87,12 @@ def create_section_dialog(
     header.addWidget(prev_btn)
     header.addWidget(next_btn)
 
+    close_btn = QPushButton(translate("Close"))
+    close_btn.setToolTip(translate("Close this panel"))
+    close_btn.setFixedWidth(64)
+    close_btn.clicked.connect(dialog.close)
+    header.addWidget(close_btn)
+
     root.addLayout(header)
 
     panel = panel_cls(callback, parent=dialog)

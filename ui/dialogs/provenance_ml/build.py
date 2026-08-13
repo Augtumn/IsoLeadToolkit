@@ -249,7 +249,8 @@ class ProvenanceMLBuildMixin:
         button_layout.addWidget(self.export_btn)
 
         close_btn = QPushButton(translate("Close"))
-        close_btn.clicked.connect(self.accept)
+        close_btn.clicked.connect(self.reject)
+        close_btn.setAutoDefault(False)
         button_layout.addWidget(close_btn)
 
         layout.addLayout(button_layout)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -41,6 +42,7 @@ class _DataPanelGeochemBuild:
             chk = QCheckBox(translate(label_text))
             chk.setChecked(checked)
             chk.stateChanged.connect(handler)
+            chk.setProperty("translate_key", label_text)
             row.addWidget(chk)
 
             if style_key:
@@ -49,6 +51,8 @@ class _DataPanelGeochemBuild:
                 swatch = QLabel()
                 swatch.setFixedSize(16, 16)
                 apply_color_swatch(swatch, swatch_color)
+                swatch.setCursor(Qt.PointingHandCursor)
+                swatch.setToolTip(translate("Edit line style"))
                 swatch.mousePressEvent = lambda event, k=style_key, s=swatch: self._open_line_style_dialog(k, s)
                 row.addWidget(swatch)
                 chk._style_swatch = swatch

@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem, QGroupBox, QMessageBox, QCheckBox, QHeaderView,
     QLineEdit, QFileDialog,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 from core import app_state, state_gateway, translate
 
@@ -71,7 +71,7 @@ class NeighborhoodSearchDialog(QDialog):
         radius_row.addWidget(QLabel(translate("Radius:")))
         self.radius_slider = QSlider(Qt.Horizontal)
         self.radius_slider.setRange(1, 200)
-        self.radius_slider.setValue(20)
+        self.radius_slider.setValue(10)  # 10/200*10 = 0.5, matching the spin
         self.radius_spin = QDoubleSpinBox()
         # Must match the slider mapping (1..200 → 0.005..10.0); a wider spin
         # range silently clamps at the slider maximum.
@@ -106,6 +106,7 @@ class NeighborhoodSearchDialog(QDialog):
         btn_row = QHBoxLayout()
         search_btn = QPushButton(translate("Search"))
         search_btn.clicked.connect(self._do_search)
+        search_btn.setDefault(True)  # Enter triggers the search
         btn_row.addWidget(search_btn)
 
         self.apply_check = QCheckBox(translate("Add as group column"))
@@ -127,6 +128,7 @@ class NeighborhoodSearchDialog(QDialog):
         # ── Summary label ──────────────────────────────────────────
         self.info_label = QLabel("")
         self.info_label.setWordWrap(True)
+        self.info_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         self.info_label.setStyleSheet("font-weight: bold;")
         layout.addWidget(self.info_label)
 
@@ -158,10 +160,19 @@ class NeighborhoodSearchDialog(QDialog):
 
         self.radius_slider.valueChanged.connect(_slider_to_spin)
         self.radius_spin.valueChanged.connect(_spin_to_slider)
-        # Live preview on slider change
-        self.radius_slider.valueChanged.connect(self._do_search)
-        self.radius_spin.valueChanged.connect(self._do_search)
-        self.min_neighbors_spin.valueChanged.connect(self._do_search)
+        # Live preview on slider change, debounced: the search over the full
+        # embedding is too heavy to run on every slider tick.
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(350)
+        self._search_timer.timeout.connect(self._do_search)
+
+        def _schedule_search(*_args):
+            self._search_timer.start()
+
+        self.radius_slider.valueChanged.connect(_schedule_search)
+        self.radius_spin.valueChanged.connect(_schedule_search)
+        self.min_neighbors_spin.valueChanged.connect(_schedule_search)
         # Update column name when radius changes
         def _update_col_name(v):
             self.col_name_edit.setText(f"_Neighbor_r{float(v):.2f}")
@@ -181,11 +192,8 @@ class NeighborhoodSearchDialog(QDialog):
         df = getattr(app_state, 'df_global', None)
         if df is None or group_col not in df.columns:
             return
-        for val in sorted(df[group_col].dropna().unique()):
+        for val in sorted(df[group_col].dropna().unique(), key=str):
             self.query_combo.addItem(str(val), str(val))
-        if self.query_combo.count() > 0:
-            # Skip the first few slots if we want to set default from selection
-            pass
 
     def _get_embedding_and_groups(self):
         """Get the embedding array and group labels, handling subset."""

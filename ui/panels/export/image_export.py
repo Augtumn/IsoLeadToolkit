@@ -224,10 +224,6 @@ class ExportPanelImageExportMixin:
                 self._attach_preview_label_state(export_fig)
                 return export_fig
         finally:
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
             state_gateway.set_plot_marker_size(original_marker_size)
             state_gateway.set_plot_font_sizes(original_font_sizes)
             state_gateway.set_figure_axes(original_fig, original_ax)
@@ -244,6 +240,12 @@ class ExportPanelImageExportMixin:
                     app_state.fig.canvas.draw_idle()
             except Exception as restore_err:
                 logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
+            # Keep the wait cursor through the restore re-render so the user
+            # does not see a frozen UI without feedback after exporting.
+            try:
+                QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
 
     def _on_preview_image_clicked(self):
         """Preview export result with full parameter adjustment in a separate dialog."""
@@ -471,9 +473,11 @@ class ExportPanelImageExportMixin:
                         except Exception:
                             pass
 
-                    # Update canvas size to match new figure
-                    new_w = int(round(float(effective_profile['figsize'][0]) * float(state['params']['dpi'])))
-                    new_h = int(round(float(effective_profile['figsize'][1]) * float(state['params']['dpi'])))
+                    # Update canvas size to match new figure (use the capped
+                    # preview DPI so huge requested values do not allocate a
+                    # multi-thousand-pixel canvas widget).
+                    new_w = int(round(float(effective_profile['figsize'][0]) * preview_dpi))
+                    new_h = int(round(float(effective_profile['figsize'][1]) * preview_dpi))
                     state['canvas'].figure = new_fig
                     # Keep the reverse reference so code reaching the canvas
                     # through the figure (draw paths) does not hit None.
@@ -700,10 +704,12 @@ class ExportPanelImageExportMixin:
             save_button = button_box.button(QDialogButtonBox.Save)
             if save_button is not None:
                 save_button.setText(translate("Save"))
+                save_button.setDefault(True)  # Enter saves
                 save_button.clicked.connect(_save_preview_image)
             close_button = button_box.button(QDialogButtonBox.Close)
             if close_button is not None:
                 close_button.setText(translate("Close"))
+                close_button.setAutoDefault(False)
                 close_button.clicked.connect(dialog.reject)
             main_layout.addWidget(button_box)
 

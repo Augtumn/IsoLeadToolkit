@@ -147,6 +147,11 @@ class ClusteringDialog(QDialog):
             return
 
         if getattr(self, "_cluster_worker", None) is not None and self._cluster_worker.isRunning():
+            QMessageBox.information(
+                self,
+                translate("Info"),
+                translate("A clustering run is already in progress."),
+            )
             return
 
         # Snapshot widget values on the main thread; the worker closure must

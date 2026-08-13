@@ -102,6 +102,7 @@ class GeoPanel(BasePanel):
 
         prim_label = QLabel(translate("Primordial (T1/T2):"))
         prim_label.setProperty('translate_key', 'Primordial (T1/T2):')
+        prim_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         prim_label.setStyleSheet("font-weight: bold;")
         self.geo_section_labels['primordial'] = prim_label
         init_layout.addWidget(prim_label)
@@ -114,6 +115,7 @@ class GeoPanel(BasePanel):
 
         sk_label = QLabel(translate("Stacey-Kramers 2nd Stage:"))
         sk_label.setProperty('translate_key', 'Stacey-Kramers 2nd Stage:')
+        sk_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         sk_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
         self.geo_section_labels['second_stage'] = sk_label
         init_layout.addWidget(sk_label)

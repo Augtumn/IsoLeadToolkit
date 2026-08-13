@@ -76,6 +76,7 @@ class LegendBuildMixin:
         for row, col, value, label in grid_positions:
             btn = QToolButton()
             btn.setText(label)
+            btn.setToolTip(translate(value))
             btn.setCheckable(True)
             btn.setFixedSize(40, 32)
             btn.clicked.connect(lambda checked=False, loc=value: self._on_legend_inside_position_change(loc))
@@ -83,11 +84,12 @@ class LegendBuildMixin:
             position_grid.addWidget(btn, row, col)
 
         for key, text, row, col, align in [
-            ('outside_left', 'OUT L', 1, 0, Qt.AlignHCenter),
-            ('outside_right', 'OUT R', 1, 2, Qt.AlignHCenter),
+            ('outside_left', translate("Outside Left"), 1, 0, Qt.AlignHCenter),
+            ('outside_right', translate("Outside Right"), 1, 2, Qt.AlignHCenter),
         ]:
             btn = QToolButton()
             btn.setText(text)
+            btn.setToolTip(translate("Legend {position}").format(position=text))
             btn.setCheckable(True)
             btn.setFixedSize(56, 32)
             btn.clicked.connect(lambda checked=False, loc=key: self._on_legend_outside_position_change(loc))
@@ -136,7 +138,10 @@ class LegendBuildMixin:
         self.legend_columns_spin.setRange(0, 5)
         self.legend_columns_spin.setSpecialValueText(translate("Auto"))
         self.legend_columns_spin.setValue(app_state.legend_columns)
-        self.legend_columns_spin.valueChanged.connect(self._on_legend_columns_change)
+        # Full re-render on every spin tick is expensive; debounce like the
+        # data panel's slider callbacks.
+        self.legend_columns_spin.setKeyboardTracking(False)
+        self.legend_columns_spin.valueChanged.connect(self._schedule_legend_columns_change)
         columns_row.addWidget(self.legend_columns_spin)
         style_layout.addLayout(columns_row)
 
@@ -162,23 +167,27 @@ class LegendBuildMixin:
         nudge_grid.setVerticalSpacing(6)
 
         up_btn = QToolButton()
-        up_btn.setText(translate("Up"))
-        up_btn.setProperty('translate_key', 'Up')
+        up_btn.setText("↑")
+        up_btn.setToolTip(translate("Nudge legend up"))
+        up_btn.setFixedSize(32, 28)
         up_btn.clicked.connect(lambda checked=False: self._nudge_legend(0.0, self.legend_nudge_step))
 
         down_btn = QToolButton()
-        down_btn.setText(translate("Down"))
-        down_btn.setProperty('translate_key', 'Down')
+        down_btn.setText("↓")
+        down_btn.setToolTip(translate("Nudge legend down"))
+        down_btn.setFixedSize(32, 28)
         down_btn.clicked.connect(lambda checked=False: self._nudge_legend(0.0, -self.legend_nudge_step))
 
         left_btn = QToolButton()
-        left_btn.setText(translate("Left"))
-        left_btn.setProperty('translate_key', 'Left')
+        left_btn.setText("←")
+        left_btn.setToolTip(translate("Nudge legend left"))
+        left_btn.setFixedSize(32, 28)
         left_btn.clicked.connect(lambda checked=False: self._nudge_legend(-self.legend_nudge_step, 0.0))
 
         right_btn = QToolButton()
-        right_btn.setText(translate("Right"))
-        right_btn.setProperty('translate_key', 'Right')
+        right_btn.setText("→")
+        right_btn.setToolTip(translate("Nudge legend right"))
+        right_btn.setFixedSize(32, 28)
         right_btn.clicked.connect(lambda checked=False: self._nudge_legend(self.legend_nudge_step, 0.0))
 
         nudge_grid.addWidget(up_btn, 0, 1)
@@ -239,6 +248,7 @@ class LegendBuildMixin:
 
         auto_btn = QPushButton(translate("Auto Style"))
         auto_btn.setProperty('translate_key', 'Auto Style')
+        auto_btn.setToolTip(translate("Assign palette and shapes to all groups"))
         auto_btn.clicked.connect(self._auto_assign_styles)
         self.auto_style_btn = auto_btn
         style_layout.addWidget(auto_btn)
@@ -251,7 +261,16 @@ class LegendBuildMixin:
 
         layout.addWidget(section_toolbox)
         layout.addStretch()
+        self._is_initialized = True
         return widget
+
+    def _schedule_legend_columns_change(self, _value=None):
+        """Debounced legend-columns update (full re-render)."""
+        self._debounce(
+            "legend_columns",
+            lambda: self._on_legend_columns_change(self.legend_columns_spin.value()),
+            300,
+        )
 
     # ------ 位置 ------
 

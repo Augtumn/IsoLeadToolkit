@@ -104,7 +104,18 @@ class AnalysisPanelMixingMixin:
         self.update_selection_controls()
 
     def _on_clear_mixing_groups(self):
-        """Clear all mixing groups."""
+        """Clear all mixing groups (with confirmation)."""
+        if not app_state.mixing_endmembers and not app_state.mixing_mixtures:
+            return
+        reply = QMessageBox.question(
+            self,
+            translate("Confirm"),
+            translate("Clear all endmember and mixture groups?"),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
         state_gateway.set_mixing_endmembers({})
         state_gateway.set_mixing_mixtures({})
         self._update_mixing_status()

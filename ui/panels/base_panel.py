@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QRadioButton,
     QToolBox,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -158,8 +159,9 @@ class BasePanel(QWidget):
         无需销毁重建整个 UI。
 
         支持的控件类型: QGroupBox (setTitle), QLabel/QPushButton/QCheckBox/
-        QRadioButton (setText), QToolBox (``toolbox_tab_keys`` JSON 属性),
-        QComboBox (``combo_item_keys`` JSON 属性，与 addItem 顺序一致)。
+        QRadioButton/QToolButton (setText), QToolBox (``toolbox_tab_keys``
+        JSON 属性), QComboBox (``combo_item_keys`` JSON 属性，与 addItem
+        顺序一致)。
         """
         import json as _json
 
@@ -171,7 +173,7 @@ class BasePanel(QWidget):
                 translated_str = translate(key)
                 if isinstance(child, QGroupBox):
                     child.setTitle(translated_str)
-                elif isinstance(child, (QLabel, QPushButton, QCheckBox, QRadioButton)):
+                elif isinstance(child, (QLabel, QPushButton, QCheckBox, QRadioButton, QToolButton)):
                     child.setText(translated_str)
 
             if isinstance(child, QToolBox):

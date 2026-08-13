@@ -31,9 +31,12 @@ class Qt5ThreeDDialog(QDialog):
                 translate("Error"),
                 translate("Need at least 3 numeric columns for 3D plot.")
             )
-            self.reject()
+            # A pre-show reject() does NOT stop exec_() from showing an empty
+            # dialog; the getter checks this flag and skips exec_().
+            self._failed = True
             return
 
+        self._failed = False
         self._setup_ui()
 
         # 如果已有选择，恢复
@@ -110,16 +113,19 @@ class Qt5ThreeDDialog(QDialog):
 
         clear_btn = QPushButton(translate("Clear"))
         clear_btn.clicked.connect(self._clear_selection)
+        clear_btn.setAutoDefault(False)
         footer_layout.addWidget(clear_btn)
 
         footer_layout.addStretch()
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setAutoDefault(False)
         footer_layout.addWidget(cancel_btn)
 
         ok_btn = QPushButton(translate("OK"))
         ok_btn.clicked.connect(self._ok_clicked)
+        ok_btn.setDefault(True)
         footer_layout.addWidget(ok_btn)
 
         layout.addLayout(footer_layout)
@@ -188,6 +194,8 @@ class Qt5ThreeDDialog(QDialog):
 def get_3d_column_selection() -> list[str] | None:
     """获取 3D 列选择"""
     dialog = Qt5ThreeDDialog()
+    if getattr(dialog, "_failed", False):
+        return None
     if dialog.exec_() == Qt5ThreeDDialog.Accepted:
         return dialog.result
     return None

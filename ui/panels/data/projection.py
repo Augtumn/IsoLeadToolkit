@@ -179,20 +179,36 @@ class DataPanelProjectionMixin:
         self._on_change()
 
     def _on_pca_dim_change(self):
-        """Handle PCA projection dimension changes."""
+        """Handle PCA projection dimension changes (sender-aware).
+
+        The RobustPCA X/Y spins share this handler; read the value from the
+        spin that actually emitted the change so editing an rpca spin is not
+        immediately overwritten by the PCA spin values.
+        """
         try:
-            x_idx = self.pca_x_spin.value() - 1
-            y_idx = self.pca_y_spin.value() - 1
+            sender = self.sender()
+            if sender is getattr(self, "rpca_x_spin", None):
+                x_idx = self.rpca_x_spin.value() - 1
+                y_idx = self.rpca_y_spin.value() - 1
+                self.pca_x_spin.blockSignals(True)
+                self.pca_x_spin.setValue(x_idx + 1)
+                self.pca_x_spin.blockSignals(False)
+                self.pca_y_spin.blockSignals(True)
+                self.pca_y_spin.setValue(y_idx + 1)
+                self.pca_y_spin.blockSignals(False)
+            else:
+                x_idx = self.pca_x_spin.value() - 1
+                y_idx = self.pca_y_spin.value() - 1
 
-            if hasattr(self, "rpca_x_spin"):
-                self.rpca_x_spin.blockSignals(True)
-                self.rpca_x_spin.setValue(x_idx + 1)
-                self.rpca_x_spin.blockSignals(False)
+                if hasattr(self, "rpca_x_spin"):
+                    self.rpca_x_spin.blockSignals(True)
+                    self.rpca_x_spin.setValue(x_idx + 1)
+                    self.rpca_x_spin.blockSignals(False)
 
-            if hasattr(self, "rpca_y_spin"):
-                self.rpca_y_spin.blockSignals(True)
-                self.rpca_y_spin.setValue(y_idx + 1)
-                self.rpca_y_spin.blockSignals(False)
+                if hasattr(self, "rpca_y_spin"):
+                    self.rpca_y_spin.blockSignals(True)
+                    self.rpca_y_spin.setValue(y_idx + 1)
+                    self.rpca_y_spin.blockSignals(False)
 
             state_gateway.set_pca_component_indices([x_idx, y_idx])
             logger.info("PCA dimensions changed to: PC%d vs PC%d", x_idx + 1, y_idx + 1)
@@ -297,6 +313,8 @@ class DataPanelProjectionMixin:
         """Refresh 2D axis selection combo boxes."""
         if not hasattr(self, "xaxis_combo") or not hasattr(self, "yaxis_combo"):
             return
+        if app_state.df_global is None:
+            return
 
         cols = [c for c in getattr(app_state, "data_cols", []) if c in app_state.df_global.columns]
         self.xaxis_combo.clear()
@@ -314,6 +332,15 @@ class DataPanelProjectionMixin:
                 self.xaxis_combo.setCurrentText(current[0])
             if current[1] in cols:
                 self.yaxis_combo.setCurrentText(current[1])
+        # The stored selection may reference columns that no longer exist
+        # (dataset changed); fall back to the first two columns and sync the
+        # state so the UI and the store never disagree.
+        if current[0] not in cols or current[1] not in cols:
+            if len(cols) >= 2:
+                fallback = [cols[0], cols[1]]
+                self.xaxis_combo.setCurrentText(fallback[0])
+                self.yaxis_combo.setCurrentText(fallback[1])
+                state_gateway.set_selected_2d_columns(fallback, confirmed=True)
 
     def _on_2d_axis_change(self):
         """Handle 2D axis selection changes."""

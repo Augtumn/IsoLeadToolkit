@@ -143,10 +143,12 @@ class IsochronErrorConfigDialog(QDialog):
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setAutoDefault(False)
         buttons.addWidget(cancel_btn)
 
         ok_btn = QPushButton(translate("OK"))
         ok_btn.clicked.connect(self._on_ok)
+        ok_btn.setDefault(True)
         buttons.addWidget(ok_btn)
 
         layout.addLayout(buttons)

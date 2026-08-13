@@ -153,6 +153,7 @@ class EndmemberAnalysisDialog(QDialog):
         self.slope_label = QLabel(f"{geo_slope:.6f}")
         param_layout.addWidget(self.slope_label, 2, 1)
         hint_label = QLabel(translate("(computed from decay constants)"))
+        hint_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         hint_label.setStyleSheet("color: gray; font-size: 11px;")
         param_layout.addWidget(hint_label, 2, 2, 1, 2)
 
@@ -179,6 +180,7 @@ class EndmemberAnalysisDialog(QDialog):
         # ---- 警告信息 ----
         self.warning_label = QLabel("")
         self.warning_label.setWordWrap(True)
+        self.warning_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         self.warning_label.setStyleSheet("color: #cc6600; font-weight: bold;")
         self.warning_label.setVisible(False)
         layout.addWidget(self.warning_label)
@@ -269,6 +271,11 @@ class EndmemberAnalysisDialog(QDialog):
             clamp_b = np.inf
 
         if getattr(self, "_endmember_worker", None) is not None and self._endmember_worker.isRunning():
+            QMessageBox.information(
+                self,
+                translate("Info"),
+                translate("An endmember search is already in progress."),
+            )
             return
 
         # Decide the input scope on the main thread; the worker closure must

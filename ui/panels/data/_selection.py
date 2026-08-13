@@ -143,6 +143,7 @@ class _DataPanelSelectionBuild:
 
         self.xaxis_combo = QComboBox()
         self.xaxis_combo.setEditable(False)
+        self.xaxis_combo.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         self.xaxis_combo.setStyleSheet("QComboBox { combobox-popup: 0; }")
         self.xaxis_combo.setMinimumWidth(150)
         twod_grid.addWidget(self.xaxis_combo, 0, 1)
@@ -153,6 +154,7 @@ class _DataPanelSelectionBuild:
 
         self.yaxis_combo = QComboBox()
         self.yaxis_combo.setEditable(False)
+        self.yaxis_combo.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         self.yaxis_combo.setStyleSheet("QComboBox { combobox-popup: 0; }")
         self.yaxis_combo.setMinimumWidth(150)
         twod_grid.addWidget(self.yaxis_combo, 1, 1)

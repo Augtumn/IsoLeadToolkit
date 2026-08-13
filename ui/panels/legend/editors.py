@@ -1,6 +1,8 @@
 """Legend panel palette and marker editor helpers."""
 from __future__ import annotations
 
+import logging
+
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QColor, QIcon, QPainter, QPixmap
 from PyQt5.QtWidgets import (
@@ -20,6 +22,8 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, state_gateway, translate
 from ui.icons import build_marker_icon
+
+logger = logging.getLogger(__name__)
 
 
 class LegendEditorsMixin:
@@ -143,7 +147,18 @@ class LegendEditorsMixin:
         down_btn.clicked.connect(lambda: _move_item(1))
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(dialog.accept)
+        # Validate BEFORE closing so the user never loses their input.
+        def _validate_and_accept():
+            if not name_edit.text().strip() or color_list.count() == 0:
+                QMessageBox.warning(
+                    dialog,
+                    translate("Warning"),
+                    translate("Please provide a name and at least one color."),
+                )
+                return
+            dialog.accept()
+
+        buttons.accepted.connect(_validate_and_accept)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
 
@@ -157,15 +172,12 @@ class LegendEditorsMixin:
             val = item.data(Qt.UserRole)
             if val:
                 colors.append(val)
-        if not name or not colors:
-            QMessageBox.warning(self, translate("Warning"), translate("Please provide a name and at least one color."))
-            return None
 
         try:
             from visualization.style_manager import style_manager_instance
             style_manager_instance.palettes[name] = colors
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to register palette in style manager: %s", exc)
 
         if not hasattr(app_state, 'custom_palettes'):
             state_gateway.set_custom_palettes({})
@@ -240,7 +252,7 @@ class LegendEditorsMixin:
         self._ensure_marker_shape_map()
         for label, marker in self._marker_shape_map.items():
             icon = build_marker_icon('#94a3b8', marker, size=16)
-            item = QListWidgetItem(icon, "")
+            item = QListWidgetItem(icon, label)
             item.setData(Qt.UserRole, marker)
             item.setToolTip(label)
             available_list.addItem(item)
@@ -251,7 +263,7 @@ class LegendEditorsMixin:
                 return
             marker = item.data(Qt.UserRole)
             icon = build_marker_icon('#94a3b8', marker, size=16)
-            new_item = QListWidgetItem(icon, "")
+            new_item = QListWidgetItem(icon, item.text())
             new_item.setData(Qt.UserRole, marker)
             new_item.setToolTip(item.toolTip())
             selected_list.addItem(new_item)
@@ -279,7 +291,18 @@ class LegendEditorsMixin:
         available_list.itemDoubleClicked.connect(lambda _item: _add_shape())
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(dialog.accept)
+        # Validate BEFORE closing so the user never loses their input.
+        def _validate_and_accept():
+            if not name_edit.text().strip() or selected_list.count() == 0:
+                QMessageBox.warning(
+                    dialog,
+                    translate("Warning"),
+                    translate("Please provide a name and at least one shape."),
+                )
+                return
+            dialog.accept()
+
+        buttons.accepted.connect(_validate_and_accept)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
 
@@ -293,9 +316,6 @@ class LegendEditorsMixin:
             marker = item.data(Qt.UserRole)
             if marker:
                 shapes.append(marker)
-        if not name or not shapes:
-            QMessageBox.warning(self, translate("Warning"), translate("Please provide a name and at least one shape."))
-            return None, None
 
         if not hasattr(app_state, 'custom_shape_sets'):
             state_gateway.set_custom_shape_sets({})

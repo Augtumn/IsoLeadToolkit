@@ -76,10 +76,12 @@ class Qt5DataConfigDialog(QDialog):
 
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setAutoDefault(False)
         footer_layout.addWidget(cancel_btn)
 
         apply_btn = QPushButton(translate("Apply"))
         apply_btn.clicked.connect(self._ok_clicked)
+        apply_btn.setDefault(True)
         footer_layout.addWidget(apply_btn)
 
         layout.addLayout(footer_layout)

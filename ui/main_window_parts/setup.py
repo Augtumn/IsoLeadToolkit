@@ -102,6 +102,7 @@ class MainWindowSetupMixin:
         legend_layout.setContentsMargins(8, 8, 8, 8)
         legend_layout.setSpacing(6)
         legend_title = QLabel(translate("Legend"))
+        legend_title.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         legend_title.setStyleSheet("font-weight: bold;")
         legend_layout.addWidget(legend_title)
 

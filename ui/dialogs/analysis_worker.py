@@ -60,13 +60,25 @@ class AnalysisWorker(QThread):
 
 
 def stop_analysis_worker(worker: Any, wait_ms: int = 5000) -> None:
-    """Cancel, wait for, and dispose of an analysis worker (dialog close)."""
+    """Cancel, wait for, and dispose of an analysis worker (dialog close).
+
+    When the worker does not stop within *wait_ms* it is left alive instead
+    of being destroyed mid-run — destroying a running QThread crashes with
+    "QThread: Destroyed while thread is still running".
+    """
     if worker is None:
         return
     try:
         worker.request_cancel()
         if worker.isRunning():
-            worker.wait(wait_ms)
+            stopped = worker.wait(wait_ms)
+            if not stopped:
+                logger.error(
+                    "Analysis worker still running after %sms; leaving it "
+                    "alive to avoid destroying a running thread",
+                    wait_ms,
+                )
+                return
         worker.deleteLater()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to stop analysis worker: %s", exc)

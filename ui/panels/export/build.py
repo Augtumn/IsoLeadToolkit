@@ -61,18 +61,25 @@ class ExportPanelBuildMixin:
         self.export_csv_button = QPushButton(translate("Export CSV"))
         self.export_csv_button.setProperty('translate_key', 'Export CSV')
         self.export_csv_button.setFixedWidth(200)
+        self.export_csv_button.setToolTip(
+            translate("Export selected rows, or all rows when nothing is selected")
+        )
         self.export_csv_button.clicked.connect(self._on_export_csv)
         export_layout.addWidget(self.export_csv_button, 0, Qt.AlignHCenter)
 
         self.export_excel_button = QPushButton(translate("Export Excel"))
         self.export_excel_button.setProperty('translate_key', 'Export Excel')
         self.export_excel_button.setFixedWidth(200)
+        self.export_excel_button.setToolTip(
+            translate("Export selected rows, or all rows when nothing is selected")
+        )
         self.export_excel_button.clicked.connect(self._on_export_excel)
         export_layout.addWidget(self.export_excel_button, 0, Qt.AlignHCenter)
 
         self.export_append_button = QPushButton(translate("Append to Excel"))
         self.export_append_button.setProperty('translate_key', 'Append to Excel')
         self.export_append_button.setFixedWidth(200)
+        self.export_append_button.setToolTip(translate("Append selected rows as a new sheet"))
         self.export_append_button.clicked.connect(self._on_export_append_excel)
         export_layout.addWidget(self.export_append_button, 0, Qt.AlignHCenter)
 
@@ -125,12 +132,16 @@ class ExportPanelBuildMixin:
         self.preview_image_button = QPushButton(translate("Preview Export"))
         self.preview_image_button.setProperty('translate_key', 'Preview Export')
         self.preview_image_button.setFixedWidth(160)
+        self.preview_image_button.setToolTip(
+            translate("Adjust parameters and save from the preview dialog")
+        )
         self.preview_image_button.clicked.connect(self._on_preview_image_clicked)
         button_row.addWidget(self.preview_image_button, 0, Qt.AlignHCenter)
 
         self.export_image_button = QPushButton(translate("Export Image"))
         self.export_image_button.setProperty('translate_key', 'Export Image')
         self.export_image_button.setFixedWidth(160)
+        self.export_image_button.setToolTip(translate("Save the figure directly with the current preset"))
         self.export_image_button.clicked.connect(self._on_export_image_clicked)
         button_row.addWidget(self.export_image_button, 0, Qt.AlignHCenter)
         image_layout.addLayout(button_row)
@@ -139,6 +150,7 @@ class ExportPanelBuildMixin:
         self.export_origin_button = QPushButton(translate("Export to Origin"))
         self.export_origin_button.setProperty('translate_key', 'Export to Origin')
         self.export_origin_button.setFixedWidth(160)
+        self.export_origin_button.setToolTip(translate("Send the current plot to an Origin project"))
         self.export_origin_button.clicked.connect(self._on_export_origin_clicked)
         origin_row.addWidget(self.export_origin_button, 0, Qt.AlignHCenter)
         image_layout.addLayout(origin_row)

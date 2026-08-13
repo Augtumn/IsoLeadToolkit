@@ -128,6 +128,11 @@ class MixingCalculatorDialog(QDialog):
             return
 
         if getattr(self, "_mixing_worker", None) is not None and self._mixing_worker.isRunning():
+            QMessageBox.information(
+                self,
+                translate("Info"),
+                translate("A mixing calculation is already in progress."),
+            )
             return
 
         def _calculate():

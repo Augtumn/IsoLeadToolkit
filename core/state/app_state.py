@@ -102,6 +102,11 @@ class AppState:
         if callback and callback not in self.language_listeners:
             self.language_listeners.append(callback)
 
+    def unregister_language_listener(self, callback: Callable[[], None]) -> None:
+        """Remove a previously registered language listener."""
+        if callback in self.language_listeners:
+            self.language_listeners.remove(callback)
+
     def notify_language_change(self) -> None:
         """Notify registered listeners about language changes."""
         for callback in list(self.language_listeners):

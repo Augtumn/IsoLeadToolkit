@@ -135,6 +135,7 @@ class Qt5LogViewerDialog(QDialog):
         # ── Footer with path ───────────────────────────────────────
         self.path_label = QLabel("")
         self.path_label.setWordWrap(True)
+        self.path_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         self.path_label.setStyleSheet("color: #64748b;")
         layout.addWidget(self.path_label)
 

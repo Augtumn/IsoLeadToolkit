@@ -57,6 +57,19 @@ class DisplayThemeMixin:
             QMessageBox.warning(self, translate("Warning"), translate("Please enter a theme name."))
             return
 
+        # Overwriting an existing theme is destructive; confirm first.
+        existing = getattr(app_state, 'saved_themes', {}) or {}
+        if name in existing:
+            reply = QMessageBox.question(
+                self,
+                translate("Confirm"),
+                translate("Overwrite theme '{name}'?").format(name=name),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if reply != QMessageBox.Yes:
+                return
+
         if not hasattr(app_state, 'saved_themes'):
             state_gateway.set_saved_themes({})
 
