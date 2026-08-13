@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "isotopesanalyse"
 version = "0.1.0"
@@ -24,6 +28,20 @@ dependencies = [
     "pyqt5-sip>=12.13",
     "adjusttext>=1.3.0",
     "originpro>=1.1.15",
+]
+
+# Flat-layout project (ui/, core/, data/, ... live at the repo root);
+# explicit discovery prevents setuptools from rejecting the build with
+# "Multiple top-level packages discovered in a flat-layout".
+[tool.setuptools.packages.find]
+include = [
+    "core*",
+    "data*",
+    "ui*",
+    "visualization*",
+    "plugins*",
+    "application*",
+    "utils*",
 ]
 
 [project.optional-dependencies]
