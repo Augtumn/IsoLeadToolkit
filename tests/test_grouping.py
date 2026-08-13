@@ -10,10 +10,14 @@ from core import app_state, state_gateway
 from visualization.plotting.grouping import (
     PARENT_SHAPE_CYCLE,
     all_parents,
+    descendant_groups,
+    is_descendant,
+    is_parent,
     parent_children,
     parent_of_group,
     parent_shape,
     resolve_group_marker,
+    top_parent_of_group,
 )
 
 
@@ -79,6 +83,47 @@ def test_parent_children_and_all_parents() -> None:
     assert parent_children(state, "second") == ["B", "C"]
     assert all_parents(state) == ["first", "second"]
     assert parent_children(state, "missing") == []
+
+
+def test_nested_parents_top_level_and_descendants() -> None:
+    state = _FakeState()
+    state.parent_groups = {
+        "root": ["sub", "leafA"],
+        "sub": ["leafB", "leafC"],
+    }
+    # Only the top-level parent is listed as a root block.
+    assert all_parents(state) == ["root"]
+    assert is_parent(state, "sub") is True
+    assert is_parent(state, "leafA") is False
+    # Direct parent of a nested parent is the innermost container.
+    assert parent_of_group(state, "sub") == "root"
+    assert parent_of_group(state, "leafB") == "sub"
+    # Top-level ancestor is resolved by walking up.
+    assert top_parent_of_group(state, "leafB") == "root"
+    assert top_parent_of_group(state, "leafA") == "root"
+    assert top_parent_of_group(state, "sub") == "root"
+    # Descendants expand recursively, depth-first.
+    assert descendant_groups(state, "root") == ["leafB", "leafC", "leafA"]
+    assert descendant_groups(state, "sub") == ["leafB", "leafC"]
+    # Cycle detection.
+    assert is_descendant(state, "sub", "root") is True
+    assert is_descendant(state, "root", "sub") is False
+
+
+def test_nested_parent_shape_inherits_root() -> None:
+    state = _FakeState()
+    state.parent_groups = {
+        "root": ["sub"],
+        "sub": ["A"],
+    }
+    state.group_marker_map = {"A": "^"}
+    # Automatic: root takes cycle[0], nested parents inherit it.
+    assert parent_shape(state, "root") == PARENT_SHAPE_CYCLE[0]
+    assert parent_shape(state, "sub") == PARENT_SHAPE_CYCLE[0]
+    assert resolve_group_marker(state, "A") == PARENT_SHAPE_CYCLE[0]
+    # Manual override on the root applies to the whole subtree.
+    state.parent_shape_map = {"root": "X"}
+    assert resolve_group_marker(state, "A") == "X"
 
 
 def test_gateway_set_parent_groups_syncs_store_and_state() -> None:

@@ -15,7 +15,11 @@ _DEFAULT_SHAPE = "o"
 
 
 def parent_of_group(state: Any, group: Any) -> str | None:
-    """Return the parent group name for *group*, or None if unassigned."""
+    """Return the direct parent group name for *group*, or None if unassigned.
+
+    A parent group can itself be a child of another parent (nested levels);
+    the direct parent is the innermost container.
+    """
     parents = getattr(state, "parent_groups", None) or {}
     for parent, children in parents.items():
         if group in children:
@@ -23,20 +27,94 @@ def parent_of_group(state: Any, group: Any) -> str | None:
     return None
 
 
-def parent_shape(state: Any, parent: str) -> str:
-    """Return the marker shape assigned to a parent group.
+def is_parent(state: Any, name: Any) -> bool:
+    """True when *name* is itself a parent group (internal tree node)."""
+    return str(name) in (getattr(state, "parent_groups", None) or {})
 
-    A manual override in ``parent_shape_map`` wins; otherwise the shape
-    follows the parent creation order (dict insertion order), which is
-    stable across session save/restore because JSON preserves key order.
+
+def all_parents(state: Any) -> list[str]:
+    """Return TOP-LEVEL parent group names in creation order.
+
+    Parents nested inside another parent are not listed here; they render
+    inside their ancestor's block.
     """
+    parents = getattr(state, "parent_groups", None) or {}
+    nested: set[str] = set()
+    for children in parents.values():
+        for child in children:
+            if child in parents:
+                nested.add(child)
+    return [name for name in parents if name not in nested]
+
+
+def top_parent_of_group(state: Any, group: Any) -> str | None:
+    """Return the TOP-LEVEL parent of *group* (walking nested parents up)."""
+    current: Any = group
+    seen: set[str] = set()
+    while True:
+        parent = parent_of_group(state, current)
+        if parent is None:
+            return None if current == group else str(current)
+        if parent in seen:
+            return None  # cycle guard (should not happen)
+        seen.add(parent)
+        current = parent
+
+
+def descendant_groups(state: Any, parent: str) -> list[str]:
+    """Return all data groups nested (at any depth) under *parent*.
+
+    Nested parent names are expanded recursively; their own children are
+    included. Order is depth-first following the children lists.
+    """
+    parents = getattr(state, "parent_groups", None) or {}
+    result: list[str] = []
+    seen: set[str] = set()
+
+    def _walk(name: str) -> None:
+        if name in seen:
+            return
+        seen.add(name)
+        for child in parents.get(name, []) or []:
+            if child in parents:
+                _walk(child)
+            elif child not in result:
+                result.append(child)
+
+    _walk(parent)
+    return result
+
+
+def is_descendant(state: Any, candidate: str, ancestor: str) -> bool:
+    """True when *candidate* is *ancestor* itself or nested under it."""
+    if candidate == ancestor:
+        return True
+    parents = getattr(state, "parent_groups", None) or {}
+    for parent in (ancestor,):
+        for child in parents.get(parent, []) or []:
+            if child in parents and is_descendant(state, candidate, child):
+                return True
+            if child == candidate:
+                return True
+    return False
+
+
+def parent_shape(state: Any, parent: str) -> str:
+    """Return the marker shape assigned to a TOP-LEVEL parent group.
+
+    Nested parents inherit the shape of their top-level ancestor, so all
+    groups merged under one root share one shape. A manual override in
+    ``parent_shape_map`` wins; otherwise the shape follows the parent
+    creation order (dict insertion order).
+    """
+    root = top_parent_of_group(state, parent) or parent
     overrides = getattr(state, "parent_shape_map", None) or {}
-    manual = overrides.get(parent)
+    manual = overrides.get(root)
     if manual:
         return str(manual)
-    parents = list((getattr(state, "parent_groups", None) or {}).keys())
+    parents = all_parents(state)
     try:
-        idx = parents.index(parent)
+        idx = parents.index(root)
     except ValueError:
         idx = 0
     cycle = PARENT_SHAPE_CYCLE or (_DEFAULT_SHAPE,)
@@ -60,8 +138,3 @@ def parent_children(state: Any, parent: str) -> list[str]:
     """Return the ordered children of *parent* (may include stale names)."""
     parents = getattr(state, "parent_groups", None) or {}
     return list(parents.get(parent, []) or [])
-
-
-def all_parents(state: Any) -> list[str]:
-    """Return parent group names in creation order."""
-    return list((getattr(state, "parent_groups", None) or {}).keys())
