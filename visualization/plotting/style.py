@@ -118,7 +118,9 @@ def refresh_plot_style() -> None:
                 if sc is None:
                     continue
                 try:
-                    sc.set_sizes(base_size)
+                    # matplotlib >=3.10 rejects scalar sizes (len() of 0-d
+                    # array raises TypeError); broadcast to per-point sizes.
+                    sc.set_sizes([base_size] * len(sc.get_offsets()))
                     sc.set_alpha(base_alpha)
                     sc.set_edgecolor(resolved_edgecolor)
                     sc.set_linewidths(resolved_edgewidth)
