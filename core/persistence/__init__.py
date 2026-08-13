@@ -15,8 +15,12 @@ The facade is deliberately thin: schemas live in ``schema.py``, atomic I/O in
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import time
+import zipfile
+from pathlib import Path
 from typing import Any
 
 from ..config import CONFIG
@@ -26,6 +30,10 @@ from .paths import EXIT_OK_FILE, SESSION_FILE, UI_STATE_FILE
 from .schema import SESSION_FIELDS, UI_STATE_FIELDS, build_payload
 
 logger = logging.getLogger(__name__)
+
+#: Session archive format tag and version (export/import feature).
+SESSION_ARCHIVE_FORMAT = "isotopes-session"
+SESSION_ARCHIVE_VERSION = 1
 
 #: Default debounce: save at most once per interval while state keeps changing.
 DEFAULT_AUTOSAVE_INTERVAL = 30.0
@@ -76,13 +84,10 @@ def save_all(store: Any) -> bool:
     its version cap on the next start.
     """
     try:
-        snapshot = store.snapshot()
-        session_payload = build_payload(snapshot, SESSION_FIELDS)
-        session_payload["session_version"] = CONFIG.get("session_version", 1)
+        session_payload, ui_payload = _build_payloads(store)
         session_payload["saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         atomic_write_json(SESSION_FILE, _json_safe(session_payload))
 
-        ui_payload = build_payload(snapshot, UI_STATE_FIELDS)
         atomic_write_json(UI_STATE_FILE, _json_safe(ui_payload))
         return True
     except Exception as exc:
@@ -240,3 +245,141 @@ def consume_exit_marker() -> bool:
     except OSError:
         logger.exception("Failed to remove clean-exit marker")
     return was_clean
+
+
+def _build_payloads(store: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Extract the (session, ui_state) payload pair from a store snapshot."""
+    snapshot = store.snapshot()
+    session_payload = build_payload(snapshot, SESSION_FIELDS)
+    session_payload["session_version"] = CONFIG.get("session_version", 1)
+    ui_payload = build_payload(snapshot, UI_STATE_FIELDS)
+    return session_payload, ui_payload
+
+
+def export_session(store: Any, path: Any, *, include_data: bool = True) -> bool:
+    """Export the current session (config + loaded data) as a ZIP archive.
+
+    Archive layout (single portable file):
+    - ``manifest.json``  — format tag, archive version, saved_at, has_data
+    - ``session.json``   — SESSION_FIELDS payload (algorithm, params, ...)
+    - ``ui_state.json``  — UI_STATE_FIELDS payload (styles, legend, presets)
+    - ``data.csv``       — the loaded ``df_global`` (when present and
+      ``include_data``), utf-8-sig compatible
+
+    Writes are atomic (tmp + rename). Returns True on success.
+    """
+    try:
+        session_payload, ui_payload = _build_payloads(store)
+        snapshot = store.snapshot()
+        df = snapshot.get("df_global")
+        has_data = bool(include_data and df is not None and len(df) > 0)
+
+        manifest = {
+            "format": SESSION_ARCHIVE_FORMAT,
+            "version": SESSION_ARCHIVE_VERSION,
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "has_data": has_data,
+            "data_file": "data.csv" if has_data else None,
+        }
+
+        path = _as_path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = Path(str(path) + ".tmp")
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "manifest.json",
+                json.dumps(manifest, indent=2, ensure_ascii=False),
+            )
+            archive.writestr(
+                "session.json",
+                json.dumps(_json_safe(session_payload), indent=2, ensure_ascii=False),
+            )
+            archive.writestr(
+                "ui_state.json",
+                json.dumps(_json_safe(ui_payload), indent=2, ensure_ascii=False),
+            )
+            if has_data:
+                archive.writestr("data.csv", df.to_csv(index=False))
+        os.replace(tmp_path, path)
+        logger.info(
+            "Session exported to %s (data=%s)",
+            path,
+            "yes" if has_data else "no",
+        )
+        return True
+    except Exception as exc:
+        logger.exception("Failed to export session to %s: %s", path, exc)
+        return False
+
+
+def import_session(path: Any) -> dict[str, Any] | None:
+    """Read and validate a session archive produced by ``export_session``.
+
+    Returns a dict with keys ``session``, ``ui_state``, ``data_csv`` (raw CSV
+    text or None) and ``has_data``; returns None when the file is missing,
+    unreadable, not a session archive, or from a newer version. Nothing is
+    applied to the live state here — the caller decides how to apply it.
+    """
+    try:
+        path = _as_path(path)
+        if not path.exists():
+            logger.warning("Session archive not found: %s", path)
+            return None
+        with zipfile.ZipFile(path, "r") as archive:
+            names = set(archive.namelist())
+            if "manifest.json" not in names:
+                logger.warning("Session archive %s has no manifest", path)
+                return None
+            manifest = json.loads(archive.read("manifest.json"))
+            if manifest.get("format") != SESSION_ARCHIVE_FORMAT:
+                logger.warning(
+                    "File %s is not a %s archive (format=%r)",
+                    path,
+                    SESSION_ARCHIVE_FORMAT,
+                    manifest.get("format"),
+                )
+                return None
+            version = int(manifest.get("version", 1) or 1)
+            if version > SESSION_ARCHIVE_VERSION:
+                logger.warning(
+                    "Session archive %s is version %s (supported: <=%s)",
+                    path,
+                    version,
+                    SESSION_ARCHIVE_VERSION,
+                )
+                return None
+
+            session_payload = (
+                json.loads(archive.read("session.json"))
+                if "session.json" in names
+                else {}
+            )
+            ui_payload = (
+                json.loads(archive.read("ui_state.json"))
+                if "ui_state.json" in names
+                else {}
+            )
+            data_csv = None
+            has_data = bool(manifest.get("has_data") and "data.csv" in names)
+            if has_data:
+                data_csv = archive.read("data.csv").decode("utf-8-sig")
+            logger.info(
+                "Session archive %s loaded (version %s, data=%s)",
+                path,
+                version,
+                "yes" if has_data else "no",
+            )
+            return {
+                "session": session_payload,
+                "ui_state": ui_payload,
+                "data_csv": data_csv,
+                "has_data": has_data,
+            }
+    except Exception as exc:
+        logger.exception("Failed to import session from %s: %s", path, exc)
+        return None
+
+
+def _as_path(path: Any) -> Path:
+    """Normalize a str/Path archive path."""
+    return Path(str(path))

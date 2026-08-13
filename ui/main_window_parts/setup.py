@@ -169,6 +169,16 @@ class MainWindowSetupMixin:
 
         self.file_menu.addSeparator()
 
+        export_session_action = QAction(translate("Export Session..."), self)
+        export_session_action.triggered.connect(self._export_session)
+        self.file_menu.addAction(export_session_action)
+
+        import_session_action = QAction(translate("Import Session..."), self)
+        import_session_action.triggered.connect(self._import_session)
+        self.file_menu.addAction(import_session_action)
+
+        self.file_menu.addSeparator()
+
         exit_action = QAction(translate("Exit"), self)
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self.close)
@@ -180,7 +190,13 @@ class MainWindowSetupMixin:
         log_action.triggered.connect(self._show_log_viewer)
         self.file_menu.addAction(log_action)
 
-        self._menu_actions = {"reload": reload_action, "exit": exit_action, "log": log_action}
+        self._menu_actions = {
+            "reload": reload_action,
+            "exit": exit_action,
+            "log": log_action,
+            "export_session": export_session_action,
+            "import_session": import_session_action,
+        }
 
         panels_menu = menubar.addMenu(translate("Panels"))
         self.panels_menu = panels_menu

@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-14 · 会话导出/导入）
+
+文件菜单新增 **Export Session... / Import Session...**（i18n zh/en 各 +11 键，共 1113 键）：
+
+- **归档格式**：单文件 ZIP（`manifest.json` + `session.json` + `ui_state.json` + `data.csv`），`core/persistence` 新增 `export_session`/`import_session`（format 标签 + 版本上限拒绝 + 原子写 + 损坏拒绝）；数据为已加载的 `df_global`（CSV，utf-8-sig 兼容），无数据时仅配置。
+- **导入应用**：新用例 `application/use_cases/session_io.py`——先恢复数据契约字段（group/data cols、路径）→ `hydrate_state_from_dataframe` 恢复数据 → 再 `restore_snapshot` 全量配置（避免列选择重置清掉可见组）→ 语言切换；数据恢复失败仅告警，配置照常恢复。
+- **UI**：`lifecycle.py` 处理器（保存对话框默认 `session.session.zip`、导入前覆盖确认、成功后刷新渲染并立即落盘）。
+- **测试**：+7 用例（`tests/test_session_archive.py`：带数据/无数据导出、往返、版本拒绝、非归档拒绝、端到端导入恢复、数据契约守卫）。全套测试通过、守护脚本 TOTAL=0。
+
 ## 阶段进展（2026-08-14 · 持久化统一批，persistence_plan.md 全量实施）
 
 按 `docs/persistence_plan.md` 逐项落地（P1-P7 全部解决）：

@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 
 from PyQt5.QtCore import QSettings, Qt
-from PyQt5.QtWidgets import QDockWidget
+from PyQt5.QtWidgets import QDockWidget, QFileDialog, QMessageBox
 
 from core import app_state, state_gateway, translate
 
@@ -13,6 +13,114 @@ logger = logging.getLogger(__name__)
 
 class MainWindowLifecycleMixin:
     """Window lifecycle methods and action callbacks."""
+
+    def _session_archive_filter(self) -> str:
+        return translate("Isotope Session Archive (*.zip)")
+
+    def _export_session(self) -> None:
+        """Export the current session (config + loaded data) to a ZIP archive."""
+        default_path = f"{app_state.file_path or 'session'}.session.zip"
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            translate("Export Session..."),
+            default_path,
+            self._session_archive_filter(),
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".zip"):
+            path += ".zip"
+        try:
+            from application.use_cases import export_session
+
+            if export_session(path):
+                logger.info("Session exported to %s", path)
+                self.statusBar().showMessage(
+                    translate("Session exported to {path}").format(path=path),
+                    5000,
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    translate("Export Session..."),
+                    translate("Failed to export session: {error}").format(
+                        error=translate("Unknown error")
+                    ),
+                )
+        except Exception as exc:
+            logger.exception("Session export failed")
+            QMessageBox.warning(
+                self,
+                translate("Export Session..."),
+                translate("Failed to export session: {error}").format(error=exc),
+            )
+
+    def _import_session(self) -> None:
+        """Import a session archive (config + optional data) into the app."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            translate("Import Session..."),
+            "",
+            self._session_archive_filter(),
+        )
+        if not path:
+            return
+        reply = QMessageBox.question(
+            self,
+            translate("Import Session"),
+            translate("Importing a session will replace current settings. Continue?"),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+        try:
+            from application.use_cases import import_session
+
+            ok, flag = import_session(path)
+        except Exception as exc:
+            logger.exception("Session import failed")
+            QMessageBox.warning(
+                self,
+                translate("Import Session"),
+                translate("Failed to import session: {error}").format(error=exc),
+            )
+            return
+
+        if not ok:
+            QMessageBox.warning(
+                self,
+                translate("Import Session"),
+                translate(
+                    "The session file is not valid or was created by a newer version."
+                ),
+            )
+            return
+
+        # Refresh the plot with the imported data/settings.
+        self._refresh_plot()
+        try:
+            from core import save_all
+
+            save_all(state_gateway)
+        except Exception:
+            pass
+
+        if flag == "data_failed":
+            QMessageBox.warning(
+                self,
+                translate("Import Session"),
+                translate(
+                    "Session settings were imported, but the saved data could "
+                    "not be restored."
+                ),
+            )
+        else:
+            QMessageBox.information(
+                self,
+                translate("Import Session"),
+                translate("Session imported successfully."),
+            )
 
     def _refresh_plot(self):
         self._apply_legend_panel_layout()

@@ -7,7 +7,9 @@ from .session import clear_session_params, get_temp_dir_size, load_session_param
 from .persistence import (
     atomic_write_json,
     consume_exit_marker,
+    export_session,
     extract_legacy_projection_presets,
+    import_session,
     install_autosave,
     load_all,
     load_persistent_cache,
@@ -33,6 +35,8 @@ __all__ = [
     'load_ui_state',
     'load_persistent_cache',
     'extract_legacy_projection_presets',
+    'export_session',
+    'import_session',
     'install_autosave',
     'mark_clean_exit',
     'consume_exit_marker',
