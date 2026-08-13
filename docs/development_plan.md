@@ -2,6 +2,17 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-12 · 全库审查修复批，16 commits）
+
+基于四专项只读审查（data/plugins、ui、visualization/utils、tests/scripts/docs/core）与第一手验证，按严重度从高到低修复 52 个文件（+759/-234），全部 372 测试通过、5 守护脚本 TOTAL=0、release_check 13/13：
+
+- **P0 崩溃/数据丢失**：`style.py` 标量 `set_sizes` 崩溃（matplotlib ≥3.10 拒绝 0 维数组）；QThread 退役管理（退休列表 + wait/deleteLater + 退出取消）；线型对话框等 9 处原地状态修改改走 gateway（拷贝后提交）；渲染失败画布一致性（clear 推迟 + 失败重绘）；`load_dataset` 无对话框路径 KeyError 死路径。
+- **P0 静默失效**：overlay 样式刷新单复数键统一（并修正掩盖问题的单测）；异步嵌入路径接入 LRU 缓存（worker 写回 + 命中短路）；CI 触发分支 `master`→`main` + 完整依赖。
+- **P1**：插件判空/管理器 try 包围/api_version 校验；`predict_threshold` 回写、'nan' 幽灵区域、SMOTE CV 数据泄漏；dispatch 未知 action 告警、overlay 开关默认值对齐；EPSILON 保号截断、York 回归 NaN/分母守卫、`calculate_model_kappa` 形参名实一致；`LoggerWriter.isatty`/level-only 着色/`logger.exception` 统一；`_notify_listeners` 死调用、sheet 空窗、置信度 double-fire、draw_event 双刷、主题加载 blockSignals、导出 Figure 泄漏、日志尾部读取。
+- **P2**：build.spec 补 assets、application 门面 `__all__` 统一、params.json 原子写、new_plugin 名称校验、README/CLAUDE.md/architecture.md 数字与结构刷新。
+
+**遗留（未改，建议单独排期）**：测试 fixture 化与快照 schema 程序化生成、ML 对话框移入 QThread、死代码与面板重复代码清理。
+
 ## 阶段进展（2026-05-19 · A8 发布工程化第一百九十五批）
 
 - A8 发布工程化 — 自动化质量门禁与性能基线落地：
