@@ -61,8 +61,12 @@ class ExportPanelOriginExportMixin:
         )
         if not file_path:
             return
-        if not file_path.lower().endswith(".opju"):
-            file_path += ".opju"
+        from pathlib import Path as _Path
+
+        target = _Path(file_path)
+        if target.suffix.lower() != ".opju":
+            # Replace any stray extension instead of appending a second one.
+            file_path = str(target.with_suffix(".opju"))
 
         try:
             from application.use_cases.export_origin import export_to_origin

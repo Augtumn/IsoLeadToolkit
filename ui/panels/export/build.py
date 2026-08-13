@@ -149,5 +149,6 @@ class ExportPanelBuildMixin:
         layout.addWidget(section_toolbox)
 
         self._on_image_preset_changed()
+        self._is_initialized = True
         layout.addStretch()
         return widget

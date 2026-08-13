@@ -52,7 +52,6 @@ class ExportPanelDataExportMixin:
                 pass
         return {
             'df_global': app_state.df_global,
-            'algorithm': render_mode,
             'embedding': embedding,
             'embedding_type': embedding_type,
             'active_subset_indices': app_state.active_subset_indices,
@@ -62,20 +61,12 @@ class ExportPanelDataExportMixin:
             'render_mode': getattr(app_state, 'render_mode', None),
         }
 
-    def _build_export_df(self, selected_indices):
-        """构建导出 DataFrame，降维算法附加嵌入坐标和参数信息"""
-        context = self._current_export_context()
-        return build_export_dataframe(
-            selected_indices=selected_indices,
-            **context,
-        )
-
     @staticmethod
     def _resolve_export_indices():
         """Return the indices to export — selected rows, or all rows."""
         sel = getattr(app_state, "selected_indices", None)
         if sel:
-            return list(sel)
+            return sorted(sel)
         df = getattr(app_state, "df_global", None)
         if df is not None:
             return list(range(len(df)))
