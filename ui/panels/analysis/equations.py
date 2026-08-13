@@ -370,7 +370,8 @@ class AnalysisPanelEquationMixin:
         save_button = QPushButton(translate("Save"))
 
         def _apply():
-            style_ref = getattr(app_state, 'line_styles', {}).setdefault(style_key, {})
+            current_styles = dict(getattr(app_state, 'line_styles', {}) or {})
+            style_ref = dict(current_styles.get(style_key, {}) or {})
             style_ref['alpha'] = float(alpha_spin.value())
             style_ref['linewidth'] = float(width_spin.value())
             style_ref['fill'] = bool(fill_checkbox.isChecked())
@@ -433,6 +434,9 @@ class AnalysisPanelEquationMixin:
                 state_gateway.set_kde_style(legacy_payload)
             else:
                 state_gateway.set_marginal_kde_style(legacy_payload)
+
+            current_styles[style_key] = style_ref
+            state_gateway.set_line_styles(current_styles)
 
             if swatch is not None:
                 apply_color_swatch(swatch, '#e2e8f0')

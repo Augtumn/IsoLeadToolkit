@@ -118,8 +118,13 @@ class LegendBuildMixin:
         if outside_location not in self.legend_outside_buttons:
             outside_location = None
 
-        state_gateway.set_legend_position(inside_location)
-        state_gateway.set_legend_location(outside_location)
+        # Only write normalized position state when it actually differs:
+        # dispatching during panel construction would otherwise fire an
+        # unnecessary observer/sync cycle on every build.
+        if getattr(app_state, 'legend_position', None) != inside_location:
+            state_gateway.set_legend_position(inside_location)
+        if getattr(app_state, 'legend_location', None) != outside_location:
+            state_gateway.set_legend_location(outside_location)
 
         self._set_legend_inside_position_button(inside_location)
         self._set_legend_outside_position_button(outside_location)

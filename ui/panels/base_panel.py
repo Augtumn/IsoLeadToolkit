@@ -329,20 +329,24 @@ class BasePanel(QWidget):
         if legend_frame_edge_edit is not None:
             style_updates['legend_frame_edgecolor'] = legend_frame_edge_edit.text() or '#cbd5f5'
 
-        # ---- line_styles 同步 ----
+        # ---- line_styles 同步（拷贝后经 gateway 提交，避免被 store 回滚） ----
         if hasattr(app_state, 'line_styles'):
-            app_state.line_styles.setdefault('model_curve', {})['linewidth'] = float(
-                style_updates.get('model_curve_width', app_state.model_curve_width)
-            )
-            app_state.line_styles.setdefault('paleoisochron', {})['linewidth'] = float(
-                style_updates.get('paleoisochron_width', app_state.paleoisochron_width)
-            )
-            app_state.line_styles.setdefault('model_age_line', {})['linewidth'] = float(
-                style_updates.get('model_age_line_width', app_state.model_age_line_width)
-            )
-            app_state.line_styles.setdefault('isochron', {})['linewidth'] = float(
-                style_updates.get('isochron_line_width', app_state.isochron_line_width)
-            )
+            line_styles = dict(getattr(app_state, 'line_styles', {}) or {})
+            line_width_updates = {
+                'model_curve': float(style_updates.get('model_curve_width', app_state.model_curve_width)),
+                'paleoisochron': float(style_updates.get('paleoisochron_width', app_state.paleoisochron_width)),
+                'model_age_line': float(style_updates.get('model_age_line_width', app_state.model_age_line_width)),
+                'isochron': float(style_updates.get('isochron_line_width', app_state.isochron_line_width)),
+            }
+            changed = False
+            for key, width in line_width_updates.items():
+                entry = dict(line_styles.get(key, {}) or {})
+                if entry.get('linewidth') != width:
+                    entry['linewidth'] = width
+                    line_styles[key] = entry
+                    changed = True
+            if changed:
+                state_gateway.set_line_styles(line_styles)
 
         # ---- 保存快照（撤销用） ----
         self._style_snapshot = {

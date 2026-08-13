@@ -202,9 +202,10 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
     save_btn = QPushButton(translate("Save"))
 
     def _apply():
-        if not hasattr(app_state, 'line_styles'):
-            state_gateway.set_line_styles({})
-        style_ref = app_state.line_styles.setdefault(style_key, {})
+        # Copy-then-submit: mutating app_state.line_styles in place is
+        # silently rolled back by the next StateStore sync, losing edits.
+        current_styles = dict(getattr(app_state, 'line_styles', {}) or {})
+        style_ref = dict(current_styles.get(style_key, {}) or {})
         if auto_color_check.isChecked():
             style_ref['color'] = None
             new_swatch = '#e2e8f0'
@@ -215,6 +216,23 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         style_ref['linewidth'] = float(width_spin.value())
         style_ref['linestyle'] = style_combo.currentText()
         style_ref['alpha'] = float(alpha_spin.value())
+
+        if label_text_edit is not None:
+            style_ref['label_text'] = label_text_edit.text().strip()
+        if label_size_spin is not None:
+            style_ref['label_fontsize'] = float(label_size_spin.value())
+        if label_bg_check is not None:
+            style_ref['label_background'] = bool(label_bg_check.isChecked())
+        if label_pos_combo is not None:
+            style_ref['label_position'] = label_pos_combo.currentData() or 'auto'
+        if label_bg_check is not None and label_bg_color_swatch is not None:
+            label_color = normalize_color_hex(label_bg_color_swatch.property('color_value') or '', '#ffffff')
+            style_ref['label_bg_color'] = label_color or '#ffffff'
+        if label_bg_alpha_spin is not None:
+            style_ref['label_bg_alpha'] = float(label_bg_alpha_spin.value())
+
+        current_styles[style_key] = style_ref
+        state_gateway.set_line_styles(current_styles)
 
         if style_key == 'model_curve':
             state_gateway.set_model_curve_width(style_ref['linewidth'])
@@ -233,20 +251,6 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
                 state_gateway.set_isochron_label_options(options)
         elif style_key == 'selected_isochron':
             state_gateway.set_selected_isochron_line_width(style_ref['linewidth'])
-
-        if label_text_edit is not None:
-            style_ref['label_text'] = label_text_edit.text().strip()
-        if label_size_spin is not None:
-            style_ref['label_fontsize'] = float(label_size_spin.value())
-        if label_bg_check is not None:
-            style_ref['label_background'] = bool(label_bg_check.isChecked())
-        if label_pos_combo is not None:
-            style_ref['label_position'] = label_pos_combo.currentData() or 'auto'
-        if label_bg_check is not None and label_bg_color_swatch is not None:
-            label_color = normalize_color_hex(label_bg_color_swatch.property('color_value') or '', '#ffffff')
-            style_ref['label_bg_color'] = label_color or '#ffffff'
-        if label_bg_alpha_spin is not None:
-            style_ref['label_bg_alpha'] = float(label_bg_alpha_spin.value())
 
         _update_external_swatch(swatch, new_swatch)
         dialog.accept()

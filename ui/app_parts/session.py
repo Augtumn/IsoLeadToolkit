@@ -38,8 +38,12 @@ class Qt5AppSessionMixin:
         state_gateway.set_algorithm(session_data.get("algorithm", "UMAP"))
         logger.info("Algorithm from session: %s", app_state.algorithm)
 
-        app_state.umap_params.update(session_data.get("umap_params", {}))
-        app_state.tsne_params.update(session_data.get("tsne_params", {}))
+        saved_umap = session_data.get("umap_params") or {}
+        saved_tsne = session_data.get("tsne_params") or {}
+        if saved_umap:
+            state_gateway.set_umap_params({**dict(app_state.umap_params), **saved_umap})
+        if saved_tsne:
+            state_gateway.set_tsne_params({**dict(app_state.tsne_params), **saved_tsne})
         state_gateway.set_point_size(session_data.get("point_size", app_state.point_size))
 
         preserve_import_mode = bool(getattr(app_state, "preserve_import_render_mode", False))

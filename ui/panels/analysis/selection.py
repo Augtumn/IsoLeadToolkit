@@ -74,7 +74,7 @@ class AnalysisPanelSelectionMixin:
     def _clear_selection_only(self):
         """Clear selection and refresh overlays."""
         if app_state.selected_indices:
-            app_state.selected_indices.clear()
+            state_gateway.clear_selected_indices()
         try:
             from visualization.events import refresh_selection_overlay
 

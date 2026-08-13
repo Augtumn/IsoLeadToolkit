@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QWidget
 
 from core import CONFIG, app_state, state_gateway, translate
 from visualization.plotting.style import configure_constrained_layout
@@ -116,7 +116,9 @@ class DisplayThemeMixin:
             'adjust_text_time_lim': self.adjust_time_lim_spin.value() if self.adjust_time_lim_spin else 0.25,
         }
 
-        app_state.saved_themes[name] = theme_data
+        saved_themes = dict(getattr(app_state, 'saved_themes', {}) or {})
+        saved_themes[name] = theme_data
+        state_gateway.set_saved_themes(saved_themes)
 
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         try:
@@ -145,6 +147,19 @@ class DisplayThemeMixin:
             return
 
         data = app_state.saved_themes[name]
+
+        # Applying a theme touches ~50 widgets; block their signals so the
+        # single _on_style_change() at the end performs one refresh instead
+        # of dozens of chained dispatches.
+        find_children = getattr(self, 'findChildren', None)
+        blocked_widgets = []
+        if callable(find_children):
+            blocked_widgets = [
+                w for w in find_children(QWidget)
+                if not w.signalsBlocked()
+            ]
+            for w in blocked_widgets:
+                w.blockSignals(True)
 
         if self.grid_check:
             self.grid_check.setChecked(bool(data.get('grid', False)))
@@ -303,6 +318,9 @@ class DisplayThemeMixin:
         state_gateway.set_legend_position(legend_inside)
         self._set_legend_position_button(legend_inside, legend_outside)
 
+        for w in blocked_widgets:
+            w.blockSignals(False)
+
         self._on_style_change()
 
     def _delete_theme(self):
@@ -324,7 +342,9 @@ class DisplayThemeMixin:
             return
 
         if hasattr(app_state, 'saved_themes') and name in app_state.saved_themes:
-            del app_state.saved_themes[name]
+            saved_themes = dict(getattr(app_state, 'saved_themes', {}) or {})
+            saved_themes.pop(name, None)
+            state_gateway.set_saved_themes(saved_themes)
 
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         try:

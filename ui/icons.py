@@ -71,6 +71,10 @@ def apply_color_swatch(
     if widget is None:
         return normalized
 
+    # keepStyle: the app-wide _NativeStyleFilter clears per-widget
+    # stylesheets on every Show; swatches must keep their fill/border.
+    widget.setProperty('keepStyle', True)
+
     if isinstance(widget, QPushButton):
         widget.setProperty('color_value', normalized)
         widget.setIcon(build_marker_icon(normalized, marker, size=icon_size))
