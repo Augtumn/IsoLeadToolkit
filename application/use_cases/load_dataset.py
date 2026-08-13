@@ -155,8 +155,14 @@ def load_dataset(
                 sheet_name = selected_sheet
                 logger.info("Selected sheet: %s", sheet_name)
         else:
-            excel_file = CONFIG["excel_file"]
+            excel_file = CONFIG.get("excel_file")
             sheet_name = CONFIG.get("sheet_name", "Sheet1")
+            if not excel_file:
+                logger.error(
+                    "No file dialog requested and no 'excel_file' configured; "
+                    "cannot load a dataset."
+                )
+                return False
 
         if not os.path.exists(excel_file):
             logger.error("Data file not found: %s", excel_file)
