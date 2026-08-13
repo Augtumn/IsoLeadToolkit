@@ -1091,5 +1091,11 @@
   "Drag a group onto a parent to merge it": "将分组拖到父组上以归并",
   "Parent": "父组",
   "In parent group {parent}": "位于父组 {parent}",
-  "Shape follows parent group ({marker})": "形状随父组 ({marker})"
+  "Shape follows parent group ({marker})": "形状随父组 ({marker})",
+  "Auto Legend": "自动图例",
+  "Legend Settings...": "图例设定...",
+  "Reset parent shapes to automatic assignment": "将父组形状重置为自动分配",
+  "Open the full legend settings dialog": "打开完整图例设定对话框",
+  "Parent shape (shared by subgroups)": "父组形状（所有子组共用）",
+  "Auto (by order)": "自动（按顺序）"
 }

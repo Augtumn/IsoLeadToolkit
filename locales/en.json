@@ -1091,5 +1091,11 @@
   "Drag a group onto a parent to merge it": "Drag a group onto a parent to merge it",
   "Parent": "Parent",
   "In parent group {parent}": "In parent group {parent}",
-  "Shape follows parent group ({marker})": "Shape follows parent group ({marker})"
+  "Shape follows parent group ({marker})": "Shape follows parent group ({marker})",
+  "Auto Legend": "Auto Legend",
+  "Legend Settings...": "Legend Settings...",
+  "Reset parent shapes to automatic assignment": "Reset parent shapes to automatic assignment",
+  "Open the full legend settings dialog": "Open the full legend settings dialog",
+  "Parent shape (shared by subgroups)": "Parent shape (shared by subgroups)",
+  "Auto (by order)": "Auto (by order)"
 }

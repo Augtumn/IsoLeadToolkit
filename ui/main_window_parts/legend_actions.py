@@ -391,7 +391,7 @@ class MainWindowLegendActionsMixin:
         self._move_legend_item_to_top("group", group)
 
     def _add_parent_legend_item(self, parent):
-        """Render a parent-group row: bold header, shared-shape icon, delete."""
+        """Render a parent-group row: shape swatch, bold header, delete."""
         from visualization.plotting.grouping import parent_children, parent_shape
 
         children = parent_children(app_state, parent)
@@ -400,10 +400,17 @@ class MainWindowLegendActionsMixin:
         item_layout.setContentsMargins(4, 2, 4, 2)
         item_layout.setSpacing(6)
 
-        marker_icon = self._build_marker_icon("#94a3b8", parent_shape(app_state, parent), size=14)
-        icon_label = QLabel()
-        icon_label.setPixmap(marker_icon.pixmap(14, 14))
-        item_layout.addWidget(icon_label)
+        # Shape swatch: shows the shape shared by all children of this
+        # parent; clicking opens the shape picker (manual override).
+        shape_btn = QPushButton()
+        shape_btn.setFixedSize(22, 22)
+        self._update_parent_swatch(parent, shape_btn)
+        shape_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        shape_btn.setToolTip(translate("Parent shape (shared by subgroups)"))
+        shape_btn.clicked.connect(
+            lambda checked=False, p=parent, btn=shape_btn: self._show_parent_shape_menu(p, btn)
+        )
+        item_layout.addWidget(shape_btn)
 
         label = QLabel(f"{translate('Parent')}: {parent}")
         label.setStyleSheet("font-weight: bold;")
@@ -428,6 +435,66 @@ class MainWindowLegendActionsMixin:
         item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
         self._legend_list.addItem(item)
         self._legend_list.setItemWidget(item, item_widget)
+
+    def _update_parent_swatch(self, parent, swatch):
+        from visualization.plotting.grouping import parent_shape
+
+        marker = parent_shape(app_state, parent)
+        icon = self._build_marker_icon("#94a3b8", marker, size=16)
+        swatch.setIcon(icon)
+        swatch.setIconSize(QSize(16, 16))
+        swatch.setStyleSheet("border: 1px solid #111827; border-radius: 3px; background: transparent;")
+
+    def _set_parent_shape(self, parent, marker):
+        """Apply a manual shape override for a parent group ('' = auto)."""
+        mapping = dict(getattr(app_state, "parent_shape_map", {}) or {})
+        if marker:
+            mapping[parent] = marker
+        else:
+            mapping.pop(parent, None)
+        state_gateway.set_parent_shape_map(mapping)
+        self._reload_legend_panel()
+
+    def _show_parent_shape_menu(self, parent, swatch):
+        from visualization.plotting.grouping import PARENT_SHAPE_CYCLE, parent_shape
+
+        menu = QMenu(self)
+        current = parent_shape(app_state, parent)
+        manual = bool((getattr(app_state, "parent_shape_map", {}) or {}).get(parent))
+
+        auto_action = QAction(translate("Auto (by order)"), self)
+        auto_action.setCheckable(True)
+        auto_action.setChecked(not manual)
+        auto_action.triggered.connect(
+            lambda checked=False, p=parent: self._set_parent_shape(p, "")
+        )
+        menu.addAction(auto_action)
+        menu.addSeparator()
+
+        for value in PARENT_SHAPE_CYCLE:
+            icon = self._build_marker_icon("#94a3b8", value, size=14)
+            action = QAction(icon, "", self)
+            action.setCheckable(True)
+            action.setChecked(value == current)
+            action.triggered.connect(
+                lambda checked=False, p=parent, v=value, btn=swatch: self._set_parent_shape(p, v)
+            )
+            menu.addAction(action)
+
+        menu.exec_(QCursor.pos())
+
+    def _auto_assign_parent_shapes(self):
+        """Reset all parent shapes to automatic (by creation order)."""
+        if getattr(app_state, "parent_shape_map", None):
+            state_gateway.set_parent_shape_map({})
+            self._reload_legend_panel()
+
+    def _open_legend_settings(self):
+        """Open the full legend settings dialog (same as Ctrl+L)."""
+        try:
+            self._show_section_dialog("legend")
+        except Exception as exc:
+            logger.warning("Failed to open legend settings: %s", exc)
 
     def _update_legend_panel(self, title, handles, labels):
         try:
@@ -514,7 +581,9 @@ class MainWindowLegendActionsMixin:
                     in_parent = entry.get("in_parent")
                     item_widget = QWidget()
                     item_layout = QHBoxLayout()
-                    item_layout.setContentsMargins(4, 2, 4, 2)
+                    # Children of a parent group are indented visually.
+                    left_margin = 24 if in_parent else 4
+                    item_layout.setContentsMargins(left_margin, 2, 4, 2)
                     item_layout.setSpacing(6)
 
                     color_btn = QPushButton()
@@ -533,7 +602,7 @@ class MainWindowLegendActionsMixin:
                     checkbox.setFixedWidth(18)
                     item_layout.addWidget(checkbox)
 
-                    label = QLabel(("↳ " if in_parent else "") + str(group))
+                    label = QLabel(str(group))
                     if in_parent:
                         label.setToolTip(
                             translate("In parent group {parent}").format(parent=in_parent)
