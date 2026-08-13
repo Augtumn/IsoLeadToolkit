@@ -69,6 +69,44 @@ def test_display_entries_children_keep_own_order() -> None:
     assert keys == [("parent", "P1"), ("group", "A"), ("group", "B"), ("group", "C")]
 
 
+def test_independent_group_can_sort_above_parent_block() -> None:
+    """Independent groups are free units: they may be dragged above parents."""
+    entries = [_entry("group", "A"), _entry("group", "B"), _entry("group", "C")]
+    parents = ["P1"]
+    child_parent = {"A": "P1", "B": "P1"}
+
+    # C's order index places it FIRST — above the parent block.
+    order_index = {"group:C": 0, "parent:P1": 1, "group:A": 2, "group:B": 3}
+    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    keys = [(e["type"], e["key"]) for e in result]
+    assert keys == [("group", "C"), ("parent", "P1"), ("group", "A"), ("group", "B")]
+
+    # And back: parent block above the independent group.
+    order_index = {"parent:P1": 0, "group:A": 1, "group:B": 2, "group:C": 3}
+    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    keys = [(e["type"], e["key"]) for e in result]
+    assert keys == [("parent", "P1"), ("group", "A"), ("group", "B"), ("group", "C")]
+
+
+def test_independent_group_mixed_with_multiple_parent_blocks() -> None:
+    entries = [_entry("group", "A"), _entry("group", "B"), _entry("group", "C"), _entry("group", "D")]
+    parents = ["P1", "P2"]
+    child_parent = {"A": "P1", "C": "P2"}
+
+    # Interleave: P2 block, independent B, P1 block, independent D.
+    order_index = {"parent:P2": 0, "group:C": 1, "group:B": 2, "parent:P1": 3, "group:A": 4, "group:D": 5}
+    result = build_legend_display_entries(entries, parents, child_parent, order_index)
+    keys = [(e["type"], e["key"]) for e in result]
+    assert keys == [
+        ("parent", "P2"),
+        ("group", "C"),
+        ("group", "B"),
+        ("parent", "P1"),
+        ("group", "A"),
+        ("group", "D"),
+    ]
+
+
 # ---------------------------------------------------------------------------
 # drop ambiguity guard (parent rows must never stack on other rows)
 # ---------------------------------------------------------------------------

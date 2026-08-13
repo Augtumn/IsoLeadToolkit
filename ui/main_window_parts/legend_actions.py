@@ -35,16 +35,18 @@ def build_legend_display_entries(
 ) -> list[dict[str, Any]]:
     """Build the ordered legend display list with parent-group blocks.
 
-    Each parent is rendered as a block (parent row followed by its children)
-    and the block position follows the parent's own entry in
-    ``legend_item_order`` — this is what makes dragging a parent row reorder
-    the whole parent group's stacking. Children inside a block keep their own
-    relative order; independent groups and overlays keep their positions.
+    Every visual unit participates in one unified ordering: a parent block
+    (parent row followed by its children), an independent group, or an
+    overlay. Units are sorted by their own ``legend_item_order`` position,
+    so an independent group may be dragged above a parent block — parents
+    are not forced to the top. Children inside a block keep their own
+    relative order.
     """
     if not parents:
         return list(entries)
 
-    parent_blocks: list[tuple[str, list[dict[str, Any]]]] = []
+    # Parent blocks: parent name -> ordered child entries.
+    blocks: dict[str, list[dict[str, Any]]] = {}
     for parent in parents:
         block: list[dict[str, Any]] = []
         for entry in entries:
@@ -52,26 +54,29 @@ def build_legend_display_entries(
                 child_entry = dict(entry)
                 child_entry["in_parent"] = parent
                 block.append(child_entry)
-        # Children inside a block keep their own legend_item_order.
         block.sort(key=lambda e: order_index.get(f"group:{e['group']}", 10_000))
-        parent_blocks.append((parent, block))
+        blocks[parent] = block
 
-    parent_blocks.sort(
-        key=lambda blk: order_index.get(f"parent:{blk[0]}", 10_000)
-    )
+    # Unified sort units: (order_index, unit_kind, payload).
+    units: list[tuple[int, str, Any]] = []
+    for parent in parents:
+        units.append((order_index.get(f"parent:{parent}", 10_000), "parent", parent))
+    for entry in entries:
+        if entry["type"] == "group" and entry["group"] not in child_parent:
+            units.append((order_index.get(f"group:{entry['group']}", 10_000), "group", entry))
+        elif entry["type"] == "overlay":
+            units.append((order_index.get(f"overlay:{entry['key']}", 10_000), "overlay", entry))
+
+    # Stable sort: units with equal order keep their construction order.
+    units.sort(key=lambda unit: unit[0])
 
     display_entries: list[dict[str, Any]] = []
-    placed: set[str] = set()
-    for parent, block in parent_blocks:
-        display_entries.append({"type": "parent", "key": parent, "parent": parent})
-        for child_entry in block:
-            display_entries.append(child_entry)
-            placed.add(child_entry["group"])
-    for entry in entries:
-        if entry["type"] == "group" and entry["group"] not in placed:
-            display_entries.append(entry)
-        elif entry["type"] == "overlay":
-            display_entries.append(entry)
+    for _, unit_kind, payload in units:
+        if unit_kind == "parent":
+            display_entries.append({"type": "parent", "key": payload, "parent": payload})
+            display_entries.extend(blocks[payload])
+        else:
+            display_entries.append(payload)
     return display_entries
 
 
