@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QListWidgetItem,
     QMenu,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QWidget,
@@ -375,7 +376,7 @@ class MainWindowLegendActionsMixin:
 
         name, ok = QInputDialog.getText(
             self,
-            translate("New Child Parent Group"),
+            translate("New Child Parent Group..."),
             translate("Parent Group Name"),
         )
         if not ok:
@@ -386,6 +387,11 @@ class MainWindowLegendActionsMixin:
         parents = self._current_parent_groups()
         if name in parents:
             logger.info("Parent group already exists: %s", name)
+            QMessageBox.information(
+                self,
+                translate("New Parent Group"),
+                translate("Parent group '{name}' already exists.").format(name=name),
+            )
             return
         parents[name] = []
         parents.setdefault(container, []).append(name)

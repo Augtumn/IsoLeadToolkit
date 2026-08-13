@@ -205,37 +205,20 @@ class ExportPanelCommonMixin:
     def _resolve_export_save_options(self, profile: dict, *, overrides: dict | None = None) -> dict:
         """Collect figure save options from export controls.
 
-        When *overrides* is provided, panel widget values are ignored.
+        All current callers pass *overrides* (the panel builds no export
+        control widgets of its own), so only the override path is kept.
         """
-        if overrides is not None:
-            dpi_override = int(overrides.get('dpi', profile.get('dpi', 400)))
-            use_tight_bbox = bool(overrides.get('tight_bbox', True))
-            transparent = bool(overrides.get('transparent', False))
-            pad_inches = float(overrides.get('pad_inches', 0.02))
-        else:
-            dpi_override = int(self.image_dpi_spin.value()) if self.image_dpi_spin is not None else None
-            use_tight_bbox = bool(self.image_tight_bbox_check.isChecked()) if self.image_tight_bbox_check is not None else True
-            transparent = bool(self.image_transparent_check.isChecked()) if self.image_transparent_check is not None else False
-            pad_inches = 0.02
-            if self.image_pad_inches_spin is not None:
-                pad_inches = float(self.image_pad_inches_spin.value())
-
-        if overrides is not None:
-            preset_key = str(overrides.get('preset_key', 'science_single'))
-            image_ext = str(overrides.get('image_ext', 'png'))
-            point_size = int(overrides.get('point_size', profile.get('point_size', 60)))
-            legend_size = int(overrides.get('legend_size', 8))
-            label_size = int(overrides.get('label_size', 10))
-            title_size = int(overrides.get('title_size', 12))
-            tick_size = int(overrides.get('tick_size', 9))
-        else:
-            preset_key = self.image_preset_combo.currentData() if self.image_preset_combo is not None else 'science_single'
-            image_ext = self.image_format_combo.currentData() if self.image_format_combo is not None else 'png'
-            point_size = int(self.image_point_size_spin.value()) if self.image_point_size_spin is not None else None
-            legend_size = int(self.image_legend_size_spin.value()) if self.image_legend_size_spin is not None else None
-            label_size = int(self.image_label_size_spin.value()) if self.image_label_size_spin is not None else None
-            title_size = int(self.image_title_size_spin.value()) if self.image_title_size_spin is not None else None
-            tick_size = int(self.image_tick_size_spin.value()) if self.image_tick_size_spin is not None else None
+        dpi_override = int(overrides.get('dpi', profile.get('dpi', 400)))
+        use_tight_bbox = bool(overrides.get('tight_bbox', True))
+        transparent = bool(overrides.get('transparent', False))
+        pad_inches = float(overrides.get('pad_inches', 0.02))
+        preset_key = str(overrides.get('preset_key', 'science_single'))
+        image_ext = str(overrides.get('image_ext', 'png'))
+        point_size = int(overrides.get('point_size', profile.get('point_size', 60)))
+        legend_size = int(overrides.get('legend_size', 8))
+        label_size = int(overrides.get('label_size', 10))
+        title_size = int(overrides.get('title_size', 12))
+        tick_size = int(overrides.get('tick_size', 9))
 
         state_gateway.set_export_image_options(
             preset_key=str(preset_key),

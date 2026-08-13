@@ -1,6 +1,7 @@
 """面板基类 - 提供共享工具方法"""
 from __future__ import annotations
 
+import json
 import logging
 from typing import Callable
 
@@ -120,6 +121,15 @@ class BasePanel(QWidget):
         page_layout.addWidget(group_widget)
         page_layout.addStretch()
         section_toolbox.addItem(page, translate(title_key))
+        # Record the English key so _update_translations can re-label the tab
+        # on language switches (appends to any keys set by the caller).
+        existing = section_toolbox.property('toolbox_tab_keys')
+        try:
+            keys = json.loads(existing) if existing else []
+        except Exception:
+            keys = []
+        keys.append(title_key)
+        section_toolbox.setProperty('toolbox_tab_keys', json.dumps(keys))
 
     def __init__(self, callback=None, parent=None):
         super().__init__(parent)
@@ -331,8 +341,7 @@ class BasePanel(QWidget):
         )
 
         # ---- 数据驱动: 从 _STYLE_WIDGET_MAP 批量提取样式更新 ----
-        style_updates: dict[str, object] = {}
-        style_updates = self._collect_style_updates()
+        style_updates: dict[str, object] = self._collect_style_updates()
 
         # ---- 特殊处理: 需额外逻辑的控件 ----
 

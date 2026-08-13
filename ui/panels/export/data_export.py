@@ -74,7 +74,7 @@ class ExportPanelDataExportMixin:
         return []
 
     def _on_export_csv(self):
-        """导出CSV"""
+        """Export the selected rows (or all rows) as CSV."""
         indices = self._resolve_export_indices()
         if not indices:
             QMessageBox.warning(
@@ -128,7 +128,7 @@ class ExportPanelDataExportMixin:
             QApplication.restoreOverrideCursor()
 
     def _on_export_excel(self):
-        """导出Excel"""
+        """Export the selected rows (or all rows) as Excel."""
         indices = self._resolve_export_indices()
         if not indices:
             QMessageBox.warning(
@@ -164,7 +164,7 @@ class ExportPanelDataExportMixin:
                 )
 
     def _on_export_append_excel(self):
-        """追加数据到已有 Excel 文件的新 Sheet"""
+        """Append the selected rows as a new sheet in an existing workbook."""
         indices = self._resolve_export_indices()
         if not indices:
             QMessageBox.warning(

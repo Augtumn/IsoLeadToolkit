@@ -123,10 +123,10 @@ class DataPanelProjectionMixin:
         """Handle UMAP slider move."""
         state_gateway.set_umap_params(app_state.umap_params | {param: value})
         if label:
-            if param == "min_dist":
-                label.setText(translate("{param}: {value:.2f}").format(param=param, value=value))
-            else:
-                label.setText(translate("{param}: {value}").format(param=param, value=value))
+            # Build the dedicated locale key (e.g. "min_dist: {value:.2f}")
+            # so the runtime label stays translated like the initial label.
+            key = f"{param}: {{value:.2f}}" if param == "min_dist" else f"{param}: {{value}}"
+            label.setText(translate(key).format(value=value))
         # Schedule a debounced render so keyboard / scroll-wheel adjustments
         # also trigger a recompute (sliderReleased only fires on mouse release).
         self._schedule_slider_callback(f"umap_{param}")
@@ -135,10 +135,8 @@ class DataPanelProjectionMixin:
         """Handle UMAP parameter changes for non-slider controls."""
         state_gateway.set_umap_params(app_state.umap_params | {param: value})
         if label:
-            if param == "min_dist":
-                label.setText(translate("{param}: {value:.2f}").format(param=param, value=value))
-            else:
-                label.setText(translate("{param}: {value}").format(param=param, value=value))
+            key = f"{param}: {{value:.2f}}" if param == "min_dist" else f"{param}: {{value}}"
+            label.setText(translate(key).format(value=value))
         self._schedule_slider_callback(f"umap_{param}")
         self._on_change()
 
@@ -146,14 +144,14 @@ class DataPanelProjectionMixin:
         """Handle t-SNE slider move."""
         state_gateway.set_tsne_params(app_state.tsne_params | {param: value})
         if label:
-            label.setText(translate("{param}: {value}").format(param=param, value=int(value)))
+            label.setText(translate(f"{param}: {{value}}").format(value=int(value)))
         self._schedule_slider_callback(f"tsne_{param}")
 
     def _on_tsne_param_change(self, param, value, label):
         """Handle t-SNE parameter changes for non-slider controls."""
         state_gateway.set_tsne_params(app_state.tsne_params | {param: value})
         if label:
-            label.setText(translate("{param}: {value}").format(param=param, value=value))
+            label.setText(translate(f"{param}: {{value}}").format(value=value))
         self._schedule_slider_callback(f"tsne_{param}")
         self._on_change()
 

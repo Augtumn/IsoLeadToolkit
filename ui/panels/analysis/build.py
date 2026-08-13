@@ -31,9 +31,6 @@ class AnalysisPanelBuildMixin:
         super().reset_state()
         self.tools_kde_check = None
         self.tools_marginal_kde_check = None
-        self.tools_equation_overlays_check = None
-        self.equation_overlays_container = None
-        self.equation_overlays_layout = None
         self.selection_button = None
         self.ellipse_selection_button = None
         self.lasso_selection_button = None
@@ -43,7 +40,6 @@ class AnalysisPanelBuildMixin:
         self.confidence_68_radio = None
         self.confidence_95_radio = None
         self.confidence_99_radio = None
-        self.tooltip_check = None
 
     def build(self) -> QWidget:
         widget = self._build_analysis_section()

@@ -107,10 +107,12 @@ class DisplayThemeMixin:
             'scatter_show_edge': bool(self.scatter_edge_check.isChecked()) if self.scatter_edge_check else True,
             'scatter_edgecolor': self._get_color_control_value(self.scatter_edgecolor_edit, '#1e293b'),
             'scatter_edgewidth': self.scatter_edgewidth_spin.value() if self.scatter_edgewidth_spin else 0.4,
-            'model_curve_width': self.model_curve_width_spin.value() if self.model_curve_width_spin else 1.2,
-            'paleoisochron_width': self.paleoisochron_width_spin.value() if self.paleoisochron_width_spin else 0.9,
-            'model_age_line_width': self.model_age_width_spin.value() if self.model_age_width_spin else 0.7,
-            'isochron_line_width': self.isochron_width_spin.value() if self.isochron_width_spin else 1.5,
+            # Width/legend-frame controls are not built in this panel; read
+            # the live app_state values so themes round-trip real state.
+            'model_curve_width': self.model_curve_width_spin.value() if self.model_curve_width_spin else getattr(app_state, 'model_curve_width', 1.2),
+            'paleoisochron_width': self.paleoisochron_width_spin.value() if self.paleoisochron_width_spin else getattr(app_state, 'paleoisochron_width', 0.9),
+            'model_age_line_width': self.model_age_width_spin.value() if self.model_age_width_spin else getattr(app_state, 'model_age_line_width', 0.7),
+            'isochron_line_width': self.isochron_width_spin.value() if self.isochron_width_spin else getattr(app_state, 'isochron_line_width', 1.5),
             'line_styles': getattr(app_state, 'line_styles', {}),
             'label_color': self._get_color_control_value(self.label_color_edit, '#1f2937'),
             'label_weight': self.label_weight_combo.currentText() if self.label_weight_combo else 'normal',
@@ -120,10 +122,10 @@ class DisplayThemeMixin:
             'title_pad': self.title_pad_spin.value() if self.title_pad_spin else 20.0,
             'legend_location': getattr(app_state, 'legend_location', 'outside_right'),
             'legend_position': getattr(app_state, 'legend_position', None),
-            'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check else True,
-            'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin else _DEFAULT_LEGEND_FRAME_ALPHA,
-            'legend_frame_facecolor': self.legend_frame_face_edit.text() if self.legend_frame_face_edit else '#ffffff',
-            'legend_frame_edgecolor': self.legend_frame_edge_edit.text() if self.legend_frame_edge_edit else '#cbd5f5',
+            'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check else bool(getattr(app_state, 'legend_frame_on', True)),
+            'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin else float(getattr(app_state, 'legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA)),
+            'legend_frame_facecolor': self.legend_frame_face_edit.text() if self.legend_frame_face_edit else str(getattr(app_state, 'legend_frame_facecolor', '#ffffff')),
+            'legend_frame_edgecolor': self.legend_frame_edge_edit.text() if self.legend_frame_edge_edit else str(getattr(app_state, 'legend_frame_edgecolor', '#cbd5f5')),
             'adjust_text_force_text': [
                 self.adjust_force_text_x_spin.value() if self.adjust_force_text_x_spin else 0.8,
                 self.adjust_force_text_y_spin.value() if self.adjust_force_text_y_spin else 1.0,
@@ -407,7 +409,70 @@ class DisplayThemeMixin:
         self._apply_ui_theme(self.ui_theme_combo.currentText())
 
     def _apply_ui_theme(self, theme_name):
-        """保存 UI 主题选择"""
+        """Apply the selected UI theme: Qt palette via app-level QSS and the
+        matplotlib style, then re-render so the plot follows.
+
+        "Modern Light" keeps the native style (empty QSS); other themes
+        install a small QSS palette driven by the theme definition. The
+        per-widget _NativeStyleFilter does not touch the app-level stylesheet.
+        """
         if not theme_name:
             theme_name = 'Modern Light'
         state_gateway.set_ui_theme(theme_name)
+        try:
+            from visualization.style_manager import style_manager_instance
+
+            theme = style_manager_instance.get_ui_theme(theme_name)
+        except Exception as exc:
+            logger.warning("Failed to load UI theme %s: %s", theme_name, exc)
+            theme = None
+
+        qss = _build_theme_qss(theme) if theme and theme_name != 'Modern Light' else ""
+        try:
+            from PyQt5.QtWidgets import QApplication
+
+            QApplication.instance().setStyleSheet(qss)
+        except Exception as exc:
+            logger.warning("Failed to apply UI theme stylesheet: %s", exc)
+
+        try:
+            import matplotlib.pyplot as plt
+
+            plt.style.use((theme or {}).get('mpl_style') or 'default')
+        except Exception as exc:
+            logger.warning("Failed to apply matplotlib theme: %s", exc)
+
+        try:
+            self._on_change()
+        except Exception:
+            pass
+
+
+def _build_theme_qss(theme: dict) -> str:
+    """Build an app-level stylesheet from a UI theme definition."""
+    bg = theme.get('bg', '#ffffff')
+    fg = theme.get('fg', '#1f2937')
+    panel = theme.get('panel_bg', '#f3f4f6')
+    header = theme.get('header_bg', '#e5e7eb')
+    accent = theme.get('accent', '#2563eb')
+    secondary = theme.get('secondary', '#4b5563')
+    return (
+        f"QWidget {{ background-color: {bg}; color: {fg}; }}\n"
+        f"QGroupBox {{ border: 1px solid {header}; border-radius: 4px; margin-top: 8px; }}\n"
+        f"QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; }}\n"
+        f"QPushButton {{ background-color: {panel}; border: 1px solid {header}; border-radius: 3px; padding: 4px 10px; }}\n"
+        f"QPushButton:hover {{ background-color: {header}; }}\n"
+        f"QPushButton:default {{ background-color: {accent}; color: white; border: none; }}\n"
+        f"QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit, QTextEdit, QPlainTextEdit {{ "
+        f"background-color: {bg}; border: 1px solid {header}; border-radius: 3px; padding: 2px 4px; }}\n"
+        f"QToolBox::tab {{ background: {panel}; border: 1px solid {header}; padding: 5px 8px; }}\n"
+        f"QToolBox::tab:selected {{ background: {header}; font-weight: bold; }}\n"
+        f"QScrollArea {{ border: none; }}\n"
+        f"QListWidget, QTableWidget {{ background: {bg}; border: 1px solid {header}; }}\n"
+        f"QMenuBar {{ background: {header}; }}\n"
+        f"QMenuBar::item:selected {{ background: {accent}; color: white; }}\n"
+        f"QMenu {{ background: {bg}; border: 1px solid {header}; }}\n"
+        f"QMenu::item:selected {{ background: {accent}; color: white; }}\n"
+        f"QStatusBar {{ background: {header}; }}\n"
+        f"QToolTip {{ background: {bg}; color: {fg}; border: 1px solid {secondary}; }}\n"
+    )

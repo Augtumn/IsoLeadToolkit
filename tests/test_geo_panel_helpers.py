@@ -15,6 +15,13 @@ from ui.panels import geo_panel as geo_panel_module
 class _FakeLabel:
     def __init__(self, text: str) -> None:
         self.text = text
+        self._properties: dict[str, object] = {}
+
+    def setProperty(self, name: str, value: object) -> None:
+        self._properties[name] = value
+
+    def property(self, name: str) -> object:
+        return self._properties.get(name)
 
 
 class _FakeSpinBox:

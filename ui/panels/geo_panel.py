@@ -76,9 +76,9 @@ class GeoPanel(BasePanel):
         time_group.setProperty('translate_key', 'Time Parameters (Ma)')
         time_layout = QGridLayout()
 
-        self._add_geo_param(time_layout, "T1", translate("T1 (1st Stage):"), 0, 0, 0.0, 10000.0, 4430.0)
-        self._add_geo_param(time_layout, "T2", translate("T2 (Earth Age):"), 0, 2, 0.0, 10000.0, 4570.0)
-        self._add_geo_param(time_layout, "Tsec", translate("Tsec (2nd Stage):"), 1, 0, 0.0, 10000.0, 3700.0)
+        self._add_geo_param(time_layout, "T1", "T1 (1st Stage):", 0, 0, 0.0, 10000.0, 4430.0)
+        self._add_geo_param(time_layout, "T2", "T2 (Earth Age):", 0, 2, 0.0, 10000.0, 4570.0)
+        self._add_geo_param(time_layout, "Tsec", "Tsec (2nd Stage):", 1, 0, 0.0, 10000.0, 3700.0)
 
         time_group.setLayout(time_layout)
         BasePanel.add_group_page(section_toolbox, time_group, 'Time Parameters (Ma)')
@@ -88,9 +88,9 @@ class GeoPanel(BasePanel):
         decay_group.setProperty('translate_key', 'Decay Constants (a^-1)')
         decay_layout = QGridLayout()
 
-        self._add_geo_param(decay_layout, "lambda_238", translate("λ (238U):"), 0, 0, 0.0, 1.0, _GEO_DECAY_LAMBDA_238_DEFAULT, scientific=True)
-        self._add_geo_param(decay_layout, "lambda_235", translate("λ (235U):"), 0, 2, 0.0, 1.0, _GEO_DECAY_LAMBDA_235_DEFAULT, scientific=True)
-        self._add_geo_param(decay_layout, "lambda_232", translate("λ (232Th):"), 1, 0, 0.0, 1.0, _GEO_DECAY_LAMBDA_232_DEFAULT, scientific=True)
+        self._add_geo_param(decay_layout, "lambda_238", "λ (238U):", 0, 0, 0.0, 1.0, _GEO_DECAY_LAMBDA_238_DEFAULT, scientific=True)
+        self._add_geo_param(decay_layout, "lambda_235", "λ (235U):", 0, 2, 0.0, 1.0, _GEO_DECAY_LAMBDA_235_DEFAULT, scientific=True)
+        self._add_geo_param(decay_layout, "lambda_232", "λ (232Th):", 1, 0, 0.0, 1.0, _GEO_DECAY_LAMBDA_232_DEFAULT, scientific=True)
 
         decay_group.setLayout(decay_layout)
         BasePanel.add_group_page(section_toolbox, decay_group, 'Decay Constants (a^-1)')
@@ -108,9 +108,9 @@ class GeoPanel(BasePanel):
         init_layout.addWidget(prim_label)
 
         prim_grid = QGridLayout()
-        self._add_geo_param(prim_grid, "a0", translate("a0 (206/204):"), 0, 0, 0.0, 100.0, 9.307)
-        self._add_geo_param(prim_grid, "b0", translate("b0 (207/204):"), 0, 2, 0.0, 100.0, 10.294)
-        self._add_geo_param(prim_grid, "c0", translate("c0 (208/204):"), 1, 0, 0.0, 100.0, 29.476)
+        self._add_geo_param(prim_grid, "a0", "a0 (206/204):", 0, 0, 0.0, 100.0, 9.307)
+        self._add_geo_param(prim_grid, "b0", "b0 (207/204):", 0, 2, 0.0, 100.0, 10.294)
+        self._add_geo_param(prim_grid, "c0", "c0 (208/204):", 1, 0, 0.0, 100.0, 29.476)
         init_layout.addLayout(prim_grid)
 
         sk_label = QLabel(translate("Stacey-Kramers 2nd Stage:"))
@@ -121,9 +121,9 @@ class GeoPanel(BasePanel):
         init_layout.addWidget(sk_label)
 
         sk_grid = QGridLayout()
-        self._add_geo_param(sk_grid, "a1", translate("a1 (206/204):"), 0, 0, 0.0, 100.0, 11.152)
-        self._add_geo_param(sk_grid, "b1", translate("b1 (207/204):"), 0, 2, 0.0, 100.0, 12.998)
-        self._add_geo_param(sk_grid, "c1", translate("c1 (208/204):"), 1, 0, 0.0, 100.0, 31.23)
+        self._add_geo_param(sk_grid, "a1", "a1 (206/204):", 0, 0, 0.0, 100.0, 11.152)
+        self._add_geo_param(sk_grid, "b1", "b1 (207/204):", 0, 2, 0.0, 100.0, 12.998)
+        self._add_geo_param(sk_grid, "c1", "c1 (208/204):", 1, 0, 0.0, 100.0, 31.23)
         init_layout.addLayout(sk_grid)
 
         init_group.setLayout(init_layout)
@@ -134,9 +134,9 @@ class GeoPanel(BasePanel):
         mantle_group.setProperty('translate_key', 'Mantle & Production')
         mantle_layout = QGridLayout()
 
-        self._add_geo_param(mantle_layout, "mu_M", translate("μ (Mantle):"), 0, 0, 0.0, 100.0, 9.74)
-        self._add_geo_param(mantle_layout, "omega_M", translate("ω (Mantle):"), 0, 2, 0.0, 100.0, 36.84)
-        self._add_geo_param(mantle_layout, "U_ratio", translate("U Ratio (235/238):"), 1, 0, 0.0, 1.0, 1.0 / 137.88, scientific=True)
+        self._add_geo_param(mantle_layout, "mu_M", "μ (Mantle):", 0, 0, 0.0, 100.0, 9.74)
+        self._add_geo_param(mantle_layout, "omega_M", "ω (Mantle):", 0, 2, 0.0, 100.0, 36.84)
+        self._add_geo_param(mantle_layout, "U_ratio", "U Ratio (235/238):", 1, 0, 0.0, 1.0, 1.0 / 137.88, scientific=True)
 
         mantle_group.setLayout(mantle_layout)
         BasePanel.add_group_page(section_toolbox, mantle_group, 'Mantle & Production')
@@ -165,6 +165,16 @@ class GeoPanel(BasePanel):
         action_layout.addLayout(button_layout)
         action_layout.addStretch()
         section_toolbox.addItem(action_page, translate('Apply Changes'))
+        # Keep this manually-added page in the language-refresh key list.
+        import json as _json
+
+        existing = section_toolbox.property('toolbox_tab_keys')
+        try:
+            keys = _json.loads(existing) if existing else []
+        except Exception:
+            keys = []
+        keys.append('Apply Changes')
+        section_toolbox.setProperty('toolbox_tab_keys', _json.dumps(keys))
 
         self._restore_toolbox_state(section_toolbox, 'geo')
         layout.addWidget(section_toolbox)
@@ -187,9 +197,10 @@ class GeoPanel(BasePanel):
         layout.addStretch()
         return widget
 
-    def _add_geo_param(self, grid_layout, param_name, label_text, row, col, min_val, max_val, default_val, scientific=False):
-        """添加地球化学参数控件"""
-        label = QLabel(label_text)
+    def _add_geo_param(self, grid_layout, param_name, label_key, row, col, min_val, max_val, default_val, scientific=False):
+        """添加地球化学参数控件（label_key 为英文翻译键）"""
+        label = QLabel(translate(label_key))
+        label.setProperty('translate_key', label_key)
         grid_layout.addWidget(label, row, col)
 
         spinbox = QDoubleSpinBox()

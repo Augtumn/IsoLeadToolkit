@@ -161,7 +161,6 @@ class ExportPanelImageExportMixin:
         original_marker_size = int(getattr(app_state, 'plot_marker_size', 60))
         original_font_sizes = dict(getattr(app_state, 'plot_font_sizes', {}) or {})
 
-        from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication
 
         QApplication.setOverrideCursor(Qt.WaitCursor)

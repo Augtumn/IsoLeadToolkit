@@ -6,7 +6,7 @@ import sys
 import traceback
 from typing import Any
 
-from PyQt5.QtCore import QEvent, QLocale, QObject, QTranslator
+from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QStyleFactory, QWidget
 from PyQt5.QtGui import QFont
 
@@ -115,14 +115,3 @@ class Qt5AppStyleMixin:
             sys.__excepthook__(exc_type, exc, tb)
 
         sys.excepthook = _excepthook
-
-    def _setup_translator(self, language):
-        """Set up Qt translation resources."""
-        if self.translator:
-            QApplication.removeTranslator(self.translator)
-
-        self.translator = QTranslator()
-        translations_dir = "locales"
-
-        if self.translator.load(QLocale(language), "qt", "_", translations_dir):
-            QApplication.installTranslator(self.translator)

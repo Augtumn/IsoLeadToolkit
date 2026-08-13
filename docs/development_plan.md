@@ -2,6 +2,15 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-08-14 · UI 全量审查修复批，3 commits）
+
+7 区域并行审查（含运行时验证）后分批修复，全部经全量回归 + 守护脚本：
+
+- **P0**：canvas 事件重复连接（图例点击/双击选择净无操作）；导出预览 effective_profile 未赋值即用（预览参数全部失效）；2D 轴下拉未连接；配色切换不重渲染；图例内外位置不互斥；主题加载无 try/finally（面板假死）；3 处 worker 线程读 Qt 控件；geo 引擎/UI 模型不同步。
+- **交互**：语言监听器重注册、Ctrl+Z 让位输入框、_refresh_language 补全、等时线不再强制弹设置、rpca 维度 spin 可用、诊断/选择按钮空操作提示、子集按钮接插件、清除混合确认、导出等待光标、对话框失败不再弹空窗、9 个对话框默认按钮（Enter 不再触发 Clear/Cancel）、neighborhood 滑块同步+防抖、图例列防抖、worker 运行中提示、analysis_worker 不再销毁运行中线程。
+- **美化**：16 处 setStyleSheet 加 keepStyle（_NativeStyleFilter 不再清空）；形状菜单文字+tooltip；位置按钮 tooltip；nudge 箭头；主题覆盖确认；预览画布用封顶 DPI；图例重建保留滚动位置；KDE 色块反映真实颜色；面板对话框加 Close 按钮。
+- **i18n/一致性**：补 33+ 缺失 key（1149 键对等）；display 面板 ~40 标签 translate_key + 3 个 toolbox tab keys（add_group_page 自动记录）；QToolButton 纳入 _update_translations；geo 参数标签改英文键；运行时滑块标签不再降级为英文 param 名；删 ~200 行死代码（方程覆盖层列表/重复 tooltip 处理/v1v2 模型 combo/导出 widget 分支/零调用 translator）。
+- **UI Theme 接线**：`_apply_ui_theme` 从仅持久化变为真实应用（app 级 QSS 调色板 + matplotlib style + 全量重渲染；Modern Light 保持原生外观）。
 ## 阶段进展（2026-08-14 · 会话导出/导入）
 
 文件菜单新增 **Export Session... / Import Session...**（i18n zh/en 各 +11 键，共 1113 键）：

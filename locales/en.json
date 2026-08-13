@@ -1146,5 +1146,6 @@
   "Send the current plot to an Origin project": "Send the current plot to an Origin project",
   "Overwrite theme '{name}'?": "Overwrite theme '{name}'?",
   "Assign palette and shapes to all groups": "Assign palette and shapes to all groups",
-  "Clear search": "Clear search"
+  "Clear search": "Clear search",
+  "Parent group '{name}' already exists.": "Parent group '{name}' already exists."
 }

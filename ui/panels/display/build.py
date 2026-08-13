@@ -34,7 +34,6 @@ class DisplayBuildMixin:
         self.theme_name_edit = None
         self.theme_load_combo = None
         self.grid_check = None
-        self.color_combo = None
         self.primary_font_combo = None
         self.cjk_font_combo = None
         self.font_size_spins = {}
@@ -67,20 +66,12 @@ class DisplayBuildMixin:
         self.minor_grid_style_combo = None
         self.scatter_edgecolor_edit = None
         self.scatter_edgewidth_spin = None
-        self.model_curve_width_spin = None
-        self.paleoisochron_width_spin = None
-        self.model_age_width_spin = None
-        self.isochron_width_spin = None
         self.label_color_edit = None
         self.label_weight_combo = None
         self.label_pad_spin = None
         self.title_color_edit = None
         self.title_weight_combo = None
         self.title_pad_spin = None
-        self.legend_frame_on_check = None
-        self.legend_frame_alpha_spin = None
-        self.legend_frame_face_edit = None
-        self.legend_frame_edge_edit = None
         self.adjust_force_text_x_spin = None
         self.adjust_force_text_y_spin = None
         self.adjust_force_static_x_spin = None
@@ -181,6 +172,8 @@ class DisplayBuildMixin:
 
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('display_section_toolbox')
+        # Language refresh: BasePanel._update_translations re-labels the tabs.
+        section_toolbox.setProperty('toolbox_tab_keys', '["Presets & Themes", "Text & Markers", "Axes, Grid & Canvas"]')
         self._section_toolbox = section_toolbox
 
         presets_page = QWidget()
@@ -297,7 +290,9 @@ class DisplayBuildMixin:
             ('legend', "Legend", 10, 3),
         ]
         for key, label_key, default, row in size_defs:
-            size_grid.addWidget(QLabel(translate(label_key)), row, 0)
+            size_label = QLabel(translate(label_key))
+            size_label.setProperty('translate_key', label_key)
+            size_grid.addWidget(size_label, row, 0)
             spin = QSpinBox()
             spin.setRange(6, 36)
             spin.setValue(getattr(app_state, 'plot_font_sizes', {}).get(key, default))
@@ -355,7 +350,9 @@ class DisplayBuildMixin:
         marker_layout.addLayout(marker_edge_row)
 
         marker_edge_color_row = QHBoxLayout()
-        marker_edge_color_row.addWidget(QLabel(translate("Scatter Edge Color")))
+        marker_edge_color_label = QLabel(translate("Scatter Edge Color"))
+        marker_edge_color_label.setProperty('translate_key', 'Scatter Edge Color')
+        marker_edge_color_row.addWidget(marker_edge_color_label)
         marker_edge_editor, self.scatter_edgecolor_edit = self._create_color_picker(
             getattr(app_state, 'scatter_edgecolor', '#1e293b')
         )
@@ -363,7 +360,9 @@ class DisplayBuildMixin:
         marker_layout.addLayout(marker_edge_color_row)
 
         marker_edge_width_row = QHBoxLayout()
-        marker_edge_width_row.addWidget(QLabel(translate("Scatter Edge Width")))
+        marker_edge_width_label = QLabel(translate("Scatter Edge Width"))
+        marker_edge_width_label.setProperty('translate_key', 'Scatter Edge Width')
+        marker_edge_width_row.addWidget(marker_edge_width_label)
         self.scatter_edgewidth_spin = QDoubleSpinBox()
         self.scatter_edgewidth_spin.setRange(0.0, 3.0)
         self.scatter_edgewidth_spin.setSingleStep(0.1)
@@ -384,7 +383,10 @@ class DisplayBuildMixin:
         axes_layout.addWidget(auto_layout_btn)
 
         def add_row(grid, label_key, widget, row_idx):
-            grid.addWidget(QLabel(translate(label_key)), row_idx, 0)
+            label = QLabel(translate(label_key))
+            label.setProperty('translate_key', label_key)
+            label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            grid.addWidget(label, row_idx, 0)
             grid.addWidget(widget, row_idx, 1)
             return row_idx + 1
 
@@ -392,8 +394,12 @@ class DisplayBuildMixin:
             group = QGroupBox(translate(title_key))
             group.setProperty('translate_key', title_key)
             grid = QGridLayout()
-            grid.setColumnStretch(0, 1)
-            grid.setColumnStretch(1, 2)
+            # Keep labels from squeezing the value widgets: labels size to
+            # their text, values get the remaining width.
+            grid.setColumnStretch(0, 0)
+            grid.setColumnStretch(1, 1)
+            grid.setHorizontalSpacing(10)
+            grid.setVerticalSpacing(6)
             group.setLayout(grid)
             axes_layout.addWidget(group)
             return grid

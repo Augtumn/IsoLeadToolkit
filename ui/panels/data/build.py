@@ -73,7 +73,6 @@ class DataPanelBuildMixin(
         self.v1v2_group = None
         self.v1v2_t1_spin = None
         self.v1v2_t2_spin = None
-        self.v1v2_model_combo = None
         self.twod_group = None
         self.xaxis_combo = None
         self.yaxis_combo = None

@@ -29,7 +29,6 @@ QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
     "yes",
     "on",
 }
-DEFAULT_TOOLBAR_ICON_SIZE = QSize(24, 24)
 
 
 class LegendListWidget(QListWidget):

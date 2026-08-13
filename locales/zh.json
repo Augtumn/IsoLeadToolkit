@@ -1146,5 +1146,6 @@
   "Send the current plot to an Origin project": "将当前图形发送到 Origin 项目",
   "Overwrite theme '{name}'?": "覆盖主题“{name}”？",
   "Assign palette and shapes to all groups": "为所有分组分配配色和形状",
-  "Clear search": "清除搜索"
+  "Clear search": "清除搜索",
+  "Parent group '{name}' already exists.": "父组“{name}”已存在。"
 }

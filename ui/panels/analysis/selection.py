@@ -212,29 +212,6 @@ class AnalysisPanelSelectionMixin:
                 translate("Failed to reset subset: {error}").format(error=exc),
             )
 
-    def _on_tooltip_change(self, state):
-        """Handle tooltip visibility change."""
-        state_gateway.set_show_tooltip(state == Qt.Checked)
-        self._on_change()
-
-    def _on_configure_tooltip(self):
-        """Open tooltip configuration dialog."""
-        try:
-            from ui.dialogs.tooltip_dialog import get_tooltip_configuration
-
-            result = get_tooltip_configuration(self)
-            if result:
-                state_gateway.set_tooltip_columns(result)
-                logger.info("Tooltip columns configured: %s", result)
-                self._on_change()
-        except Exception as error:
-            logger.error("Failed to open tooltip configuration dialog: %s", error)
-            QMessageBox.warning(
-                self,
-                translate("Error"),
-                translate("Failed to open tooltip configuration: {error}").format(error=str(error)),
-            )
-
     def _on_confidence_change(self, level):
         """Handle confidence level change."""
         state_gateway.set_confidence_level(level)

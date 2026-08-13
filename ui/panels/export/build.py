@@ -25,19 +25,9 @@ class ExportPanelBuildMixin:
         self.export_excel_button = None
         self.export_append_button = None
         self.image_preset_combo = None
-        self.image_format_combo = None
-        self.image_point_size_spin = None
-        self.image_legend_size_spin = None
-        self.image_dpi_spin = None
-        self.image_tight_bbox_check = None
-        self.image_transparent_check = None
-        self.image_pad_inches_spin = None
         self.image_style_source_label = None
         self.export_image_button = None
         self.preview_image_button = None
-        self.image_label_size_spin = None
-        self.image_title_size_spin = None
-        self.image_tick_size_spin = None
         self.export_origin_button = None
         self._scienceplots_available = None
 
