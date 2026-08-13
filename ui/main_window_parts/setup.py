@@ -124,31 +124,17 @@ class MainWindowSetupMixin:
         legend_title.setStyleSheet("font-weight: bold;")
         legend_layout.addWidget(legend_title)
 
-        # Parent-group toolbar: create a parent, drag subgroups onto it,
-        # auto-assign shapes, or open the full legend settings dialog.
-        parent_row = QWidget()
-        parent_row_layout = QHBoxLayout(parent_row)
-        parent_row_layout.setContentsMargins(0, 0, 0, 0)
-        parent_row_layout.setSpacing(4)
-        new_parent_btn = QPushButton(translate("New Parent Group"))
-        new_parent_btn.setToolTip(translate("Drag a group onto a parent to merge it"))
-        new_parent_btn.clicked.connect(self._create_parent_group)
-        parent_row_layout.addWidget(new_parent_btn, 1)
-        legend_layout.addWidget(parent_row)
-
-        legend_tools_row = QWidget()
-        legend_tools_layout = QHBoxLayout(legend_tools_row)
-        legend_tools_layout.setContentsMargins(0, 0, 0, 0)
-        legend_tools_layout.setSpacing(4)
-        auto_legend_btn = QPushButton(translate("Auto Legend"))
-        auto_legend_btn.setToolTip(translate("Reset parent shapes to automatic assignment"))
-        auto_legend_btn.clicked.connect(self._auto_assign_parent_shapes)
-        legend_tools_layout.addWidget(auto_legend_btn, 1)
+        # Legend settings entry (parents are created via context menu or by
+        # dragging a parent row onto another parent row to nest it).
+        settings_row = QWidget()
+        settings_layout = QHBoxLayout(settings_row)
+        settings_layout.setContentsMargins(0, 0, 0, 0)
+        settings_layout.setSpacing(4)
         settings_btn = QPushButton(translate("Legend Settings..."))
         settings_btn.setToolTip(translate("Open the full legend settings dialog"))
         settings_btn.clicked.connect(self._open_legend_settings)
-        legend_tools_layout.addWidget(settings_btn, 1)
-        legend_layout.addWidget(legend_tools_row)
+        settings_layout.addWidget(settings_btn, 1)
+        legend_layout.addWidget(settings_row)
 
         legend_list = LegendListWidget()
         legend_list.setSelectionMode(QAbstractItemView.SingleSelection)
