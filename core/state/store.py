@@ -41,6 +41,47 @@ from ._normalizers import (
 
 logger = logging.getLogger(__name__)
 
+# Runtime-only snapshot fields that the rendering pipeline legitimately
+# writes directly (rebuilt every render / transient artist state); they are
+# exempt from the direct-mutation warning below.
+_DIFF_WARN_EXCLUDED = frozenset({
+    "overlay_artists",
+    "marginal_axes",
+    "legend_last_title",
+    "legend_last_handles",
+    "legend_last_labels",
+    "df_global",
+    "last_embedding",
+})
+
+
+def _warn_direct_mutations(state: Any, snapshot: dict[str, Any]) -> None:
+    """Warn when snapshot-managed state diverged from the store snapshot.
+
+    Any divergence on a non-exempt field means someone bypassed the gateway;
+    the next sync will silently roll that change back. Runtime-only fields
+    (render maps, matplotlib objects) are exempt.
+    """
+    import numpy as np
+
+    for key, snap_value in snapshot.items():
+        if key in _DIFF_WARN_EXCLUDED:
+            continue
+        current = getattr(state, key, None)
+        try:
+            if isinstance(snap_value, np.ndarray) or isinstance(current, np.ndarray):
+                equal = bool(np.array_equal(current, snap_value, equal_nan=True))
+            else:
+                equal = current == snap_value
+        except Exception:
+            continue
+        if not equal:
+            logger.warning(
+                "State field '%s' was modified outside the gateway and will "
+                "be rolled back on the next sync",
+                key,
+            )
+
 
 class StateStore:
     """Manage selected AppState domains through action dispatch."""
@@ -469,6 +510,7 @@ class StateStore:
 
     def dispatch(self, action: dict[str, Any]) -> dict[str, Any]:
         """Dispatch an action and return a snapshot copy."""
+        _warn_direct_mutations(self._state, self._snapshot)
         dispatch_action(self, action)
         self._sync_state()
         return self.snapshot()

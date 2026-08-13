@@ -173,6 +173,12 @@ def _snapshot_state() -> dict[str, Any]:
         "custom_palettes": dict(getattr(app_state, "custom_palettes", {}) or {}),
         "custom_shape_sets": dict(getattr(app_state, "custom_shape_sets", {}) or {}),
         "legend_item_order": list(getattr(app_state, "legend_item_order", []) or []),
+        "parent_groups": {
+            str(k): list(v or []) for k, v in (getattr(app_state, "parent_groups", {}) or {}).items()
+        },
+        "parent_shape_map": {
+            str(k): str(v) for k, v in (getattr(app_state, "parent_shape_map", {}) or {}).items()
+        },
         "mixing_endmembers": dict(getattr(app_state, "mixing_endmembers", {}) or {}),
         "mixing_mixtures": dict(getattr(app_state, "mixing_mixtures", {}) or {}),
         "ternary_ranges": dict(getattr(app_state, "ternary_ranges", {}) or {}),
@@ -379,6 +385,8 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_custom_palettes(snapshot["custom_palettes"])
     state_gateway.set_custom_shape_sets(snapshot["custom_shape_sets"])
     state_gateway.set_legend_item_order(snapshot["legend_item_order"])
+    state_gateway.set_parent_groups(snapshot["parent_groups"])
+    state_gateway.set_parent_shape_map(snapshot["parent_shape_map"])
     state_gateway.set_mixing_endmembers(snapshot["mixing_endmembers"])
     state_gateway.set_mixing_mixtures(snapshot["mixing_mixtures"])
     state_gateway.set_ternary_ranges(snapshot["ternary_ranges"])

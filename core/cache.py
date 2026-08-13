@@ -21,7 +21,20 @@ def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
     data_cols = tuple(getattr(app_state, 'data_cols', []) or [])
     group_cols = tuple(getattr(app_state, 'group_cols', []) or [])
     data_version = getattr(app_state, 'data_version', 0)
-    return (file_path, sheet_name, shape, data_cols, group_cols, data_version)
+    # Lightweight content probe: column names plus per-column means. This
+    # catches same-shape files whose values changed without a version bump.
+    content_probe: Tuple[Any, ...] = ()
+    if df is not None and len(df) > 0:
+        try:
+            columns = tuple(str(c) for c in df.columns)
+            numeric = df.select_dtypes(include='number')
+            means = tuple(
+                round(float(v), 6) for v in numeric.mean(numeric_only=True)
+            ) if numeric.shape[1] else ()
+            content_probe = (columns, means)
+        except Exception:
+            content_probe = ()
+    return (file_path, sheet_name, shape, data_cols, group_cols, data_version, content_probe)
 
 
 def build_embedding_cache_key(app_state: Any, algorithm: str, params: Any, subset_key: Hashable) -> Tuple[Any, ...]:

@@ -16,6 +16,7 @@ from source_scan_guard import print_scan_result, scan_pattern_hits
 
 # Dict fields that _sync_state() overwrites with fresh dict() copies.
 # In-place mutation on these is silently lost on the next dispatch.
+# Keep in sync with core/state/_normalizers.py sync_state_store_to_app.
 _SYNCED_DICT_FIELDS: set[str] = {
     "umap_params",
     "tsne_params",
@@ -29,6 +30,18 @@ _SYNCED_DICT_FIELDS: set[str] = {
     "overlay_artists",
     "isochron_results",
     "plumbotectonics_group_visibility",
+    "line_styles",
+    "saved_themes",
+    "custom_palettes",
+    "custom_shape_sets",
+    "mixing_endmembers",
+    "mixing_mixtures",
+    "ternary_ranges",
+    "kde_style",
+    "marginal_kde_style",
+    "isochron_label_options",
+    "parent_groups",
+    "parent_shape_map",
 }
 
 # Match app_state.<dict_field>[<key>] = <value>

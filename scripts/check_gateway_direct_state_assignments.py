@@ -58,8 +58,14 @@ def main() -> int:
     parser.add_argument("--fail-on-hits", action="store_true")
     args = parser.parse_args()
 
-    root = Path.cwd()
-    gateway_file = root / "core" / "state" / "gateway.py"
+    # Anchor to the repository root via this script's own location so the
+    # scan works from any working directory (a hardcoded CWD path silently
+    # returned an empty result -> false TOTAL=0 when run elsewhere).
+    repo_root = Path(__file__).resolve().parents[1]
+    gateway_file = repo_root / "core" / "state" / "gateway.py"
+    if not gateway_file.exists():
+        print(f"ERROR: gateway file not found at {gateway_file}")
+        return 1
     counts = scan_disallowed_fields(gateway_file)
     total = sum(counts.values())
     print_scan_result(counts)
