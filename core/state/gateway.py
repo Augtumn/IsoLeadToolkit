@@ -597,7 +597,7 @@ class AppStateGateway:
         self._dispatch("SET_PALEOISOCHRON_MAX_AGE", age=int(age))
 
     def set_paleoisochron_step(self, step: int) -> None:
-        self._dispatch("SET_PALEOISOCHRON_STEP", step=step)
+        self._dispatch("SET_PALEOISOCHRON_STEP", step=int(step))
 
     def set_paleoisochron_ages(self, ages: Any) -> None:
         self._dispatch("SET_PALEOISOCHRON_AGES", ages=list(ages or []))

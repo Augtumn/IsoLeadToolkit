@@ -430,19 +430,29 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         store._snapshot["last_2d_cols"] = list(columns or []) if columns is not None else None
 
     elif action_type == "SET_SHOW_MODEL_CURVES":
-        store._snapshot["show_model_curves"] = bool(action.get("show", False))
+        store._snapshot["show_model_curves"] = bool(
+            action.get("show", store._snapshot.get("show_model_curves", True))
+        )
 
     elif action_type == "SET_SHOW_PLUMBOTECTONICS_CURVES":
-        store._snapshot["show_plumbotectonics_curves"] = bool(action.get("show", False))
+        store._snapshot["show_plumbotectonics_curves"] = bool(
+            action.get("show", store._snapshot.get("show_plumbotectonics_curves", True))
+        )
 
     elif action_type == "SET_SHOW_PALEOISOCHRONS":
-        store._snapshot["show_paleoisochrons"] = bool(action.get("show", False))
+        store._snapshot["show_paleoisochrons"] = bool(
+            action.get("show", store._snapshot.get("show_paleoisochrons", True))
+        )
 
     elif action_type == "SET_SHOW_MODEL_AGE_LINES":
-        store._snapshot["show_model_age_lines"] = bool(action.get("show", False))
+        store._snapshot["show_model_age_lines"] = bool(
+            action.get("show", store._snapshot.get("show_model_age_lines", True))
+        )
 
     elif action_type == "SET_SHOW_GROWTH_CURVES":
-        store._snapshot["show_growth_curves"] = bool(action.get("show", False))
+        store._snapshot["show_growth_curves"] = bool(
+            action.get("show", store._snapshot.get("show_growth_curves", True))
+        )
 
     elif action_type == "SET_SHOW_ISOCHRONS":
         store._snapshot["show_isochrons"] = bool(action.get("show", False))
@@ -798,3 +808,6 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             if value is not None:
                 merged[key] = value
         store._snapshot["export_image_options"] = _normalize_export_options(merged)
+
+    else:
+        logger.warning("Ignored unknown dispatch action type: %s", action_type)
