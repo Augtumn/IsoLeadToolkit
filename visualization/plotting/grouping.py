@@ -26,9 +26,14 @@ def parent_of_group(state: Any, group: Any) -> str | None:
 def parent_shape(state: Any, parent: str) -> str:
     """Return the marker shape assigned to a parent group.
 
-    Shapes follow the parent creation order (dict insertion order), which is
+    A manual override in ``parent_shape_map`` wins; otherwise the shape
+    follows the parent creation order (dict insertion order), which is
     stable across session save/restore because JSON preserves key order.
     """
+    overrides = getattr(state, "parent_shape_map", None) or {}
+    manual = overrides.get(parent)
+    if manual:
+        return str(manual)
     parents = list((getattr(state, "parent_groups", None) or {}).keys())
     try:
         idx = parents.index(parent)

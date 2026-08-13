@@ -842,6 +842,9 @@ class AppStateGateway:
     def set_parent_groups(self, mapping: dict[str, list[str]]) -> None:
         self._dispatch("SET_PARENT_GROUPS", mapping=dict(mapping or {}))
 
+    def set_parent_shape_map(self, mapping: dict[str, str]) -> None:
+        self._dispatch("SET_PARENT_SHAPE_MAP", mapping=dict(mapping or {}))
+
     def set_active_subset_indices(self, indices: Any) -> None:
         self._dispatch("SET_ACTIVE_SUBSET_INDICES", indices=indices)
 

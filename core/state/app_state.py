@@ -50,6 +50,8 @@ class AppState:
         # Parent-group overlay: parent name -> ordered child group names.
         # Children of one parent share a marker shape and keep distinct colors.
         self.parent_groups: dict[str, list[str]] = {}
+        # Manual per-parent shape overrides; empty = auto-assign by order.
+        self.parent_shape_map: dict[str, str] = {}
 
         # --- Sub-state objects ---
         self.overlay = OverlayState()

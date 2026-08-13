@@ -45,6 +45,7 @@ def save_session_params(
     tooltip_columns: list[str] | None = None,
     ui_theme: str | None = None,
     parent_groups: dict[str, list[str]] | None = None,
+    parent_shape_map: dict[str, str] | None = None,
 ) -> bool:
     """
     Save current session parameters to temporary file
@@ -69,6 +70,9 @@ def save_session_params(
             'ui_theme': ui_theme,
             'parent_groups': {
                 str(k): list(v or []) for k, v in (parent_groups or {}).items()
+            },
+            'parent_shape_map': {
+                str(k): str(v) for k, v in (parent_shape_map or {}).items()
             },
         }
         

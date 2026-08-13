@@ -402,6 +402,9 @@ class StateStore:
             "parent_groups": {
                 str(k): list(v or []) for k, v in (getattr(state, "parent_groups", {}) or {}).items()
             },
+            "parent_shape_map": {
+                str(k): str(v) for k, v in (getattr(state, "parent_shape_map", {}) or {}).items()
+            },
             "mixing_endmembers": dict(getattr(state, "mixing_endmembers", {}) or {}),
             "mixing_mixtures": dict(getattr(state, "mixing_mixtures", {}) or {}),
             "ternary_ranges": dict(getattr(state, "ternary_ranges", {}) or {}),
@@ -635,6 +638,9 @@ class StateStore:
             "legend_item_order": list(self._snapshot["legend_item_order"]),
             "parent_groups": {
                 str(k): list(v or []) for k, v in (self._snapshot["parent_groups"] or {}).items()
+            },
+            "parent_shape_map": {
+                str(k): str(v) for k, v in (self._snapshot["parent_shape_map"] or {}).items()
             },
             "mixing_endmembers": dict(self._snapshot["mixing_endmembers"]),
             "mixing_mixtures": dict(self._snapshot["mixing_mixtures"]),

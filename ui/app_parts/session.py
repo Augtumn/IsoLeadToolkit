@@ -82,6 +82,9 @@ class Qt5AppSessionMixin:
                 "Restored parent groups: %s",
                 {k: len(list(v or [])) for k, v in saved_parents.items()},
             )
+        saved_shapes = session_data.get("parent_shape_map") or {}
+        if saved_shapes:
+            state_gateway.set_parent_shape_map(saved_shapes)
 
         session_group_col = session_data.get("group_col")
         if session_group_col and session_group_col in app_state.group_cols:

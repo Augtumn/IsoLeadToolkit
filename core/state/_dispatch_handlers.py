@@ -807,6 +807,11 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             for k, vs in (action.get("mapping") or {}).items()
         }
 
+    elif action_type == "SET_PARENT_SHAPE_MAP":
+        store._snapshot["parent_shape_map"] = {
+            str(k): str(v) for k, v in (action.get("mapping") or {}).items()
+        }
+
     elif action_type == "SET_EXPORT_IMAGE_OPTIONS":
         merged = dict(store._snapshot["export_image_options"])
         payload = dict(action.get("options") or {})

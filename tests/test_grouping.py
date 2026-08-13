@@ -22,6 +22,7 @@ class _FakeState:
 
     def __init__(self):
         self.parent_groups: dict[str, list[str]] = {}
+        self.parent_shape_map: dict[str, str] = {}
         self.group_marker_map: dict[str, str] = {}
         self.plot_marker_shape = "o"
 
@@ -42,6 +43,21 @@ def test_parent_shape_follows_creation_order() -> None:
     assert parent_shape(state, "third") == PARENT_SHAPE_CYCLE[2]
     # Unknown parent falls back to the first shape.
     assert parent_shape(state, "missing") == PARENT_SHAPE_CYCLE[0]
+
+
+def test_parent_shape_manual_override_wins() -> None:
+    state = _FakeState()
+    state.parent_groups = {"first": ["A"]}
+    assert parent_shape(state, "first") == PARENT_SHAPE_CYCLE[0]
+
+    state.parent_shape_map = {"first": "^"}
+    assert parent_shape(state, "first") == "^"
+    # Children inherit the manual parent shape.
+    assert resolve_group_marker(state, "A") == "^"
+
+    # Removing the override falls back to automatic assignment.
+    state.parent_shape_map = {}
+    assert parent_shape(state, "first") == PARENT_SHAPE_CYCLE[0]
 
 
 def test_resolve_group_marker_prefers_parent_shape() -> None:
@@ -67,6 +83,7 @@ def test_parent_children_and_all_parents() -> None:
 
 def test_gateway_set_parent_groups_syncs_store_and_state() -> None:
     previous = app_state.parent_groups
+    previous_shapes = app_state.parent_shape_map
     try:
         state_gateway.set_parent_groups({"grp": ["x", "y"]})
         assert app_state.parent_groups == {"grp": ["x", "y"]}
@@ -74,11 +91,17 @@ def test_gateway_set_parent_groups_syncs_store_and_state() -> None:
         snapshot = app_state.state_store.snapshot()
         assert snapshot["parent_groups"] == {"grp": ["x", "y"]}
 
+        state_gateway.set_parent_shape_map({"grp": "^"})
+        assert app_state.parent_shape_map == {"grp": "^"}
+        assert app_state.state_store.snapshot()["parent_shape_map"] == {"grp": "^"}
+
         state_gateway.set_parent_groups({})
+        state_gateway.set_parent_shape_map({})
         assert app_state.parent_groups == {}
-        assert app_state.state_store.snapshot()["parent_groups"] == {}
+        assert app_state.parent_shape_map == {}
     finally:
         state_gateway.set_parent_groups(previous or {})
+        state_gateway.set_parent_shape_map(previous_shapes or {})
 
 
 def test_guard_script_scan_is_clean_for_grouping(monkeypatch) -> None:

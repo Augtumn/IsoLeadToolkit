@@ -29,6 +29,7 @@ def test_save_session_params_roundtrip(tmp_path: Path, monkeypatch) -> None:
         render_mode="UMAP",
         language="zh",
         parent_groups={"coins": ["A", "B"], "silver": []},
+        parent_shape_map={"coins": "^"},
     )
     assert ok is True
     assert params_file.exists()
@@ -43,6 +44,7 @@ def test_save_session_params_roundtrip(tmp_path: Path, monkeypatch) -> None:
     assert loaded["file_path"] == "C:/data/sample.xlsx"
     assert loaded["language"] == "zh"
     assert loaded["parent_groups"] == {"coins": ["A", "B"], "silver": []}
+    assert loaded["parent_shape_map"] == {"coins": "^"}
 
 
 def test_save_session_params_default_parent_groups(tmp_path: Path, monkeypatch) -> None:
