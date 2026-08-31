@@ -11,6 +11,10 @@ from .style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
 
+# constrained_layout cannot coexist with axes_grid1 divider axes; it is
+# disabled while marginal KDE axes are attached and restored on clear.
+_constrained_layout_disabled = False
+
 # Default maximum number of points per group for KDE sampling
 _KDE_MAX_POINTS_DEFAULT = 5000
 _KDE_GRID_SIZE_DEFAULT = 256
@@ -199,14 +203,57 @@ def _normalize_density_curve(density: np.ndarray) -> np.ndarray:
 
 
 def clear_marginal_axes() -> None:
+    global _constrained_layout_disabled
     axes = getattr(app_state, 'marginal_axes', None)
+    fig = None
     if axes:
         for ax in axes:
+            if fig is None:
+                fig = getattr(ax, 'figure', None)
             try:
                 ax.remove()
             except Exception:
                 pass
     state_gateway.set_marginal_axes(None)
+    # Re-enable constrained layout now that the divider axes are gone
+    # (constrained_layout cannot coexist with axes_grid1 divider axes).
+    if _constrained_layout_disabled:
+        _constrained_layout_disabled = False
+        if fig is not None:
+            try:
+                configure_constrained_layout(fig)
+            except Exception:
+                pass
+
+
+def _figure_uses_constrained_layout(fig: Any) -> bool:
+    """Detect whether a figure has constrained layout enabled."""
+    if fig is None:
+        return False
+    try:
+        engine = fig.get_layout_engine()
+        if engine is not None:
+            return True
+    except Exception:
+        pass
+    try:
+        return bool(fig.get_constrained_layout())
+    except Exception:
+        return False
+
+
+def _set_figure_constrained_layout(fig: Any, enabled: bool) -> None:
+    """Enable/disable constrained layout (both API generations)."""
+    try:
+        if hasattr(fig, 'set_layout_engine'):
+            fig.set_layout_engine('constrained' if enabled else 'none')
+            return
+    except Exception:
+        pass
+    try:
+        fig.set_constrained_layout(enabled)
+    except Exception:
+        pass
 
 
 def draw_marginal_kde(
@@ -219,11 +266,20 @@ def draw_marginal_kde(
     y_col: str = '_emb_y',
 ) -> None:
     """Draw marginal KDEs on top/right axes for 2D plots."""
+    global _constrained_layout_disabled
     try:
         from mpl_toolkits.axes_grid1 import make_axes_locatable
     except Exception as import_err:
         logger.warning("Failed to import KDE dependencies: %s", import_err)
         return
+
+    # Divider axes are incompatible with constrained layout (axes collapse
+    # to zero and matplotlib warns on every draw). Disable it for as long as
+    # the marginal axes are attached; clear_marginal_axes restores it.
+    fig = getattr(ax, 'figure', None) if ax is not None else None
+    if _figure_uses_constrained_layout(fig):
+        _set_figure_constrained_layout(fig, False)
+        _constrained_layout_disabled = True
 
     max_points = int(getattr(app_state, 'marginal_kde_max_points', _KDE_MAX_POINTS_DEFAULT))
 
@@ -393,5 +449,7 @@ def draw_marginal_kde(
         spine.set_visible(False)
 
     state_gateway.set_marginal_axes((ax_top, ax_right))
-    configure_constrained_layout(ax.figure)
+    # NOTE: constrained layout stays OFF while the divider axes exist (see
+    # the disable block at the top of this function); clear_marginal_axes
+    # re-enables it. Re-enabling here would warn on every draw.
 

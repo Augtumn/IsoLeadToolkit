@@ -50,16 +50,24 @@ def test_draw_marginal_kde_creates_and_registers_axes() -> None:
         _restore_marginal_axes_state(snapshot)
 
 
-def test_draw_marginal_kde_uses_layout_helper(monkeypatch) -> None:
+def test_draw_marginal_kde_keeps_constrained_layout_off_while_axes_attached(monkeypatch) -> None:
+    """Divider axes and constrained_layout are incompatible (matplotlib warns
+    'axes sizes collapsed to zero'). Drawing must disable it, and clearing
+    the marginal axes must restore it."""
     snapshot = _snapshot_marginal_axes_state()
     fig, ax = plt.subplots()
-    called: dict[str, object | None] = {"fig": None}
+    calls: list[tuple[str, object]] = []
     try:
         state_gateway.set_marginal_axes(None)
         monkeypatch.setattr(
             kde_helpers,
+            "_set_figure_constrained_layout",
+            lambda target_fig, enabled: calls.append(("set", target_fig) if enabled else ("set-off", target_fig)),
+        )
+        monkeypatch.setattr(
+            kde_helpers,
             "configure_constrained_layout",
-            lambda target_fig: called.__setitem__("fig", target_fig),
+            lambda target_fig: calls.append(("configure", target_fig)),
         )
 
         df_plot = pd.DataFrame(
@@ -70,15 +78,26 @@ def test_draw_marginal_kde_uses_layout_helper(monkeypatch) -> None:
             }
         )
 
-        draw_marginal_kde(
-            ax=ax,
-            df_plot=df_plot,
-            group_col="group",
-            palette={"A": "#1f77b4"},
-            unique_cats=["A"],
-        )
+        # Figure starts with constrained layout enabled.
+        configure_layout = fig.set_layout_engine
+        try:
+            fig.set_layout_engine("constrained")
+            draw_marginal_kde(
+                ax=ax,
+                df_plot=df_plot,
+                group_col="group",
+                palette={"A": "#1f77b4"},
+                unique_cats=["A"],
+            )
+            # Disabled while drawing (before re-enabling on clear).
+            assert calls and calls[0][0] == "set-off"
+        finally:
+            fig.set_layout_engine = configure_layout
 
-        assert called["fig"] is fig
+        clear_marginal_axes()
+        # Restored after the divider axes are removed.
+        assert len(calls) >= 2
+        assert calls[-1][0] == "configure"
     finally:
         clear_marginal_axes()
         plt.close(fig)
