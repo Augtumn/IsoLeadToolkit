@@ -333,7 +333,7 @@ class DataPanelProjectionMixin:
         # The stored selection may reference columns that no longer exist
         # (dataset changed); fall back to the first two columns and sync the
         # state so the UI and the store never disagree.
-        if current[0] not in cols or current[1] not in cols:
+        if len(current) == 2 and (current[0] not in cols or current[1] not in cols):
             if len(cols) >= 2:
                 fallback = [cols[0], cols[1]]
                 self.xaxis_combo.setCurrentText(fallback[0])
