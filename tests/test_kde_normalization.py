@@ -98,3 +98,20 @@ def test_2d_kde_uses_common_norm_false(monkeypatch) -> None:
     plot2d._render_2d_kde(df_plot, "g", ["Pb206", "Pb207"])
 
     assert captured.get("common_norm") is False, captured.keys()
+
+
+def test_robust_peak_limit_clips_extreme_spike() -> None:
+    """An extreme peak must not drive the axis limit past typical curves."""
+    peaks = [1.0, 1.1, 0.9, 1.05, 42.0]  # one extreme spike
+    limit = kde_utils._robust_peak_limit(peaks)
+    assert limit < 10.0, limit          # typical curves fully visible
+    assert limit >= 1.1, limit          # and not clipped themselves
+
+
+def test_robust_peak_limit_handles_degenerate_input() -> None:
+    assert kde_utils._robust_peak_limit([]) == 1.0
+    assert kde_utils._robust_peak_limit([0.0, -1.0, np.nan]) == 1.0
+    assert kde_utils._robust_peak_limit([3.0]) == 3.0
+    # Nearly identical peaks -> no clipping.
+    limit = kde_utils._robust_peak_limit([2.0, 2.01, 1.99])
+    assert limit >= 2.01

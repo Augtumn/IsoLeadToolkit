@@ -202,6 +202,30 @@ def _normalize_density_curve(density: np.ndarray) -> np.ndarray:
     return density / peak
 
 
+def _robust_peak_limit(peaks: list[float]) -> float:
+    """Y-limit that contains the typical curves but clips extreme spikes.
+
+    Uses the box-plot rule on the per-group density peaks: the upper limit
+    is ``Q3 + 1.5 * IQR`` (when there is enough spread), so a tightly
+    concentrated group's enormous spike no longer flattens every other
+    curve, while normal groups keep their true relative density.
+    """
+    finite = [float(p) for p in peaks if np.isfinite(p) and p > 0.0]
+    if not finite:
+        return 1.0
+    if len(finite) == 1:
+        return float(finite[0])
+    q75, q25 = np.percentile(finite, [75, 25])
+    iqr = float(q75 - q25)
+    if iqr <= 0.0:
+        # All peaks equal (or nearly so): no outlier to clip.
+        return float(np.max(finite))
+    limit = float(q75 + 1.5 * iqr)
+    if limit <= 0.0 or not np.isfinite(limit):
+        return float(np.max(finite))
+    return max(limit, float(np.max(finite)) * 0.05)
+
+
 def clear_marginal_axes() -> None:
     global _constrained_layout_disabled
     axes = getattr(app_state, 'marginal_axes', None)
@@ -339,6 +363,9 @@ def draw_marginal_kde(
     log_transform = bool(style.get('log_transform', False))
     max_points = max(200, min(max_points, 50000))
 
+    x_peaks: list[float] = []
+    y_peaks: list[float] = []
+
     for cat in unique_cats:
         subset = df_plot[df_plot[group_col] == cat]
         if subset.empty:
@@ -366,9 +393,10 @@ def draw_marginal_kde(
             )
             if curve_x is not None:
                 grid_x, density_x = curve_x
-                # Per-curve normalization so one tightly-spiked group cannot
-                # flatten the other curves on the shared marginal axis.
-                density_x = _normalize_density_curve(density_x)
+                # Keep the true density (relative heights preserved); the
+                # y-limit below clips extreme spikes so one tightly grouped
+                # category cannot flatten every other curve.
+                x_peaks.append(float(np.nanmax(density_x)))
                 try:
                     ax_top.plot(
                         grid_x,
@@ -401,8 +429,8 @@ def draw_marginal_kde(
             )
             if curve_y is not None:
                 grid_y, density_y = curve_y
-                # Per-curve normalization (see X-side comment above).
-                density_y = _normalize_density_curve(density_y)
+                # True density preserved; the x-limit below clips spikes.
+                y_peaks.append(float(np.nanmax(density_y)))
                 try:
                     ax_right.plot(
                         density_y,
@@ -422,6 +450,15 @@ def draw_marginal_kde(
                         )
                 except Exception as kde_err:
                     logger.warning("Marginal KDE Y failed for %s: %s", cat, kde_err)
+
+    # Clip extreme spikes on the shared marginal axes so a tightly grouped
+    # category cannot flatten every other curve, while typical groups keep
+    # their true relative density (baseline stays at 0).
+    try:
+        ax_top.set_ylim(0.0, _robust_peak_limit(x_peaks))
+        ax_right.set_xlim(0.0, _robust_peak_limit(y_peaks))
+    except Exception as limit_err:
+        logger.warning("Failed to set marginal KDE limits: %s", limit_err)
 
     # Keep marginal panels visually clean: no ticks or tick marks.
     # NOTE: marginal axes share x/y with the main axes. Do not call
