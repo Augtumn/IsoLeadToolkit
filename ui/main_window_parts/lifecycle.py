@@ -162,12 +162,16 @@ class MainWindowLifecycleMixin:
 
         try:
             if save_all(state_gateway):
-                mark_clean_exit()
                 logger.info("Session + UI state saved on exit")
             else:
                 logger.warning("Failed to save state on exit")
         except Exception as e:
             logger.warning("Failed to save session: %s", e)
+        finally:
+            # A user-initiated close is a clean exit even when the save
+            # itself failed; without the marker the next startup would
+            # wrongly report a crash.
+            mark_clean_exit()
 
         event.accept()
 

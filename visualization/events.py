@@ -51,7 +51,12 @@ def _sweep_retired_workers() -> None:
 
 
 def shutdown_embedding_worker() -> None:
-    """Cancel, wait for, and dispose of all embedding workers (app exit)."""
+    """Cancel, wait for, and dispose of all embedding workers (app exit).
+
+    Workers that do not stop within the wait window are KEPT ALIVE with a
+    warning: dropping the last reference would let GC destroy a running
+    QThread ("QThread: Destroyed while thread is still running").
+    """
     try:
         _cancel_embedding_task(reason='app_shutdown')
     except Exception:
@@ -61,12 +66,21 @@ def shutdown_embedding_worker() -> None:
         _retired_workers.append(current)
         state_gateway.set_embedding_worker(None, running=False)
     _sweep_retired_workers()
+    still_running = []
     for worker in list(_retired_workers):
         try:
-            worker.wait(5000)
+            stopped = worker.wait(5000)
+            if stopped:
+                worker.deleteLater()
+            else:
+                still_running.append(worker)
+                logger.error(
+                    "Embedding worker still running after shutdown wait; "
+                    "keeping it alive to avoid destroying a running thread"
+                )
         except Exception:
             pass
-    _retired_workers.clear()
+    _retired_workers[:] = still_running
 
 
 def _sync_render_mode(render_mode: str) -> None:
