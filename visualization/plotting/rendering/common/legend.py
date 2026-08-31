@@ -67,6 +67,81 @@ def _build_overlay_legend_entries(actual_algorithm: str) -> list[tuple[Line2D, s
     return entries
 
 
+def _merge_parent_groups_for_inline(
+    handles: list[Any],
+    labels: list[str],
+) -> tuple[list[Any], list[str]] | None:
+    """Collapse parent-group children into single in-plot legend entries.
+
+    Returns ``(merged_handles, merged_labels)`` or None when no parent
+    groups exist. Overlay entries (Line2D handles) are passed through
+    unchanged; each top-level parent becomes one entry using the parent's
+    shared shape, followed by the ungrouped groups in their original order.
+    """
+    from matplotlib.lines import Line2D as _Line2D
+
+    from visualization.plotting.grouping import (
+        all_parents,
+        parent_children,
+        parent_shape,
+    )
+
+    parents = all_parents(app_state)
+    if not parents:
+        return None
+
+    child_to_parent: dict[str, str] = {}
+    for parent in parents:
+        for child in parent_children(app_state, parent):
+            child_to_parent[str(child)] = parent
+    if not child_to_parent:
+        return None
+
+    group_handles: list[Any] = []
+    group_labels: list[str] = []
+    overlay_handles: list[Any] = []
+    overlay_labels: list[str] = []
+    for handle, label in zip(handles, labels):
+        if isinstance(handle, _Line2D):
+            overlay_handles.append(handle)
+            overlay_labels.append(str(label))
+        else:
+            group_handles.append(handle)
+            group_labels.append(str(label))
+
+    merged_handles: list[Any] = []
+    merged_labels: list[str] = []
+    for parent in parents:
+        color = '#94a3b8'
+        for child in parent_children(app_state, parent):
+            if str(child) in group_labels:
+                color = app_state.current_palette.get(str(child), '#94a3b8')
+                break
+        marker = parent_shape(app_state, parent)
+        merged_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker=marker,
+                linestyle='None',
+                markerfacecolor=color,
+                markeredgecolor=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
+                markeredgewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                markersize=8,
+            )
+        )
+        merged_labels.append(f"{translate('Parent')}: {parent}")
+
+    for group_label, group_handle in zip(group_labels, group_handles):
+        if group_label not in child_to_parent:
+            merged_handles.append(group_handle)
+            merged_labels.append(group_label)
+
+    merged_handles.extend(overlay_handles)
+    merged_labels.extend(overlay_labels)
+    return merged_handles, merged_labels
+
+
 def _place_inline_legend(
     ax: Any,
     group_col: str,
@@ -76,12 +151,23 @@ def _place_inline_legend(
     show_marginal_kde: bool = False,
     scatters: list[Any] | None = None,
     is_kde_mode: bool = False,
+    inline_handles: list[Any] | None = None,
+    inline_labels: list[str] | None = None,
 ) -> None:
-    """Place in-plot legend and notify the outside legend panel."""
+    """Place in-plot legend and notify the outside legend panel.
+
+    *inline_handles*/*inline_labels* optionally override what is drawn
+    inside the plot (e.g. parent-merged entries) while the snapshot and the
+    outside panel keep the full original list.
+    """
     state_gateway.set_legend_snapshot(group_col, legend_handles, legend_labels)
     _notify_legend_panel(group_col, legend_handles, legend_labels)
 
-    n_cats = len(legend_labels)
+    draw_handles = inline_handles if inline_handles is not None else legend_handles
+    draw_labels = inline_labels if inline_labels is not None else legend_labels
+    merged = inline_handles is not None
+
+    n_cats = len(draw_labels)
     if n_cats > 30:
         logger.debug('Too many categories for standard legend. Use Control Panel legend.')
         return
@@ -91,7 +177,7 @@ def _place_inline_legend(
         return
 
     location_key = inside_location
-    auto_ncol = _legend_columns_for_layout(legend_labels, ax, location_key)
+    auto_ncol = _legend_columns_for_layout(draw_labels, ax, location_key)
     if auto_ncol is None:
         ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if n_cats > 15 else 1)
     else:
@@ -114,7 +200,7 @@ def _place_inline_legend(
     if borderaxespad is not None:
         legend_kwargs['borderaxespad'] = borderaxespad
 
-    legend = ax.legend(handles=legend_handles, labels=legend_labels, **legend_kwargs)
+    legend = ax.legend(handles=draw_handles, labels=draw_labels, **legend_kwargs)
 
     if legend is not None and bbox:
         try:
@@ -124,7 +210,9 @@ def _place_inline_legend(
 
     _style_legend(legend, show_marginal_kde=show_marginal_kde, location_key=location_key)
 
-    if legend is not None and scatters and not is_kde_mode:
+    # Only map patch->scatter when the entry order is untouched; parent
+    # merging reorders entries so a zip would map wrongly.
+    if legend is not None and scatters and not is_kde_mode and not merged:
         try:
             for leg_patch, sc in zip(legend.get_patches(), scatters):
                 app_state.legend_to_scatter[leg_patch] = sc
@@ -159,6 +247,15 @@ def _render_legend(
             legend_handles.append(handle)
             legend_labels.append(label)
 
+        # In-plot legend honors parent groups: children collapse into one
+        # entry per parent, which also keeps the entry count under the
+        # 30-category cap (the outside panel keeps the full list).
+        inline_handles = inline_labels = None
+        if not is_kde_mode:
+            merged = _merge_parent_groups_for_inline(legend_handles, legend_labels)
+            if merged is not None:
+                inline_handles, inline_labels = merged
+
         _place_inline_legend(
             app_state.ax,
             group_col,
@@ -167,6 +264,8 @@ def _render_legend(
             show_marginal_kde=show_marginal_kde,
             scatters=scatters,
             is_kde_mode=is_kde_mode,
+            inline_handles=inline_handles,
+            inline_labels=inline_labels,
         )
     except Exception as err:
         logger.warning('Legend creation error: %s', err)

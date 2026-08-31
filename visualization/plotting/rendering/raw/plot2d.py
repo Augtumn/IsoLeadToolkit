@@ -13,7 +13,7 @@ from ...core import _build_group_palette, _ensure_axes
 from ...geochem.equation_overlays import _draw_equation_overlays
 from ...grouping import resolve_group_marker
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
-from ..common.legend import _place_inline_legend
+from ..common.legend import _merge_parent_groups_for_inline, _place_inline_legend
 from ..common.state_access import _active_subset_indices, _df_global
 from ..kde import _resolve_kde_style
 
@@ -264,6 +264,13 @@ def _render_2d_legend(
         legend_handles = handles if handles else list(scatters)
         legend_labels = labels if labels else list(unique_cats)
 
+        # Parent groups collapse into single entries for the in-plot legend.
+        inline_handles = inline_labels = None
+        if not show_kde:
+            merged = _merge_parent_groups_for_inline(legend_handles, legend_labels)
+            if merged is not None:
+                inline_handles, inline_labels = merged
+
         _place_inline_legend(
             app_state_ax,
             group_col,
@@ -272,6 +279,8 @@ def _render_2d_legend(
             show_marginal_kde=show_marginal_kde,
             scatters=scatters,
             is_kde_mode=show_kde,
+            inline_handles=inline_handles,
+            inline_labels=inline_labels,
         )
 
     except Exception as legend_err:
