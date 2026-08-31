@@ -151,6 +151,9 @@ def _render_2d_kde(
             'warn_singular': False,
             'legend': False,
             'zorder': 1,
+            # Per-group normalization: seaborn's default common_norm=True
+            # lets one tight-spike group flatten every other group's KDE.
+            'common_norm': False,
         }
         if not kde_fill:
             # seaborn warns when 'linewidth' is passed to filled contours;

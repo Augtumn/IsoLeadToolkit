@@ -181,6 +181,23 @@ def _estimate_density_curve(
         return None
 
 
+def _normalize_density_curve(density: np.ndarray) -> np.ndarray:
+    """Scale a density curve to a peak of 1.0 (per-curve normalization).
+
+    Marginal KDE axes share one y-scale; without normalization a group whose
+    data is extremely concentrated produces a huge density spike that flattens
+    every other group's curve against the axis bottom. Normalizing each curve
+    to its own peak keeps all shapes comparable. Idempotent when the curve is
+    already peak-normalized (e.g. after the log-transform path).
+    """
+    if density is None or density.size == 0:
+        return density
+    peak = float(np.nanmax(density))
+    if not np.isfinite(peak) or peak <= 0.0:
+        return density
+    return density / peak
+
+
 def clear_marginal_axes() -> None:
     axes = getattr(app_state, 'marginal_axes', None)
     if axes:
@@ -293,6 +310,9 @@ def draw_marginal_kde(
             )
             if curve_x is not None:
                 grid_x, density_x = curve_x
+                # Per-curve normalization so one tightly-spiked group cannot
+                # flatten the other curves on the shared marginal axis.
+                density_x = _normalize_density_curve(density_x)
                 try:
                     ax_top.plot(
                         grid_x,
@@ -325,6 +345,8 @@ def draw_marginal_kde(
             )
             if curve_y is not None:
                 grid_y, density_y = curve_y
+                # Per-curve normalization (see X-side comment above).
+                density_y = _normalize_density_curve(density_y)
                 try:
                     ax_right.plot(
                         density_y,

@@ -69,6 +69,10 @@ def _render_kde_overlay(
                     'warn_singular': False,
                     'legend': False,
                     'zorder': 1,
+                    # Normalize each group's density independently: with the
+                    # default common_norm=True a tight-spike group (extreme
+                    # data) scales down every other group's contours.
+                    'common_norm': False,
                 }
                 if not kde_fill:
                     # seaborn warns when 'linewidth' is passed to filled
@@ -92,6 +96,9 @@ def _render_kde_overlay(
                 'warn_singular': False,
                 'legend': False,
                 'zorder': 1,
+                # Per-group normalization so extreme groups cannot flatten
+                # the contours of the others.
+                'common_norm': False,
             }
             if not kde_fill:
                 kde_kwargs['linewidths'] = float(kde_style.get('linewidth', 1.0))
