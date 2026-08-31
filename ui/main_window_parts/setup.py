@@ -298,7 +298,9 @@ class MainWindowSetupMixin:
         df = getattr(app_state, "df_global", None)
         if df is not None and len(df) > 0:
             n = len(df)
-            mode = getattr(app_state, "render_mode", "?")
+            # Show the user-friendly mode name (e.g. "Pb Evolution 206-207"
+            # for the internal "PB_EVOL_76" code) via the locale table.
+            mode = translate(str(getattr(app_state, "render_mode", "?")))
             group_cols = getattr(app_state, "group_cols", []) or []
             g = len(group_cols)
             text = translate(

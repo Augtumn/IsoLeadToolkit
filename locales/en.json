@@ -816,12 +816,12 @@
   "No data selected. Please select data points first.": "No data selected. Please select data points first.",
   "No mixing groups defined": "No mixing groups defined",
   "Opacity: {value:.2f}": "Opacity: {value:.2f}",
-  "PB_EVOL_76": "PB_EVOL_76",
-  "PB_EVOL_86": "PB_EVOL_86",
-  "PB_KAPPA_AGE": "PB_KAPPA_AGE",
-  "PB_MU_AGE": "PB_MU_AGE",
-  "PLUMBOTECTONICS_76": "PLUMBOTECTONICS_76",
-  "PLUMBOTECTONICS_86": "PLUMBOTECTONICS_86",
+  "PB_EVOL_76": "Pb Evolution 206-207",
+  "PB_EVOL_86": "Pb Evolution 206-208",
+  "PB_KAPPA_AGE": "Pb Kappa Age",
+  "PB_MU_AGE": "Pb Mu Age",
+  "PLUMBOTECTONICS_76": "Plumbotectonics 206-207",
+  "PLUMBOTECTONICS_86": "Plumbotectonics 206-208",
   "Plumbotectonics Model": "Plumbotectonics Model",
   "No plumbotectonics data": "No plumbotectonics data",
   "Li,2001": "Li, 2001",
@@ -1147,5 +1147,7 @@
   "Overwrite theme '{name}'?": "Overwrite theme '{name}'?",
   "Assign palette and shapes to all groups": "Assign palette and shapes to all groups",
   "Clear search": "Clear search",
-  "Parent group '{name}' already exists.": "Parent group '{name}' already exists."
+  "Parent group '{name}' already exists.": "Parent group '{name}' already exists.",
+  "V1V2": "V1-V2 Diagram",
+  "tSNE": "t-SNE"
 }

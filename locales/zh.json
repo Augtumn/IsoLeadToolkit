@@ -849,12 +849,12 @@
   "No data selected. Please select data points first.": "未选择数据。请先选择数据点。",
   "No mixing groups defined": "未定义混合分组",
   "Opacity: {value:.2f}": "透明度：{value:.2f}",
-  "PB_EVOL_76": "PB_EVOL_76",
-  "PB_EVOL_86": "PB_EVOL_86",
-  "PB_KAPPA_AGE": "PB_KAPPA_AGE",
-  "PB_MU_AGE": "PB_MU_AGE",
-  "PLUMBOTECTONICS_76": "PLUMBOTECTONICS_76",
-  "PLUMBOTECTONICS_86": "PLUMBOTECTONICS_86",
+  "PB_EVOL_76": "Pb 演化图 206-207",
+  "PB_EVOL_86": "Pb 演化图 206-208",
+  "PB_KAPPA_AGE": "Pb κ 年龄",
+  "PB_MU_AGE": "Pb μ 年龄",
+  "PLUMBOTECTONICS_76": "地体构造 206-207",
+  "PLUMBOTECTONICS_86": "地体构造 206-208",
   "Plumbotectonics Model": "Plumbotectonics 模型",
   "No plumbotectonics data": "没有可用的 Plumbotectonics 数据",
   "Li,2001": "李等, 2001",
@@ -1147,5 +1147,7 @@
   "Overwrite theme '{name}'?": "覆盖主题“{name}”？",
   "Assign palette and shapes to all groups": "为所有分组分配配色和形状",
   "Clear search": "清除搜索",
-  "Parent group '{name}' already exists.": "父组“{name}”已存在。"
+  "Parent group '{name}' already exists.": "父组“{name}”已存在。",
+  "V1V2": "地化-V1V2判别图",
+  "tSNE": "t-SNE"
 }
