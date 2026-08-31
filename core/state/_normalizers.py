@@ -312,28 +312,11 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
         snapshot["algorithm"] = algorithm
     state.algorithm = algorithm
 
-    # Detect unsynchronized in-place dict mutations before overwriting.
-    # If any of these differ from the snapshot, a state_gateway.set_*_params()
-    # call was missed after an in-place modification — log a warning so the
-    # regression is visible in logs before it manifests as a user-facing bug.
-    _WATCHED_DICT_FIELDS = (
-        ("umap_params", state.umap_params),
-        ("tsne_params", state.tsne_params),
-        ("pca_params", state.pca_params),
-        ("robust_pca_params", state.robust_pca_params),
-        ("ml_params", state.ml_params),
-        ("v1v2_params", state.v1v2_params),
-    )
-    for name, current in _WATCHED_DICT_FIELDS:
-        snap = snapshot.get(name)
-        if isinstance(snap, dict) and isinstance(current, dict):
-            if current != snap:
-                logger.warning(
-                    "_sync_state overwriting %s: snapshot differs from live state. "
-                    "Missing state_gateway.set_%s() after in-place mutation?",
-                    name, name,
-                )
-
+    # NOTE: parameter dicts are written back below. Bypass detection for
+    # in-place mutations happens in StateStore.dispatch (before applying an
+    # action), where snapshot vs live comparison has the correct semantics —
+    # comparing here (after the handler updated the snapshot but before the
+    # write-back) would flag every legitimate parameter change.
     state.umap_params = dict(snapshot["umap_params"])
     state.tsne_params = dict(snapshot["tsne_params"])
     state.pca_params = dict(snapshot["pca_params"])

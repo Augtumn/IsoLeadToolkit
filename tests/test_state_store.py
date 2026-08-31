@@ -1637,3 +1637,54 @@ def test_app_state_runtime_legend_properties_passthrough() -> None:
     finally:
         setattr(app_state, "legend_to_scatter", original_mapping)
         setattr(app_state, "legend_update_callback", original_callback)
+
+
+def test_clear_artists_does_not_trigger_diff_warning(caplog) -> None:
+    """Render-loop reset must not warn "modified outside the gateway".
+
+    Regression: OverlayState.clear_artists used to clear local fields before
+    dispatching, so the dispatch's diff check saw a stale snapshot and logged
+    a warning on every render (see isotopes_analyse.20260831-125705.log).
+    """
+    import logging
+
+    state_gateway.set_paleoisochron_label_data([{"text": "paleo", "style_key": "paleoisochron"}])
+    with caplog.at_level(logging.WARNING, logger="core.state.store"):
+        app_state.overlay.clear_artists()
+        state_gateway.set_legend_item_order([])
+        assert "modified outside the gateway" not in caplog.text
+        assert app_state.paleoisochron_label_data == []
+        assert app_state.state_store.snapshot()["paleoisochron_label_data"] == []
+
+
+def test_set_umap_params_does_not_warn_on_legitimate_change(caplog) -> None:
+    """A real parameter change through the gateway must not warn.
+
+    Regression: the sync-time watched-dict check compared the live state
+    against the freshly-updated snapshot and warned on every change.
+    """
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="core.state._normalizers"):
+        state_gateway.set_umap_params({**app_state.umap_params, "n_neighbors": 7})
+        state_gateway.set_umap_params({**app_state.umap_params, "n_neighbors": 8})
+        assert "overwriting umap_params" not in caplog.text
+        assert app_state.umap_params["n_neighbors"] == 8
+
+
+def test_restore_snapshot_ignores_metadata_keys_silently(caplog) -> None:
+    """session_version/saved_at are expected metadata, not junk keys."""
+    import logging
+
+    # algorithm follows render_mode during sync; pin it so the assertion is
+    # independent of the ordering of other tests.
+    state_gateway.set_render_mode("UMAP")
+    with caplog.at_level(logging.WARNING, logger="core.state.store"):
+        app_state.state_store.restore_snapshot({
+            "algorithm": "UMAP",
+            "session_version": 2,
+            "saved_at": "2026-08-31T12:00:00",
+        })
+        assert "session_version" not in caplog.text
+        assert app_state.state_store.snapshot()["algorithm"] == "UMAP"
+

@@ -46,6 +46,10 @@ logger = logging.getLogger(__name__)
 # exempt from the direct-mutation warning below.
 _DIFF_WARN_EXCLUDED = frozenset({
     "overlay_artists",
+    "overlay_curve_label_data",
+    "paleoisochron_label_data",
+    "plumbotectonics_label_data",
+    "plumbotectonics_isoage_label_data",
     "marginal_axes",
     "legend_last_title",
     "legend_last_handles",
@@ -534,9 +538,13 @@ class StateStore:
         """
         from ..persistence.schema import SESSION_FIELDS, UI_STATE_FIELDS
 
+        # Metadata keys carried by persisted session payloads that are not
+        # snapshot fields; they are expected and silently ignored.
+        _META_KEYS = frozenset({"session_version", "saved_at"})
+
         allowed = SESSION_FIELDS | UI_STATE_FIELDS
         accepted = {key: value for key, value in payload.items() if key in allowed}
-        skipped = sorted(set(payload) - allowed)
+        skipped = sorted(set(payload) - allowed - _META_KEYS)
         if skipped:
             logger.warning(
                 "Ignored %s non-persisted key(s) during snapshot restore: %s",

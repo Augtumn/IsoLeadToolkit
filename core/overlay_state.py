@@ -184,15 +184,14 @@ class OverlayState:
             })
 
     def clear_artists(self) -> None:
-        """Reset runtime artist tracking state (through gateway so snapshot stays in sync)."""
-        # Clear local state directly so this works for standalone instances (tests)
-        # as well as when called through app_state.overlay.
-        self.overlay_artists = {}
-        self.overlay_curve_label_data = []
-        self.paleoisochron_label_data = []
-        self.plumbotectonics_label_data = []
-        self.plumbotectonics_isoage_label_data = []
+        """Reset runtime artist tracking state.
 
+        Dispatch through the gateway FIRST so the diff check inside the
+        dispatch sees a consistent snapshot/live pair (clearing the locals
+        before dispatching used to trigger "modified outside the gateway"
+        warnings on every render), then clear the local fields so standalone
+        instances (unit tests) work as well.
+        """
         # Lazy import to avoid circular dependency at module load time.
         from core.state.gateway import state_gateway  # noqa: E402
 
@@ -201,3 +200,11 @@ class OverlayState:
         state_gateway.set_paleoisochron_label_data([])
         state_gateway.set_plumbotectonics_label_data([])
         state_gateway.set_plumbotectonics_isoage_label_data([])
+
+        # Keep standalone instances (unit tests) working: the dispatches
+        # above only touch the global app_state.
+        self.overlay_artists = {}
+        self.overlay_curve_label_data = []
+        self.paleoisochron_label_data = []
+        self.plumbotectonics_label_data = []
+        self.plumbotectonics_isoage_label_data = []
