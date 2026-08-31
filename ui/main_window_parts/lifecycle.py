@@ -105,6 +105,11 @@ class MainWindowLifecycleMixin:
             save_all(state_gateway)
         except Exception:
             pass
+        # restore_snapshot bypasses dispatch, so refresh the mode label here.
+        try:
+            self._refresh_status_info()
+        except Exception:
+            pass
 
         if flag == "data_failed":
             QMessageBox.warning(

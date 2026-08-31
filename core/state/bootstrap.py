@@ -118,6 +118,7 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.language = config.get('default_language', 'zh')
     state.language_labels = config.get('languages', {'zh': '中文', 'en': 'English'})
     state.language_listeners = []
+    state.render_mode_listeners = []
 
     # Legend and color state
     state.current_palette = {}

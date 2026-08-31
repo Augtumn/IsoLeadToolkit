@@ -115,6 +115,24 @@ class AppState:
             except Exception:
                 pass
 
+    def register_render_mode_listener(self, callback: Callable[[str], None]) -> None:
+        """Register a callback invoked (with the new mode) when render mode changes."""
+        if callback and callback not in self.render_mode_listeners:
+            self.render_mode_listeners.append(callback)
+
+    def unregister_render_mode_listener(self, callback: Callable[[str], None]) -> None:
+        """Remove a previously registered render-mode listener."""
+        if callback in self.render_mode_listeners:
+            self.render_mode_listeners.remove(callback)
+
+    def notify_render_mode_change(self, mode: str) -> None:
+        """Notify registered listeners about render-mode changes."""
+        for callback in list(self.render_mode_listeners):
+            try:
+                callback(mode)
+            except Exception:
+                pass
+
     # ------------------------------------------------------------------ #
     # Backward-compatible property delegation: OverlayState
     # ------------------------------------------------------------------ #

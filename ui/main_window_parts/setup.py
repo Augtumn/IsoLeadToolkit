@@ -264,6 +264,13 @@ class MainWindowSetupMixin:
 
         status_bar.addPermanentWidget(self._embedding_progress_bar)
 
+        # Refresh the mode label whenever the render mode changes (panel
+        # dialogs switch modes without rebuilding the status bar).
+        try:
+            app_state.register_render_mode_listener(lambda _mode: self._refresh_status_info())
+        except Exception:
+            pass
+
         self._refresh_status_info()
 
         def _on_embedding_progress(percent: int, stage: str) -> None:

@@ -1688,3 +1688,20 @@ def test_restore_snapshot_ignores_metadata_keys_silently(caplog) -> None:
         assert "session_version" not in caplog.text
         assert app_state.state_store.snapshot()["algorithm"] == "UMAP"
 
+
+
+def test_render_mode_listener_fires_on_dispatch() -> None:
+    """Status-bar follower must be told when the render mode changes."""
+    received: list[str] = []
+
+    def _listener(mode: str) -> None:
+        received.append(mode)
+
+    app_state.register_render_mode_listener(_listener)
+    try:
+        state_gateway.set_render_mode("PCA")
+        state_gateway.set_render_mode("UMAP")
+        assert received == ["PCA", "UMAP"], received
+        assert app_state.render_mode == "UMAP"
+    finally:
+        app_state.unregister_render_mode_listener(_listener)

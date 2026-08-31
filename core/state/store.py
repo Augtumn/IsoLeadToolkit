@@ -521,6 +521,7 @@ class StateStore:
         _warn_direct_mutations(self._state, self._snapshot)
         dispatch_action(self, action)
         self._sync_state()
+        self._notify_render_mode_if_changed(action)
         hook = self._dispatch_hook
         if callable(hook):
             try:
@@ -528,6 +529,23 @@ class StateStore:
             except Exception:
                 logger.exception("Dispatch hook failed for action %s", action.get("type"))
         return self.snapshot()
+
+    def _notify_render_mode_if_changed(self, action: dict[str, Any]) -> None:
+        """Tell render-mode listeners when the mode actually changed.
+
+        The status bar (and any other follower) refreshes through this
+        listener; without it, the bottom-right mode label stays stale after
+        switching modes from a panel dialog.
+        """
+        action_type = str(action.get("type", "")).upper().strip()
+        if action_type != "SET_RENDER_MODE":
+            return
+        notify = getattr(self._state, "notify_render_mode_change", None)
+        if callable(notify):
+            try:
+                notify(str(self._snapshot.get("render_mode", "")))
+            except Exception:
+                logger.exception("Render-mode listener failed")
 
     def restore_snapshot(self, payload: dict[str, Any]) -> None:
         """Bulk-restore persisted fields without going through the gateway.
