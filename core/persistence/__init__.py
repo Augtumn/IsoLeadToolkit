@@ -106,9 +106,10 @@ def extract_legacy_projection_presets() -> tuple[dict[str, Any] | None, dict[str
     Before the persistence rework, projection parameter presets lived inside
     ``saved_themes["projection_presets"]`` in user_themes.json. Returns
     ``(themes_payload, presets_payload)`` with the presets key removed from
-    the themes payload; either may be None when absent/unreadable. The theme
-    file itself is left untouched here (it is rewritten on the next theme
-    save, which then persists the clean container).
+    the themes payload; either may be None when absent/unreadable. When
+    legacy presets were found, the cleaned container is written back to
+    user_themes.json so the migration runs exactly once (otherwise every
+    panel open re-migrates and re-dispatches).
     """
     from .paths import THEMES_FILE
 
@@ -121,6 +122,15 @@ def extract_legacy_projection_presets() -> tuple[dict[str, Any] | None, dict[str
         if isinstance(presets, dict)
         else None
     )
+    if presets_payload:
+        try:
+            atomic_write_json(THEMES_FILE, themes)
+            logger.info(
+                "Migrated %s legacy projection presets; cleaned user_themes.json",
+                len(presets_payload),
+            )
+        except Exception as exc:
+            logger.warning("Failed to persist cleaned user_themes.json: %s", exc)
     return themes, presets_payload
 
 

@@ -137,10 +137,12 @@ def test_extract_legacy_projection_presets(tmp_path: Path, monkeypatch) -> None:
     assert themes == {"My Theme": {"grid": True}}
     assert "projection_presets" not in themes
 
-    # Idempotent on a clean container.
+    # The cleaned container is written back, so the migration runs once.
+    on_disk = json.loads((tmp_path / "user_themes.json").read_text(encoding="utf-8"))
+    assert "projection_presets" not in on_disk
     themes2, presets2 = persistence.extract_legacy_projection_presets()
-    assert presets2 == {"P1": {"algorithm": "UMAP"}}  # file itself untouched
-    assert "projection_presets" not in themes2
+    assert presets2 is None
+    assert themes2 == {"My Theme": {"grid": True}}
 
 
 def test_restore_snapshot_normalizes_set_and_tuple_fields(tmp_path: Path, monkeypatch) -> None:

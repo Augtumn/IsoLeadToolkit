@@ -83,7 +83,7 @@ def _place_inline_legend(
 
     n_cats = len(legend_labels)
     if n_cats > 30:
-        logger.info('Too many categories for standard legend. Use Control Panel legend.')
+        logger.debug('Too many categories for standard legend. Use Control Panel legend.')
         return
 
     inside_location = getattr(app_state, 'legend_position', None)

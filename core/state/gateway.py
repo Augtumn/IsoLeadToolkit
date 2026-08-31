@@ -679,7 +679,13 @@ class AppStateGateway:
         self._dispatch("SET_CUSTOM_SHAPE_SETS", shape_sets=dict(shape_sets or {}))
 
     def set_legend_item_order(self, order: Any) -> None:
-        self._dispatch("SET_LEGEND_ITEM_ORDER", order=list(order or []))
+        # The render loop re-syncs the order on every frame; skip the
+        # dispatch (and the immediate autosave it triggers) when nothing
+        # actually changed.
+        normalized = [str(item) for item in list(order or [])]
+        if normalized == list(getattr(self._state, "legend_item_order", []) or []):
+            return
+        self._dispatch("SET_LEGEND_ITEM_ORDER", order=normalized)
 
     def set_ternary_render_margin(self, margin: float) -> None:
         self._dispatch("SET_TERNARY_RENDER_MARGIN", margin=margin)

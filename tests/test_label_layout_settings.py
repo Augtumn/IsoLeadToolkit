@@ -92,3 +92,48 @@ def test_pick_anchor_on_line_respects_position_mode_and_visibility() -> None:
         assert label_layout._pick_anchor_on_line(ax, [20.0, 21.0], [20.0, 21.0], "auto") is None
     finally:
         plt.close(fig)
+
+
+def test_apply_adjust_text_passes_single_limit(monkeypatch) -> None:
+    """Only one of iter_lim/time_lim is passed to adjustText.
+
+    Regression: passing both made adjustText warn ("faster will be used")
+    and the 0.25 s default time limit always won, killing the iteration
+    limit control.
+    """
+    import numpy as np
+
+    from visualization.plotting import label_layout
+
+    captured: dict = {}
+
+    def _fake_adjust_text(texts, **kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(label_layout, "_lazy_import_adjust_text", lambda: _fake_adjust_text)
+    snapshot = _snapshot_adjust_text_state()
+    try:
+        # Default time limit -> iteration limit is used.
+        state_gateway.set_adjust_text_time_lim(0.25)
+        state_gateway.set_adjust_text_iter_lim(120)
+        ax = type("Ax", (), {
+            "get_xlim": lambda self: (0.0, 1.0),
+            "get_ylim": lambda self: (0.0, 1.0),
+        })()
+        fake_text = type("T", (), {
+            "get_position": lambda self: (0.5, 0.5),
+            "get_visible": lambda self: True,
+        })
+        label_layout.apply_adjust_text_to_labels(ax, [fake_text(), fake_text()])
+        assert "iter_lim" in captured and captured["iter_lim"] == 120
+        assert "time_lim" not in captured
+
+        captured.clear()
+        # Explicitly changed time limit -> time limit is used.
+        state_gateway.set_adjust_text_time_lim(1.5)
+        label_layout.apply_adjust_text_to_labels(ax, [fake_text(), fake_text()])
+        assert "time_lim" in captured and captured["time_lim"] == 1.5
+        assert "iter_lim" not in captured
+    finally:
+        _restore_adjust_text_state(snapshot)
+

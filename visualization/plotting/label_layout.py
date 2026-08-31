@@ -320,6 +320,11 @@ def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None
                 y_static = arr[:, 1]
 
     force_text, force_static, expand, iter_lim, time_lim = _resolve_adjust_text_settings()
+    # adjustText warns "faster will be used" when both limits are set and
+    # the 0.25 s default time limit always wins, making the iteration-limit
+    # control dead. Pass only one: the time limit when the user explicitly
+    # changed it, otherwise the iteration limit.
+    use_time_limit = time_lim != 0.25
 
     target_x = []
     target_y = []
@@ -335,26 +340,28 @@ def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None
 
     try:
         state_gateway.set_adjust_text_in_progress(True)
-        adjust_text(
-            texts,
-            ax=ax,
-            x=x_static,
-            y=y_static,
-            target_x=target_x or None,
-            target_y=target_y or None,
-            only_move={'text': 'xy', 'static': 'xy', 'explode': 'xy', 'pull': 'xy'},
-            ensure_inside_axes=True,
-            force_text=force_text,
-            force_static=force_static,
-            force_pull=(0.04, 0.06),
-            expand=expand,
-            expand_axes=False,
-            avoid_self=True,
-            prevent_crossings=True,
-            iter_lim=iter_lim,
-            time_lim=time_lim,
-            arrowprops=None,
-        )
+        adjust_kwargs: dict[str, Any] = {
+            'ax': ax,
+            'x': x_static,
+            'y': y_static,
+            'target_x': target_x or None,
+            'target_y': target_y or None,
+            'only_move': {'text': 'xy', 'static': 'xy', 'explode': 'xy', 'pull': 'xy'},
+            'ensure_inside_axes': True,
+            'force_text': force_text,
+            'force_static': force_static,
+            'force_pull': (0.04, 0.06),
+            'expand': expand,
+            'expand_axes': False,
+            'avoid_self': True,
+            'prevent_crossings': True,
+            'arrowprops': None,
+        }
+        if use_time_limit:
+            adjust_kwargs['time_lim'] = time_lim
+        else:
+            adjust_kwargs['iter_lim'] = iter_lim
+        adjust_text(texts, **adjust_kwargs)
     except Exception as err:
         logger.debug("adjustText layout skipped: %s", err)
     finally:
