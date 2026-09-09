@@ -2,6 +2,7 @@
 """Model age calculations."""
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any, Callable
 
@@ -12,6 +13,8 @@ from .engine import (
     engine,
     EPSILON,
 )
+
+logger = logging.getLogger(__name__)
 
 
 _RATIO_DIFF_FLOOR = 1e-10
@@ -57,7 +60,8 @@ def _solve_age_scipy(
         try:
             out = f(val)
             return out if np.isfinite(out) else np.nan
-        except Exception:
+        except Exception as exc:
+            logger.debug("Age objective evaluation failed at t=%s: %s", val, exc)
             return np.nan
 
     try:
@@ -86,7 +90,8 @@ def _solve_age_scipy(
                 return optimize.brentq(f, t_samples[i], t_samples[i + 1], xtol=_AGE_SOLVER_XTOL)
 
         return None
-    except Exception:
+    except Exception as exc:
+        logger.warning("Age solver failed over bounds %s: %s", bounds, exc)
         return None
 
 def calculate_single_stage_age(

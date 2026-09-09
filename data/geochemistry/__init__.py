@@ -175,6 +175,15 @@ def calculate_all_parameters(
         tSK = tCDT
 
     t_model = tSK if is_two_stage else tCDT
+    # Finite fallback: a two-stage solve can fail (None/NaN) while the
+    # single-stage age is still valid, and vice versa.
+    if is_two_stage:
+        if t_model is None:
+            t_model = tCDT
+        elif tCDT is not None:
+            t_model = np.where(np.isfinite(t_model), t_model, tCDT)
+    if t_model is None:
+        t_model = np.nan
 
     if t_Ma is None:
         t_input = t_model
@@ -210,6 +219,11 @@ def calculate_all_parameters(
             # crashing in np.maximum below.
             logger.warning("Single-stage age solve failed; falling back to tCDT")
             t_calc = tCDT
+        if t_calc is None:
+            # Both solves failed: keep going with NaN so the remaining
+            # outputs degrade instead of raising TypeError.
+            logger.warning("No finite single-stage age available; deltas will be NaN")
+            t_calc = np.nan
         if is_geokit or params_calc.get('v1v2_formula') == 'zhu1993':
             t_calc = np.maximum(t_calc, 0)
         t_mantle = params_calc.get('T2') if is_geokit else None

@@ -331,7 +331,10 @@ def calculate_initial_ratio_64(
         params = engine.params
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
     x_ref, _, _, t_ref = _model_reference_params(params)
-    t = np.asarray(t_Ma) * 1e6
+    # Same age handling as the mu/kappa inversions (None-safe, clamped to
+    # >= 0): the raw np.asarray(t_Ma) crashed on None and disagreed with
+    # the clamped age used for mu, corrupting the initial ratios.
+    t = _prepare_age(t_Ma)
     e8T = np.exp(params['lambda_238'] * t_ref)
     e8t = np.exp(params['lambda_238'] * t)
     return x_ref + mu * (e8T - e8t)
@@ -350,7 +353,7 @@ def calculate_initial_ratio_74(
         params = engine.params
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
     _, y_ref, _, t_ref = _model_reference_params(params)
-    t = np.asarray(t_Ma) * 1e6
+    t = _prepare_age(t_Ma)
     U8U5 = 1.0 / params['U_ratio']
     e5T = np.exp(params['lambda_235'] * t_ref)
     e5t = np.exp(params['lambda_235'] * t)
@@ -373,7 +376,7 @@ def calculate_initial_ratio_84(
     kappa = calculate_model_kappa(Pb206_204_S, Pb208_204_S, t_Ma, params)
     omega = kappa * mu
     _, _, z_ref, t_ref = _model_reference_params(params)
-    t = np.asarray(t_Ma) * 1e6
+    t = _prepare_age(t_Ma)
     e2T = np.exp(params['lambda_232'] * t_ref)
     e2t = np.exp(params['lambda_232'] * t)
     return z_ref + omega * (e2T - e2t)
