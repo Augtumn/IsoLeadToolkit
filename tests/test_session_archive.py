@@ -167,3 +167,39 @@ def test_data_contract_keys_cover_hydration_inputs() -> None:
     assert {"group_cols", "data_cols", "file_path", "sheet_name", "last_group_col"} <= set(
         _DATA_CONTRACT_KEYS
     )
+
+
+def test_import_mismatched_columns_keeps_live_selection(tmp_path: Path) -> None:
+    """An archive whose CSV lacks the saved columns must not poison the live
+    column selection: config still restores, the data contract does not."""
+    original = state_gateway.snapshot()
+    archive = tmp_path / "mismatched.zip"
+    try:
+        live = pd.DataFrame({"Pb206": [1.0, 2.0], "Pb207": [3.0, 4.0]})
+        state_gateway.set_dataframe_and_source(
+            live, file_path="D:/live.xlsx", sheet_name=None
+        )
+        state_gateway.set_group_data_columns([], ["Pb206", "Pb207"])
+
+        snapshot = _sample_snapshot(pd.DataFrame({"Pb206": [9.0], "Pb207": [9.0]}))
+        snapshot["data_cols"] = ["Pb206", "Pb208"]  # Pb208 is absent from data.csv
+        snapshot["group_cols"] = []
+        assert export_archive(_FakeStore(snapshot), archive) is True
+
+        ok, flag = import_session(str(archive))
+        assert ok is True
+        assert flag == "data_failed"
+        # Configuration is still applied ...
+        assert app_state.algorithm == "tSNE"
+        # ... but the data contract keeps pointing at the live dataset.
+        assert app_state.data_cols == ["Pb206", "Pb207"]
+        assert app_state.file_path == "D:/live.xlsx"
+        assert app_state.df_global is not None
+        assert list(app_state.df_global.columns) == ["Pb206", "Pb207"]
+    finally:
+        state_gateway.set_dataframe_and_source(
+            original["df_global"],
+            file_path=original["file_path"],
+            sheet_name=original["sheet_name"],
+        )
+        state_gateway.restore_snapshot(original)

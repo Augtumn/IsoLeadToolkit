@@ -70,10 +70,19 @@ class PluginManager:
         return self._failed.get(name)
 
     # ── loading ────────────────────────────────────────────────────
+    #: Plugin stems that would shadow real plugin-system modules if they
+    #: were registered as ``plugins.<stem>`` in sys.modules.
+    RESERVED_NAMES = frozenset({"api", "manager", "registry", "builtins", "__init__"})
+
     def load_plugin(self, name: str) -> BasePlugin:
         """Load a single plugin by name. Raises PluginLoadError on failure."""
         if name in self._plugins:
             return self._plugins[name]
+
+        if name in self.RESERVED_NAMES:
+            raise PluginLoadError(
+                f"Plugin name '{name}' is reserved by the plugin system."
+            )
 
         resolved = self._resolve_module(name)
         if resolved is None:
@@ -82,14 +91,19 @@ class PluginManager:
         module_path, source = resolved
 
         try:
+            # Namespaced module name: registering user plugins as
+            # ``plugins.<stem>`` let a user file named api.py shadow the real
+            # plugins.api module (they are executed at startup).
             spec = importlib.util.spec_from_file_location(
-                f"plugins.{name}", module_path
+                f"plugins._loaded.{name}", module_path
             )
             if spec is None or spec.loader is None:
                 raise PluginLoadError(f"Cannot create spec for plugin '{name}'")
             module = importlib.util.module_from_spec(spec)
             sys.modules[spec.name] = module
             spec.loader.exec_module(module)
+        except PluginLoadError:
+            raise
         except Exception as exc:
             self._failed[name] = str(exc)
             raise PluginLoadError(f"Failed to load plugin '{name}': {exc}") from exc

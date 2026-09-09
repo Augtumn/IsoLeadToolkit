@@ -80,9 +80,12 @@ class MLClassifierPlugin(BasePlugin, Protocol):
 ## 加载流程
 
 1. **发现**：扫描 `plugins/builtins/` 和 `~/.isotopes_analysis/plugins/`
-2. **加载**：动态导入模块，提取实现 BasePlugin 的类
+2. **加载**：动态导入模块（注册名 `plugins._loaded.<stem>`，避免用户插件遮蔽
+   `plugins.api` 等真实模块），提取实现 BasePlugin 的类
 3. **验证**：调用 `validate_environment()`，失败则跳过并记录
-4. **注册**：加入 `plugin_manager.plugins` 字典
+4. **注册**：加入 `plugin_manager.plugins` 字典，键为文件名 stem
+
+保留名（`api`、`manager`、`registry`、`builtins`、`__init__`）拒绝加载。
 
 启动时自动加载（`ui/app.py`），也可手动：
 
@@ -93,13 +96,16 @@ plugin_manager.load_all()
 
 ## 内置插件
 
-| 插件 | 类型 | 功能 |
-|------|------|------|
-| `endmember` | analysis | PCA 端元识别 + geochron 斜率过滤 |
-| `mixing` | analysis | 混合模型最小二乘 + 蒙特卡洛不确定度 |
-| `hdbscan_clustering` | analysis | HDBSCAN 密度聚类 |
-| `provenance_ml` | classifier | XGBoost OvR 产地分类（SMOTE+DBSCAN） |
-| `subset_analysis` | analysis | 子集选择与重分析 |
+`load_plugin()` 以文件 stem 为键，`get()` 也支持 `meta.name` 查询。
+
+| 文件 stem | meta.name | 类型 | 功能 |
+|------|------|------|------|
+| `endmember_plugin` | `endmember` | analysis | PCA 端元识别 + geochron 斜率过滤 |
+| `mixing_plugin` | `mixing` | analysis | 混合模型最小二乘 + 蒙特卡洛不确定度 |
+| `clustering_plugin` | `hdbscan_clustering` | analysis | HDBSCAN 密度聚类 |
+| `provenance_ml_plugin` | `provenance_ml` | classifier | XGBoost OvR 产地分类（SMOTE+DBSCAN） |
+| `subset_plugin` | `subset_analysis` | analysis | 子集选择与重分析 |
+| `neighborhood_plugin` | `neighborhood_search` | analysis | KD-tree 邻域搜索 |
 
 ## 完整示例
 
@@ -148,6 +154,6 @@ class HelloPlugin(BasePlugin):
 ## API 版本兼容
 
 - `api_version` 采用 `MAJOR.MINOR` 格式
-- 主版本不匹配：拒绝加载并记录错误
-- 次版本差异：允许加载但记录 warning
-- 当前版本：**1.0**
+- 与宿主版本（**1.0**）不一致即拒绝加载，并记录到 `failure_info()`
+  （`plugins/manager.py::load_plugin` 的兼容门；修改宿主版本需同步更新插件）
+- 预留的语义化策略：主版本不匹配直接拒绝，次版本差异仅告警——当前尚未实现

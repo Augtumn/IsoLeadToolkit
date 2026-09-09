@@ -6,13 +6,13 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~38,700 行 |
+| Python 代码总量 | ~52,700 行 |
 | 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
-| Python 文件数 | 279 个 |
+| Python 文件数 | 300 个 |
 | 对话框数 | 15+ 个 |
 | 支持算法 | UMAP, t-SNE, PCA, RobustPCA, V1V2 |
 | 图类型 | 8+ 种 |
-| 语言支持 | 中文/英文（1084 键） |
+| 语言支持 | 中文/英文（1152 键） |
 
 ---
 
@@ -30,7 +30,7 @@
 │  │ config   │  │ main_window  │  │  api             │  │
 │  │ session  │  │ control_panel│  │  core            │  │
 │  │ locale   │  │ dialogs/     │  │  render          │  │
-│  │ cache    │  │  (11 个)     │  │  geo             │  │
+│  │ cache    │  │  (19 个)     │  │  geo             │  │
 │  │          │  │ icons.py     │  │  ternary          │  │
 │  └──────────┘  └──────────────┘  │                   │  │
 │       ↑                          │ events            │  │
@@ -44,9 +44,13 @@
 │                │          │      └───────────────────┘  │
 │                │ loader   │                             │
 │                │ geochem  │      ┌───────────────────┐  │
-│                │ endmember│      │     utils/        │  │
-│                │ prov_ml  │      │ logger            │  │
-│                │ mixing   │      └───────────────────┘  │
+│                │          │      │     plugins/      │  │
+│                │          │      │ builtins/ (6)     │  │
+│                │          │      └───────────────────┘  │
+│                │          │      ┌───────────────────┐  │
+│                │          │      │     utils/        │  │
+│                │          │      │ logger            │  │
+│                │          │      └───────────────────┘  │
 │                └──────────┘                             │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -79,16 +83,16 @@ Excel/CSV 文件
 
 ## 各模块文档索引
 
-| 模块 | 文档路径 | 行数（2026-08 实测） | 备注 |
+| 模块 | 文档路径 | 行数（2026-08 实测，含空行） | 备注 |
 |------|----------|------|------|
-| core/ | [docs/core.md](core.md) | 4,807 | 含 state/ 子包（store 681, gateway 855, app_state 868, _normalizers 545, _views 326, _compat_builders 332, _dispatch_handlers 800, bootstrap 等） |
-| data/ | [docs/data.md](data.md) | 1,731 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py |
-| ui/ | [docs/ui.md](ui.md) | 13,209 | 85 文件 |
-| application/ | [docs/export.md](export.md) | 2,084 | 用例层（12 use cases） |
-| visualization/ | [docs/visualization.md](visualization.md) | 7,387 | 65 文件 |
-| utils/ | [docs/utils.md](utils.md) | 201 | |
-| plugins/ | [docs/plugins.md](plugins.md) | 1,568 | 插件系统（5 内置） |
-| tests/ | - | 6,720 | 62 文件，372 用例 |
+| core/ | — | 6,871 | 含 state/ 子包（store 829, gateway 893, app_state 899, _normalizers 537, _views 326, _compat_builders 332, _dispatch_handlers 838, bootstrap 227）、persistence/、session/ |
+| data/ | [docs/data.md](data.md) | 2,082 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py |
+| ui/ | [docs/ui.md](ui.md) | 17,121 | 85 文件 |
+| application/ | [docs/export.md](export.md) | 2,829 | 用例层（13 use cases） |
+| visualization/ | [docs/visualization.md](visualization.md) | 9,252 | 66 文件 |
+| utils/ | [docs/utils.md](utils.md) | 252 | |
+| plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
+| tests/ | - | 10,876 | 75 文件，478 用例 |
 
 ---
 

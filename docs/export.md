@@ -17,14 +17,15 @@ ui/panels/
 └── export/
     ├── __init__.py            # 子包公开 API（mixin 导出）
     ├── build.py               # UI 构建、控件初始化、信号连接
-    ├── selection.py           # 选择状态同步、选择工具联动
     ├── data_export.py         # CSV/Excel/追加导出
     ├── image_export.py        # 预览导出、直接导出、离屏重绘
+    ├── origin_export.py       # Origin 工程导出
     └── common.py              # 导出公共工具方法
 
 application/use_cases/
 ├── export_data.py             # 数据导出用例（构建 DataFrame、写出、追加）
 ├── export_image.py            # 图像导出用例（预设、格式归一化、savefig 选项）
+├── export_origin.py           # Origin 工程导出用例
 └── export_dataframe.py        # 兼容代理（转发到 export_data）
 ```
 

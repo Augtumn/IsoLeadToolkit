@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Iterable, Mapping, Sequence
-
-from typing import Any
+from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -73,6 +71,25 @@ def _curve_sheets_for_mode(render_mode: str | None) -> dict[str, pd.DataFrame]:
     return collect_geochem_curve_data()
 
 
+def _resolve_export_age(df: pd.DataFrame, app_state: Any) -> Any | None:
+    """Return the user-selected real-age series (Ma) or None.
+
+    Mirrors the rendering path (compute_geochem._resolve_model_age): when
+    'use real age' is enabled and an age column is selected, the model
+    parameters must be derived from it instead of the computed model age.
+    """
+    if not bool(getattr(app_state, "use_real_age_for_mu_kappa", False)):
+        return None
+    age_col = getattr(app_state, "mu_kappa_age_col", None)
+    if not age_col or age_col not in df.columns:
+        return None
+    try:
+        return pd.to_numeric(df[age_col], errors="coerce").to_numpy(dtype=float)
+    except Exception as exc:
+        logger.warning("Failed to resolve export age column %s: %s", age_col, exc)
+        return None
+
+
 def _compute_geochem_params(
     df: pd.DataFrame,
     render_mode: str,
@@ -103,13 +120,29 @@ def _compute_geochem_params(
         return {}
 
     try:
+        from core import app_state, state_gateway
         from data.geochemistry import calculate_all_parameters
 
         pb206 = pd.to_numeric(df[_PB206_COL], errors="coerce").to_numpy(dtype=float)
         pb207 = pd.to_numeric(df[_PB207_COL], errors="coerce").to_numpy(dtype=float)
         pb208 = pd.to_numeric(df[_PB208_COL], errors="coerce").to_numpy(dtype=float)
 
-        results = calculate_all_parameters(pb206, pb207, pb208)
+        # Match what the plot renders: V1V2 discrimination parameters and the
+        # real-age override must be forwarded, otherwise exported V1/V2 and
+        # mu_model/kappa_model disagree with the on-screen values.
+        v1v2_params = dict(state_gateway.get_v1v2_params() or {})
+        t_ma = _resolve_export_age(df, app_state)
+
+        results = calculate_all_parameters(
+            pb206,
+            pb207,
+            pb208,
+            a=v1v2_params.get("a"),
+            b=v1v2_params.get("b"),
+            c=v1v2_params.get("c"),
+            scale=v1v2_params.get("scale", 1.0),
+            t_Ma=t_ma,
+        )
 
         out: dict[str, np.ndarray] = {}
         for col in columns:

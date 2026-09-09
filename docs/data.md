@@ -2,19 +2,19 @@
 
 ## 模块概述
 
-`data/` 负责数据加载、地球化学计算、端元识别、ML 产地分析和混合模型。是应用的科学计算核心。
+`data/` 负责数据加载与铅同位素地球化学计算。
+
+> **注意:** 端元识别、ML 产地分类、混合模型已迁至 `plugins/builtins/*_plugin.py`（本文档第 3–5 节保留算法说明，路径以插件为准）。
 
 **文件清单 (拆分后)**
 
 | 文件 | 行数 | 职责 |
 |------|------|------|
-| `__init__.py` | 34 | 模块入口，导出公共 API |
-| `loader.py` | 239 | Excel/CSV 数据加载与列类型检测 |
-| `geochemistry/` | — | 铅同位素地球化学计算引擎 (拆分模块) |
-| `geochemistry.py` | 30 | 兼容 shim (保持旧导入可用) |
-| `endmember.py` | 302 | 端元识别 (PCA + 地球化学过滤) |
-| `provenance_ml.py` | 366 | ML 产地分类管线 (DBSCAN + XGBoost) |
-| `mixing.py` | 100 | 混合模型计算 |
+| `__init__.py` | 30 | 模块入口，PEP 562 懒加载导出地球化学 API |
+| `loader.py` | 53 | Excel/CSV 读取与列类型检测 |
+| `geochemistry/` | 1,861 | 铅同位素地球化学计算引擎 (拆分模块) |
+| `geochemistry.py` | 25 | 兼容 shim (保持旧导入可用) |
+| `plumbotectonics_data.py` | 98 | Plumbotectonics 曲线数据 |
 
 ---
 
@@ -28,18 +28,13 @@
 ```python
 def read_data_frame(excel_file: str, sheet_name: str = None) -> pd.DataFrame
 ```
-- 优先使用 `calamine` 引擎 (快速)，回退到 `openpyxl`
-- 自动检测数值列 (>50% 数值即为数值列)
-- NaN 替换为 `"empty"` 字符串
+- Excel 优先使用 `calamine` 引擎 (快速)，失败回退到 `openpyxl` 并记录 warning
+- 无 `sheet_name` 时按 CSV 读取
+- 自动检测数值列 (>50% 数值即为数值列)；非数值单元格被强制转换时记录 warning
+- 分类列空值替换为 `"empty"` 字符串
 
-```python
-def load_data(show_file_dialog=True, show_config_dialog=True) -> bool
-```
-- 主数据加载入口
-- 显示统一导入对话框 (文件 + 工作表 + 列选择)
-- 验证数值列确实为数值类型
-- 清理分组列 (空值替换为 `"Unknown"`)
-- 更新 `app_state.df_global`
+> 文件/工作表/列选择、数值列验证与 `app_state.df_global` 写入由用例层
+> `application/use_cases/load_dataset.py` 负责；`data/loader.py` 只做读取与类型清洗。
 
 ### 数据流
 
@@ -47,7 +42,7 @@ def load_data(show_file_dialog=True, show_config_dialog=True) -> bool
 Excel/CSV 文件
   → read_data_frame() [calamine/openpyxl]
   → 类型检测 (数值 vs 分类)
-  → 对话框选择 (文件/工作表/列)
+  → application/use_cases/load_dataset.py (对话框选择文件/工作表/列)
   → 验证
   → app_state.df_global
 ```
@@ -229,7 +224,9 @@ def _solve_age_scipy(f, bounds=(-4700e6, 4700e6), search_points=200)
 
 ---
 
-## 3. endmember.py — 端元识别
+## 3. 端元识别 — `plugins/builtins/endmember_plugin.py`
+
+> 代码已迁出 `data/`，本节保留算法说明；插件封装见 [`docs/plugins.md`](plugins.md)。
 
 ### 职责
 基于 PCA 和地球化学约束识别铅同位素端元。
@@ -276,7 +273,9 @@ def validate_groups(scores, assignments, label_map) -> dict
 
 ---
 
-## 4. provenance_ml.py — ML 产地分类
+## 4. ML 产地分类 — `plugins/builtins/provenance_ml_plugin.py`
+
+> 代码已迁出 `data/`，本节保留算法说明；插件封装见 [`docs/plugins.md`](plugins.md)。
 
 ### 职责
 基于 DBSCAN 异常值移除 + One-vs-Rest XGBoost 的产地分类管线。
@@ -339,7 +338,10 @@ def run_provenance_pipeline(training_df, region_col, feature_cols,
 
 ---
 
-## 5. mixing.py — 混合模型
+## 5. 混合模型 — `plugins/builtins/mixing_plugin.py`
+
+> 代码已迁出 `data/`，本节保留算法说明；插件封装见 [`docs/plugins.md`](plugins.md)。
+> 另有 `calculate_mixing_with_uncertainty()` 提供带不确定度的混合比例。
 
 ### 职责
 计算端元混合比例 (单纯形约束最小二乘)。
@@ -376,12 +378,13 @@ def _solve_simplex_weights(endmember_matrix, target) -> tuple[np.ndarray, float]
 ## 模块间依赖
 
 ```
-loader.py
+application/use_cases/load_dataset.py
+  → data/loader.py (read_data_frame)
   → app_state.df_global (pandas DataFrame)
-      ├→ geochemistry/ (年龄, Delta, V1V2, 源区参数)
-      ├→ endmember.py (PCA + 地球化学过滤)
-      ├→ mixing.py (端元混合比例)
-      └→ provenance_ml.py (DBSCAN + XGBoost 分类)
+      ├→ data/geochemistry/ (年龄, Delta, V1V2, 源区参数)
+      ├→ plugins/builtins/endmember_plugin.py (PCA + 地球化学过滤)
+      ├→ plugins/builtins/mixing_plugin.py (端元混合比例)
+      └→ plugins/builtins/provenance_ml_plugin.py (DBSCAN + XGBoost 分类)
 ```
 
 ---

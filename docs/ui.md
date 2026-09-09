@@ -2,21 +2,22 @@
 
 ## 模块概述
 
-`ui/` 是应用的用户界面层，基于 PyQt5 构建。包含主窗口、控制面板、11 个专用对话框。
+`ui/` 是应用的用户界面层，基于 PyQt5 构建。包含主窗口、控制面板、19 个对话框文件（含 `data_import/`、`provenance_ml/` 子包）。
 
-**文件清单 (拆分后)**
+**文件清单 (拆分后，约 17,100 行，2026-09 实测)**
 
 | 文件 | 行数 | 职责 |
 |------|------|------|
 | `__init__.py` | 20 | 模块入口 |
-| `app.py` | 180 | 应用启动编排入口（薄组合层） |
-| `app_parts/` | 374 | 应用启动 mixin 分层实现（styles/session/plotting） |
-| `main_window.py` | 34 | 主窗口组合入口 (Qt5MainWindow) |
-| `main_window_parts/` | 1,297+ | 主窗口 mixin 分层实现（setup/legend*/canvas/lifecycle） |
-| `control_panel.py` | 505 | 控制面板组装 + 对话框入口 |
-| `icons.py` | 230 | UI 色块/标记图标渲染工具 |
-| `panels/` | 5,312 | 6 个标签页的面板实现 |
-| `dialogs/` | 3,967 | 11 个专用对话框 |
+| `app.py` | 222 | 应用启动编排入口（薄组合层） |
+| `app_parts/` | 421 | 应用启动 mixin 分层实现（styles/session/plotting） |
+| `main_window.py` | 35 | 主窗口组合入口 (Qt5MainWindow) |
+| `main_window_parts/` | 2,035 | 主窗口 mixin 分层实现（setup/legend*/canvas/lifecycle） |
+| `control_panel.py` | 199 | 控制面板组装 + 对话框入口 |
+| `icons.py` | 191 | UI 色块/标记图标渲染工具 |
+| `widgets.py` | 22 | 通用小部件 |
+| `panels/` | 8,624 | 6 个标签页的面板实现（40 文件） |
+| `dialogs/` | 5,352 | 专用对话框（19 文件，含 `data_import/`、`provenance_ml/` 子包） |
 
 ---
 

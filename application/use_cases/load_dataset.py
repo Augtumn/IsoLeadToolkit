@@ -33,11 +33,8 @@ def hydrate_state_from_dataframe(
         True when state is hydrated successfully, False on validation failure.
     """
     try:
-        if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
-            state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
-
-        state_gateway.reset_column_selection()
-
+        # Validate BEFORE mutating any state: a failed load used to leave the
+        # column selection pointing at the previous dataset.
         for col in app_state.data_cols:
             if col not in df.columns:
                 logger.error("Missing data column: %s", col)
@@ -46,6 +43,11 @@ def hydrate_state_from_dataframe(
                 logger.error("Data column '%s' is not numeric", col)
                 return False
             logger.debug("Data column '%s' is numeric: OK", col)
+
+        if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
+            state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
+
+        state_gateway.reset_column_selection()
 
         valid_group_cols: list[str] = []
         for col in app_state.group_cols:

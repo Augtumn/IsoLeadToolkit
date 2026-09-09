@@ -463,7 +463,7 @@ def _on_finished(result, finished_token):
 | `isochron.py` | 等时线误差配置 |
 | `analysis_qt.py` | 诊断图 |
 | `legend_model.py` | 图例条目数据模型 |
-| `overlay_helpers.py` | 覆盖层绘制通用工具 |
+| `geochem/overlay_helpers.py` | 覆盖层绘制兼容 facade（实现在 `geochem/overlay_common.py` 等） |
 
 ### 7.2 渲染函数约束
 
@@ -516,40 +516,32 @@ OVERLAY_TOGGLE_MAP = {
 
 #### 7.5.2 覆盖层绘制通用工具
 
-`visualization/plotting/overlay_helpers.py` 提供通用绘制函数，避免重复代码：
+通用工具位于 `visualization/plotting/geochem/overlay_common.py`；
+`visualization/plotting/geochem/overlay_helpers.py` 仅为兼容 facade，
+实际绘制函数分散在 `model_overlays.py`、`plumbotectonics_curves.py`、
+`plumbotectonics_isoage.py` 等模块。
 
 ```python
-from visualization.plotting.overlay_helpers import (
-    draw_curve,           # 绘制单条曲线
-    draw_label,           # 绘制文本标签
-    compute_label_position,  # 计算标签位置
-    filter_valid_points,  # 过滤 NaN/Inf
-    clip_to_axes_limits,  # 裁剪到坐标轴范围
-    store_overlay_artist, # 注册 artist 到 app_state
-    clear_overlay_category,  # 清除某类 artist
+from visualization.plotting.geochem.overlay_common import (
+    _is_overlay_label_style_visible,  # 按 style_key 查询覆盖层开关
+    _register_overlay_artist,         # 注册 artist 到 app_state.overlay_artists
+    _register_overlay_curve_label,    # 按位置模式注册曲线标签
+    _resolve_label_options,           # 合并 line_styles 中的标签样式
+    _format_label_text,               # 标签模板格式化
+    _label_bbox,                      # 标签背景框
 )
 
-# 示例：绘制模型曲线
-line = draw_curve(
-    ax, x_data, y_data,
-    style_key='model_curve',
-    line_styles=app_state.overlay.line_styles,
-    label='Stacey-Kramers',
-    zorder=1
-)
-if line:
-    store_overlay_artist(
-        app_state.overlay.overlay_artists,
-        'model_curves',
-        'stacey_kramers',
-        line
-    )
+# 示例：注册模型曲线 artist
+_register_overlay_artist('model_curve', line)
+if _is_overlay_label_style_visible('model_curve'):
+    label_opts = _resolve_label_options('model_curve', fallback_label_opts)
+    text = _format_label_text(label_opts.get('label_template'), age=age_ma)
 ```
 
 **规范**：
-- 新增覆盖层绘制逻辑优先使用这些工具函数
-- 避免在 `geo.py` 中重复实现样式解析、artist 注册等逻辑
-- 标签定位使用 `compute_label_position()` 统一处理
+- 新增覆盖层绘制逻辑复用上述工具函数，不在各 `_draw_*` 中重复实现
+- 样式解析统一走 `_resolve_label_options()`，标签位置统一走 `_register_overlay_curve_label()`
+- 覆盖层开关统一走 `_is_overlay_label_style_visible()`，避免硬编码 `app_state.show_*`
 
 #### 7.5.3 Artist 跟踪与管理
 
@@ -965,7 +957,7 @@ app_state.legend.legend_columns = 2
 为保持向后兼容，`AppState` 为所有移入子对象的字段提供 property 委托：
 
 ```python
-# core/state.py
+# core/state/app_state.py（兼容 property 由 core/state/_compat_builders.py 生成）
 class AppState:
     def __init__(self):
         self.overlay = OverlayState()
@@ -1044,7 +1036,9 @@ session_data = {
 }
 ```
 
-新增会话字段必须在 `core/session.py` 的 `_migrate_session_data()` 中处理向后兼容。
+新增会话字段必须在 `core/persistence/schema.py` 的白名单（`SESSION_FIELDS` /
+`UI_STATE_FIELDS`）中登记，并在 `core/session/migration.py` 的
+`migrate_session_data()` 中处理旧文件的向后兼容。
 
 ### 12.5 观察者模式
 
@@ -1258,7 +1252,7 @@ pyinstaller build.spec
 - `core/legend_state.py` — 封装 10+ 图例相关字段
 
 **修改文件**：
-- `core/state.py` — 创建 `self.overlay` 和 `self.legend` 子对象，添加 property 委托实现向后兼容
+- `core/state/app_state.py` + `core/state/_compat_builders.py` — 创建 `self.overlay` 和 `self.legend` 子对象，添加 property 委托实现向后兼容
 
 **效果**：
 - `app_state` 字段按职责分组，避免 God Object
@@ -1280,7 +1274,7 @@ pyinstaller build.spec
 #### 18.1.3 Phase 3: 覆盖层绘制工具
 
 **新增文件**：
-- `visualization/plotting/overlay_helpers.py` — 提供 `draw_curve()`、`draw_label()`、`compute_label_position()` 等通用函数
+- `visualization/plotting/geochem/overlay_common.py` — 提供 `_register_overlay_artist()`、`_resolve_label_options()`、`_format_label_text()` 等通用函数（`overlay_helpers.py` 为兼容 facade）
 
 **效果**：
 - `geo.py` 中的 `_draw_*` 函数复用通用工具，代码量减半
@@ -1310,9 +1304,9 @@ pyinstaller build.spec
 
 | 阶段 | 新增 | 修改 |
 |------|------|------|
-| P1 | `core/overlay_state.py`, `core/legend_state.py` | `core/state.py` |
+| P1 | `core/overlay_state.py`, `core/legend_state.py` | `core/state/app_state.py` |
 | P2 | — | `visualization/plotting/legend_model.py`, `render.py`, `ui/main_window.py` |
-| P3 | `visualization/plotting/overlay_helpers.py` | `visualization/plotting/geo.py` |
+| P3 | `visualization/plotting/geochem/overlay_common.py` | `visualization/plotting/geo.py` |
 | P4 | — | `visualization/plotting/style.py`, `ui/main_window.py`, `ui/panels/base_panel.py` |
 
 #### 18.1.7 后续改进方向

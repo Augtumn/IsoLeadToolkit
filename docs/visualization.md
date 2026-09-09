@@ -4,29 +4,34 @@
 
 `visualization/` 是应用的渲染引擎，负责图形绑定、交互事件、样式管理。支持 8+ 种图类型，并对地球化学与 ML 依赖进行惰性加载以降低启动成本。
 
-**文件清单 (约 3,700+ 行)**
+**文件清单 (约 9,250 行，2026-09 实测)**
 
 | 文件 | 行数 | 职责 |
 |------|------|------|
-| `__init__.py` | 89 | 模块入口，导出公共 API |
-| `plotting/api.py` | ~200 | 渲染入口（汇总导出） |
-| `plotting/core.py` | ~600 | 嵌入计算 + 核心工具 |
-| `plotting/render.py` | ~20 | 渲染兼容门面（向后兼容导出） |
-| `plotting/rendering/` | 多文件 | 渲染辅助层（图例、KDE、地球化学覆盖层、embedding 算法/数据准备、raw 2D/3D） |
-| `plotting/geo.py` | ~70 | 地球化学兼容门面（向后兼容导出） |
-| `plotting/geochem/` | 多文件 | 地球化学辅助函数（`isochron_fits.py`、`isochron_fit_76.py`、`isochron_fit_86.py`、`selected_isochron_overlay.py`、`paleoisochron_overlays.py`、模型年龄线、标签刷新、方程覆盖、Plumbotectonics 子域） |
-| `plotting/ternary.py` | ~120 | 三元图工具 |
-| `plotting/isochron.py` | 60 | 等时线误差配置与共享工具 |
-| `events.py` | ~170 | 事件编排入口（渲染触发 + 异步 embedding 管理） |
-| `embedding_worker.py` | ~200 | 异步 embedding 后台计算与进度回调 |
-| `event_handlers/` | 多文件 | 交互事件实现（`selection_tools.py`、`pointer_events.py`、`legend.py`、`isochron.py`、`overlay.py`、`shared.py`） |
-| `plotting/style.py` | 320 | 绘图样式 + 图例布局 |
-| `plotting/styling/` | 多文件 | 样式辅助层（核心样式、图例布局、覆盖层可见性） |
-| `style_manager.py` | 224 | 调色板 + 字体 + UI 主题 |
-| `plotting/analysis_qt.py` | 261 | 诊断图 (scree, loadings, 相关性) |
-| `plotting/kde.py` | 127 | KDE 叠加渲染 |
-| `plotting/data.py` | 63 | 数据准备工具 (懒加载 ML 依赖) |
-| `line_styles.py` | 22 | 线型解析工具 |
+| `__init__.py` | 74 | 模块入口，导出公共 API |
+| `plotting/api.py` | 48 | 渲染入口（汇总导出） |
+| `plotting/core.py` | 283 | 嵌入计算 + 核心工具 |
+| `plotting/render.py` | 12 | 渲染兼容门面（向后兼容导出） |
+| `plotting/rendering/` | 2,282 | 渲染辅助层（图例、KDE、地球化学覆盖层、embedding 算法/数据准备、raw 2D/3D） |
+| `plotting/geo.py` | 59 | 地球化学兼容门面（向后兼容导出） |
+| `plotting/geochem/` | 2,294 | 地球化学辅助函数（`isochron_fits.py`、`isochron_fit_76.py`、`isochron_fit_86.py`、`selected_isochron_overlay.py`、`paleoisochron_overlays.py`、模型年龄线、标签刷新、方程覆盖、Plumbotectonics 子域） |
+| `plotting/ternary.py` | 203 | 三元图工具 |
+| `plotting/isochron.py` | 41 | 等时线误差配置与共享工具 |
+| `events.py` | 365 | 事件编排入口（渲染触发 + 异步 embedding 管理） |
+| `embedding_worker.py` | 138 | 异步 embedding 后台计算与进度回调 |
+| `event_handlers/` | 682 | 交互事件实现（`selection_tools.py`、`pointer_events.py`、`legend.py`、`isochron.py`、`overlay.py`、`shared.py`） |
+| `plotting/style.py` | 146 | 绘图样式 + 图例布局 |
+| `plotting/styling/` | 444 | 样式辅助层（核心样式、图例布局、覆盖层可见性） |
+| `style_manager.py` | 234 | 调色板 + 字体 + UI 主题 |
+| `plotting/analysis_qt.py` | 332 | 诊断图 (scree, loadings, 相关性) |
+| `plotting/kde.py` | 492 | KDE 叠加渲染 |
+| `plotting/data.py` | 126 | 数据准备工具 (懒加载 ML 依赖) |
+| `line_styles.py` | 53 | 线型解析工具 |
+| `selection_overlay.py` | 185 | 选择覆盖层 + 置信椭圆 |
+| `plotting/grouping.py` | 140 | 分组/调色板工具 |
+| `plotting/label_layout.py` | 368 | 标签布局与避让 |
+| `plotting/legend_model.py` | 190 | 图例条目数据模型 |
+| `plotting/event_bridge.py` | 27 | 画布事件桥接 |
 
 ---
 

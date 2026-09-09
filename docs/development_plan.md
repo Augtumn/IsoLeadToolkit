@@ -2,6 +2,20 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-09-10 · 项目全量审查修复批，6 commits）
+
+6 层并行审查（core/state、data/geochemistry、visualization×2、application+plugins、tests/scripts/docs）后按批修复，每批一次提交，全量回归 + 守护脚本 TOTAL=0：
+
+- **批次 1 正确性（`23a8833`）**：导出 `kappa` 列名恒不命中（真实键 `kappa_model`）→ 模糊匹配；208Pb 缺失不再伪造 `29.476` 常数（跳过并记 WARNING）；置信椭圆改特征分解（协方差 → `eigh` 半轴/角度，共线退化安全）；PCA 诊断缓存命中不再清空 `last_pca_*`；图例分组全集取 `available_groups`（原 `current_groups` 恒空）。
+- **批次 2 地球化学（`12f1a4f`）**：初始比值函数的 None 年龄不再崩溃（`_prepare_age` → NaN + 夹紧 ≥0）；`t_calc=None` 显式 NaN + warning；`age.py` 求解失败记日志；loader 的 calamine 回退与非数值强转记日志并删除死代码 `load_data()`；`data/__init__.py` 改 PEP 562 懒加载（`importlib.import_module` 避免 `__getattr__` 递归）。
+- **批次 3 守护脚本（`c2d3588`）**：4 个 guard 锚定仓库根 + 相对路径匹配（此前依赖 cwd 导致假 PASS）；新增 `tests/test_guard_scripts_positive.py` 植入违规并断言能被抓到；locale 检查器缺键改 exit 1 并补齐 `Unknown error`。
+- **批次 4 状态层（`5f575db`）**：`IMMEDIATE_SAVE_ACTIONS` 指向真实 action 名（`SET_LANGUAGE_CODE`，删死项）；`SET_ALGORITHM` 同步 `render_mode`；`disable_selection_mode` 清空 `selection_tool`；`restore_snapshot` 失败回滚并返回 bool；椭圆读取 `confidence_level`。
+- **批次 5 性能（`939d9ba`）**：`data_signature` 记忆化并去掉会话内 `data_version`（解锁跨会话缓存）；新增 `save_all_async` 异步自动保存；邻域搜索改 `cKDTree.query_ball_point`。
+- **批次 6 契约与文档**：导出年龄解析 `_resolve_export_age`（用 UI/模型年龄而非常量）并转发 V1V2 `a/b/c/scale` 与 `t_Ma`；插件管理器拒绝保留名、以 `plugins._loaded.<name>` 注册；列校验前移到 `reset_column_selection()` 之前；会话导入先解析 CSV/校验列再 `restore_snapshot`；文档指标与路径全面对齐（CLAUDE.md / architecture.md / data.md / dev_conventions.md，移除失效的 `docs/core.md` 链接）。
+- **测试**：448 → 478（新增 `tests/test_review_correctness_fixes.py`、`tests/test_guard_scripts_positive.py`、`tests/test_plugin_manager.py`）。
+
+**有意保留**：V1V2/geo 嵌入缓存（缓存键需纳入引擎全局参数，风险高于收益）；locale 死键清理（约 39% 键未被引用，需人工判断）；启动时 `restore_snapshot` 失败只记日志（无 UI 提示）。
+
 ## 阶段进展（2026-08-14 · UI 全量审查修复批，3 commits）
 
 7 区域并行审查（含运行时验证）后分批修复，全部经全量回归 + 守护脚本：

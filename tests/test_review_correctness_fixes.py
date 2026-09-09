@@ -78,8 +78,9 @@ def test_geochem_export_uses_real_208pb_when_present(monkeypatch) -> None:
 
     captured: dict = {}
 
-    def _fake_calc(pb206, pb207, pb208):
+    def _fake_calc(pb206, pb207, pb208, **kwargs):
         captured["pb208"] = np.asarray(pb208, dtype=float)
+        captured["kwargs"] = kwargs
         return {"kappa_model": np.full_like(pb206, 1.0)}
 
     monkeypatch.setattr("data.geochemistry.calculate_all_parameters", _fake_calc)
