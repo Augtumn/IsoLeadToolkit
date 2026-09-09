@@ -146,5 +146,9 @@ def test_load_all_skips_reserved_and_broken_plugins(
     assert "api" not in loaded
     assert "broken_plugin" not in loaded
     assert "boom" in (manager.failure_info("broken_plugin") or "")
-    # Builtins are discovered and loaded alongside user plugins.
-    assert _BUILTIN_STEMS <= set(manager.available)
+    # Builtins are discovered and loaded alongside user plugins. Optional
+    # dependencies (hdbscan) may be absent, so only assert dependency-free
+    # builtins actually loaded.
+    assert _BUILTIN_STEMS <= set(manager.discover())
+    assert "subset_plugin" in loaded
+    assert set(loaded) <= set(manager.discover())
