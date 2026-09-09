@@ -34,14 +34,15 @@ jobs:
         if: failure()
         run: |
           if (Test-Path pytest-junit.xml) {
-            [xml]$xml = Get-Content pytest-junit.xml
+            [xml]$xml = Get-Content pytest-junit.xml -Raw
             $cases = $xml.testsuites.testsuite | ForEach-Object { $_.testcase }
             $failed = $cases | Where-Object { $_.failure -or $_.error }
             if ($failed) {
               foreach ($tc in $failed | Select-Object -First 30) {
                 $msg = "$($tc.failure.message) $($tc.error.message)" -replace "`r?`n", ' '
                 if ($msg.Length -gt 300) { $msg = $msg.Substring(0, 300) }
-                "::error file=tests/$($tc.name).py::$($tc.classname)::$($tc.name) - $msg"
+                $file = "$($tc.classname -replace '\.', '/').py"
+                "::error file=$file::$($tc.classname)::$($tc.name) - $msg"
               }
             } else {
               "::error::pytest reported no failures in JUnit XML (collection error?)"

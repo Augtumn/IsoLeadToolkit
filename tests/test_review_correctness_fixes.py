@@ -15,14 +15,17 @@ import matplotlib.pyplot as plt
 def test_confidence_ellipse_axes_match_covariance_eigenvalues() -> None:
     """Semi-axes must be sqrt(eigenvalue)*n_std, not the 2*sqrt(1±rho) recipe.
 
-    With var_x != var_y the old formula mis-sized both axes badly.
+    With var_x != var_y the old formula mis-sized both axes badly. The
+    covariance must stay non-singular: a singular matrix has a theoretical
+    minor axis of 0, so the sample estimate is pure BLAS noise (~1e-8) and a
+    relative tolerance degenerates into pytest's absolute 1e-12 floor.
     """
     import scipy.stats
 
     from visualization.selection_overlay import draw_confidence_ellipse
 
     rng = np.random.default_rng(0)
-    cov = np.array([[4.0, 2.0], [2.0, 1.0]])  # highly anisotropic
+    cov = np.array([[4.0, 2.0], [2.0, 1.5]])  # anisotropic, det > 0
     samples = rng.multivariate_normal([0.0, 0.0], cov, size=4000)
 
     fig, ax = plt.subplots()
@@ -43,6 +46,24 @@ def test_confidence_ellipse_axes_match_covariance_eigenvalues() -> None:
         expected_angle = np.degrees(np.arctan2(major[1], major[0]))
         delta = (ellipse.angle - expected_angle + 90.0) % 180.0 - 90.0
         assert abs(delta) < 5.0, (ellipse.angle, expected_angle)
+    finally:
+        plt.close(fig)
+
+
+def test_confidence_ellipse_handles_singular_covariance() -> None:
+    """Collinear samples (singular covariance) must degrade gracefully:
+    no crash, no negative semi-axes."""
+    from visualization.selection_overlay import draw_confidence_ellipse
+
+    x = np.linspace(-1.0, 1.0, 50)
+    y = 2.0 * x
+
+    fig, ax = plt.subplots()
+    try:
+        ellipse = draw_confidence_ellipse(x, y, ax)
+        assert ellipse is not None
+        assert ellipse.width > 0.0
+        assert ellipse.height >= 0.0
     finally:
         plt.close(fig)
 

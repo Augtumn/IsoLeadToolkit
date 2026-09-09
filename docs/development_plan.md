@@ -12,7 +12,7 @@
 - **批次 4 状态层（`5f575db`）**：`IMMEDIATE_SAVE_ACTIONS` 指向真实 action 名（`SET_LANGUAGE_CODE`，删死项）；`SET_ALGORITHM` 同步 `render_mode`；`disable_selection_mode` 清空 `selection_tool`；`restore_snapshot` 失败回滚并返回 bool；椭圆读取 `confidence_level`。
 - **批次 5 性能（`939d9ba`）**：`data_signature` 记忆化并去掉会话内 `data_version`（解锁跨会话缓存）；新增 `save_all_async` 异步自动保存；邻域搜索改 `cKDTree.query_ball_point`。
 - **批次 6 契约与文档**：导出年龄解析 `_resolve_export_age`（用 UI/模型年龄而非常量）并转发 V1V2 `a/b/c/scale` 与 `t_Ma`；插件管理器拒绝保留名、以 `plugins._loaded.<name>` 注册；列校验前移到 `reset_column_selection()` 之前；会话导入先解析 CSV/校验列再 `restore_snapshot`；文档指标与路径全面对齐（CLAUDE.md / architecture.md / data.md / dev_conventions.md，移除失效的 `docs/core.md` 链接）。
-- **测试**：448 → 478（新增 `tests/test_review_correctness_fixes.py`、`tests/test_guard_scripts_positive.py`、`tests/test_plugin_manager.py`）。
+- **测试**：448 → 479（新增 `tests/test_review_correctness_fixes.py`、`tests/test_guard_scripts_positive.py`、`tests/test_plugin_manager.py`）。CI 环境（Python 3.12 + 最新 scipy/numpy/BLAS）暴露椭圆回归用例使用奇异协方差（det=0）导致次轴期望值为 0、`rel` 容差退化为 `abs=1e-12` 的缺陷：改用非奇异协方差并新增共线退化用例；同时给 CI 增加 JUnit XML 失败注解，便于定位。
 
 **有意保留**：V1V2/geo 嵌入缓存（缓存键需纳入引擎全局参数，风险高于收益）；locale 死键清理（约 39% 键未被引用，需人工判断）；启动时 `restore_snapshot` 失败只记日志（无 UI 提示）。
 
