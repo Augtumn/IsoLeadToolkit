@@ -62,11 +62,19 @@ def _calc_err(calc: float, std: float) -> float:
 
 
 def _calc_row_pass(row: dict[str, object], checked_metrics: list[str]) -> bool:
+    """A row passes only when every checked metric has a real, passing error.
+
+    A metric whose computed value is missing (engine returned None -> NaN)
+    yields a NaN pass flag; treating NaN as "skip" let a broken engine
+    validate as all-green.
+    """
     checks: list[bool] = []
     for metric in checked_metrics:
         pass_key = f"{metric}_pass_pm1"
-        if pd.notna(row[pass_key]):
-            checks.append(bool(row[pass_key]))
+        value = row.get(pass_key)
+        if value is None or pd.isna(value):
+            return False
+        checks.append(bool(value))
     return all(checks) if checks else True
 
 

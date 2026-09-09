@@ -13,7 +13,7 @@ import argparse
 import re
 from pathlib import Path
 
-from source_scan_guard import print_scan_result
+from source_scan_guard import print_scan_result, repo_root, should_scan as _should_scan
 
 # Simple + nested assignments: app_state.foo = x  /  app_state.sub.foo = x
 PATTERN = re.compile(r"app_state\.[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?\s*=(?!=)")
@@ -36,9 +36,7 @@ RUNTIME_MAP_FIELDS: tuple[str, ...] = (
 
 
 def should_scan(path: Path, _repo_root: Path) -> bool:
-    if path.suffix != ".py":
-        return False
-    return not any(part in EXCLUDED_PARTS for part in path.parts)
+    return _should_scan(path, _repo_root, EXCLUDED_PARTS)
 
 
 def _is_runtime_target(line: str) -> bool:
@@ -58,7 +56,7 @@ def main() -> int:
     parser.add_argument("--fail-on-hits", action="store_true")
     args = parser.parse_args()
 
-    root = Path.cwd()
+    root = repo_root()
     counts: dict[str, int] = {}
     for file_path in root.rglob("*.py"):
         if not should_scan(file_path, root):

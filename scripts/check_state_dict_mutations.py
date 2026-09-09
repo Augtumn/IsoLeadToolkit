@@ -12,7 +12,7 @@ import argparse
 import re
 from pathlib import Path
 
-from source_scan_guard import print_scan_result, scan_pattern_hits
+from source_scan_guard import print_scan_result, repo_root, scan_pattern_hits, should_scan as _should_scan
 
 # Dict fields that _sync_state() overwrites with fresh dict() copies.
 # In-place mutation on these is silently lost on the next dispatch.
@@ -57,9 +57,7 @@ ALLOWLIST: set[str] = {
 
 
 def should_scan(path: Path, _repo_root: Path) -> bool:
-    if path.suffix != ".py":
-        return False
-    return not any(part in EXCLUDED_PARTS for part in path.parts)
+    return _should_scan(path, _repo_root, EXCLUDED_PARTS)
 
 
 def _find_mutations(root: Path) -> dict[str, list[tuple[int, str]]]:
@@ -73,7 +71,8 @@ def _find_mutations(root: Path) -> dict[str, list[tuple[int, str]]]:
             continue
         try:
             text = file_path.read_text(encoding="utf-8")
-        except Exception:
+        except Exception as exc:
+            print(f"SKIPPED\t{rel}\t{exc}")
             continue
         for m in PATTERN.finditer(text):
             field = m.group(1)
@@ -91,7 +90,7 @@ def main() -> int:
     parser.add_argument("--fail-on-hits", action="store_true")
     args = parser.parse_args()
 
-    root = Path.cwd()
+    root = repo_root()
     mutations = _find_mutations(root)
 
     total = sum(len(hits) for hits in mutations.values())

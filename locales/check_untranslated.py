@@ -122,6 +122,20 @@ def main() -> int:
     _write_report(report_path, lines)
     print(f"Report written to: {report_path}")
 
+    # Fail the check when keys used by the code have no entry in either
+    # locale: silently exiting 0 let drift (e.g. "Unknown error") ship.
+    if code_missing_both or missing_in_zh or missing_in_en:
+        print(
+            "MISSING_KEYS=%s (code missing both=%s, missing in zh=%s, "
+            "missing in en=%s)"
+            % (
+                len(code_missing_both) + len(missing_in_zh) + len(missing_in_en),
+                len(code_missing_both),
+                len(missing_in_zh),
+                len(missing_in_en),
+            )
+        )
+        return 1
     return 0
 
 

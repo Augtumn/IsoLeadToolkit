@@ -154,6 +154,7 @@ def test_guard_script_scan_is_clean_for_grouping(monkeypatch) -> None:
     import re
     from pathlib import Path
 
-    source = Path("visualization/plotting/grouping.py").read_text(encoding="utf-8")
+    repo_root = Path(__file__).resolve().parents[1]
+    source = (repo_root / "visualization" / "plotting" / "grouping.py").read_text(encoding="utf-8")
     pattern = re.compile(r"app_state\.[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)")
     assert not pattern.search(source), "grouping.py must not assign app_state fields"

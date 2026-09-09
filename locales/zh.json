@@ -1149,5 +1149,6 @@
   "Clear search": "清除搜索",
   "Parent group '{name}' already exists.": "父组“{name}”已存在。",
   "V1V2": "地化-V1V2判别图",
-  "tSNE": "t-SNE"
+  "tSNE": "t-SNE",
+  "Unknown error": "未知错误"
 }

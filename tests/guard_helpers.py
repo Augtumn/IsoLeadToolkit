@@ -7,14 +7,14 @@ import sys
 from pathlib import Path
 
 
-def run_guard_script(script_name: str) -> subprocess.CompletedProcess[str]:
+def run_guard_script(script_name: str, cwd: str | None = None) -> subprocess.CompletedProcess[str]:
     """Run a guard script from scripts/ with fail-on-hits mode enabled."""
     repo_root = Path(__file__).resolve().parents[1]
     script_path = repo_root / "scripts" / script_name
 
     return subprocess.run(
         [sys.executable, str(script_path), "--fail-on-hits"],
-        cwd=str(repo_root),
+        cwd=cwd or str(repo_root),
         capture_output=True,
         text=True,
         check=False,

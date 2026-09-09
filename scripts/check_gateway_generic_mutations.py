@@ -6,9 +6,14 @@ import argparse
 from pathlib import Path
 
 from gateway_mutation_guard import print_scan_result, scan_generic_gateway_calls
+from source_scan_guard import repo_root
 
 EXCLUDED_PARTS = {".venv", "reference", ".git"}
-TARGET_ROOTS = {"application", "core", "data", "ui", "visualization"}
+# Production roots that must not use the generic gateway writers. plugins/
+# and utils/ were previously unscanned, leaving the rule unenforced there.
+TARGET_ROOTS = {"application", "core", "data", "ui", "visualization", "plugins", "utils"}
+# Standalone entry-point scripts are covered by their own root check.
+TARGET_FILES = {"main.py"}
 
 
 def should_scan(path: Path, repo_root: Path) -> bool:
@@ -24,6 +29,8 @@ def should_scan(path: Path, repo_root: Path) -> bool:
 
     if not rel.parts:
         return False
+    if rel.as_posix() in TARGET_FILES:
+        return True
     if rel.parts[0] not in TARGET_ROOTS:
         return False
     if rel.as_posix() == "core/state/gateway.py":
@@ -36,7 +43,7 @@ def main() -> int:
     parser.add_argument("--fail-on-hits", action="store_true")
     args = parser.parse_args()
 
-    root = Path.cwd()
+    root = repo_root()
     counts = scan_generic_gateway_calls(root, include_file=should_scan)
     total = sum(counts.values())
     print_scan_result(counts)

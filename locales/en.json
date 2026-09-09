@@ -1149,5 +1149,6 @@
   "Clear search": "Clear search",
   "Parent group '{name}' already exists.": "Parent group '{name}' already exists.",
   "V1V2": "V1-V2 Diagram",
-  "tSNE": "t-SNE"
+  "tSNE": "t-SNE",
+  "Unknown error": "Unknown error"
 }

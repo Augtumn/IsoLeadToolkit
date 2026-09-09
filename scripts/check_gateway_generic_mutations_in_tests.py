@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from gateway_mutation_guard import print_scan_result, scan_generic_gateway_calls
+from source_scan_guard import repo_root
 
 EXCLUDED_PARTS = {".venv", "reference", ".git", "__pycache__"}
 ALLOWED = {
@@ -32,7 +33,7 @@ def main() -> int:
     parser.add_argument("--fail-on-hits", action="store_true")
     args = parser.parse_args()
 
-    root = Path.cwd()
+    root = repo_root()
     counts = scan_generic_gateway_calls(root, include_file=should_scan, allowlist=ALLOWED)
     total = sum(counts.values())
     print_scan_result(counts)
