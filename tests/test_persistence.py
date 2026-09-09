@@ -81,6 +81,18 @@ def test_restore_snapshot_ignores_non_persisted_keys(caplog) -> None:
     store.dispatch({"type": "SET_RENDER_MODE", "render_mode": original_mode})
 
 
+def _wait_for_file(path: Path, timeout: float = 5.0) -> bool:
+    """Wait for the asynchronous autosave to create/refresh *path*."""
+    import time
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if path.exists():
+            return True
+        time.sleep(0.02)
+    return path.exists()
+
+
 def test_autosave_hook_immediate_and_debounced(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(persistence, "SESSION_FILE", tmp_path / "params.json")
     monkeypatch.setattr(persistence, "UI_STATE_FILE", tmp_path / "ui_state.json")
@@ -88,10 +100,10 @@ def test_autosave_hook_immediate_and_debounced(tmp_path: Path, monkeypatch) -> N
     store = app_state.state_store
     persistence.install_autosave(store, interval=3600.0)
     try:
-        # Immediate action flushes right away.
+        # Immediate action flushes right away (the write is async).
         store.dispatch({"type": "SET_PARAM_PRESETS", "presets": {"p1": {}}})
-        assert (tmp_path / "params.json").exists()
         params_file = tmp_path / "params.json"
+        assert _wait_for_file(params_file)
         first_mtime = params_file.stat().st_mtime_ns
 
         # Non-immediate dispatches inside the interval do not rewrite.
@@ -101,6 +113,11 @@ def test_autosave_hook_immediate_and_debounced(tmp_path: Path, monkeypatch) -> N
         # The dispatch-count safety net eventually saves.
         for i in range(persistence.DEFAULT_AUTOSAVE_DISPATCHES + 1):
             store.dispatch({"type": "SET_COLOR_SCHEME", "scheme": f"scheme-{i}"})
+        import time
+
+        deadline = time.monotonic() + 5.0
+        while params_file.stat().st_mtime_ns <= first_mtime and time.monotonic() < deadline:
+            time.sleep(0.02)
         assert params_file.stat().st_mtime_ns > first_mtime
     finally:
         store._dispatch_hook = None

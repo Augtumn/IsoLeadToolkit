@@ -5,6 +5,11 @@ import json
 from collections import OrderedDict
 from typing import Any, Hashable, Iterable, Tuple
 
+#: Memoized data signatures keyed by (id(df), data_version, row count).
+#: ``build_data_signature`` recomputes per-column means on every call and is
+#: called twice per render; this keeps that off the hot path.
+_SIGNATURE_CACHE: dict[Tuple[int, int, int], Tuple[Any, ...]] = {}
+
 
 def _normalize_params(params: Any) -> str:
     try:
@@ -16,11 +21,16 @@ def _normalize_params(params: Any) -> str:
 def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
     df = getattr(app_state, 'df_global', None)
     shape = (len(df), len(df.columns)) if df is not None else (0, 0)
+    data_version = int(getattr(app_state, 'data_version', 0) or 0)
+    cache_key = (id(df), data_version, int(shape[0]))
+    cached = _SIGNATURE_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     file_path = getattr(app_state, 'file_path', '') or ''
     sheet_name = getattr(app_state, 'sheet_name', '') or ''
     data_cols = tuple(getattr(app_state, 'data_cols', []) or [])
     group_cols = tuple(getattr(app_state, 'group_cols', []) or [])
-    data_version = getattr(app_state, 'data_version', 0)
     # Lightweight content probe: column names plus per-column means. This
     # catches same-shape files whose values changed without a version bump.
     content_probe: Tuple[Any, ...] = ()
@@ -34,7 +44,15 @@ def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
             content_probe = (columns, means)
         except Exception:
             content_probe = ()
-    return (file_path, sheet_name, shape, data_cols, group_cols, data_version, content_probe)
+    # NOTE: data_version is deliberately NOT part of the signature. It is
+    # session-local (reset to 0 on every start), which made the persisted
+    # embedding cache unusable across sessions; the content probe already
+    # covers in-place data changes.
+    signature = (file_path, sheet_name, shape, data_cols, group_cols, content_probe)
+
+    _SIGNATURE_CACHE.clear()  # datasets are not hot-swapped often
+    _SIGNATURE_CACHE[cache_key] = signature
+    return signature
 
 
 def build_embedding_cache_key(app_state: Any, algorithm: str, params: Any, subset_key: Hashable) -> Tuple[Any, ...]:

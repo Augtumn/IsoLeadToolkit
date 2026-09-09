@@ -57,24 +57,40 @@ def run_neighborhood_search(
     
     query_emb = embedding[query_idx]
     bg_emb = embedding[bg_idx]
-    
-    # Compute pairwise distances: (n_query, n_bg)
-    # Using efficient broadcasting
-    dists = np.sqrt(((query_emb[:, None, :] - bg_emb[None, :, :]) ** 2).sum(axis=2))
-    
-    # Find matches within radius
+
+    # KD-tree query instead of an (n_query, n_bg, n_dims) broadcast array:
+    # the old approach materialised e.g. 10k x 10k x 2 (~1.6 GB) on the UI
+    # thread for a single search.
+    dists = None
+    try:
+        from scipy.spatial import cKDTree
+
+        tree = cKDTree(bg_emb)
+        neighbor_lists = tree.query_ball_point(query_emb, r=radius)
+    except Exception as tree_err:
+        logger.warning(
+            "KD-tree search unavailable (%s); falling back to broadcast distances",
+            tree_err,
+        )
+        dists = np.sqrt(((query_emb[:, None, :] - bg_emb[None, :, :]) ** 2).sum(axis=2))
+        neighbor_lists = [np.where(dists[i] <= radius)[0] for i in range(len(query_idx))]
+
     matches = []
     neighbor_counts = []
     for i, qi in enumerate(query_idx):
-        within = np.where(dists[i] <= radius)[0]
+        within = np.asarray(neighbor_lists[i], dtype=int)
         if len(within) >= min_neighbors:
             neighbor_counts.append(len(within))
+            if dists is not None:
+                dists_i = dists[i][within]
+            else:
+                dists_i = np.linalg.norm(bg_emb[within] - query_emb[i], axis=1)
             matches.append({
                 "query_index": int(qi),
                 "query_label": str(group_series[qi]),
                 "neighbor_indices": bg_idx[within].tolist(),
                 "neighbor_count": len(within),
-                "distances": dists[i][within].tolist(),
+                "distances": dists_i.tolist(),
             })
         else:
             neighbor_counts.append(0)

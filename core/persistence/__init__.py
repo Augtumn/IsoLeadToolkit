@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 import zipfile
 from pathlib import Path
@@ -30,6 +31,9 @@ from .paths import EXIT_OK_FILE, SESSION_FILE, UI_STATE_FILE
 from .schema import SESSION_FIELDS, UI_STATE_FIELDS, build_payload
 
 logger = logging.getLogger(__name__)
+
+#: Guards against overlapping background autosave writes.
+_async_save_lock = threading.Lock()
 
 #: Session archive format tag and version (export/import feature).
 SESSION_ARCHIVE_FORMAT = "isotopes-session"
@@ -81,18 +85,62 @@ def save_all(store: Any) -> bool:
     ``store`` may be a StateStore or anything exposing ``snapshot()``
     (the AppStateGateway forwards to its store). The params.json payload
     keeps the ``session_version`` key so the legacy loader can still apply
-    its version cap on the next start.
+    its version cap on the next start. Synchronous: use ``save_all_async``
+    for the autosave path.
+    """
+    return save_snapshot(store.snapshot())
+
+
+def save_snapshot(snapshot: dict[str, Any]) -> bool:
+    """Write the two payload files from an already-captured snapshot.
+
+    Splitting capture from I/O lets the autosave hook snapshot on the UI
+    thread (cheap, race-free) and do the fsync-heavy write on a worker
+    thread.
     """
     try:
-        session_payload, ui_payload = _build_payloads(store)
+        session_payload = build_payload(snapshot, SESSION_FIELDS)
+        session_payload["session_version"] = CONFIG.get("session_version", 1)
         session_payload["saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         atomic_write_json(SESSION_FILE, _json_safe(session_payload))
 
+        ui_payload = build_payload(snapshot, UI_STATE_FIELDS)
         atomic_write_json(UI_STATE_FILE, _json_safe(ui_payload))
         return True
     except Exception as exc:
         logger.exception("Failed to persist state: %s", exc)
         return False
+
+
+def save_all_async(store: Any) -> None:
+    """Snapshot on the caller's thread, write on a daemon thread.
+
+    Autosave ran two fsync+rename pairs synchronously inside dispatch() on
+    the UI thread; coalescing to a background write keeps interaction
+    smooth. Concurrent writes are skipped (the next dispatch retries).
+    """
+    try:
+        snapshot = store.snapshot()
+    except Exception:
+        logger.exception("Failed to capture state snapshot for autosave")
+        return
+
+    if not _async_save_lock.acquire(blocking=False):
+        return  # a write is already in flight; the next autosave covers us
+
+    def _worker() -> None:
+        try:
+            save_snapshot(snapshot)
+        finally:
+            _async_save_lock.release()
+
+    try:
+        threading.Thread(
+            target=_worker, name="state-autosave", daemon=True
+        ).start()
+    except Exception:
+        _async_save_lock.release()
+        logger.exception("Failed to start autosave thread")
 
 
 def load_ui_state() -> dict[str, Any] | None:
@@ -170,10 +218,9 @@ def _make_autosave_hook(store: Any, interval: float) -> Any:
     """Build the closure installed as the store dispatch hook."""
     last_save = time.monotonic()
     dispatches = 0
-    last_result = True
 
     def hook(action_type: str) -> None:
-        nonlocal last_save, dispatches, last_result
+        nonlocal last_save, dispatches
         dispatches += 1
         immediate = action_type in IMMEDIATE_SAVE_ACTIONS
         due = interval > 0 and time.monotonic() - last_save >= interval
@@ -182,9 +229,8 @@ def _make_autosave_hook(store: Any, interval: float) -> Any:
             last_save = time.monotonic()
             if action_type in IMMEDIATE_SAVE_ACTIONS:
                 logger.info("Immediate save after action %s", action_type)
-            last_result = save_all(store)
-            if not last_result:
-                logger.error("Autosave failed; will retry on the next dispatch")
+            # Snapshot now (cheap, race-free), write on a worker thread.
+            save_all_async(store)
             _maybe_save_cache()
 
     def _maybe_save_cache() -> None:
