@@ -52,7 +52,10 @@ def on_legend_click(event: Any) -> None:
                         if app_state.visible_groups is not None
                         else None
                     ),
-                    all_groups=list(app_state.current_groups),
+                    # app_state.current_groups is never populated; use the
+                    # rendered group universe, otherwise a hide-click is a
+                    # no-op and a show-click hides every other group.
+                    all_groups=list(app_state.available_groups or app_state.current_palette.keys()),
                     target_group=label,
                     target_visible=new_visible,
                 )

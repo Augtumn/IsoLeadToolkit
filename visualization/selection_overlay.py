@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import matplotlib
 import numpy as np
 import scipy.stats
 from matplotlib.patches import Ellipse
@@ -49,38 +48,41 @@ def draw_confidence_ellipse(
     if var_x <= 0 or var_y <= 0:
         return None
 
-    denom = np.sqrt(var_x * var_y)
-    if not np.isfinite(denom) or denom <= np.finfo(float).tiny:
+    # Eigen-decomposition of the covariance gives the true chi-square
+    # ellipse: semi-axes are sqrt(eigenvalue) * n_std along the principal
+    # directions. The old 2*sqrt(1 +/- rho) recipe is only correct when
+    # var_x == var_y; otherwise the axes are badly mis-sized.
+    try:
+        eigenvalues, eigenvectors = np.linalg.eigh(cov)
+    except np.linalg.LinAlgError:
+        return None
+    if not np.all(np.isfinite(eigenvalues)):
+        return None
+    # Clip tiny negative eigenvalues from numerical error; perfectly
+    # collinear data legitimately degenerates to a zero minor axis.
+    eigenvalues = np.clip(eigenvalues, 0.0, None)
+    if float(np.max(eigenvalues)) <= 0.0:
         return None
 
-    pearson = cov[0, 1] / denom
-    pearson = float(np.clip(pearson, -1.0, 1.0))
+    order = np.argsort(eigenvalues)[::-1]
+    eigenvalues = eigenvalues[order]
+    eigenvectors = eigenvectors[:, order]
+    major_axis = eigenvectors[:, 0]
+    theta_deg = float(np.degrees(np.arctan2(major_axis[1], major_axis[0])))
 
-    ell_radius_x = np.sqrt(1 + pearson)
-    ell_radius_y = np.sqrt(1 - pearson)
+    width = 2.0 * float(np.sqrt(eigenvalues[0])) * float(n_std)
+    height = 2.0 * float(np.sqrt(eigenvalues[1])) * float(n_std)
+    mean_x = float(np.mean(x_valid))
+    mean_y = float(np.mean(y_valid))
 
     ellipse = Ellipse(
-        (0, 0),
-        width=ell_radius_x * 2,
-        height=ell_radius_y * 2,
+        (mean_x, mean_y),
+        width=width,
+        height=height,
+        angle=theta_deg,
         facecolor=facecolor,
         **kwargs,
     )
-
-    scale_x = np.sqrt(var_x) * n_std
-    mean_x = np.mean(x_valid)
-    scale_y = np.sqrt(var_y) * n_std
-    mean_y = np.mean(y_valid)
-
-    theta = 0.5 * np.arctan2(2 * cov[0, 1], var_x - var_y)
-    transf = (
-        matplotlib.transforms.Affine2D()
-        .rotate(theta)
-        .scale(scale_x, scale_y)
-        .translate(mean_x, mean_y)
-    )
-
-    ellipse.set_transform(transf + ax.transData)
     return ax.add_patch(ellipse)
 
 

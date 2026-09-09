@@ -87,11 +87,19 @@ def _compute_geochem_params(
         return {}
 
     needed = {_PB206_COL, _PB207_COL}
-    if "kappa" in columns:
+    # 208Pb is required by every 208-derived output (kappa_model, omega,
+    # nu, Init_208_204). Matching on "kappa" alone never fired because the
+    # result key is "kappa_model", so missing 208Pb used to be silently
+    # replaced by a constant and the exported values were wrong.
+    if any("208" in str(col) or "kappa" in str(col) for col in columns):
         needed.add(_PB208_COL)
     missing = needed - set(df.columns)
     if missing:
-        logger.debug("Skipping geochem export – missing columns: %s", missing)
+        logger.warning(
+            "Skipping geochem export (mode=%s) – missing columns: %s",
+            render_mode,
+            sorted(missing),
+        )
         return {}
 
     try:
@@ -99,11 +107,7 @@ def _compute_geochem_params(
 
         pb206 = pd.to_numeric(df[_PB206_COL], errors="coerce").to_numpy(dtype=float)
         pb207 = pd.to_numeric(df[_PB207_COL], errors="coerce").to_numpy(dtype=float)
-        pb208 = (
-            pd.to_numeric(df[_PB208_COL], errors="coerce").to_numpy(dtype=float)
-            if _PB208_COL in df.columns
-            else np.full_like(pb206, 29.476)
-        )
+        pb208 = pd.to_numeric(df[_PB208_COL], errors="coerce").to_numpy(dtype=float)
 
         results = calculate_all_parameters(pb206, pb207, pb208)
 

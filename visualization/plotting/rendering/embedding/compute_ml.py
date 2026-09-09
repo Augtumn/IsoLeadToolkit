@@ -26,11 +26,16 @@ def apply_precomputed_embedding(
     state_gateway.set_last_embedding(embedding, last_type)
 
     if isinstance(precomputed_meta, dict):
-        state_gateway.set_pca_diagnostics(
-            last_pca_variance=precomputed_meta.get('last_pca_variance'),
-            last_pca_components=precomputed_meta.get('last_pca_components'),
-            current_feature_names=precomputed_meta.get('current_feature_names'),
-        )
+        # Only submit keys the meta actually carries: the cache-hit path
+        # passes an empty meta, and submitting .get() results unconditionally
+        # wiped last_pca_variance/components/feature_names (Scree Plot and
+        # PCA Loadings then reported "no data" after any re-render).
+        diagnostics: dict[str, object] = {}
+        for key in ('last_pca_variance', 'last_pca_components', 'current_feature_names'):
+            if key in precomputed_meta:
+                diagnostics[key] = precomputed_meta[key]
+        if diagnostics:
+            state_gateway.set_pca_diagnostics(**diagnostics)
 
     logger.debug('Using precomputed embedding for %s', actual_algorithm)
     return embedding
