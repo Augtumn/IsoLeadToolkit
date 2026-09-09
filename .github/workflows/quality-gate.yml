@@ -28,20 +28,26 @@ jobs:
       - name: Run test suite
         env:
           PYTHONPATH: ${{ github.workspace }}
-        run: |
-          python -m pytest --tb=line 2>&1 | Tee-Object -FilePath pytest-output.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: python -m pytest --junitxml=pytest-junit.xml
 
       - name: Annotate test failures
         if: failure()
         run: |
-          if (Test-Path pytest-output.txt) {
-            Get-Content pytest-output.txt | Select-String -Pattern '^(FAILED|ERROR)' | Select-Object -First 30 | ForEach-Object { "::error::$($_.Line)" }
-            if (-not (Select-String -Path pytest-output.txt -Pattern '^(FAILED|ERROR)' -Quiet)) {
-              Get-Content pytest-output.txt -Tail 30 | ForEach-Object { "::error::$($_)" }
+          if (Test-Path pytest-junit.xml) {
+            [xml]$xml = Get-Content pytest-junit.xml
+            $cases = $xml.testsuites.testsuite | ForEach-Object { $_.testcase }
+            $failed = $cases | Where-Object { $_.failure -or $_.error }
+            if ($failed) {
+              foreach ($tc in $failed | Select-Object -First 30) {
+                $msg = "$($tc.failure.message) $($tc.error.message)" -replace "`r?`n", ' '
+                if ($msg.Length -gt 300) { $msg = $msg.Substring(0, 300) }
+                "::error file=tests/$($tc.name).py::$($tc.classname)::$($tc.name) - $msg"
+              }
+            } else {
+              "::error::pytest reported no failures in JUnit XML (collection error?)"
             }
           } else {
-            "::error::pytest produced no output file"
+            "::error::pytest produced no JUnit XML (crash before report?)"
           }
 
       - name: Check app_state direct assignments
