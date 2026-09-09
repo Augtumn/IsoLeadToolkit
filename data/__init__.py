@@ -23,8 +23,11 @@ _GEOCHEM_ATTRS = frozenset(name for name in __all__ if name != 'read_data_frame'
 
 def __getattr__(name: str):
     if name in _GEOCHEM_ATTRS:
-        from . import geochemistry as _geochemistry
+        # importlib avoids re-entering __getattr__ (``from . import x``
+        # would recurse infinitely while the submodule is not yet bound).
+        import importlib
 
+        _geochemistry = importlib.import_module(f"{__name__}.geochemistry")
         if name == 'geochemistry':
             return _geochemistry
         return getattr(_geochemistry, name)

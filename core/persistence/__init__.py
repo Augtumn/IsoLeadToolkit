@@ -40,19 +40,19 @@ DEFAULT_AUTOSAVE_INTERVAL = 30.0
 #: Safety net: also save after this many dispatches even inside one interval.
 DEFAULT_AUTOSAVE_DISPATCHES = 20
 #: Rare, high-value actions that flush to disk immediately.
+#: NOTE: entries must be real dispatch action types (guarded by
+#: tests/test_persistence.py::test_immediate_save_actions_are_real_actions).
 IMMEDIATE_SAVE_ACTIONS: frozenset[str] = frozenset({
     "SET_PARENT_GROUPS",
     "SET_PARENT_SHAPE_MAP",
     "SET_PARAM_PRESETS",
     "SET_SAVED_THEMES",
-    "SAVE_THEME",
-    "DELETE_THEME",
     "SET_RECENT_FILES",
     "SET_LEGEND_ITEM_ORDER",
     "SET_VISIBLE_GROUPS",
     "SET_CUSTOM_PALETTES",
     "SET_CUSTOM_SHAPE_SETS",
-    "SET_LANGUAGE",
+    "SET_LANGUAGE_CODE",
     "SET_UI_THEME",
 })
 

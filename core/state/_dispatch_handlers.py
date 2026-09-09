@@ -69,7 +69,13 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             store._snapshot["algorithm"] = render_mode
 
     elif action_type == "SET_ALGORITHM":
-        store._snapshot["algorithm"] = str(action.get("algorithm", "UMAP") or "UMAP")
+        algorithm = str(action.get("algorithm", "UMAP") or "UMAP")
+        store._snapshot["algorithm"] = algorithm
+        # For embedding algorithms the render mode IS the algorithm; without
+        # this the sync step overwrote algorithm from render_mode and
+        # set_algorithm() was silently a no-op.
+        if algorithm in ("UMAP", "tSNE", "PCA", "RobustPCA"):
+            store._snapshot["render_mode"] = algorithm
 
     elif action_type == "SET_UMAP_PARAMS":
         store._snapshot["umap_params"] = _normalize_algorithm_params(action.get("params"))

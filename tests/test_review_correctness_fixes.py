@@ -165,3 +165,154 @@ def test_legend_toggle_uses_available_groups() -> None:
         state_gateway.set_visible_groups(original_visible)
         state_gateway.sync_available_and_visible_groups(original_available)
 
+
+
+# ------------------------------------------------------- state layer (batch 4)
+def test_immediate_save_actions_are_real_actions() -> None:
+    """Every immediate-save action name must exist as a dispatch action."""
+    import re
+    from pathlib import Path
+
+    from core.persistence import IMMEDIATE_SAVE_ACTIONS
+
+    repo_root = Path(__file__).resolve().parents[1]
+    handlers = (repo_root / "core" / "state" / "_dispatch_handlers.py").read_text(encoding="utf-8")
+    gateway = (repo_root / "core" / "state" / "gateway.py").read_text(encoding="utf-8")
+    known = set(re.findall(r'action_type == "([A-Z_]+)"', handlers))
+    known |= set(re.findall(r'_dispatch\("([A-Z_]+)"', gateway))
+    assert IMMEDIATE_SAVE_ACTIONS <= known, sorted(IMMEDIATE_SAVE_ACTIONS - known)
+
+
+def test_set_algorithm_updates_render_mode() -> None:
+    """set_algorithm must not be a silent no-op in embedding modes."""
+    from core import app_state, state_gateway
+
+    original = (
+        state_gateway.snapshot()["render_mode"],
+        state_gateway.snapshot()["algorithm"],
+    )
+    try:
+        state_gateway.set_algorithm("PCA")
+        assert app_state.algorithm == "PCA"
+        assert app_state.render_mode == "PCA"
+        state_gateway.set_render_mode("UMAP")
+        state_gateway.set_algorithm("tSNE")
+        assert app_state.render_mode == "tSNE"
+    finally:
+        state_gateway.set_render_mode(original[0])
+
+
+def test_disable_selection_mode_clears_tool() -> None:
+    from core import app_state, state_gateway
+
+    original_tool = getattr(app_state, "selection_tool", None)
+    try:
+        state_gateway.set_selection_mode(True)
+        state_gateway.set_selection_tool("rect")
+        state_gateway.disable_selection_mode()
+        assert app_state.selection_mode is False
+        assert app_state.selection_tool is None
+    finally:
+        state_gateway.set_selection_tool(original_tool)
+
+
+def test_restore_snapshot_rolls_back_on_bad_value(caplog) -> None:
+    """A wrong-typed persisted value must not crash or corrupt the snapshot."""
+    import logging
+
+    from core import app_state
+
+    store = app_state.state_store
+    before = store.snapshot()
+    with caplog.at_level(logging.ERROR, logger="core.state.store"):
+        ok = store.restore_snapshot({"plot_dpi": "not-a-number"})
+    assert ok is False
+    assert "Failed to apply restored snapshot" in caplog.text
+    after = store.snapshot()
+    assert after["plot_dpi"] == before["plot_dpi"]
+
+
+def test_confidence_ellipse_uses_tracked_confidence_level() -> None:
+    """The 68/95/99% radios write confidence_level; the overlay must read it."""
+    import types
+
+    from core import app_state, state_gateway
+    from visualization import selection_overlay
+
+    original = float(getattr(app_state, "confidence_level", 0.95))
+    captured: dict = {}
+
+    class _Canvas:
+        @staticmethod
+        def draw_idle():
+            return None
+
+    class _StateWrite:
+        @staticmethod
+        def set_selection_ellipse(_ellipse):
+            pass
+
+        @staticmethod
+        def set_selection_overlay(_overlay):
+            pass
+
+    class _Ax:
+        @staticmethod
+        def scatter(*_a, **_k):
+            return None
+
+        @staticmethod
+        def get_xlim():
+            return (0.0, 1.0)
+
+        @staticmethod
+        def get_ylim():
+            return (0.0, 1.0)
+
+        @staticmethod
+        def set_xlim(*_a):
+            pass
+
+        @staticmethod
+        def set_ylim(*_a):
+            pass
+
+        @staticmethod
+        def add_patch(patch):
+            return patch
+
+    def _fake_draw(x, y, ax, confidence=0.95, **kwargs):
+        captured["confidence"] = confidence
+        return None
+
+    try:
+        state_gateway.set_confidence_level(0.99)
+        state = types.SimpleNamespace(
+            fig=types.SimpleNamespace(canvas=_Canvas()),
+            ax=_Ax(),
+            render_mode="UMAP",
+            selection_overlay=None,
+            selection_ellipse=None,
+            selected_indices={0, 1, 2, 3},
+            sample_coordinates={0: (0.0, 0.0), 1: (1.0, 1.0), 2: (0.5, 0.8), 3: (0.2, 0.3)},
+            selection_tool=None,
+            show_ellipses=True,
+            draw_selection_ellipse=True,
+            confidence_level=app_state.confidence_level,
+            ellipse_confidence=0.95,
+            plot_marker_size=60,
+            point_size=60,
+        )
+        original_draw = selection_overlay.draw_confidence_ellipse
+        selection_overlay.draw_confidence_ellipse = _fake_draw
+        try:
+            selection_overlay.refresh_selection_overlay_state(
+                state=state,
+                state_write=_StateWrite(),
+                notify_selection_ui=lambda: None,
+            )
+        finally:
+            selection_overlay.draw_confidence_ellipse = original_draw
+        assert captured.get("confidence") == pytest.approx(0.99)
+    finally:
+        state_gateway.set_confidence_level(original)

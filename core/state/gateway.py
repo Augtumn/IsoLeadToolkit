@@ -795,7 +795,13 @@ class AppStateGateway:
         self._dispatch("CLEAR_SELECTION")
 
     def disable_selection_mode(self) -> None:
+        """Turn selection off: clear BOTH the mode flag and the active tool.
+
+        Consumers key off ``selection_tool``; leaving it set re-armed the
+        selector on the next sync.
+        """
         self.set_selection_mode(False)
+        self.set_selection_tool(None)
 
     def set_selection_mode(self, enabled: bool) -> None:
         self._dispatch("SET_SELECTION_MODE", enabled=bool(enabled))

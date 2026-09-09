@@ -547,12 +547,14 @@ class StateStore:
             except Exception:
                 logger.exception("Render-mode listener failed")
 
-    def restore_snapshot(self, payload: dict[str, Any]) -> None:
+    def restore_snapshot(self, payload: dict[str, Any]) -> bool:
         """Bulk-restore persisted fields without going through the gateway.
 
         Used by the persistence layer on startup (see docs/persistence_plan.md
         §4). Only whitelisted, persisted fields are accepted so a hand-edited
-        file can never smuggle junk into the live snapshot.
+        file can never smuggle junk into the live snapshot. Returns True when
+        the payload was applied; a value that breaks the sync is rolled back
+        and reported as False instead of raising.
         """
         from ..persistence.schema import SESSION_FIELDS, UI_STATE_FIELDS
 
@@ -570,7 +572,7 @@ class StateStore:
                 ", ".join(skipped),
             )
         if not accepted:
-            return
+            return False
         # JSON round-trips sets/tuples as lists; restore their native types
         # so the mutation-diff check does not flag a false divergence.
         for key in ("hidden_groups",):
@@ -584,8 +586,25 @@ class StateStore:
         ):
             if key in accepted and accepted[key] is not None:
                 accepted[key] = tuple(accepted[key])
+        # Values are not schema-validated: a hand-edited file can carry a
+        # wrong type that only blows up inside _sync_state (e.g. plot_dpi
+        # 'abc'). Apply defensively and roll back on failure so a bad file
+        # cannot abort startup.
+        previous = {key: self._snapshot.get(key) for key in accepted}
         self._snapshot.update(accepted)
-        self._sync_state()
+        try:
+            self._sync_state()
+        except Exception as exc:
+            logger.error(
+                "Failed to apply restored snapshot (%s); rolling back", exc
+            )
+            self._snapshot.update(previous)
+            try:
+                self._sync_state()
+            except Exception:
+                logger.exception("Rollback after failed restore also failed")
+            return False
+        return True
 
     def snapshot(self) -> dict[str, Any]:
         """Return shallow-copied tracked domains."""

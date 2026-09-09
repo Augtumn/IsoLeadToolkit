@@ -147,13 +147,20 @@ def refresh_selection_overlay_state(
         should_draw_ellipse = state.show_ellipses or getattr(state, "draw_selection_ellipse", False)
         if should_draw_ellipse and len(xs) >= 3:
             try:
+                # Read the tracked confidence level (the 68/95/99% radios
+                # write it); state.ellipse_confidence is config-only and was
+                # never updated by the UI, making those radios inert.
+                confidence = float(
+                    getattr(state, "confidence_level", None)
+                    or getattr(state, "ellipse_confidence", 0.95)
+                )
                 x_arr = np.array(xs)
                 y_arr = np.array(ys)
                 ellipse = draw_confidence_ellipse(
                     x_arr,
                     y_arr,
                     state.ax,
-                    confidence=state.ellipse_confidence,
+                    confidence=confidence,
                     edgecolor="#f97316",
                     linestyle="--",
                     linewidth=2,
@@ -163,7 +170,7 @@ def refresh_selection_overlay_state(
                 state_write.set_selection_ellipse(ellipse)
                 logger.info(
                     "Drawn %.0f%% confidence ellipse for %d selected points.",
-                    state.ellipse_confidence * 100,
+                    confidence * 100,
                     len(xs),
                 )
             except Exception as err:
