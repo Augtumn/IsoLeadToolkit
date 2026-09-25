@@ -8,6 +8,12 @@ for that row, and computed V1/V2/t_Model values are compared against the
 Reference columns are optional per row: a row is validated against the
 metrics whose reference columns are present (e.g. V1V2 rows → V1/V2,
 Stacey & Kramers / Cumming & Richards rows → t_Model).
+
+Real-data rows for the Albarède & Juteau (1984) model carry
+``t_Albarede``/``mu_Albarede``/``kappa_Albarede`` references produced by the
+reference implementation (F. Albarède's MATLAB pipeline, as distributed with
+the SilverQuest_v1 galena database), so the T–μ–κ inversion is checked against
+measured ore compositions rather than synthetic round-trips.
 """
 
 from __future__ import annotations
@@ -24,11 +30,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from data.geochemistry import calculate_all_parameters, engine
+from data.geochemistry import calculate_albarede_parameters, calculate_all_parameters, engine
 
 ALGORITHM_COL = "算法"
 MODEL_AGE_STD_COL = "t_Model"
 BENCHMARK_XLSX = Path(__file__).resolve().parent / "data" / "isotope_benchmark.xlsx"
+
+ALBAREDE_MODEL = "Albarède & Juteau (1984)"
 
 STD_COLUMN_CANDIDATES = {
     "V1": ["V1_std", "V1standard"],
@@ -41,6 +49,31 @@ METRIC_RESULT_KEY = {
     "V1": "V1",
     "V2": "V2",
     "t_Model": "t_Model (Ma)",
+}
+
+# AJ84 metrics come from calculate_albarede_parameters instead (their reference
+# columns are only filled on AJ84 rows).
+ALBAREDE_STD_COLUMN_CANDIDATES = {
+    "t_Albarede": ["t_Albarede", "t_Albarede (Ma)"],
+    "mu_Albarede": ["mu_Albarede"],
+    "kappa_Albarede": ["kappa_Albarede"],
+}
+ALBAREDE_RESULT_KEY = {
+    "t_Albarede": "t_Albarede (Ma)",
+    "mu_Albarede": "mu_Albarede",
+    "kappa_Albarede": "kappa_Albarede",
+}
+
+# Absolute tolerances per metric; unlisted metrics use the --tol argument.
+# t_Albarede keeps the file's model-age convention (±1 Ma, same as t_Model);
+# mu/kappa are tight because the references carry 4/3 decimals.
+METRIC_TOLERANCES = {
+    "V1": 1.0,
+    "V2": 1.0,
+    "t_Model": 1.0,
+    "t_Albarede": 1.0,
+    "mu_Albarede": 0.01,
+    "kappa_Albarede": 0.01,
 }
 
 
@@ -88,12 +121,14 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
     if missing_base:
         raise ValueError(f"Missing required columns: {missing_base}")
 
-    std_cols = {
+    std_cols: dict[str, str | None] = {
         metric: _pick_column(df, candidates)
         for metric, candidates in STD_COLUMN_CANDIDATES.items()
     }
     # t_Model is the unified model-age reference column.
     std_cols["t_Model"] = MODEL_AGE_STD_COL if MODEL_AGE_STD_COL in df.columns else None
+    for metric, candidates in ALBAREDE_STD_COLUMN_CANDIDATES.items():
+        std_cols[metric] = _pick_column(df, candidates)
     # Metrics validated for rows of each algorithm are those with a reference
     # column present AND produced by the engine for that algorithm.
     metrics = [m for m, col in std_cols.items() if col is not None]
@@ -116,6 +151,15 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
             calculate_ages=True,
         )
 
+        albarede_result = None
+        if str(algorithm) == ALBAREDE_MODEL:
+            albarede_result = calculate_albarede_parameters(
+                group_df["206Pb/204Pb"].to_numpy(float),
+                group_df["207Pb/204Pb"].to_numpy(float),
+                group_df["208Pb/204Pb"].to_numpy(float),
+                params=engine.get_parameters(),
+            )
+
         for i, (idx, src_row) in enumerate(group_df.iterrows()):
             excel_row = int(idx) + 2
 
@@ -130,18 +174,23 @@ def validate_dataset(input_path: Path, output_path: Path, tolerance: float) -> p
             checked: list[str] = []
             for metric in metrics:
                 std_val = _to_float_or_nan(src_row.get(std_cols[metric]))
-                calc = result.get(METRIC_RESULT_KEY[metric])
+                if metric in ALBAREDE_RESULT_KEY:
+                    calc = (albarede_result or {}).get(ALBAREDE_RESULT_KEY[metric])
+                else:
+                    calc = result.get(METRIC_RESULT_KEY[metric])
                 calc_val = (
                     float(calc[i])
                     if calc is not None and np.ndim(calc) > 0
                     else float("nan")
                 )
+                metric_tol = METRIC_TOLERANCES.get(metric, tolerance)
                 err = _calc_err(calc_val, std_val)
                 row_data[f"{metric}_calc"] = calc_val
                 row_data[f"{metric}_std"] = std_val
                 row_data[f"{metric}_err"] = err
+                row_data[f"{metric}_tol"] = metric_tol
                 row_data[f"{metric}_pass_pm1"] = (
-                    (err <= tolerance) if not np.isnan(err) else np.nan
+                    (err <= metric_tol) if not np.isnan(err) else np.nan
                 )
                 if not np.isnan(std_val):
                     checked.append(metric)
@@ -174,6 +223,9 @@ def _print_summary(out: pd.DataFrame) -> None:
         "V1_err",
         "V2_err",
         "t_Model_err",
+        "t_Albarede_err",
+        "mu_Albarede_err",
+        "kappa_Albarede_err",
     ]
     fail_cols = [c for c in fail_cols if c in fails.columns]
     print(fails[fail_cols].to_string(index=False))
@@ -214,27 +266,45 @@ def _make_test_dataset(tmp_path: Path) -> Path:
         calculate_ages=True,
     )
 
+    engine.load_preset(ALBAREDE_MODEL)
+    ra = calculate_albarede_parameters(
+        np.array([18.75]), np.array([15.68]), np.array([38.97]),
+        params=engine.get_parameters(),
+    )
+
     data: dict[str, list[object]] = {
-        ALGORITHM_COL: ["V1V2 (Zhu 1993)", "V1V2 (Geokit)", "Stacey & Kramers (1st Stage)"],
-        "206Pb/204Pb": [18.5, 19.0, 17.5],
-        "207Pb/204Pb": [15.6, 15.7, 15.5],
-        "208Pb/204Pb": [38.5, 39.0, 38.0],
-        "Reference": ["synthetic", "synthetic", "synthetic"],
+        ALGORITHM_COL: [
+            "V1V2 (Zhu 1993)",
+            "V1V2 (Geokit)",
+            "Stacey & Kramers (1st Stage)",
+            ALBAREDE_MODEL,
+        ],
+        "206Pb/204Pb": [18.5, 19.0, 17.5, 18.75],
+        "207Pb/204Pb": [15.6, 15.7, 15.5, 15.68],
+        "208Pb/204Pb": [38.5, 39.0, 38.0, 38.97],
+        "Reference": ["synthetic", "synthetic", "synthetic", "synthetic"],
         "V1_std": [
             _scalar(rz.get("V1")),
             _scalar(rg.get("V1")),
+            float("nan"),
             float("nan"),
         ],
         "V2_std": [
             _scalar(rz.get("V2")),
             _scalar(rg.get("V2")),
             float("nan"),
+            float("nan"),
         ],
         MODEL_AGE_STD_COL: [
             float("nan"),
             float("nan"),
             _scalar(rp_sk1.get("t_Model (Ma)")),  # unified model age for SK1 row
+            float("nan"),
         ],
+        # Wiring check for the AJ84 branch (self-consistent, not a real benchmark).
+        "t_Albarede": [float("nan"), float("nan"), float("nan"), _scalar(ra.get("t_Albarede (Ma)"))],
+        "mu_Albarede": [float("nan"), float("nan"), float("nan"), _scalar(ra.get("mu_Albarede"))],
+        "kappa_Albarede": [float("nan"), float("nan"), float("nan"), _scalar(ra.get("kappa_Albarede"))],
     }
 
     df = pd.DataFrame(data)
@@ -254,14 +324,19 @@ def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
     zhu = out[out["algorithm"] == "V1V2 (Zhu 1993)"]
     geokit = out[out["algorithm"] == "V1V2 (Geokit)"]
     sk1 = out[out["algorithm"] == "Stacey & Kramers (1st Stage)"]
+    aj84 = out[out["algorithm"] == ALBAREDE_MODEL]
 
     assert not zhu.empty, "Expected zhu algorithm rows in output"
     assert not geokit.empty, "Expected geokit algorithm rows in output"
     assert not sk1.empty, "Expected SK1 algorithm rows in output"
+    assert not aj84.empty, "Expected AJ84 algorithm rows in output"
 
     assert set(zhu["validated_metrics"].dropna().unique()) == {"V1,V2"}
     assert set(geokit["validated_metrics"].dropna().unique()) == {"V1,V2"}
     assert set(sk1["validated_metrics"].dropna().unique()) == {"t_Model"}
+    assert set(aj84["validated_metrics"].dropna().unique()) == {
+        "t_Albarede,mu_Albarede,kappa_Albarede"
+    }
 
     # All synthetic rows should pass (±1 tolerance vs self-computed standard)
     failing = out[~out["row_pass_by_rule"]]
@@ -272,12 +347,18 @@ def test_validate_dataset_rules_and_output(tmp_path: Path) -> None:
 
 
 def test_real_benchmark_dataset_validates() -> None:
-    """Guard: the tracked literature benchmark dataset validates within ±1.
+    """Guard: the tracked literature benchmark dataset validates within tolerance.
 
     Every algorithm group (zhu / geokit / SK1 / SK2 / CR / MM20) must reach
     ≥95% row pass rate. Known exceptions: three zhu rows with documented
     data issues (one bad 207Pb/204Pb=18.503 entry, two marginally outside
     tolerance) are excluded from the pass-rate floor via skip-list.
+
+    AJ84 rows are measured ore compositions whose T–μ–κ references come from
+    the reference implementation (F. Albarède's MATLAB pipeline, distributed
+    with the SilverQuest_v1 galena database); they must all pass at the tight
+    μ/κ tolerances, covering positive ages, negative ages (U-depleted sources)
+    and samples at 206Pb/204Pb = x*.
     """
     if not BENCHMARK_XLSX.exists():
         pytest.skip(f"Benchmark dataset missing: {BENCHMARK_XLSX}")
@@ -297,6 +378,7 @@ def test_real_benchmark_dataset_validates() -> None:
         "Stacey & Kramers (2nd Stage)",
         "Cumming & Richards (Model III)",
         "Maltese & Mezger (2020)",
+        ALBAREDE_MODEL,
     }
     present = set(out["algorithm"].unique())
     missing = expected_algorithms - present
@@ -310,8 +392,22 @@ def test_real_benchmark_dataset_validates() -> None:
         ~failing.apply(lambda r: (int(r["excel_row"]), r["algorithm"]) in known_bad, axis=1)
     ]
     assert unexpected.empty, (
-        f"Unexpected benchmark failures (±1 tolerance):\n"
+        f"Unexpected benchmark failures:\n"
         f"{unexpected[['excel_row', 'algorithm', 'V1_err', 'V2_err', 't_Model_err']].to_string()}"
+    )
+
+    # AJ84: real ore data, all rows must pass; the group must span the negative
+    # model-age branch and the x = x* degenerate case.
+    aj84 = out[out["algorithm"] == ALBAREDE_MODEL]
+    assert len(aj84) >= 15, f"AJ84 benchmark coverage too thin: {len(aj84)} rows"
+    assert (aj84["t_Albarede_std"] < 0).sum() >= 3, "AJ84 rows must cover negative model ages"
+    assert np.isclose(aj84["206Pb/204Pb"], 18.750, atol=1e-9).sum() >= 1, (
+        "AJ84 rows must cover 206Pb/204Pb = x*"
+    )
+    aj84_failing = aj84[~aj84["row_pass_by_rule"]]
+    assert aj84_failing.empty, (
+        "AJ84 real-data rows outside tolerance:\n"
+        f"{aj84_failing[['206Pb/204Pb', 't_Albarede_err', 'mu_Albarede_err', 'kappa_Albarede_err']].to_string()}"
     )
 
 

@@ -17,6 +17,7 @@
 - **文档**：`docs/geochemistry.md` §2.7/§2.8 预设与对照表、§14.7 API、§16 全节重写（含 ASTR 对照、z\* 与求解区间差异、外部验证表）；`docs/data.md` 预设表；`docs/architecture.md` 模块备注。
 - **未做（有意）**：不把 T–μ–κ 列加入导出列清单、不在 `calculate_all_parameters` 内做模型分支、不向 `engine.params` 增加模型专属键。
 - **注释清理**：`data/geochemistry/` 六个文件按"注释讲清约束与理由、细节留给 `docs/geochemistry.md`"的原则重写——删除复述公式的散文、跨文件重复的常数说明与过程/历史旁白，注释行 192 → 144（data 包 2,685 → 2,609 行），并用 AST 比对（剥离字符串语句后逐文件对比）确认**代码零改动**；同时修掉 `calculate_albarede_parameters` docstring 中过期的"T_i 不在 (0, T0) 内返回 NaN"（区间已改为 (−4·T0, T0)）。
+- **真实数据保证正确性（基准数据集）**：`tests/data/isotope_benchmark.xlsx` 由 77 行扩到 97 行，新增 20 行**真实方铅矿**数据（`算法` = `Albarède & Juteau (1984)`，参考列 `t_Albarede`/`mu_Albarede`/`kappa_Albarede`），参考值来自 F. Albarède 的 AJ84 MATLAB 管线（SilverQuest_v1 随附数据库导出，只取 z\* = 38.83 口径一致的行）。`tests/test_validate_test_dataset.py` 扩展支持 AJ84 指标并按该文件既有约定校验：T ±1.0 Ma（与 `t_Model` 同约定）、μ/κ ±0.01；实测最大偏差 **0.481 Ma / 4.8e-4 / 1.4e-4，20/20 通过**。样本覆盖 T_i ∈ [−8980, +3085] Ma、**6 行负年龄**、**2 行 206/204 = x\***；写入时逐列校验原 77 行数值未变。写入脚本与抽取判据留在 `_viewcheck/`（本地不入库）。
 
 ## 阶段进展（2026-09-10 · 项目全量审查修复批，6 commits）
 
