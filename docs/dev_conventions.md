@@ -252,7 +252,7 @@ ISOTOPES_QT_DEBUG=1
 
 1. 所有用户可见字符串必须使用 `translate("English text")`。
 2. 翻译键统一使用**英文原文**，不允许中文 key。
-3. 新增 UI 文本必须同时更新 `locales/zh.json` 与 `locales/en.json`。
+3. 新增 UI 文本必须同时更新 `locales/zh.json` 与 `locales/en.json`；`locales/check_untranslated.py` 同时检测缺失键与**未被引用的键**（静态 `translate()` 实参、模块内字面量、`f"…{x}…"` 模板、以及 `locales/sync_locales.py` 的运行时键清单，少数可能由 matplotlib/Qt/插件在运行时产出的短标题列在白名单中）。
 4. visualization 中的提示/错误同样必须翻译。
 
 ### 5.2 使用示例

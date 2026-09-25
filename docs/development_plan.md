@@ -18,11 +18,6 @@
 - [ ] 按 `docs/dev_conventions.md` §10「新增/重构函数必须标注」逐步补齐 `ui/` 与 `plugins/`。
       当前覆盖率：core / application / utils 100%、data 98%、visualization 88%、plugins 76%、ui 15%。
 
-### 国际化
-
-- [ ] **清理未被引用的 locale 键**：`en.json`/`zh.json` 各 1150 键中约 330 个在代码中无引用（判据：非静态 `translate()` 实参、非 `f"{param}: {value}"` 模板生成、且不出现在任何源码字符串里）。
-      清理后给 `locales/check_untranslated.py` 增加「未使用键」检测，防止再次堆积。
-
 ## 约定
 
 1. **登记时机**：动手前写入本文件对应小节（问题、方案、影响范围）。
