@@ -258,11 +258,18 @@ def calculate_two_stage_age(
 #     y_i = y0 + (μ_i/U)(e^{λ'T0} − e^{λ'T_i})
 # 同时解出 (T_i, μ_i) (Albarède 的 MATLAB 脚本 / ASTR 用 rootSolve::multiroot);
 # 下面的残差是这两式消去 μ_i 后的等价 1-D 形式 (已数值验证: 同一常数下两者
-# 相差 ≤ 3.5e-12 Ma)。差别只在求解区间: 本实现限定 T_i ∈ (0, T0), 无解返回 NaN;
-# ASTR 的无界 Newton 对模型族外数据会给出非物理负年龄 (如 SilverQuest 矿石库
-# 中存在 Tmod = −84 Ma 的行)。
+# 相差 ≤ 3.5e-12 Ma)。
+#
+# 求解区间: T_i ∈ (−SPAN·T0, T0), SPAN = 4, 即约 (−15.2 Ga, 3.8 Ga)。
+# **负模式年龄是有意义的**: 当样品的 207Pb/204Pb 比现代参考更低 (比现代 common Pb
+# 更不放射成因) 时, 生长曲线交点落在 T = 0 之外, 表示源区 μ 低于参考值 μ* (U 相对
+# 贫化)。Albarède 的 MATLAB 脚本、ASTR 与 SilverQuest 矿石库都保留这类结果
+# (该库 6938 行中有 407 行 Tmod < 0, 最低 −8980 Ma)。只有整个区间内都无根时才返回
+# NaN —— 这与 ASTR 的无界 Newton 的差别仅在"无根"情形的处理, 不再丢弃负年龄。
 
 _ALBAREDE_SEARCH_POINTS = 400
+#: 负向扫描跨度 (以 T0 为单位): 覆盖到约 −15 Ga, 足以涵盖参考生长曲线的负年龄分支。
+_ALBAREDE_NEGATIVE_SPAN = 4.0
 
 
 def albarede_model_age_residual(
@@ -291,8 +298,12 @@ def albarede_model_age_residual(
         params: 参数字典 (可选; 需为 AJ84 预设, 以提供 U_ratio = 1/137.79)
 
     Returns:
-        np.ndarray or float: 残差 (无量纲)
+        np.ndarray or float: 残差 (无量纲; = f·(x_i − x*), 见下文)
     """
+    # 返回"清分母"形式 g = (x_i − x*)·f: 与本函数文档中的 f 零点相同, 但 x_i = x*
+    # (现代参考值; 实测数据把 206Pb/204Pb 取整到 18.750 很常见) 时不再奇异, 自动退化
+    # 为极限方程 (y_i − y*) = μ*(e^{λT_i} − 1)[s(T0,T_i) − s(T_i,0)]。
+    # 该退化形式与第三方矿石库一致 (18.750/15.770 → T_i ≈ 270 Ma)。
     if params is None:
         params = engine.params
     t_years = np.asarray(t_Ma, dtype=float) * 1e6
@@ -300,15 +311,14 @@ def albarede_model_age_residual(
     x = np.asarray(Pb206_204_S, dtype=float)
     y = np.asarray(Pb207_204_S, dtype=float)
     dx = x - ALBAREDE_X_STAR
-    dx = np.where(np.abs(dx) < EPSILON, np.copysign(EPSILON, dx), dx)
 
     s_t0_t = calculate_model_slope(ALBAREDE_T0, t_years, params)
     s_t_0 = calculate_model_slope(t_years, 0.0, params)
 
     residual = (
-        (y - ALBAREDE_Y_STAR) / dx
-        - s_t0_t
-        - (ALBAREDE_MU_STAR * (np.exp(float(params['lambda_238']) * t_years) - 1.0) / dx)
+        (y - ALBAREDE_Y_STAR)
+        - dx * s_t0_t
+        - ALBAREDE_MU_STAR * (np.exp(float(params['lambda_238']) * t_years) - 1.0)
         * (s_t0_t - s_t_0)
     )
     if np.ndim(residual) == 0:
@@ -321,11 +331,8 @@ def _solve_albarede_age_scalar(
     y_i: float,
     params: dict[str, Any],
 ) -> float | None:
-    """求解单个样品的式 (12) 根, 返回年龄 (年) 或 None."""
+    """求解单个样品的模式年龄方程根, 返回年龄 (年, 可为负) 或 None."""
     if not (np.isfinite(x_i) and np.isfinite(y_i)):
-        return None
-    if abs(x_i - ALBAREDE_X_STAR) < _RATIO_DIFF_FLOOR:
-        # x_i 落在现代上地壳参考上, 比值项奇异, 无解。
         return None
 
     def _f(t_years: float) -> float:
@@ -336,14 +343,15 @@ def _solve_albarede_age_scalar(
             return np.nan
         return value if np.isfinite(value) else np.nan
 
+    t_min = -_ALBAREDE_NEGATIVE_SPAN * ALBAREDE_T0
     try:
-        f_low = _f(0.0)
+        f_low = _f(t_min)
         f_high = _f(ALBAREDE_T0)
         if np.isfinite(f_low) and np.isfinite(f_high) and f_low * f_high <= 0:
-            return float(optimize.brentq(_f, 0.0, ALBAREDE_T0, xtol=_AGE_SOLVER_XTOL))
+            return float(optimize.brentq(_f, t_min, ALBAREDE_T0, xtol=_AGE_SOLVER_XTOL))
 
-        # 残差在 T0 附近很陡, 端点不异号时在区间内扫描变号子区间。
-        grid = np.linspace(0.0, ALBAREDE_T0, _ALBAREDE_SEARCH_POINTS)
+        # 端点不异号时在区间内扫描变号子区间 (残差在 T0 附近很陡)。
+        grid = np.linspace(t_min, ALBAREDE_T0, _ALBAREDE_SEARCH_POINTS)
         for t_left, t_right in zip(grid[:-1], grid[1:]):
             f_left = _f(float(t_left))
             f_right = _f(float(t_right))
@@ -368,7 +376,8 @@ def calculate_albarede_model_age(
     Albarède & Juteau (1984) 模式年龄 T_i (Ma)
 
     标量输入返回标量年龄 (无解时返回 None); 数组输入返回数组, 无解位置为 NaN。
-    求解区间 (0, T0), 见 albarede_model_age_residual() 的说明。
+    求解区间 (−4·T0, T0), 即约 (−15.2 Ga, 3.8 Ga); **负年龄是合法结果** (样品的
+    ²⁰⁷Pb/²⁰⁴Pb 低于现代参考 → 源区 μ 低于 μ*, 比现代 common Pb 更不放射成因)。
 
     Args:
         Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
@@ -429,8 +438,8 @@ def calculate_albarede_age_sensitivity(
     l235 = float(params['lambda_235'])
     u8u5 = 1.0 / float(params['U_ratio'])
 
-    # Ma → 年 (None/NaN 保留为 NaN), 与非负夹紧一致于其他年龄入口。
-    t_years = np.maximum(np.asarray(t_Ma, dtype=float), 0.0) * 1e6
+    # Ma → 年 (None/NaN 保留为 NaN); 保留符号 —— 负模式年龄同样适用该灵敏度式。
+    t_years = np.asarray(t_Ma, dtype=float) * 1e6
 
     delta_mu_arr = np.asarray(delta_mu, dtype=float)
     mu_arr = np.asarray(mu_value, dtype=float)

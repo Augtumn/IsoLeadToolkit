@@ -32,7 +32,7 @@ def _safe_denominator(values: np.ndarray | float) -> np.ndarray:
     return np.where(np.abs(arr) < EPSILON, np.copysign(EPSILON, arr), arr)
 
 def _prepare_age(t_Ma: np.ndarray | float | None) -> np.ndarray:
-    """年龄预处理: Ma → 年, 处理 None 和异常值."""
+    """年龄预处理: Ma → 年, 处理 None 和异常值 (负年龄夹紧到 0)."""
     if t_Ma is None:
         return np.array(np.nan)
     try:
@@ -49,6 +49,21 @@ def _prepare_age(t_Ma: np.ndarray | float | None) -> np.ndarray:
                 t_flat.append(np.nan)
         t = np.array(t_flat).reshape(t_arr.shape)
     return np.maximum(t, 0) * 1e6
+
+
+def _prepare_age_signed(t_Ma: np.ndarray | float | None) -> np.ndarray:
+    """年龄预处理: Ma → 年, 处理 None/异常值但**保留符号**.
+
+    AJ84 的负模式年龄有物理含义 (源区 μ 低于参考 μ*, Pb 比现代 common Pb 更不
+    放射成因), 因此不能像 PbIso 口径那样夹紧到 0。
+    """
+    if t_Ma is None:
+        return np.array(np.nan)
+    try:
+        t = np.asarray(t_Ma, dtype=float)
+    except (ValueError, TypeError):
+        return np.array(np.nan)
+    return t * 1e6
 
 
 def _is_two_stage_model(params: dict[str, Any]) -> bool:
@@ -403,9 +418,12 @@ def calculate_initial_ratio_84(
 #       κ_i = (z_i − z0) / [(e^{λ''T0} − e^{λ''T_i}) · μ_i]
 #   下面给出的是相对现代 common Pb 参考的 Δμ/Δκ 记法 (源自 2012 版论文的
 #   记号), 与上面的绝对量等价: μ_i = μ* + Δμ_i, κ_i = κ* + Δκ_i。
-# 注意: ASTR 源码写作 z* = 38.86, 但 SilverQuest 矿石库 6938 条数据实测
-#   以 38.83 才能复现 (κ 残差 1e-5; 用 38.86 则 κ 系统性偏 −0.016),
-#   故此处取 38.83 (亦为 2012 版印刷值)。
+#   T_i 可为负 (负模式年龄有物理含义, 见 age.py 的说明), 故这些函数用
+#   _prepare_age_signed() 而不是会夹紧到 0 的 _prepare_age()。
+# 注意: z* 有两套约定 —— 38.83 (本工程采用; AJ84/2012 印刷值) 与 38.86
+#   (ASTR 源码)。二者只影响 κ (约 0.016), 不影响 T/μ。SilverQuest 矿石库
+#   6938 行实测为混合: 90.0% 与 38.83 一致、9.9% 与 38.86 一致, 并按文献来源
+#   分批 (38.86 组多为 Frei 1992 / Caron et al. 1997 / Pernicka et al. 1993)。
 
 def calculate_albarede_delta_mu(
     Pb206_204_S: np.ndarray | float,
@@ -436,7 +454,7 @@ def calculate_albarede_delta_mu(
     l238 = params['lambda_238']
 
     x = np.asarray(Pb206_204_S, dtype=float)
-    t = _prepare_age(t_Ma)
+    t = _prepare_age_signed(t_Ma)
 
     numerator = x - ALBAREDE_X_STAR + ALBAREDE_MU_STAR * (np.exp(l238 * t) - 1.0)
     denominator = np.exp(l238 * ALBAREDE_T0) - np.exp(l238 * t)
@@ -496,7 +514,7 @@ def calculate_albarede_delta_kappa(
 
     z = np.asarray(Pb208_204_S, dtype=float)
     mu = np.asarray(mu_value, dtype=float)
-    t = _prepare_age(t_Ma)
+    t = _prepare_age_signed(t_Ma)
 
     denominator = np.exp(l232 * ALBAREDE_T0) - np.exp(l232 * t)
     denominator = _safe_denominator(denominator)

@@ -160,6 +160,22 @@ def test_model_slope_of_identical_ages_returns_tangent_limit() -> None:
     assert value == pytest.approx(float(expected), rel=1e-12)
 
 
+def test_model_slope_near_zero_ages_returns_tangent_limit() -> None:
+    """s(T, 0) with T → 0 is also 0/0 (both exponentials underflow to 1). This
+    degenerate point is on the search interval now that negative ages are kept,
+    so it must return the tangent limit instead of NaN."""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+    l238 = params["lambda_238"]
+    l235 = params["lambda_235"]
+
+    value = calculate_model_slope(1e-9, 0.0, params)
+    expected = params["U_ratio"] * (l235 / l238)
+
+    assert np.isfinite(value)
+    assert value == pytest.approx(float(expected), rel=1e-12)
+
+
 @pytest.mark.parametrize(
     "t_i_ma,mu_i,kappa_i",
     [(50.0, 9.60, 3.85), (300.0, 9.90, 4.05), (900.0, 9.70, 3.90), (1800.0, 10.40, 4.20)],
@@ -265,20 +281,98 @@ def test_reproduces_silverquest_galena_database_rows() -> None:
     np.testing.assert_allclose(result[ALBAREDE_KAPPA_KEY], kappa_db, atol=0.005)
 
 
-def test_out_of_family_sample_returns_nan_instead_of_a_negative_age() -> None:
-    """Deliberate difference from ASTR: its unbounded ``rootSolve::multiroot``
-    returns non-physical roots outside (0, T0) — the SilverQuest database even
-    contains Tmod = -84 Ma for this composition. We restrict the search interval
-    and report NaN instead.
+def test_out_of_family_sample_returns_nan() -> None:
+    """Samples whose composition has no intersection with the growth curve at all.
+
+    With 206/204 exactly at the modern reference x*, the limit equation is
+    (y_i − y*) = mu*(e^{lambda T} − 1)·[s(T0,T) − s(T,0)]; its right-hand side
+    only spans about (−1.57, +7.05) for T in (−inf, T0), so y = 13.0 (or 23.5)
+    admits no solution and NaN/None is the correct answer.
     """
     engine.load_preset(_MODEL)
     params = engine.get_parameters()
 
-    x, y, z = 18.740, 15.586, 38.661  # database row with Tmod = -84.000 Ma
+    assert calculate_albarede_model_age(18.750, 13.0, params) is None
+    assert calculate_albarede_model_age(18.750, 23.5, params) is None
 
-    assert calculate_albarede_model_age(x, y, params) is None
-    result = calculate_albarede_parameters(x, y, z, params=params)
-    assert np.isnan(result[ALBAREDE_T_MODEL_KEY])
+    ages = calculate_albarede_model_age(np.array([18.750, 18.750]), np.array([13.0, 23.5]), params)
+    assert np.isnan(ages).all()
+
+
+def test_modern_reference_composition_has_zero_model_age() -> None:
+    """A sample equal to modern common Pb sits at T = 0 on the growth curve."""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+
+    age = calculate_albarede_model_age(ALBAREDE_X_STAR, ALBAREDE_Y_STAR, params)
+
+    assert age is not None
+    assert float(age) == pytest.approx(0.0, abs=1e-6)
+
+
+def test_negative_model_age_is_reproduced_from_the_reference_database() -> None:
+    """Negative model ages are meaningful: the sample's 207Pb/204Pb lies below the
+    modern reference, i.e. its source had mu below mu* (U-depleted relative to the
+    reference reservoir). The database ships such rows and we must reproduce them
+    instead of discarding them.
+
+    Provenance: SilverQuest_v1 galena database row (18.740, 15.586, 38.661) with
+    Tmod = -84.0, mu = 9.4950, kappa = 3.7910. Its kappa column follows the
+    z* = 38.86 convention (see test_z_star_conventions_differ_only_in_kappa),
+    hence the looser kappa tolerance.
+    """
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+
+    result = calculate_albarede_parameters(18.740, 15.586, 38.661, params=params)
+
+    assert float(result[ALBAREDE_T_MODEL_KEY]) < 0.0
+    assert float(result[ALBAREDE_T_MODEL_KEY]) == pytest.approx(-84.0, abs=0.5)
+    assert float(result[ALBAREDE_MU_KEY]) == pytest.approx(9.4950, abs=0.005)
+    assert float(result[ALBAREDE_KAPPA_KEY]) == pytest.approx(3.7910, abs=0.02)
+
+
+def test_strongly_negative_model_age_is_reproduced() -> None:
+    """Extreme but real case: the most negative row of the reference database
+    (Tmod = -8980.0 Ma) is reproduced by the wide search interval."""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+
+    result = calculate_albarede_parameters(36.9100, 17.8470, 52.4700, params=params)
+
+    assert float(result[ALBAREDE_T_MODEL_KEY]) == pytest.approx(-8980.0, abs=1.0)
+    assert float(result[ALBAREDE_MU_KEY]) == pytest.approx(16.6700, abs=0.005)
+    assert float(result[ALBAREDE_KAPPA_KEY]) == pytest.approx(2.2733, abs=0.005)
+
+
+def test_sample_at_the_x_reference_is_solved_via_the_limit_equation() -> None:
+    """206Pb/204Pb exactly 18.750 is common in real data; the model-age equation
+    must not degenerate (the residual keeps its cleared-denominator form)."""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+
+    result = calculate_albarede_parameters(18.750, 15.770, 39.220, params=params)
+
+    assert np.isfinite(result[ALBAREDE_T_MODEL_KEY])
+    assert float(result[ALBAREDE_T_MODEL_KEY]) == pytest.approx(270.0, abs=0.5)
+
+
+def test_z_star_conventions_differ_only_in_kappa() -> None:
+    """38.83 (ours, AJ84/2012 printed) vs 38.86 (ASTR / parts of the literature):
+    both circulate, they shift kappa by ~0.016 and leave T/mu untouched.
+
+    The reference database is itself a mixture: 90.0% of its 6938 rows follow
+    38.83 and 9.9% follow 38.86, split along literature sources.
+    """
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+    # This row's kappa column was produced with z* = 38.86: our difference is the
+    # expected +0.015, while T and mu agree to their published rounding.
+    result = calculate_albarede_parameters(18.740, 15.586, 38.661, params=params)
+
+    assert float(result[ALBAREDE_T_MODEL_KEY]) == pytest.approx(-84.0, abs=0.5)
+    assert float(result[ALBAREDE_MU_KEY]) == pytest.approx(9.4950, abs=0.005)
+    assert float(result[ALBAREDE_KAPPA_KEY]) - 3.7910 == pytest.approx(0.015, abs=0.005)
 
 
 # --------------------------------------------------------- error propagation
@@ -326,18 +420,6 @@ def test_array_input_keeps_nan_for_missing_samples() -> None:
     assert ages.shape == (2,)
     assert ages[0] == pytest.approx(300.0, abs=1e-4)
     assert np.isnan(ages[1])
-
-
-def test_sample_on_modern_reference_has_no_solution() -> None:
-    engine.load_preset(_MODEL)
-    params = engine.get_parameters()
-
-    assert calculate_albarede_model_age(ALBAREDE_X_STAR, ALBAREDE_Y_STAR, params) is None
-
-    ages = calculate_albarede_model_age(
-        np.array([ALBAREDE_X_STAR]), np.array([ALBAREDE_Y_STAR]), params
-    )
-    assert np.isnan(ages[0])
 
 
 def test_scalar_nan_input_does_not_raise() -> None:

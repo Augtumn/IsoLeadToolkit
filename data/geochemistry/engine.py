@@ -86,7 +86,7 @@ E2_CUMMING_RICHARDS = 3.7e-11
 ALBAREDE_T0 = 3.8e9           # T0 = 3.8 Ga (AJ84 的参考锚点, 单位: 年)
 ALBAREDE_X_STAR = 18.750      # 现代 common Pb 206Pb/204Pb (x*)
 ALBAREDE_Y_STAR = 15.63       # 现代 common Pb 207Pb/204Pb (y*)
-ALBAREDE_Z_STAR = 38.83       # 现代 common Pb 208Pb/204Pb (z*)
+ALBAREDE_Z_STAR = 38.83       # 现代 common Pb 208Pb/204Pb (z*); 另有 38.86 约定, 见下
 ALBAREDE_MU_STAR = 9.66       # 现代 common Pb 238U/204Pb (μ*)
 ALBAREDE_KAPPA_STAR = 3.90    # 现代 common Pb 232Th/238U (κ*)
 #: ω* = μ*·κ* (232Th/204Pb of the reference reservoir)
@@ -99,6 +99,12 @@ U_RATIO_AJ84 = 1.0 / ALBAREDE_U238_235
 #:   z0 = z* − μ*κ*(e^{λ''T0} − 1)
 #: 得 x0/y0/z0 ≈ 10.993/12.742/31.038 —— 远离 CDT (9.307/10.294/29.476), 这是
 #: AJ84 用 T0 = 3.8 Ga 作锚点的结果, 该值不是物理原始铅, 请勿"修正"为 CDT。
+#:
+#: z* 的两套约定: 38.83 (AJ84/2012 印刷值; ASTR 之外的多数文献) 与 38.86
+#: (ASTR::albarede_juteau_1984() 采用)。二者只影响 κ (T/μ 不受影响):
+#: z0 相差 0.03 ⇒ κ 相差约 0.016。SilverQuest 矿石库 6938 行实测为混合——
+#: 90.0% 与 38.83 一致、9.9% 与 38.86 一致, 且按文献来源分批 (38.86 组多为
+#: Frei 1992 / Caron et al. 1997 / Pernicka et al. 1993)。本工程取 38.83。
 ALBAREDE_X0 = ALBAREDE_X_STAR - ALBAREDE_MU_STAR * (np.exp(LAMBDA_238 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Y0 = ALBAREDE_Y_STAR - ALBAREDE_MU_STAR * U_RATIO_AJ84 * (np.exp(LAMBDA_235 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Z0 = ALBAREDE_Z_STAR - ALBAREDE_OMEGA_STAR * (np.exp(LAMBDA_232 * ALBAREDE_T0) - 1.0)
@@ -357,8 +363,12 @@ def calculate_model_slope(
     with np.errstate(divide='ignore', invalid='ignore'):
         result = u_ratio * numerator / denominator
 
-    # 年龄差相对极小时闭式解因相消而失去有效位, 切线极限是精确值。
-    nearly_equal = np.abs(t0 - t) < 1e-9 * np.maximum(np.abs(t0), 1.0)
+    # 年龄差极小时闭式解因相消而失去有效位 (甚至 e^{λT0} − e^{λT} 下溢为 0), 切线
+    # 极限是精确值。判据同时用"年差"与"指数差": 后者对两者都接近 0 的情形
+    # (如 s(T, 0), T → 0) 是必需的 —— 此时年差判据的相对尺度失效。
+    nearly_equal = (np.abs(t0 - t) < 1e-9 * np.maximum(np.abs(t0), 1.0)) | (
+        np.abs(l238 * (t0 - t)) < 1e-9
+    )
     if np.any(nearly_equal):
         limit = u_ratio * (l235 / l238) * np.exp((l235 - l238) * t)
         result = np.where(nearly_equal, limit, result)
