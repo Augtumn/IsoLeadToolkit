@@ -228,7 +228,7 @@ def _robust_peak_limit(peaks: list[float]) -> float:
 
 def clear_marginal_axes() -> None:
     global _constrained_layout_disabled
-    axes = getattr(app_state, 'marginal_axes', None)
+    axes = app_state.marginal_axes
     fig = None
     if axes:
         for ax in axes:
@@ -305,13 +305,13 @@ def draw_marginal_kde(
         _set_figure_constrained_layout(fig, False)
         _constrained_layout_disabled = True
 
-    max_points = int(getattr(app_state, 'marginal_kde_max_points', _KDE_MAX_POINTS_DEFAULT))
+    max_points = int(app_state.marginal_kde_max_points)
 
     rng = np.random.default_rng(42)
 
     divider = make_axes_locatable(ax)
-    top_size = float(getattr(app_state, 'marginal_kde_top_size', 15.0))
-    right_size = float(getattr(app_state, 'marginal_kde_right_size', 15.0))
+    top_size = float(app_state.marginal_kde_top_size)
+    right_size = float(app_state.marginal_kde_right_size)
     top_size = max(5.0, min(top_size, 40.0))
     right_size = max(5.0, min(right_size, 40.0))
 
@@ -327,15 +327,15 @@ def draw_marginal_kde(
             'linestyle': '-',
             'alpha': 0.25,
             'fill': True,
-            'bw_adjust': float(getattr(app_state, 'marginal_kde_bw_adjust', _KDE_BW_ADJUST_DEFAULT)),
-            'bandwidth': float(getattr(app_state, 'marginal_kde_bandwidth', _KDE_BANDWIDTH_DEFAULT) or 0.0),
-            'kernel': _resolve_kernel_name(getattr(app_state, 'marginal_kde_kernel', _KDE_KERNEL_DEFAULT)),
+            'bw_adjust': float(app_state.marginal_kde_bw_adjust),
+            'bandwidth': float(app_state.marginal_kde_bandwidth or 0.0),
+            'kernel': _resolve_kernel_name(app_state.marginal_kde_kernel),
             'auto_bandwidth_method': _resolve_auto_bandwidth_method(
-                getattr(app_state, 'marginal_kde_auto_bandwidth_method', _KDE_AUTO_BW_METHOD_DEFAULT)
+                app_state.marginal_kde_auto_bandwidth_method
             ),
-            'gridsize': int(getattr(app_state, 'marginal_kde_gridsize', _KDE_GRID_SIZE_DEFAULT)),
-            'cut': float(getattr(app_state, 'marginal_kde_cut', _KDE_CUT_DEFAULT)),
-            'log_transform': bool(getattr(app_state, 'marginal_kde_log_transform', False)),
+            'gridsize': int(app_state.marginal_kde_gridsize),
+            'cut': float(app_state.marginal_kde_cut),
+            'log_transform': bool(app_state.marginal_kde_log_transform),
         }
     )
     kde_alpha = float(style.get('alpha', 0.25))

@@ -58,7 +58,7 @@ class LegendActionsMixin:
         self.auto_shape_set_combo.blockSignals(False)
 
     def _on_legend_inside_position_change(self, position):
-        current = getattr(app_state, 'legend_position', None)
+        current = app_state.legend_position
         if current == position:
             state_gateway.set_legend_position(None)
             self._set_legend_inside_position_button(None)
@@ -68,13 +68,13 @@ class LegendActionsMixin:
         # Inside and outside positions are mutually exclusive: selecting an
         # inline position must clear the outside location (and vice versa),
         # otherwise both an inline and a docked legend render at once.
-        if getattr(app_state, 'legend_location', None) is not None:
+        if app_state.legend_location is not None:
             state_gateway.set_legend_location(None)
             self._set_legend_outside_position_button(None)
         self._on_change()
 
     def _on_legend_outside_position_change(self, position):
-        current = getattr(app_state, 'legend_location', None)
+        current = app_state.legend_location
         if current == position:
             state_gateway.set_legend_location(None)
             self._set_legend_outside_position_button(None)
@@ -82,7 +82,7 @@ class LegendActionsMixin:
             state_gateway.set_legend_location(position)
             self._set_legend_outside_position_button(position)
         # Mutually exclusive with the inline position group.
-        if getattr(app_state, 'legend_position', None) is not None:
+        if app_state.legend_position is not None:
             state_gateway.set_legend_position(None)
             self._set_legend_inside_position_button(None)
         self._on_change()
@@ -100,10 +100,10 @@ class LegendActionsMixin:
         state_gateway.set_legend_nudge_step(step)
 
     def _nudge_legend(self, dx, dy):
-        if getattr(app_state, "fig", None) is None or getattr(app_state, "ax", None) is None:
+        if app_state.fig is None or app_state.ax is None:
             logger.warning("Nudge ignored: no plot figure is initialized")
             return
-        current = getattr(app_state, 'legend_offset', (0.0, 0.0))
+        current = app_state.legend_offset
         try:
             new_offset = (float(current[0]) + float(dx), float(current[1]) + float(dy))
         except Exception:
@@ -135,7 +135,7 @@ class LegendActionsMixin:
             if self.auto_palette_combo is not None:
                 palette_name = self.auto_palette_combo.currentData()
             if palette_name == "__custom__":
-                palette_name = getattr(app_state, 'color_scheme', None)
+                palette_name = app_state.color_scheme
 
             color_pool = []
             try:
@@ -146,7 +146,7 @@ class LegendActionsMixin:
                 logger.debug('Failed to get palette: %s', e)
 
             if not color_pool:
-                existing = getattr(app_state, 'current_palette', {}) or {}
+                existing = app_state.current_palette or {}
                 for group in groups:
                     color = existing.get(group)
                     if color and color not in color_pool:
@@ -177,7 +177,7 @@ class LegendActionsMixin:
                 elif isinstance(shape_data, (list, tuple)):
                     shape_set = list(shape_data)
 
-            base_shape = getattr(app_state, 'plot_marker_shape', 'o')
+            base_shape = app_state.plot_marker_shape
             if self.auto_base_shape_combo is not None:
                 marker = self.auto_base_shape_combo.currentData()
                 if marker:

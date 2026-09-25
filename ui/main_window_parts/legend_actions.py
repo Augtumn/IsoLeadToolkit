@@ -140,7 +140,7 @@ class MainWindowLegendActionsMixin:
         item_layout.setContentsMargins(4, 2, 4, 2)
         item_layout.setSpacing(6)
 
-        style = getattr(app_state, "line_styles", {}).get(style_key, {}) or {}
+        style = app_state.line_styles.get(style_key, {}) or {}
         swatch_color = style.get("color")
         if not swatch_color and fallback:
             resolved = resolve_line_style(app_state, style_key, fallback)
@@ -178,9 +178,7 @@ class MainWindowLegendActionsMixin:
     def _on_overlay_checkbox_change(self, style_key, state):
         checked = state == Qt.Checked
         if self._is_plumbotectonics_group_style(style_key):
-            if not hasattr(app_state, "plumbotectonics_group_visibility"):
-                state_gateway.set_plumbotectonics_group_visibility({})
-            visibility = getattr(app_state, "plumbotectonics_group_visibility", {}) or {}
+            visibility = app_state.plumbotectonics_group_visibility or {}
             visibility[style_key] = checked
             state_gateway.set_plumbotectonics_group_visibility(visibility)
             self._refresh_plot()
@@ -189,7 +187,7 @@ class MainWindowLegendActionsMixin:
             if checked:
                 state_gateway.set_show_isochrons(True)
                 try:
-                    selected = getattr(app_state, "selected_indices", set()) or set()
+                    selected = app_state.selected_indices or set()
                     if app_state.render_mode == "PB_EVOL_76" and len(selected) >= 2:
                         from visualization.events import calculate_selected_isochron
 
@@ -228,10 +226,10 @@ class MainWindowLegendActionsMixin:
             self._move_legend_item_to_top("parent", entry_key)
 
     def _bring_overlay_to_front(self, style_key):
-        ax = getattr(app_state, "ax", None)
+        ax = app_state.ax
         if ax is None:
             return
-        overlay_map = getattr(app_state, "overlay_artists", {}) or {}
+        overlay_map = app_state.overlay_artists or {}
         artists = self._overlay_artists_for_style(style_key, overlay_map=overlay_map)
         if not artists:
             return
@@ -263,13 +261,13 @@ class MainWindowLegendActionsMixin:
         color = QColorDialog.getColor(QColor(current_color), self, f"Color for {group}")
         if color.isValid():
             new_hex = color.name()
-            updated_palette = dict(getattr(app_state, "current_palette", {}) or {})
+            updated_palette = dict(app_state.current_palette or {})
             updated_palette[group] = new_hex
-            marker_map = dict(getattr(app_state, "group_marker_map", {}) or {})
+            marker_map = dict(app_state.group_marker_map or {})
             state_gateway.set_palette_and_marker_map(updated_palette, marker_map)
             self._update_marker_swatch(group, swatch)
 
-            if hasattr(app_state, "group_to_scatter") and group in app_state.group_to_scatter:
+            if group in app_state.group_to_scatter:
                 sc = app_state.group_to_scatter[group]
                 try:
                     sc.set_color(new_hex)
@@ -281,10 +279,10 @@ class MainWindowLegendActionsMixin:
 
     def _set_group_shape_value(self, group, marker_value, swatch):
         self._ensure_marker_shape_map()
-        marker = marker_value or getattr(app_state, "plot_marker_shape", "o")
-        updated_marker_map = dict(getattr(app_state, "group_marker_map", {}) or {})
+        marker = marker_value or app_state.plot_marker_shape
+        updated_marker_map = dict(app_state.group_marker_map or {})
         updated_marker_map[group] = marker
-        palette = dict(getattr(app_state, "current_palette", {}) or {})
+        palette = dict(app_state.current_palette or {})
         state_gateway.set_palette_and_marker_map(palette, updated_marker_map)
         self._update_marker_swatch(group, swatch)
         self._refresh_plot()
@@ -312,7 +310,7 @@ class MainWindowLegendActionsMixin:
             locked_action.setEnabled(False)
             shape_menu.addAction(locked_action)
         else:
-            current_marker = app_state.group_marker_map.get(group, getattr(app_state, "plot_marker_shape", "o"))
+            current_marker = app_state.group_marker_map.get(group, app_state.plot_marker_shape)
             for label, value in self._marker_shape_map.items():
                 icon = self._build_marker_icon("#94a3b8", value, size=14)
                 action = QAction(icon, label, self)
@@ -332,13 +330,13 @@ class MainWindowLegendActionsMixin:
 
     def _current_parent_groups(self):
         return {
-            str(k): list(v or []) for k, v in (getattr(app_state, "parent_groups", {}) or {}).items()
+            str(k): list(v or []) for k, v in (app_state.parent_groups or {}).items()
         }
 
     def _reload_legend_panel(self):
-        title = getattr(app_state, "legend_last_title", None)
-        handles = getattr(app_state, "legend_last_handles", None)
-        labels = getattr(app_state, "legend_last_labels", None)
+        title = app_state.legend_last_title
+        handles = app_state.legend_last_handles
+        labels = app_state.legend_last_labels
         if title and handles is not None and labels is not None:
             self._update_legend_panel(title, handles, labels)
         else:
@@ -546,9 +544,9 @@ class MainWindowLegendActionsMixin:
         # _rebuild_legend_after_reorder here: its leading
         # _apply_legend_z_order() would read the OLD row order from the list
         # and write it back over the order we just set, reverting the drag.
-        title = getattr(app_state, "legend_last_title", None)
-        handles = getattr(app_state, "legend_last_handles", None)
-        labels = getattr(app_state, "legend_last_labels", None)
+        title = app_state.legend_last_title
+        handles = app_state.legend_last_handles
+        labels = app_state.legend_last_labels
         if title and handles is not None and labels is not None:
             self._update_legend_panel(title, handles, labels)
         else:
@@ -621,13 +619,12 @@ class MainWindowLegendActionsMixin:
         self._refresh_plot()
 
     def _bring_to_front(self, group):
-        if hasattr(app_state, "group_to_scatter") and group in app_state.group_to_scatter:
+        if group in app_state.group_to_scatter:
             sc = app_state.group_to_scatter[group]
             try:
                 max_z = 2
-                if hasattr(app_state, "scatter_collections"):
-                    for c in app_state.scatter_collections:
-                        max_z = max(max_z, c.get_zorder())
+                for c in app_state.scatter_collections:
+                    max_z = max(max_z, c.get_zorder())
 
                 sc.set_zorder(max_z + 1)
                 if app_state.fig:
@@ -715,7 +712,7 @@ class MainWindowLegendActionsMixin:
 
     def _set_parent_shape(self, parent, marker):
         """Apply a manual shape override for a parent group ('' = auto)."""
-        mapping = dict(getattr(app_state, "parent_shape_map", {}) or {})
+        mapping = dict(app_state.parent_shape_map or {})
         if marker:
             mapping[parent] = marker
         else:
@@ -728,7 +725,7 @@ class MainWindowLegendActionsMixin:
 
         menu = QMenu(self)
         current = parent_shape(app_state, parent)
-        manual = bool((getattr(app_state, "parent_shape_map", {}) or {}).get(parent))
+        manual = bool((app_state.parent_shape_map or {}).get(parent))
 
         auto_action = QAction(translate("Auto (by order)"), self)
         auto_action.setCheckable(True)
@@ -768,7 +765,7 @@ class MainWindowLegendActionsMixin:
             if not hasattr(self, "_legend_list") or self._legend_list is None:
                 return
             self._apply_legend_panel_layout()
-            location_key = getattr(app_state, "legend_location", None)
+            location_key = app_state.legend_location
             if location_key not in {"outside_left", "outside_right"}:
                 return
 
@@ -828,7 +825,7 @@ class MainWindowLegendActionsMixin:
 
             parents = all_parents(app_state)
             if parents:
-                parent_names = set((getattr(app_state, "parent_groups", {}) or {}).keys())
+                parent_names = set((app_state.parent_groups or {}).keys())
                 child_parent: dict[str, str] = {
                     child: parent
                     for parent in parent_names

@@ -123,7 +123,7 @@ def plot_embedding(
         new_palette = _build_group_palette(unique_cats)
 
         if actual_algorithm == 'TERNARY':
-            t_cols = getattr(app_state, 'selected_ternary_cols', ['Top', 'Left', 'Right'])
+            t_cols = app_state.selected_ternary_cols
 
             ts = df_plot['_emb_t'].to_numpy(dtype=float, copy=False)
             ls = df_plot['_emb_l'].to_numpy(dtype=float, copy=False)
@@ -134,7 +134,7 @@ def plot_embedding(
             df_plot['_emb_ln'] = l_norm
             df_plot['_emb_rn'] = r_norm
 
-            auto_zoom = bool(getattr(app_state, 'ternary_auto_zoom', True))
+            auto_zoom = bool(app_state.ternary_auto_zoom)
             tmin, tmax, lmin, lmax, rmin, rmax = configure_ternary_axis(
                 app_state.ax,
                 t_norm,
@@ -161,7 +161,7 @@ def plot_embedding(
             size,
             palette=new_palette,
         )
-        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
+        show_marginal_kde = app_state.show_marginal_kde
         if scatters is None:
             logger.warning("No scatter groups rendered for %s", algorithm)
             try:

@@ -55,18 +55,18 @@ def _float_pair(value: Any, fallback: tuple[float, float]) -> tuple[float, float
 
 def _resolve_adjust_text_settings() -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], int, float]:
     """Resolve adjustText parameters from app_state with safe defaults."""
-    force_text = _float_pair(getattr(app_state, 'adjust_text_force_text', (0.8, 1.0)), (0.8, 1.0))
-    force_static = _float_pair(getattr(app_state, 'adjust_text_force_static', (0.4, 0.6)), (0.4, 0.6))
-    expand = _float_pair(getattr(app_state, 'adjust_text_expand', (1.08, 1.20)), (1.08, 1.20))
+    force_text = _float_pair(app_state.adjust_text_force_text, (0.8, 1.0))
+    force_static = _float_pair(app_state.adjust_text_force_static, (0.4, 0.6))
+    expand = _float_pair(app_state.adjust_text_expand, (1.08, 1.20))
 
     try:
-        iter_lim = int(getattr(app_state, 'adjust_text_iter_lim', 120))
+        iter_lim = int(app_state.adjust_text_iter_lim)
     except Exception:
         iter_lim = 120
     iter_lim = max(10, min(1000, iter_lim))
 
     try:
-        time_lim = float(getattr(app_state, 'adjust_text_time_lim', 0.25))
+        time_lim = float(app_state.adjust_text_time_lim)
     except Exception:
         time_lim = 0.25
     time_lim = max(0.05, min(2.0, time_lim))
@@ -284,11 +284,11 @@ def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None
     if len(texts) < 2:
         return
 
-    if bool(getattr(app_state, 'adjust_text_in_progress', False)):
+    if bool(app_state.adjust_text_in_progress):
         return
 
     static_points = []
-    sample_coords = getattr(app_state, 'sample_coordinates', {}) or {}
+    sample_coords = app_state.sample_coordinates or {}
     if isinstance(sample_coords, dict):
         # Only include points that are inside the current viewport so
         # adjustText avoids visible data rather than wasting budget on

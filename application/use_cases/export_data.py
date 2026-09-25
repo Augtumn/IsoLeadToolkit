@@ -78,9 +78,9 @@ def _resolve_export_age(df: pd.DataFrame, app_state: Any) -> Any | None:
     'use real age' is enabled and an age column is selected, the model
     parameters must be derived from it instead of the computed model age.
     """
-    if not bool(getattr(app_state, "use_real_age_for_mu_kappa", False)):
+    if not bool(app_state.use_real_age_for_mu_kappa):
         return None
-    age_col = getattr(app_state, "mu_kappa_age_col", None)
+    age_col = app_state.mu_kappa_age_col
     if not age_col or age_col not in df.columns:
         return None
     try:
@@ -270,7 +270,7 @@ def collect_geochem_curve_data() -> dict[str, pd.DataFrame]:
     sheets: dict[str, pd.DataFrame] = {}
 
     # ---- paleoisochrons ----
-    paleo_entries = getattr(app_state, "paleoisochron_label_data", []) or []
+    paleo_entries = app_state.paleoisochron_label_data or []
     if paleo_entries:
         rows: list[dict[str, Any]] = []
         for e in paleo_entries:
@@ -291,7 +291,7 @@ def collect_geochem_curve_data() -> dict[str, pd.DataFrame]:
             sheets[_SHEET_PALEOISOCHRON] = pd.DataFrame(rows)
 
     # ---- isochron fits ----
-    iso_results = getattr(app_state, "isochron_results", {}) or {}
+    iso_results = app_state.isochron_results or {}
     if iso_results:
         iso_rows: list[dict[str, Any]] = []
         for grp, r in iso_results.items():
@@ -310,7 +310,7 @@ def collect_geochem_curve_data() -> dict[str, pd.DataFrame]:
             sheets[_SHEET_ISOCHRON] = pd.DataFrame(iso_rows)
 
     # ---- user equation overlays ----
-    eq_overlays = getattr(app_state, "equation_overlays", []) or []
+    eq_overlays = app_state.equation_overlays or []
     if eq_overlays:
         eq_rows: list[dict[str, Any]] = []
         for i, ov in enumerate(eq_overlays):

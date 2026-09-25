@@ -295,7 +295,7 @@ class DataImportBuildMixin:
         self.render_mode_combo.blockSignals(False)
 
     def _refresh_language(self):
-        current_lang = getattr(app_state, 'language', None) or 'en'
+        current_lang = app_state.language or 'en'
         self.lang_combo.blockSignals(True)
         self.lang_combo.clear()
         for code, name in self._language_labels.items():

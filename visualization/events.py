@@ -56,11 +56,8 @@ def shutdown_embedding_worker() -> None:
     warning: dropping the last reference would let GC destroy a running
     QThread ("QThread: Destroyed while thread is still running").
     """
-    try:
-        _cancel_embedding_task(reason='app_shutdown')
-    except Exception:
-        pass
-    current = getattr(app_state, 'embedding_worker', None)
+    _cancel_embedding_task(reason='app_shutdown')
+    current = app_state.embedding_worker
     if current is not None:
         _retired_workers.append(current)
         state_gateway.set_embedding_worker(None, running=False)
@@ -92,7 +89,7 @@ def _sync_render_mode(render_mode: str) -> None:
 
 def _cancel_embedding_task(reason: str = '') -> None:
     """Request cancellation for any running embedding task."""
-    worker = getattr(app_state, 'embedding_worker', None)
+    worker = app_state.embedding_worker
     if worker is None:
         return
 
@@ -105,7 +102,7 @@ def _cancel_embedding_task(reason: str = '') -> None:
 
 
 def _on_embedding_task_progress(task_token: int, percent: int, stage: str) -> None:
-    if task_token != getattr(app_state, 'embedding_task_token', -1):
+    if task_token != app_state.embedding_task_token:
         return
     callback = getattr(app_state, 'embedding_progress_callback', None)
     if callable(callback):
@@ -195,11 +192,11 @@ def _render_embedding_result(group_col: str, algorithm: str, payload: dict) -> b
 
 def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) -> None:
     _sweep_retired_workers()
-    if task_token != getattr(app_state, 'embedding_task_token', -1):
+    if task_token != app_state.embedding_task_token:
         logger.debug('Ignore stale embedding result token=%s', task_token)
         return
 
-    finished_worker = getattr(app_state, 'embedding_worker', None)
+    finished_worker = app_state.embedding_worker
     state_gateway.set_embedding_worker(None, running=False)
     if finished_worker is not None:
         _retired_workers.append(finished_worker)
@@ -214,10 +211,10 @@ def _on_embedding_task_finished(task_token: int, payload: dict, group_col: str) 
 
 def _on_embedding_task_failed(task_token: int, error_message: str) -> None:
     _sweep_retired_workers()
-    if task_token != getattr(app_state, 'embedding_task_token', -1):
+    if task_token != app_state.embedding_task_token:
         return
 
-    failed_worker = getattr(app_state, 'embedding_worker', None)
+    failed_worker = app_state.embedding_worker
     state_gateway.set_embedding_worker(None, running=False)
     if failed_worker is not None:
         _retired_workers.append(failed_worker)
@@ -230,7 +227,7 @@ def _on_embedding_task_failed(task_token: int, error_message: str) -> None:
         from core import translate as _t
 
         parent = QApplication.activeWindow()
-        algorithm = getattr(app_state, 'render_mode', 'Unknown')
+        algorithm = app_state.render_mode
         QMessageBox.warning(
             parent,
             _t("Embedding Error"),
@@ -245,10 +242,10 @@ def _on_embedding_task_failed(task_token: int, error_message: str) -> None:
 
 def _on_embedding_task_cancelled(task_token: int) -> None:
     _sweep_retired_workers()
-    if task_token != getattr(app_state, 'embedding_task_token', -1):
+    if task_token != app_state.embedding_task_token:
         return
 
-    cancelled_worker = getattr(app_state, 'embedding_worker', None)
+    cancelled_worker = app_state.embedding_worker
     state_gateway.set_embedding_worker(None, running=False)
     if cancelled_worker is not None:
         _retired_workers.append(cancelled_worker)
@@ -302,11 +299,11 @@ def _start_async_embedding_render(group_col: str) -> tuple[bool, bool]:
 
     # Keep the old worker referenced until its thread actually stops;
     # dropping the last reference while it is still running aborts Qt.
-    old_worker = getattr(app_state, 'embedding_worker', None)
+    old_worker = app_state.embedding_worker
     if old_worker is not None:
         _retired_workers.append(old_worker)
 
-    task_token = int(getattr(app_state, 'embedding_task_token', 0)) + 1
+    task_token = int(app_state.embedding_task_token) + 1
 
     worker = EmbeddingWorker(
         task_token=task_token,

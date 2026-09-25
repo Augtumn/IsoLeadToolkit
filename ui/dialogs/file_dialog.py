@@ -29,10 +29,7 @@ class Qt5FileDialog(QDialog):
         self._refresh_language()
         self._apply_translations()
 
-        try:
-            app_state.register_language_listener(self._apply_translations)
-        except Exception:
-            pass
+        app_state.register_language_listener(self._apply_translations)
 
         if default_file and os.path.exists(default_file):
             self.selected_file = default_file
@@ -40,10 +37,7 @@ class Qt5FileDialog(QDialog):
 
     def closeEvent(self, event):
         """Unregister the language listener so closed dialogs do not linger."""
-        try:
-            app_state.unregister_language_listener(self._apply_translations)
-        except Exception:
-            pass
+        app_state.unregister_language_listener(self._apply_translations)
         super().closeEvent(event)
 
     def _setup_ui(self):
@@ -183,7 +177,7 @@ class Qt5FileDialog(QDialog):
             self._apply_translations()
 
     def closeEvent(self, event):
-        listeners = getattr(app_state, 'language_listeners', [])
+        listeners = app_state.language_listeners
         if self._apply_translations in listeners:
             listeners.remove(self._apply_translations)
         super().closeEvent(event)

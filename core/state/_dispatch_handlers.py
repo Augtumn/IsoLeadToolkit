@@ -676,10 +676,7 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         store._snapshot["data_version"] = int(store._snapshot.get("data_version", 0)) + 1
         cache = getattr(store._state, "embedding_cache", None)
         if cache is not None and hasattr(cache, "clear"):
-            try:
-                cache.clear()
-            except Exception:
-                pass
+            cache.clear()
 
     elif action_type == "SET_DATA_VERSION":
         store._snapshot["data_version"] = int(action.get("version", 0))

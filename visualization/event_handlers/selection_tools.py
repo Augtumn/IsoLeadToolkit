@@ -17,7 +17,7 @@ from .shared import (
 
 
 def _disable_rectangle_selector() -> None:
-    selector = getattr(app_state, 'rectangle_selector', None)
+    selector = app_state.rectangle_selector
     if selector is None:
         return
     try:
@@ -48,7 +48,7 @@ def _ensure_rectangle_selector() -> None:
     if app_state.ax is None:
         return
 
-    selector = getattr(app_state, 'rectangle_selector', None)
+    selector = app_state.rectangle_selector
 
     if selector is not None:
         try:
@@ -209,7 +209,7 @@ def toggle_selection_mode(tool_type: str = 'export') -> None:
         if app_state.selection_tool:
             _disable_rectangle_selector()
             _disable_lasso_selector()
-            if app_state.selected_indices and not getattr(app_state, 'draw_selection_ellipse', False):
+            if app_state.selected_indices and not app_state.draw_selection_ellipse:
                 state_gateway.clear_selected_indices()
             if app_state.selection_tool == 'isochron':
                 state_gateway.set_selected_isochron_data(None)

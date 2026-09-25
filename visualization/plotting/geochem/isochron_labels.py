@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def _build_isochron_label(result_dict: dict[str, Any]) -> str:
     """根据 isochron_label_options 动态构建等时线标注文本。"""
-    opts = getattr(app_state, 'isochron_label_options', {})
+    opts = app_state.isochron_label_options
     parts = []
     age = result_dict.get('age')
     if age is None:
@@ -33,17 +33,17 @@ def _build_isochron_label(result_dict: dict[str, Any]) -> str:
 
 def refresh_paleoisochron_labels() -> None:
     """Refresh paleoisochron label positions after zoom/pan."""
-    ax = getattr(app_state, 'ax', None)
+    ax = app_state.ax
     if ax is None:
         return
-    if bool(getattr(app_state, 'overlay_label_refreshing', False)):
+    if bool(app_state.overlay_label_refreshing):
         return
 
     state_gateway.set_overlay_label_refreshing(True)
     try:
         adjusted_labels = []
 
-        label_data = getattr(app_state, 'paleoisochron_label_data', [])
+        label_data = app_state.paleoisochron_label_data
         if not label_data:
             label_data = []
 
@@ -74,7 +74,7 @@ def refresh_paleoisochron_labels() -> None:
             except Exception:
                 pass
 
-        curve_labels = getattr(app_state, 'plumbotectonics_label_data', [])
+        curve_labels = app_state.plumbotectonics_label_data
         for entry in curve_labels:
             text_artist = entry.get('text')
             if text_artist is None:
@@ -100,7 +100,7 @@ def refresh_paleoisochron_labels() -> None:
             except Exception:
                 pass
 
-        isoage_labels = getattr(app_state, 'plumbotectonics_isoage_label_data', [])
+        isoage_labels = app_state.plumbotectonics_isoage_label_data
         for entry in isoage_labels:
             text_artist = entry.get('text')
             if text_artist is None:
@@ -128,7 +128,7 @@ def refresh_paleoisochron_labels() -> None:
             except Exception:
                 pass
 
-        curve_labels = getattr(app_state, 'overlay_curve_label_data', [])
+        curve_labels = app_state.overlay_curve_label_data
         for entry in curve_labels:
             text_artist = entry.get('text')
             if text_artist is None:

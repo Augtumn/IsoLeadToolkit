@@ -355,7 +355,15 @@ def test_display_theme_load_theme_uses_named_legend_alpha_default(monkeypatch) -
         def _on_style_change(self):
             return None
 
-    monkeypatch.setattr(themes, "app_state", SimpleNamespace(saved_themes={"demo": {}}))
+    class _StateProxy:
+        """Real app state values with a stubbed theme container."""
+
+        saved_themes = {"demo": {}}
+
+        def __getattr__(self, name):
+            return getattr(app_state, name)
+
+    monkeypatch.setattr(themes, "app_state", _StateProxy())
     monkeypatch.setattr(themes, "state_gateway", _Gateway())
 
     panel = _Panel()

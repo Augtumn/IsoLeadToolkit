@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def compute_ternary_embedding() -> np.ndarray | None:
     """Compute ternary embedding from selected ternary columns."""
-    cols = getattr(app_state, 'selected_ternary_cols', [])
+    cols = app_state.selected_ternary_cols
     if not cols or len(cols) != 3:
         logger.error('Ternary columns not selected')
         return None
@@ -46,8 +46,6 @@ def compute_ternary_embedding() -> np.ndarray | None:
         embedding = np.column_stack((top_vals, left_vals, right_vals))
         state_gateway.set_last_embedding(embedding, 'TERNARY')
 
-        if hasattr(app_state, 'ternary_manual_ranges'):
-            del app_state.ternary_manual_ranges
         state_gateway.set_ternary_ranges({})
         return embedding
     except Exception as err:

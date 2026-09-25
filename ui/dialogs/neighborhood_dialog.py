@@ -183,13 +183,13 @@ class NeighborhoodSearchDialog(QDialog):
 
     def _populate_groups(self):
         """Fill query group combo from current group column."""
-        group_col = getattr(app_state, 'last_group_col', None)
+        group_col = app_state.last_group_col
         if not group_col:
-            groups = getattr(app_state, 'group_cols', [])
+            groups = app_state.group_cols
             group_col = groups[0] if groups else None
         if not group_col:
             return
-        df = getattr(app_state, 'df_global', None)
+        df = app_state.df_global
         if df is None or group_col not in df.columns:
             return
         for val in sorted(df[group_col].dropna().unique(), key=str):
@@ -201,17 +201,17 @@ class NeighborhoodSearchDialog(QDialog):
         if embedding is None:
             return None, None, None
 
-        group_col = getattr(app_state, 'last_group_col', None)
+        group_col = app_state.last_group_col
         if not group_col:
             return None, None, None
 
-        df = getattr(app_state, 'df_global', None)
+        df = app_state.df_global
         if df is None or group_col not in df.columns:
             return None, None, None
 
         groups = df[group_col].fillna("Unknown").astype(str).values
 
-        indices = getattr(app_state, 'active_subset_indices', None)
+        indices = app_state.active_subset_indices
         if indices and len(indices) > 0:
             idx_list = np.array(sorted(indices))
             emb = embedding[idx_list]  # slice embedding to match subset
@@ -313,15 +313,15 @@ class NeighborhoodSearchDialog(QDialog):
         # Use gateway for coordinated state updates
         state_gateway.set_dataframe_and_source(
             df,
-            file_path=getattr(app_state, 'file_path', ''),
-            sheet_name=getattr(app_state, 'sheet_name', None),
+            file_path=app_state.file_path,
+            sheet_name=app_state.sheet_name,
         )
         state_gateway.bump_data_version()
 
-        groups = list(getattr(app_state, 'group_cols', []) or [])
+        groups = list(app_state.group_cols or [])
         if col_name not in groups:
             groups.append(col_name)
-        data_cols = list(getattr(app_state, 'data_cols', []) or [])
+        data_cols = list(app_state.data_cols or [])
         state_gateway.set_group_data_columns(groups, data_cols)
         state_gateway.set_last_group_col(col_name)
         state_gateway.bump_data_version()
@@ -340,7 +340,7 @@ class NeighborhoodSearchDialog(QDialog):
 
     def _export_data(self):
         """Export the current dataframe with new group column to CSV or Excel."""
-        df = getattr(app_state, 'df_global', None)
+        df = app_state.df_global
         if df is None:
             QMessageBox.warning(self, translate("Warning"), translate("No data to export."))
             return

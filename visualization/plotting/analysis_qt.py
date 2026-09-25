@@ -58,7 +58,7 @@ def _create_plot_dialog(
 
 def show_scree_plot(parent_window=None) -> None:
     """Display a scree plot of the explained variance for the last PCA run."""
-    if not hasattr(app_state, 'last_pca_variance') or app_state.last_pca_variance is None:
+    if app_state.last_pca_variance is None:
         logger.warning("No PCA variance data available. Run PCA first.")
         return
 
@@ -111,7 +111,7 @@ def show_scree_plot(parent_window=None) -> None:
 
 def show_pca_loadings(parent_window=None) -> None:
     """Display a heatmap of PCA loadings (components)."""
-    if not hasattr(app_state, 'last_pca_components') or app_state.last_pca_components is None:
+    if app_state.last_pca_components is None:
         logger.warning("No PCA components data available. Run PCA first.")
         return
 
@@ -166,7 +166,7 @@ def show_pca_loadings(parent_window=None) -> None:
 
 def show_embedding_correlation(parent_window=None) -> None:
     """Display correlation between original features and embedding dimensions."""
-    if not hasattr(app_state, 'last_embedding') or app_state.last_embedding is None:
+    if app_state.last_embedding is None:
         logger.warning("No embedding data available. Run an analysis first.")
         return
 
@@ -228,7 +228,7 @@ def show_embedding_correlation(parent_window=None) -> None:
 
 def show_shepard_diagram(parent_window=None) -> None:
     """Display a Shepard diagram (Distance Plot) to evaluate embedding quality."""
-    if not hasattr(app_state, 'last_embedding') or app_state.last_embedding is None:
+    if app_state.last_embedding is None:
         logger.warning("No embedding data available.")
         return
 

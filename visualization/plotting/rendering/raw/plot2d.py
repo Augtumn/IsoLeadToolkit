@@ -51,7 +51,7 @@ def _validate_2d_inputs(
 def _capture_prev_axes() -> tuple[Any | None, Any | None, Any | None, list[str] | None]:
     """Snapshot the current axes and its limits before reconfiguring for 2D."""
     prev_ax = app_state.ax
-    prev_2d_cols = getattr(app_state, 'last_2d_cols', None)
+    prev_2d_cols = app_state.last_2d_cols
     prev_xlim = None
     prev_ylim = None
     if prev_ax is not None and getattr(prev_ax, 'name', '') != '3d':
@@ -172,9 +172,9 @@ def _render_2d_scatter_groups(
     size: int,
 ) -> list[Any]:
     """Render per-group 2D scatter collections and register point mappings."""
-    show_edge = bool(getattr(app_state, 'scatter_show_edge', True))
-    edge_color = getattr(app_state, 'scatter_edgecolor', '#1e293b') if show_edge else 'none'
-    edge_width = getattr(app_state, 'scatter_edgewidth', 0.4) if show_edge else 0.0
+    show_edge = bool(app_state.scatter_show_edge)
+    edge_color = app_state.scatter_edgecolor if show_edge else 'none'
+    edge_width = app_state.scatter_edgewidth if show_edge else 0.0
     scatters = []
 
     for cat in unique_cats:
@@ -188,8 +188,8 @@ def _render_2d_scatter_groups(
 
         color = app_state.current_palette[cat]
 
-        marker_size = getattr(app_state, 'plot_marker_size', size)
-        marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+        marker_size = app_state.plot_marker_size
+        marker_alpha = app_state.plot_marker_alpha
         marker_shape = resolve_group_marker(app_state, cat)
         sc = app_state.ax.scatter(
             xs,
@@ -310,8 +310,8 @@ def _render_2d_title_and_axes(
             pass
 
     state_gateway.set_current_plot_title(title)
-    if getattr(app_state, 'show_plot_title', True):
-        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
+    if app_state.show_plot_title:
+        app_state.ax.set_title(title, pad=app_state.title_pad)
     else:
         app_state.ax.set_title('')
     state_gateway.set_last_2d_cols(list(data_columns))
@@ -382,7 +382,7 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
 
         _build_group_palette(unique_cats)
 
-        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
+        show_marginal_kde = app_state.show_marginal_kde
 
         if show_kde:
             _render_2d_kde(df_plot, group_col, data_columns)

@@ -55,7 +55,7 @@ def _draw_paleoisochrons(
                 'paleoisochron',
                 {
                     'color': None,
-                    'linewidth': getattr(app_state, 'paleoisochron_width', 0.9),
+                    'linewidth': app_state.paleoisochron_width,
                     'linestyle': '--',
                     'alpha': 0.85
                 }
@@ -91,7 +91,7 @@ def _draw_paleoisochrons(
                 text_artist = ax.text(
                     x_vals[-1], y_vals[-1],
                     label_text,
-                    color=line_color or paleo_style.get('color') or getattr(app_state, 'label_color', '#1f2937'),
+                    color=line_color or paleo_style.get('color') or app_state.label_color,
                     fontsize=label_opts['label_fontsize'],
                     va='center',
                     ha='left',

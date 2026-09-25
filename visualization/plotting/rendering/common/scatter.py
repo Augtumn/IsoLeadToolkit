@@ -24,11 +24,11 @@ def _render_scatter_groups(
     palette: dict[str, str] | None = None,
 ) -> list[Any] | None:
     scatters = []
-    is_kde_mode = getattr(app_state, 'show_kde', False)
-    show_edge = bool(getattr(app_state, 'scatter_show_edge', True))
-    edge_color = getattr(app_state, 'scatter_edgecolor', '#1e293b') if show_edge else 'none'
-    edge_width = getattr(app_state, 'scatter_edgewidth', 0.4) if show_edge else 0.0
-    palette_map = dict(palette or getattr(app_state, 'current_palette', {}) or {})
+    is_kde_mode = app_state.show_kde
+    show_edge = bool(app_state.scatter_show_edge)
+    edge_color = app_state.scatter_edgecolor if show_edge else 'none'
+    edge_width = app_state.scatter_edgewidth if show_edge else 0.0
+    palette_map = dict(palette or app_state.current_palette or {})
 
     for cat in unique_cats:
         if is_kde_mode:
@@ -54,8 +54,8 @@ def _render_scatter_groups(
                 if len(t_norm) == 0:
                     continue
 
-                marker_size = getattr(app_state, 'plot_marker_size', size)
-                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                marker_size = app_state.plot_marker_size
+                marker_alpha = app_state.plot_marker_alpha
                 marker_shape = resolve_group_marker(app_state, cat)
                 color = palette_map.get(cat, '#333333')
 
@@ -104,8 +104,8 @@ def _render_scatter_groups(
                 if len(xs) == 0:
                     continue
 
-                marker_size = getattr(app_state, 'plot_marker_size', size)
-                marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.88)
+                marker_size = app_state.plot_marker_size
+                marker_alpha = app_state.plot_marker_alpha
                 marker_shape = resolve_group_marker(app_state, cat)
 
                 color = palette_map.get(cat, '#333333')

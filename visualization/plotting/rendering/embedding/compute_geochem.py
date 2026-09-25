@@ -74,10 +74,10 @@ def compute_v1v2_embedding() -> np.ndarray | None:
 def _resolve_model_age(geochemistry: Any, pb206: np.ndarray, pb207: np.ndarray) -> np.ndarray | None:
     """Resolve model age series for Mu/Kappa charts."""
     t_ma = None
-    if getattr(app_state, 'use_real_age_for_mu_kappa', False):
+    if app_state.use_real_age_for_mu_kappa:
         df_subset, _ = _get_subset_dataframe()
         if df_subset is not None:
-            age_col = getattr(app_state, 'mu_kappa_age_col', None)
+            age_col = app_state.mu_kappa_age_col
             if age_col and age_col in df_subset.columns:
                 t_ma = pd.to_numeric(df_subset[age_col], errors='coerce').values
 

@@ -35,7 +35,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
 
         params = geochemistry.engine.get_parameters()
 
-        show_fits = getattr(app_state, 'show_isochrons', True)
+        show_fits = app_state.show_isochrons
         # In PB_EVOL_76/86, model curves already represent growth trajectories.
         show_growth = False
         if not show_fits and not show_growth:
@@ -45,7 +45,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
         if indices is None or len(indices) == 0:
             return
 
-        data_state = getattr(app_state, 'data', app_state)
+        data_state = app_state.data
         df = getattr(data_state, 'df_global', app_state.df_global)
         if df is None:
             return
@@ -66,7 +66,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
         sx_all, sy_all, rxy_all = _resolve_isochron_errors(df_subset, len(df_subset))
 
         group_col = app_state.last_group_col
-        current_palette = getattr(app_state, 'current_palette', {})
+        current_palette = app_state.current_palette
 
         if not group_col or group_col not in df_subset.columns:
             unique_groups = ['All Data']
@@ -118,9 +118,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
             except Exception:
                 continue
 
-            if not hasattr(app_state, 'isochron_results'):
-                state_gateway.set_isochron_results({})
-            results = dict(getattr(app_state, 'isochron_results', {}) or {})
+            results = dict(app_state.isochron_results or {})
             results[grp] = {
                 'slope': slope,
                 'intercept': intercept,
@@ -148,7 +146,7 @@ def _draw_isochron_overlays(ax: Any, actual_algorithm: str) -> None:
                 'isochron',
                 {
                     'color': None,
-                    'linewidth': getattr(app_state, 'isochron_line_width', 1.5),
+                    'linewidth': app_state.isochron_line_width,
                     'linestyle': '-',
                     'alpha': 0.8,
                 },

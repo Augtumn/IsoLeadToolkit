@@ -149,7 +149,7 @@ class DataImportWorkflowMixin:
 
     def _refresh_recent_files(self):
         self.recent_list.clear()
-        recent_files = getattr(app_state, 'recent_files', [])
+        recent_files = app_state.recent_files
         for path in recent_files:
             if not path:
                 continue
@@ -159,7 +159,7 @@ class DataImportWorkflowMixin:
             self.recent_list.addItem(item)
 
     def _add_recent_file(self, file_path):
-        recent_files = list(getattr(app_state, 'recent_files', []))
+        recent_files = list(app_state.recent_files)
         recent_files = [path for path in recent_files if path and path != file_path]
         recent_files.insert(0, file_path)
         recent_files = recent_files[:8]

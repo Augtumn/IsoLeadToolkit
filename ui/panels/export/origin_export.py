@@ -27,10 +27,10 @@ class ExportPanelOriginExportMixin:
 
     def _on_export_origin_clicked(self):
         """Handle Export to Origin button click."""
-        if getattr(app_state, "df_global", None) is None or len(app_state.df_global) == 0:
+        if app_state.df_global is None or len(app_state.df_global) == 0:
             QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
             return
-        if getattr(app_state, "fig", None) is None:
+        if app_state.fig is None:
             QMessageBox.warning(
                 self, translate("Warning"), translate("Plot figure is not initialized.")
             )

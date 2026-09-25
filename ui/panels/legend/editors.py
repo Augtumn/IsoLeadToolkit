@@ -179,9 +179,7 @@ class LegendEditorsMixin:
         except Exception as exc:
             logger.warning("Failed to register palette in style manager: %s", exc)
 
-        if not hasattr(app_state, 'custom_palettes'):
-            state_gateway.set_custom_palettes({})
-        custom_palettes = dict(getattr(app_state, 'custom_palettes', {}) or {})
+        custom_palettes = dict(app_state.custom_palettes or {})
         custom_palettes[name] = list(colors)
         state_gateway.set_custom_palettes(custom_palettes)
 
@@ -189,7 +187,7 @@ class LegendEditorsMixin:
             from visualization.style_manager import style_manager_instance
             palette_names = style_manager_instance.get_palette_names()
         except Exception:
-            palette_names = list(getattr(app_state, 'custom_palettes', {}).keys())
+            palette_names = list(app_state.custom_palettes.keys())
         self._populate_palette_combo(palette_names)
         return name
 
@@ -317,9 +315,7 @@ class LegendEditorsMixin:
             if marker:
                 shapes.append(marker)
 
-        if not hasattr(app_state, 'custom_shape_sets'):
-            state_gateway.set_custom_shape_sets({})
-        custom_shape_sets = dict(getattr(app_state, 'custom_shape_sets', {}) or {})
+        custom_shape_sets = dict(app_state.custom_shape_sets or {})
         custom_shape_sets[name] = list(shapes)
         state_gateway.set_custom_shape_sets(custom_shape_sets)
         return name, shapes

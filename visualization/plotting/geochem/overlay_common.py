@@ -9,9 +9,9 @@ def _is_overlay_label_style_visible(style_key: str | None) -> bool:
     """Return whether labels for the style key should be visible."""
     style = str(style_key or '').strip()
     if style.startswith('plumbotectonics_curve:'):
-        group_visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+        group_visibility = app_state.plumbotectonics_group_visibility or {}
         return bool(
-            getattr(app_state, 'show_plumbotectonics_curves', True)
+            app_state.show_plumbotectonics_curves
             and group_visibility.get(style, True)
         )
 
@@ -32,13 +32,11 @@ def _is_overlay_label_style_visible(style_key: str | None) -> bool:
 def _register_overlay_artist(style_key: str, artist: Any) -> None:
     if artist is None:
         return
-    if not hasattr(app_state, 'overlay_artists'):
-        state_gateway.set_overlay_artists({})
     app_state.overlay_artists.setdefault(style_key, []).append(artist)
 
 
 def _resolve_label_options(style_key: str, fallback: dict[str, Any]) -> dict[str, Any]:
-    style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+    style = app_state.line_styles.get(style_key, {}) or {}
     resolved = dict(fallback)
     for key in resolved:
         if key not in style:
@@ -87,7 +85,7 @@ def _register_overlay_curve_label(
 ) -> None:
     if text_artist is None:
         return
-    data = getattr(app_state, 'overlay_curve_label_data', None)
+    data = app_state.overlay_curve_label_data
     if data is None:
         data = []
     data.append({

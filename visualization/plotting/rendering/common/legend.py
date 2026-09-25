@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def _notify_legend_panel(title: str, handles: list[Any], labels: list[str]) -> None:
-    callback = getattr(app_state, 'legend_update_callback', None)
+    callback = app_state.legend_update_callback
     if callable(callback):
         try:
             callback(title, handles, labels)
@@ -42,8 +42,8 @@ def _build_legend_proxies(handles: list[Any], labels: list[str]) -> list[Any]:
                     marker=item['marker'],
                     linestyle='None',
                     markerfacecolor=color,
-                    markeredgecolor=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
-                    markeredgewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                    markeredgecolor=app_state.scatter_edgecolor,
+                    markeredgewidth=app_state.scatter_edgewidth,
                     markersize=8,
                 )
             )
@@ -125,8 +125,8 @@ def _merge_parent_groups_for_inline(
                 marker=marker,
                 linestyle='None',
                 markerfacecolor=color,
-                markeredgecolor=getattr(app_state, 'scatter_edgecolor', '#1e293b'),
-                markeredgewidth=getattr(app_state, 'scatter_edgewidth', 0.4),
+                markeredgecolor=app_state.scatter_edgecolor,
+                markeredgewidth=app_state.scatter_edgewidth,
                 markersize=8,
             )
         )
@@ -172,14 +172,14 @@ def _place_inline_legend(
         logger.debug('Too many categories for standard legend. Use Control Panel legend.')
         return
 
-    inside_location = getattr(app_state, 'legend_position', None)
+    inside_location = app_state.legend_position
     if not inside_location or str(inside_location).startswith('outside_'):
         return
 
     location_key = inside_location
     auto_ncol = _legend_columns_for_layout(draw_labels, ax, location_key)
     if auto_ncol is None:
-        ncol = app_state.legend_columns if getattr(app_state, 'legend_columns', 0) > 0 else (2 if n_cats > 15 else 1)
+        ncol = app_state.legend_columns if app_state.legend_columns > 0 else (2 if n_cats > 15 else 1)
     else:
         ncol = auto_ncol
 
@@ -229,8 +229,8 @@ def _render_legend(
     try:
         handles = []
         labels = []
-        is_kde_mode = getattr(app_state, 'show_kde', False)
-        show_marginal_kde = getattr(app_state, 'show_marginal_kde', False)
+        is_kde_mode = app_state.show_kde
+        show_marginal_kde = app_state.show_marginal_kde
 
         if is_kde_mode:
             for cat in unique_cats:

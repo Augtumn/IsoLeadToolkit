@@ -33,7 +33,7 @@ def get_plumbotectonics_variants() -> list[tuple[str, str]]:
 def _select_plumbotectonics_section(sections: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not sections:
         return None
-    variant = getattr(app_state, 'plumbotectonics_variant', None)
+    variant = app_state.plumbotectonics_variant
     try:
         idx = int(variant)
     except Exception:
@@ -50,7 +50,7 @@ def _normalize_plumbotectonics_group_key(name: str) -> str:
 
 
 def _plumbotectonics_group_visible(style_key: str) -> bool:
-    visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+    visibility = app_state.plumbotectonics_group_visibility or {}
     return bool(visibility.get(style_key, True))
 
 
@@ -85,7 +85,7 @@ def _overlay_palette() -> list[str]:
     palette = []
     try:
         from visualization.style_manager import style_manager_instance
-        scheme = getattr(app_state, 'color_scheme', None)
+        scheme = app_state.color_scheme
         if scheme and scheme in style_manager_instance.palettes:
             palette = list(style_manager_instance.palettes.get(scheme, []))
     except Exception:

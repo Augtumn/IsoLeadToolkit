@@ -223,10 +223,7 @@ class MainWindowSetupMixin:
             lang_action.triggered.connect(lambda checked, c=code: set_language(c))
             self.lang_menu.addAction(lang_action)
 
-        try:
-            app_state.register_language_listener(self._refresh_language)
-        except Exception:
-            pass
+        app_state.register_language_listener(self._refresh_language)
 
     def _show_log_viewer(self) -> None:
         """Open the in-app log viewer dialog."""
@@ -266,10 +263,7 @@ class MainWindowSetupMixin:
 
         # Refresh the mode label whenever the render mode changes (panel
         # dialogs switch modes without rebuilding the status bar).
-        try:
-            app_state.register_render_mode_listener(lambda _mode: self._refresh_status_info())
-        except Exception:
-            pass
+        app_state.register_render_mode_listener(lambda _mode: self._refresh_status_info())
 
         self._refresh_status_info()
 
@@ -302,13 +296,13 @@ class MainWindowSetupMixin:
 
     def _refresh_status_info(self) -> None:
         """Update status bar info label with current app state summary."""
-        df = getattr(app_state, "df_global", None)
+        df = app_state.df_global
         if df is not None and len(df) > 0:
             n = len(df)
             # Show the user-friendly mode name (e.g. "Pb Evolution 206-207"
             # for the internal "PB_EVOL_76" code) via the locale table.
-            mode = translate(str(getattr(app_state, "render_mode", "?")))
-            group_cols = getattr(app_state, "group_cols", []) or []
+            mode = translate(str(app_state.render_mode))
+            group_cols = app_state.group_cols or []
             g = len(group_cols)
             text = translate(
                 "Samples: {n} | Mode: {mode} | Groups: {g}",
@@ -320,7 +314,7 @@ class MainWindowSetupMixin:
 
     def _apply_legend_panel_layout(self):
         try:
-            location_key = getattr(app_state, "legend_location", None)
+            location_key = app_state.legend_location
             if location_key not in {"outside_left", "outside_right"}:
                 location_key = None
             is_outside = bool(location_key)
@@ -401,7 +395,7 @@ class MainWindowSetupMixin:
         self._refresh_status_info()
 
         if hasattr(self, "_legend_title_label") and self._legend_title_label is not None:
-            last_title = getattr(app_state, "legend_last_title", None)
+            last_title = app_state.legend_last_title
             if last_title:
                 self._legend_title_label.setText(str(last_title))
             else:

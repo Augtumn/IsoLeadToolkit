@@ -170,17 +170,17 @@ class IsochronErrorConfigDialog(QDialog):
             combo.addItem(col, col)
 
     def _load_state(self):
-        mode = getattr(app_state, 'isochron_error_mode', 'fixed')
+        mode = app_state.isochron_error_mode
         self.columns_radio.setChecked(mode == 'columns')
         self.fixed_radio.setChecked(mode != 'columns')
 
-        self._select_combo_value(self.sx_combo, getattr(app_state, 'isochron_sx_col', ''))
-        self._select_combo_value(self.sy_combo, getattr(app_state, 'isochron_sy_col', ''))
-        self._select_combo_value(self.rxy_combo, getattr(app_state, 'isochron_rxy_col', ''))
+        self._select_combo_value(self.sx_combo, app_state.isochron_sx_col)
+        self._select_combo_value(self.sy_combo, app_state.isochron_sy_col)
+        self._select_combo_value(self.rxy_combo, app_state.isochron_rxy_col)
 
-        self.sx_spin.setValue(float(getattr(app_state, 'isochron_sx_value', 0.001)))
-        self.sy_spin.setValue(float(getattr(app_state, 'isochron_sy_value', 0.001)))
-        self.rxy_spin.setValue(float(getattr(app_state, 'isochron_rxy_value', 0.0)))
+        self.sx_spin.setValue(float(app_state.isochron_sx_value))
+        self.sy_spin.setValue(float(app_state.isochron_sy_value))
+        self.rxy_spin.setValue(float(app_state.isochron_rxy_value))
 
         self._sync_mode()
 
@@ -202,7 +202,7 @@ class IsochronErrorConfigDialog(QDialog):
         lines = []
 
         # 1. 用户选中样品的等时线结果
-        selected = getattr(app_state, 'selected_isochron_data', None)
+        selected = app_state.selected_isochron_data
         if selected and selected.get('slope') is not None:
             lines.append(f"── {translate('Selected Isochron')} (n={selected.get('n_points', '—')}) ──")
 
@@ -228,7 +228,7 @@ class IsochronErrorConfigDialog(QDialog):
             lines.append("")
 
         # 2. 按分组的等时线结果
-        results = getattr(app_state, 'isochron_results', None)
+        results = app_state.isochron_results
         if results:
             for grp, r in results.items():
                 slope = r.get('slope')

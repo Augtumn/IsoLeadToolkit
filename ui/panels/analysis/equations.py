@@ -60,7 +60,7 @@ class AnalysisPanelEquationMixin:
             overlay_id = overlay.get('id') or overlay.get('expression') or overlay.get('label') or 'equation'
             style_key = f"equation:{overlay_id}"
             overlay['style_key'] = style_key
-        existing_style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+        existing_style = app_state.line_styles.get(style_key, {}) or {}
         fallback_color = None if existing_style.get('color', '__missing__') in (None, '') else overlay.get('color', '#ef4444')
         fallback = {
             'color': fallback_color,
@@ -166,7 +166,7 @@ class AnalysisPanelEquationMixin:
             top_size_spin = QDoubleSpinBox()
             top_size_spin.setRange(5.0, 40.0)
             top_size_spin.setSingleStep(1.0)
-            top_size_spin.setValue(float(getattr(app_state, 'marginal_kde_top_size', 15.0)))
+            top_size_spin.setValue(float(app_state.marginal_kde_top_size))
             top_row.addWidget(top_size_spin)
             top_row.addStretch()
             layout.addLayout(top_row)
@@ -176,7 +176,7 @@ class AnalysisPanelEquationMixin:
             right_size_spin = QDoubleSpinBox()
             right_size_spin.setRange(5.0, 40.0)
             right_size_spin.setSingleStep(1.0)
-            right_size_spin.setValue(float(getattr(app_state, 'marginal_kde_right_size', 15.0)))
+            right_size_spin.setValue(float(app_state.marginal_kde_right_size))
             right_row.addWidget(right_size_spin)
             right_row.addStretch()
             layout.addLayout(right_row)
@@ -186,7 +186,7 @@ class AnalysisPanelEquationMixin:
             max_points_spin = QSpinBox()
             max_points_spin.setRange(200, 50000)
             max_points_spin.setSingleStep(100)
-            max_points_spin.setValue(int(getattr(app_state, 'marginal_kde_max_points', 5000)))
+            max_points_spin.setValue(int(app_state.marginal_kde_max_points))
             max_points_row.addWidget(max_points_spin)
             max_points_row.addStretch()
             layout.addLayout(max_points_row)
@@ -196,7 +196,7 @@ class AnalysisPanelEquationMixin:
             bw_adjust_spin = QDoubleSpinBox()
             bw_adjust_spin.setRange(0.05, 5.0)
             bw_adjust_spin.setSingleStep(0.05)
-            bw_adjust_spin.setValue(float(getattr(app_state, 'marginal_kde_bw_adjust', style.get('bw_adjust', 1.0))))
+            bw_adjust_spin.setValue(float(app_state.marginal_kde_bw_adjust))
             bw_row.addWidget(bw_adjust_spin)
             bw_row.addStretch()
             layout.addLayout(bw_row)
@@ -278,7 +278,7 @@ class AnalysisPanelEquationMixin:
             cut_spin = QDoubleSpinBox()
             cut_spin.setRange(0.0, 5.0)
             cut_spin.setSingleStep(0.1)
-            cut_spin.setValue(float(getattr(app_state, 'marginal_kde_cut', style.get('cut', 1.0))))
+            cut_spin.setValue(float(app_state.marginal_kde_cut))
             cut_row.addWidget(cut_spin)
             cut_row.addStretch()
             layout.addLayout(cut_row)
@@ -286,7 +286,7 @@ class AnalysisPanelEquationMixin:
             log_row = QHBoxLayout()
             log_transform_check = QCheckBox(translate("Log Transform Density"))
             log_transform_check.setChecked(
-                bool(getattr(app_state, 'marginal_kde_log_transform', style.get('log_transform', False)))
+                bool(app_state.marginal_kde_log_transform)
             )
             log_row.addWidget(log_transform_check)
             log_row.addStretch()
@@ -300,7 +300,7 @@ class AnalysisPanelEquationMixin:
         save_button = QPushButton(translate("Save"))
 
         def _apply():
-            current_styles = dict(getattr(app_state, 'line_styles', {}) or {})
+            current_styles = dict(app_state.line_styles or {})
             style_ref = dict(current_styles.get(style_key, {}) or {})
             style_ref['alpha'] = float(alpha_spin.value())
             style_ref['linewidth'] = float(width_spin.value())
@@ -383,7 +383,7 @@ class AnalysisPanelEquationMixin:
             },
         ]
 
-        working_overlays = list(getattr(app_state, 'equation_overlays', []) or [])
+        working_overlays = list(app_state.equation_overlays or [])
 
         list_group = QGroupBox(translate("Equation Library"))
         list_group.setProperty('translate_key', 'Equation Library')

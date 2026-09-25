@@ -328,7 +328,7 @@ class _DataPanelProjectionBuild:
 
         self.ternary_auto_zoom_check = QCheckBox(translate("Auto-Zoom to Data"))
         self.ternary_auto_zoom_check.setProperty("translate_key", "Auto-Zoom to Data")
-        self.ternary_auto_zoom_check.setChecked(getattr(app_state, "ternary_auto_zoom", False))
+        self.ternary_auto_zoom_check.setChecked(app_state.ternary_auto_zoom)
         self.ternary_auto_zoom_check.stateChanged.connect(self._on_ternary_zoom_change)
         ternary_layout.addWidget(self.ternary_auto_zoom_check)
 
@@ -340,7 +340,7 @@ class _DataPanelProjectionBuild:
         self.ternary_render_margin_spin.setRange(0.0, 0.05)
         self.ternary_render_margin_spin.setDecimals(3)
         self.ternary_render_margin_spin.setSingleStep(0.001)
-        self.ternary_render_margin_spin.setValue(float(getattr(app_state, "ternary_render_margin", 0.002)))
+        self.ternary_render_margin_spin.setValue(float(app_state.ternary_render_margin))
         self.ternary_render_margin_spin.setToolTip(
             translate("Expand ternary axis limits to prevent edge data clipping when figure is enlarged")
         )
@@ -360,7 +360,7 @@ class _DataPanelProjectionBuild:
         limit_mode_row.addWidget(self.ternary_limit_mode_combo)
         ternary_layout.addLayout(limit_mode_row)
 
-        current_limit_mode = str(getattr(app_state, "ternary_limit_mode", "min")).strip().lower()
+        current_limit_mode = str(app_state.ternary_limit_mode).strip().lower()
         if current_limit_mode not in ("min", "max", "both"):
             current_limit_mode = "min"
         self._set_combo_value(self.ternary_limit_mode_combo, current_limit_mode)
@@ -368,11 +368,11 @@ class _DataPanelProjectionBuild:
 
         self.ternary_manual_limits_check = QCheckBox(translate("Manual Limit Parameters"))
         self.ternary_manual_limits_check.setProperty("translate_key", "Manual Limit Parameters")
-        self.ternary_manual_limits_check.setChecked(bool(getattr(app_state, "ternary_manual_limits_enabled", False)))
+        self.ternary_manual_limits_check.setChecked(bool(app_state.ternary_manual_limits_enabled))
         self.ternary_manual_limits_check.stateChanged.connect(self._on_ternary_manual_limits_change)
         ternary_layout.addWidget(self.ternary_manual_limits_check)
 
-        manual_limits = getattr(app_state, "ternary_manual_limits", None) or {}
+        manual_limits = app_state.ternary_manual_limits or {}
         default_limits = {
             "tmin": 0.0,
             "tmax": 1.0,
@@ -426,7 +426,7 @@ class _DataPanelProjectionBuild:
         current = self.preset_combo.currentText()
         self.preset_combo.clear()
         self.preset_combo.addItem(translate("Custom"))
-        presets = dict(getattr(app_state, "param_presets", {}) or {})
+        presets = dict(app_state.param_presets or {})
         for name in sorted(presets.keys()):
             self.preset_combo.addItem(name)
         idx = self.preset_combo.findText(current)
@@ -436,14 +436,14 @@ class _DataPanelProjectionBuild:
     def _collect_params_snapshot(self) -> dict:
         """Snapshot current projection params from app_state for preset storage."""
         return {
-            "algorithm": str(getattr(app_state, "algorithm", "UMAP")),
-            "umap_params": dict(getattr(app_state, "umap_params", {})),
-            "tsne_params": dict(getattr(app_state, "tsne_params", {})),
-            "pca_params": dict(getattr(app_state, "pca_params", {})),
-            "robust_pca_params": dict(getattr(app_state, "robust_pca_params", {})),
-            "ml_params": dict(getattr(app_state, "ml_params", {})),
-            "v1v2_params": dict(getattr(app_state, "v1v2_params", {})),
-            "standardize_data": bool(getattr(app_state, "standardize_data", False)),
+            "algorithm": str(app_state.algorithm),
+            "umap_params": dict(app_state.umap_params),
+            "tsne_params": dict(app_state.tsne_params),
+            "pca_params": dict(app_state.pca_params),
+            "robust_pca_params": dict(app_state.robust_pca_params),
+            "ml_params": dict(app_state.ml_params),
+            "v1v2_params": dict(app_state.v1v2_params),
+            "standardize_data": bool(app_state.standardize_data),
         }
 
     def _save_preset(self):
@@ -465,7 +465,7 @@ class _DataPanelProjectionBuild:
         if not name:
             return
 
-        presets = dict(getattr(app_state, "param_presets", {}) or {})
+        presets = dict(app_state.param_presets or {})
         presets[name] = self._collect_params_snapshot()
         state_gateway.set_param_presets(presets)
         logger.info("Saved projection preset '%s' (%s presets total)", name, len(presets))
@@ -528,7 +528,7 @@ class _DataPanelProjectionBuild:
         name = self.preset_combo.currentText()
         if not name or name == translate("Custom"):
             return
-        presets = dict(getattr(app_state, "param_presets", {}) or {})
+        presets = dict(app_state.param_presets or {})
         if name not in presets:
             return
 
@@ -538,13 +538,10 @@ class _DataPanelProjectionBuild:
         params = snapshot.get("params", snapshot)
         algo = snapshot.get("algorithm", "")
         if algo:
-            try:
-                state_gateway.set_algorithm(algo)
-                # Also update the algorithm combo
-                if hasattr(self, "algo_combo") and self.algo_combo is not None:
-                    self._set_combo_value(self.algo_combo, algo)
-            except Exception:
-                pass
+            state_gateway.set_algorithm(algo)
+            # Also update the algorithm combo
+            if hasattr(self, "algo_combo") and self.algo_combo is not None:
+                self._set_combo_value(self.algo_combo, algo)
 
         param_setters = {
             "umap_params": state_gateway.set_umap_params,

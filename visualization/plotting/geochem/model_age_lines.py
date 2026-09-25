@@ -72,7 +72,7 @@ def _draw_model_age_lines(
             'model_age_line',
             {
                 'color': None,
-                'linewidth': getattr(app_state, 'model_age_line_width', 0.7),
+                'linewidth': app_state.model_age_line_width,
                 'linestyle': '-',
                 'alpha': 0.7
             }
@@ -120,7 +120,7 @@ def _draw_model_age_lines(
                 text_artist = ax.text(
                     x_curve[i], y_curve[i],
                     label_text,
-                    color=line_color or age_style.get('color') or getattr(app_state, 'label_color', '#1f2937'),
+                    color=line_color or age_style.get('color') or app_state.label_color,
                     fontsize=label_opts['label_fontsize'],
                     va='center',
                     ha='center',
@@ -177,7 +177,7 @@ def _draw_model_age_lines_86(
             'model_age_line',
             {
                 'color': None,
-                'linewidth': getattr(app_state, 'model_age_line_width', 0.7),
+                'linewidth': app_state.model_age_line_width,
                 'linestyle': '-',
                 'alpha': 0.7
             }
@@ -225,7 +225,7 @@ def _draw_model_age_lines_86(
                 text_artist = ax.text(
                     x_curve[i], z_curve[i],
                     label_text,
-                    color=line_color or age_style.get('color') or getattr(app_state, 'label_color', '#1f2937'),
+                    color=line_color or age_style.get('color') or app_state.label_color,
                     fontsize=label_opts['label_fontsize'],
                     va='center',
                     ha='center',

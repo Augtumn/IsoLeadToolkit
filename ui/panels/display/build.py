@@ -207,7 +207,7 @@ class DisplayBuildMixin:
         except Exception:
             theme_names = ["Modern Light", "Modern Dark"]
         self.ui_theme_combo.addItems(theme_names)
-        current_theme = getattr(app_state, 'ui_theme', 'Modern Light')
+        current_theme = app_state.ui_theme
         if current_theme in theme_names:
             self.ui_theme_combo.setCurrentText(current_theme)
         self.ui_theme_combo.currentTextChanged.connect(self._on_ui_theme_change)
@@ -264,7 +264,7 @@ class DisplayBuildMixin:
         primary_row.addWidget(primary_font_label)
         self.primary_font_combo = QComboBox()
         self.primary_font_combo.addItems(all_fonts)
-        current_primary = getattr(app_state, 'custom_primary_font', '') or '<Default>'
+        current_primary = app_state.custom_primary_font or '<Default>'
         self.primary_font_combo.setCurrentText(current_primary)
         self.primary_font_combo.currentTextChanged.connect(self._on_style_change)
         primary_row.addWidget(self.primary_font_combo)
@@ -276,7 +276,7 @@ class DisplayBuildMixin:
         cjk_row.addWidget(cjk_font_label)
         self.cjk_font_combo = QComboBox()
         self.cjk_font_combo.addItems(all_fonts)
-        current_cjk = getattr(app_state, 'custom_cjk_font', '') or '<Default>'
+        current_cjk = app_state.custom_cjk_font or '<Default>'
         self.cjk_font_combo.setCurrentText(current_cjk)
         self.cjk_font_combo.currentTextChanged.connect(self._on_style_change)
         cjk_row.addWidget(self.cjk_font_combo)
@@ -296,7 +296,7 @@ class DisplayBuildMixin:
             size_grid.addWidget(size_label, row, 0)
             spin = QSpinBox()
             spin.setRange(6, 36)
-            spin.setValue(getattr(app_state, 'plot_font_sizes', {}).get(key, default))
+            spin.setValue(app_state.plot_font_sizes.get(key, default))
             spin.valueChanged.connect(self._on_style_change)
             size_grid.addWidget(spin, row, 1)
             self.font_size_spins[key] = spin
@@ -304,7 +304,7 @@ class DisplayBuildMixin:
 
         self.show_title_check = QCheckBox(translate("Show Plot Title"))
         self.show_title_check.setProperty('translate_key', 'Show Plot Title')
-        self.show_title_check.setChecked(getattr(app_state, 'show_plot_title', False))
+        self.show_title_check.setChecked(app_state.show_plot_title)
         self.show_title_check.stateChanged.connect(self._on_style_change)
         font_layout.addWidget(self.show_title_check)
 
@@ -321,7 +321,7 @@ class DisplayBuildMixin:
         marker_size_row.addWidget(marker_size_label)
         self.marker_size_spin = QSpinBox()
         self.marker_size_spin.setRange(1, 500)
-        self.marker_size_spin.setValue(int(getattr(app_state, 'plot_marker_size', 60)))
+        self.marker_size_spin.setValue(int(app_state.plot_marker_size))
         self.marker_size_spin.setToolTip(translate("Marker size (1-2000)"))
         self.marker_size_spin.valueChanged.connect(self._on_style_change)
         marker_size_row.addWidget(self.marker_size_spin)
@@ -335,7 +335,7 @@ class DisplayBuildMixin:
         self.marker_alpha_spin.setRange(0.02, 1.0)
         self.marker_alpha_spin.setSingleStep(0.02)
         self.marker_alpha_spin.setDecimals(2)
-        self.marker_alpha_spin.setValue(float(getattr(app_state, 'plot_marker_alpha', 0.8)))
+        self.marker_alpha_spin.setValue(float(app_state.plot_marker_alpha))
         self.marker_alpha_spin.setToolTip(translate("Point transparency (0-1)"))
         self.marker_alpha_spin.valueChanged.connect(self._on_style_change)
         marker_alpha_row.addWidget(self.marker_alpha_spin)
@@ -344,7 +344,7 @@ class DisplayBuildMixin:
         marker_edge_row = QHBoxLayout()
         self.scatter_edge_check = QCheckBox(translate("Show Marker Edge"))
         self.scatter_edge_check.setProperty('translate_key', 'Show Marker Edge')
-        self.scatter_edge_check.setChecked(bool(getattr(app_state, 'scatter_show_edge', True)))
+        self.scatter_edge_check.setChecked(bool(app_state.scatter_show_edge))
         self.scatter_edge_check.stateChanged.connect(self._on_style_change)
         marker_edge_row.addWidget(self.scatter_edge_check)
         marker_edge_row.addStretch()
@@ -355,7 +355,7 @@ class DisplayBuildMixin:
         marker_edge_color_label.setProperty('translate_key', 'Scatter Edge Color')
         marker_edge_color_row.addWidget(marker_edge_color_label)
         marker_edge_editor, self.scatter_edgecolor_edit = self._create_color_picker(
-            getattr(app_state, 'scatter_edgecolor', '#1e293b')
+            app_state.scatter_edgecolor
         )
         marker_edge_color_row.addWidget(marker_edge_editor, 1)
         marker_layout.addLayout(marker_edge_color_row)
@@ -367,7 +367,7 @@ class DisplayBuildMixin:
         self.scatter_edgewidth_spin = QDoubleSpinBox()
         self.scatter_edgewidth_spin.setRange(0.0, 3.0)
         self.scatter_edgewidth_spin.setSingleStep(0.1)
-        self.scatter_edgewidth_spin.setValue(float(getattr(app_state, 'scatter_edgewidth', 0.4)))
+        self.scatter_edgewidth_spin.setValue(float(app_state.scatter_edgewidth))
         self.scatter_edgewidth_spin.valueChanged.connect(self._on_style_change)
         marker_edge_width_row.addWidget(self.scatter_edgewidth_spin)
         marker_layout.addLayout(marker_edge_width_row)
@@ -410,18 +410,18 @@ class DisplayBuildMixin:
         self.figure_dpi_spin = QSpinBox()
         self.figure_dpi_spin.setRange(50, 600)
         self.figure_dpi_spin.setSingleStep(1)
-        self.figure_dpi_spin.setValue(int(getattr(app_state, 'plot_dpi', 130)))
+        self.figure_dpi_spin.setValue(int(app_state.plot_dpi))
         self.figure_dpi_spin.valueChanged.connect(self._on_style_change)
         self.figure_dpi_spin.setToolTip(translate("Figure resolution (DPI)"))
         row = add_row(figure_grid, "Figure DPI", self.figure_dpi_spin, row)
 
         figure_bg_editor, self.figure_bg_edit = self._create_color_picker(
-            getattr(app_state, 'plot_facecolor', '#ffffff')
+            app_state.plot_facecolor
         )
         row = add_row(figure_grid, "Figure Background", figure_bg_editor, row)
 
         axes_bg_editor, self.axes_bg_edit = self._create_color_picker(
-            getattr(app_state, 'axes_facecolor', '#ffffff')
+            app_state.axes_facecolor
         )
         row = add_row(figure_grid, "Axes Background", axes_bg_editor, row)
 
@@ -429,12 +429,12 @@ class DisplayBuildMixin:
         row = 0
         self.grid_check = QCheckBox(translate("Show Grid"))
         self.grid_check.setProperty('translate_key', 'Show Grid')
-        self.grid_check.setChecked(getattr(app_state, 'plot_style_grid', False))
+        self.grid_check.setChecked(app_state.plot_style_grid)
         self.grid_check.stateChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Show Grid", self.grid_check, row)
 
         grid_color_editor, self.grid_color_edit = self._create_color_picker(
-            getattr(app_state, 'grid_color', '#e2e8f0')
+            app_state.grid_color
         )
         row = add_row(grid_grid, "Grid Color", grid_color_editor, row)
 
@@ -442,7 +442,7 @@ class DisplayBuildMixin:
         self.grid_width_spin.setRange(0.1, 3.0)
         self.grid_width_spin.setSingleStep(0.1)
         self.grid_width_spin.setDecimals(2)
-        self.grid_width_spin.setValue(float(getattr(app_state, 'grid_linewidth', 0.6)))
+        self.grid_width_spin.setValue(float(app_state.grid_linewidth))
         self.grid_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Grid Linewidth", self.grid_width_spin, row)
 
@@ -450,13 +450,13 @@ class DisplayBuildMixin:
         self.grid_alpha_spin.setRange(0.0, 1.0)
         self.grid_alpha_spin.setSingleStep(0.05)
         self.grid_alpha_spin.setDecimals(2)
-        self.grid_alpha_spin.setValue(float(getattr(app_state, 'grid_alpha', 0.7)))
+        self.grid_alpha_spin.setValue(float(app_state.grid_alpha))
         self.grid_alpha_spin.valueChanged.connect(self._on_style_change)
         self.grid_alpha_spin.setToolTip(translate("Grid line transparency (0-1)"))
         row = add_row(grid_grid, "Grid Alpha", self.grid_alpha_spin, row)
 
         grid_style_items = ['-', '--', '-.', ':']
-        grid_style_default = getattr(app_state, 'grid_linestyle', '--')
+        grid_style_default = app_state.grid_linestyle
         self.grid_style_combo = QComboBox()
         self.grid_style_combo.addItems(grid_style_items)
         self.grid_style_combo.setCurrentIndex(max(0, grid_style_items.index(grid_style_default)))
@@ -465,13 +465,13 @@ class DisplayBuildMixin:
         row = add_row(grid_grid, "Grid Style", self.grid_style_combo, row)
 
         self.minor_grid_check = QCheckBox()
-        self.minor_grid_check.setChecked(getattr(app_state, 'minor_grid', False))
+        self.minor_grid_check.setChecked(app_state.minor_grid)
         self.minor_grid_check.setToolTip(translate("Show minor grid lines"))
         self.minor_grid_check.stateChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid", self.minor_grid_check, row)
 
         minor_grid_editor, self.minor_grid_color_edit = self._create_color_picker(
-            getattr(app_state, 'minor_grid_color', '#e2e8f0')
+            app_state.minor_grid_color
         )
         row = add_row(grid_grid, "Minor Grid Color", minor_grid_editor, row)
 
@@ -479,7 +479,7 @@ class DisplayBuildMixin:
         self.minor_grid_width_spin.setRange(0.1, 2.0)
         self.minor_grid_width_spin.setSingleStep(0.1)
         self.minor_grid_width_spin.setDecimals(2)
-        self.minor_grid_width_spin.setValue(float(getattr(app_state, 'minor_grid_linewidth', 0.4)))
+        self.minor_grid_width_spin.setValue(float(app_state.minor_grid_linewidth))
         self.minor_grid_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid Linewidth", self.minor_grid_width_spin, row)
 
@@ -487,12 +487,12 @@ class DisplayBuildMixin:
         self.minor_grid_alpha_spin.setRange(0.0, 1.0)
         self.minor_grid_alpha_spin.setSingleStep(0.05)
         self.minor_grid_alpha_spin.setDecimals(2)
-        self.minor_grid_alpha_spin.setValue(float(getattr(app_state, 'minor_grid_alpha', 0.4)))
+        self.minor_grid_alpha_spin.setValue(float(app_state.minor_grid_alpha))
         self.minor_grid_alpha_spin.valueChanged.connect(self._on_style_change)
         row = add_row(grid_grid, "Minor Grid Alpha", self.minor_grid_alpha_spin, row)
 
         minor_grid_style_items = ['-', '--', '-.', ':']
-        minor_grid_style_default = getattr(app_state, 'minor_grid_linestyle', ':')
+        minor_grid_style_default = app_state.minor_grid_linestyle
         self.minor_grid_style_combo = QComboBox()
         self.minor_grid_style_combo.addItems(minor_grid_style_items)
         self.minor_grid_style_combo.setCurrentIndex(max(0, minor_grid_style_items.index(minor_grid_style_default)))
@@ -502,7 +502,7 @@ class DisplayBuildMixin:
         tick_grid = make_group("Ticks")
         row = 0
         tick_dir_items = ['out', 'in', 'inout']
-        tick_dir_default = getattr(app_state, 'tick_direction', 'out')
+        tick_dir_default = app_state.tick_direction
         self.tick_dir_combo = QComboBox()
         self.tick_dir_combo.addItems(tick_dir_items)
         self.tick_dir_combo.setCurrentIndex(max(0, tick_dir_items.index(tick_dir_default)))
@@ -510,7 +510,7 @@ class DisplayBuildMixin:
         row = add_row(tick_grid, "Tick Direction", self.tick_dir_combo, row)
 
         tick_color_editor, self.tick_color_edit = self._create_color_picker(
-            getattr(app_state, 'tick_color', '#1f2937')
+            app_state.tick_color
         )
         row = add_row(tick_grid, "Tick Color", tick_color_editor, row)
 
@@ -518,7 +518,7 @@ class DisplayBuildMixin:
         self.tick_length_spin.setRange(0.0, 12.0)
         self.tick_length_spin.setSingleStep(0.5)
         self.tick_length_spin.setDecimals(2)
-        self.tick_length_spin.setValue(float(getattr(app_state, 'tick_length', 4.0)))
+        self.tick_length_spin.setValue(float(app_state.tick_length))
         self.tick_length_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Tick Length", self.tick_length_spin, row)
 
@@ -526,12 +526,12 @@ class DisplayBuildMixin:
         self.tick_width_spin.setRange(0.2, 3.0)
         self.tick_width_spin.setSingleStep(0.1)
         self.tick_width_spin.setDecimals(2)
-        self.tick_width_spin.setValue(float(getattr(app_state, 'tick_width', 0.8)))
+        self.tick_width_spin.setValue(float(app_state.tick_width))
         self.tick_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Tick Width", self.tick_width_spin, row)
 
         self.minor_ticks_check = QCheckBox()
-        self.minor_ticks_check.setChecked(getattr(app_state, 'minor_ticks', False))
+        self.minor_ticks_check.setChecked(app_state.minor_ticks)
         self.minor_ticks_check.stateChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Minor Ticks", self.minor_ticks_check, row)
 
@@ -539,7 +539,7 @@ class DisplayBuildMixin:
         self.minor_tick_length_spin.setRange(0.0, 8.0)
         self.minor_tick_length_spin.setSingleStep(0.5)
         self.minor_tick_length_spin.setDecimals(2)
-        self.minor_tick_length_spin.setValue(float(getattr(app_state, 'minor_tick_length', 2.5)))
+        self.minor_tick_length_spin.setValue(float(app_state.minor_tick_length))
         self.minor_tick_length_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Minor Tick Length", self.minor_tick_length_spin, row)
 
@@ -547,7 +547,7 @@ class DisplayBuildMixin:
         self.minor_tick_width_spin.setRange(0.2, 2.0)
         self.minor_tick_width_spin.setSingleStep(0.1)
         self.minor_tick_width_spin.setDecimals(2)
-        self.minor_tick_width_spin.setValue(float(getattr(app_state, 'minor_tick_width', 0.6)))
+        self.minor_tick_width_spin.setValue(float(app_state.minor_tick_width))
         self.minor_tick_width_spin.valueChanged.connect(self._on_style_change)
         row = add_row(tick_grid, "Minor Tick Width", self.minor_tick_width_spin, row)
 
@@ -557,34 +557,34 @@ class DisplayBuildMixin:
         self.axis_linewidth_spin.setRange(0.2, 3.0)
         self.axis_linewidth_spin.setSingleStep(0.1)
         self.axis_linewidth_spin.setDecimals(2)
-        self.axis_linewidth_spin.setValue(float(getattr(app_state, 'axis_linewidth', 1.0)))
+        self.axis_linewidth_spin.setValue(float(app_state.axis_linewidth))
         self.axis_linewidth_spin.valueChanged.connect(self._on_style_change)
         row = add_row(spine_grid, "Axis Line Width", self.axis_linewidth_spin, row)
 
         axis_color_editor, self.axis_line_color_edit = self._create_color_picker(
-            getattr(app_state, 'axis_line_color', '#1f2937')
+            app_state.axis_line_color
         )
         row = add_row(spine_grid, "Axis Line Color", axis_color_editor, row)
 
         self.show_top_spine_check = QCheckBox()
-        self.show_top_spine_check.setChecked(getattr(app_state, 'show_top_spine', True))
+        self.show_top_spine_check.setChecked(app_state.show_top_spine)
         self.show_top_spine_check.stateChanged.connect(self._on_style_change)
         row = add_row(spine_grid, "Show Top Spine", self.show_top_spine_check, row)
 
         self.show_right_spine_check = QCheckBox()
-        self.show_right_spine_check.setChecked(getattr(app_state, 'show_right_spine', True))
+        self.show_right_spine_check.setChecked(app_state.show_right_spine)
         self.show_right_spine_check.stateChanged.connect(self._on_style_change)
         row = add_row(spine_grid, "Show Right Spine", self.show_right_spine_check, row)
 
         text_grid = make_group("Text")
         row = 0
         label_color_editor, self.label_color_edit = self._create_color_picker(
-            getattr(app_state, 'label_color', '#1f2937')
+            app_state.label_color
         )
         row = add_row(text_grid, "Label Color", label_color_editor, row)
 
         weight_items = ['normal', 'bold']
-        label_weight_default = getattr(app_state, 'label_weight', 'normal')
+        label_weight_default = app_state.label_weight
         self.label_weight_combo = QComboBox()
         self.label_weight_combo.addItems(weight_items)
         self.label_weight_combo.setCurrentIndex(max(0, weight_items.index(label_weight_default)))
@@ -595,17 +595,17 @@ class DisplayBuildMixin:
         self.label_pad_spin.setRange(0.0, 30.0)
         self.label_pad_spin.setSingleStep(1.0)
         self.label_pad_spin.setDecimals(2)
-        self.label_pad_spin.setValue(float(getattr(app_state, 'label_pad', 6.0)))
+        self.label_pad_spin.setValue(float(app_state.label_pad))
         self.label_pad_spin.valueChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Label Pad", self.label_pad_spin, row)
 
         title_color_editor, self.title_color_edit = self._create_color_picker(
-            getattr(app_state, 'title_color', '#111827')
+            app_state.title_color
         )
         row = add_row(text_grid, "Title Color", title_color_editor, row)
 
         weight_items2 = ['normal', 'bold']
-        title_weight_default = getattr(app_state, 'title_weight', 'bold')
+        title_weight_default = app_state.title_weight
         self.title_weight_combo = QComboBox()
         self.title_weight_combo.addItems(weight_items2)
         self.title_weight_combo.setCurrentIndex(max(0, weight_items2.index(title_weight_default)))
@@ -616,15 +616,15 @@ class DisplayBuildMixin:
         self.title_pad_spin.setRange(0.0, 40.0)
         self.title_pad_spin.setSingleStep(1.0)
         self.title_pad_spin.setDecimals(2)
-        self.title_pad_spin.setValue(float(getattr(app_state, 'title_pad', 20.0)))
+        self.title_pad_spin.setValue(float(app_state.title_pad))
         self.title_pad_spin.valueChanged.connect(self._on_style_change)
         row = add_row(text_grid, "Title Pad", self.title_pad_spin, row)
 
         label_layout_grid = make_group("Label Layout (adjustText)")
         row = 0
-        force_text = getattr(app_state, 'adjust_text_force_text', (0.8, 1.0))
-        force_static = getattr(app_state, 'adjust_text_force_static', (0.4, 0.6))
-        expand = getattr(app_state, 'adjust_text_expand', (1.08, 1.20))
+        force_text = app_state.adjust_text_force_text
+        force_static = app_state.adjust_text_force_static
+        expand = app_state.adjust_text_expand
 
         self.adjust_force_text_x_spin = QDoubleSpinBox()
         self.adjust_force_text_x_spin.setRange(0.0, 3.0)
@@ -679,7 +679,7 @@ class DisplayBuildMixin:
         self.adjust_iter_lim_spin = QSpinBox()
         self.adjust_iter_lim_spin.setRange(10, 1000)
         self.adjust_iter_lim_spin.setSingleStep(1)
-        self.adjust_iter_lim_spin.setValue(int(getattr(app_state, 'adjust_text_iter_lim', 120)))
+        self.adjust_iter_lim_spin.setValue(int(app_state.adjust_text_iter_lim))
         self.adjust_iter_lim_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Iteration Limit", self.adjust_iter_lim_spin, row)
 
@@ -687,7 +687,7 @@ class DisplayBuildMixin:
         self.adjust_time_lim_spin.setRange(0.05, 2.0)
         self.adjust_time_lim_spin.setSingleStep(0.05)
         self.adjust_time_lim_spin.setDecimals(2)
-        self.adjust_time_lim_spin.setValue(float(getattr(app_state, 'adjust_text_time_lim', 0.25)))
+        self.adjust_time_lim_spin.setValue(float(app_state.adjust_text_time_lim))
         self.adjust_time_lim_spin.valueChanged.connect(self._on_style_change)
         row = add_row(label_layout_grid, "Adjust Time Limit (s)", self.adjust_time_lim_spin, row)
 

@@ -84,7 +84,7 @@ def _draw_plumbotectonics_curves(ax: Any, actual_algorithm: str) -> None:
         'plumbotectonics_curve',
         {
             'color': None,
-            'linewidth': getattr(app_state, 'plumbotectonics_curve_width', 1.2),
+            'linewidth': app_state.plumbotectonics_curve_width,
             'linestyle': '-',
             'alpha': 0.85
         }
@@ -167,7 +167,7 @@ def _draw_plumbotectonics_curves(ax: Any, actual_algorithm: str) -> None:
             text_artist = ax.text(
                 x_fit[0], y_fit[0],
                 label_text,
-                color=line_color or color or getattr(app_state, 'label_color', '#1f2937'),
+                color=line_color or color or app_state.label_color,
                 fontsize=label_opts['label_fontsize'],
                 va='center',
                 ha='center',

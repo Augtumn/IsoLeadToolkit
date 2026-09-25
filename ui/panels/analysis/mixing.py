@@ -32,11 +32,6 @@ class AnalysisPanelMixingMixin:
             )
             return
 
-        if not hasattr(app_state, 'mixing_endmembers'):
-            state_gateway.set_mixing_endmembers({})
-        if not hasattr(app_state, 'mixing_mixtures'):
-            state_gateway.set_mixing_mixtures({})
-
         selected_list = list(app_state.selected_indices)
         updated_endmembers = dict(getattr(app_state, 'mixing_endmembers', {}) or {})
         updated_endmembers[group_name] = selected_list
@@ -70,11 +65,6 @@ class AnalysisPanelMixingMixin:
                 translate("Please select data points first."),
             )
             return
-
-        if not hasattr(app_state, 'mixing_endmembers'):
-            state_gateway.set_mixing_endmembers({})
-        if not hasattr(app_state, 'mixing_mixtures'):
-            state_gateway.set_mixing_mixtures({})
 
         selected_list = list(app_state.selected_indices)
         updated_mixtures = dict(getattr(app_state, 'mixing_mixtures', {}) or {})
@@ -127,7 +117,7 @@ class AnalysisPanelMixingMixin:
 
     def _on_compute_mixing(self):
         """Open mixing computation dialog."""
-        if not hasattr(app_state, 'mixing_endmembers') or not app_state.mixing_endmembers:
+        if not app_state.mixing_endmembers:
             QMessageBox.warning(
                 self,
                 translate("Warning"),
@@ -135,7 +125,7 @@ class AnalysisPanelMixingMixin:
             )
             return
 
-        if not hasattr(app_state, 'mixing_mixtures') or not app_state.mixing_mixtures:
+        if not app_state.mixing_mixtures:
             QMessageBox.warning(
                 self,
                 translate("Warning"),

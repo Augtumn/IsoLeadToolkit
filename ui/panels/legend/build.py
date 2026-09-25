@@ -101,8 +101,8 @@ class LegendBuildMixin:
 
         position_layout.addLayout(outer_grid)
 
-        inside_location = getattr(app_state, 'legend_position', None)
-        outside_location = getattr(app_state, 'legend_location', None)
+        inside_location = app_state.legend_position
+        outside_location = app_state.legend_location
 
         if outside_location and outside_location not in {'outside_left', 'outside_right'}:
             outside_location = None
@@ -115,9 +115,9 @@ class LegendBuildMixin:
         # Only write normalized position state when it actually differs:
         # dispatching during panel construction would otherwise fire an
         # unnecessary observer/sync cycle on every build.
-        if getattr(app_state, 'legend_position', None) != inside_location:
+        if app_state.legend_position != inside_location:
             state_gateway.set_legend_position(inside_location)
-        if getattr(app_state, 'legend_location', None) != outside_location:
+        if app_state.legend_location != outside_location:
             state_gateway.set_legend_location(outside_location)
 
         self._set_legend_inside_position_button(inside_location)
@@ -153,7 +153,7 @@ class LegendBuildMixin:
         self.legend_step_spin.setRange(0.001, 0.5)
         self.legend_step_spin.setDecimals(3)
         self.legend_step_spin.setSingleStep(0.005)
-        self.legend_step_spin.setValue(float(getattr(app_state, 'legend_nudge_step', self.legend_nudge_step)))
+        self.legend_step_spin.setValue(float(app_state.legend_nudge_step))
         self.legend_step_spin.valueChanged.connect(self._on_nudge_step_change)
         step_row.addWidget(self.legend_step_spin)
         style_layout.addLayout(step_row)
@@ -208,7 +208,7 @@ class LegendBuildMixin:
         except Exception:
             palette_names = ['vibrant', 'bright', 'muted']
         self._populate_palette_combo(palette_names)
-        current_scheme = getattr(app_state, 'color_scheme', 'vibrant')
+        current_scheme = app_state.color_scheme
         index = self.auto_palette_combo.findData(current_scheme)
         if index >= 0:
             self.auto_palette_combo.setCurrentIndex(index)
@@ -225,7 +225,7 @@ class LegendBuildMixin:
         self.auto_shape_set_combo.addItem(translate("All Shapes"), "all")
         self.auto_shape_set_combo.addItem(translate("Basic Shapes"), "basic")
         self.auto_shape_set_combo.addItem(translate("Custom..."), "__custom__")
-        for name, shapes in getattr(app_state, 'custom_shape_sets', {}).items():
+        for name, shapes in app_state.custom_shape_sets.items():
             self.auto_shape_set_combo.addItem(name, list(shapes))
         self.auto_shape_set_combo.currentIndexChanged.connect(self._on_shape_set_change)
         auto_shape_row.addWidget(self.auto_shape_set_combo)
@@ -238,7 +238,7 @@ class LegendBuildMixin:
         self._ensure_marker_shape_map()
         self.auto_base_shape_combo = QComboBox()
         self._populate_base_shape_combo()
-        base_marker = getattr(app_state, 'plot_marker_shape', 'o')
+        base_marker = app_state.plot_marker_shape
         for idx in range(self.auto_base_shape_combo.count()):
             if self.auto_base_shape_combo.itemData(idx) == base_marker:
                 self.auto_base_shape_combo.setCurrentIndex(idx)
@@ -257,7 +257,7 @@ class LegendBuildMixin:
         BasePanel.add_group_page(section_toolbox, style_group, 'Inline Legend Style')
 
         self._restore_toolbox_state(section_toolbox, 'legend')
-        self.legend_nudge_step = float(getattr(app_state, 'legend_nudge_step', self.legend_nudge_step))
+        self.legend_nudge_step = float(app_state.legend_nudge_step)
 
         layout.addWidget(section_toolbox)
         layout.addStretch()

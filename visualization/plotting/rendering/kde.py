@@ -35,7 +35,7 @@ def _render_kde_overlay(
     unique_cats: list[str],
     new_palette: dict[str, str],
 ) -> None:
-    if not getattr(app_state, 'show_kde', False):
+    if not app_state.show_kde:
         return
     try:
         kde_utils.lazy_import_seaborn()

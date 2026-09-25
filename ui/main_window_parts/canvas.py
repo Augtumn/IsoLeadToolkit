@@ -104,7 +104,7 @@ class MainWindowCanvasMixin:
         actions = getattr(self, "_selection_tool_actions", None)
         if not actions:
             return
-        current_tool = getattr(app_state, "selection_tool", None)
+        current_tool = app_state.selection_tool
         # "rect" is the toolbar value; "export" is the analysis-panel alias.
         rect_checked = current_tool in ("rect", "export")
         lasso_checked = current_tool == "lasso"

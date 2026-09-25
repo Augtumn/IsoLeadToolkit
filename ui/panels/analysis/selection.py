@@ -16,7 +16,7 @@ class AnalysisPanelSelectionMixin:
 
     def _sync_selection_buttons(self):
         """Sync selection button states with active tool."""
-        tool = getattr(app_state, 'selection_tool', None)
+        tool = app_state.selection_tool
 
         selection_button = getattr(self, 'selection_button', None)
         if selection_button is not None:
@@ -29,7 +29,7 @@ class AnalysisPanelSelectionMixin:
 
         ellipse_button = getattr(self, 'ellipse_selection_button', None)
         if ellipse_button is not None:
-            ellipse_active = getattr(app_state, 'draw_selection_ellipse', False)
+            ellipse_active = app_state.draw_selection_ellipse
             ellipse_button.blockSignals(True)
             ellipse_button.setChecked(ellipse_active)
             ellipse_button.setText(
@@ -48,7 +48,7 @@ class AnalysisPanelSelectionMixin:
 
     def update_selection_controls(self):
         """Refresh selection UI state from app_state."""
-        count = len(getattr(app_state, 'selected_indices', []))
+        count = len(app_state.selected_indices)
         if getattr(self, 'selection_status_label', None) is not None:
             self.selection_status_label.setText(
                 translate("Selected Samples: {count}").format(count=count)
@@ -85,7 +85,7 @@ class AnalysisPanelSelectionMixin:
 
     def _require_selection_available(self) -> bool:
         """Warn when selection tools cannot run; return True when OK."""
-        if getattr(app_state, "df_global", None) is None:
+        if app_state.df_global is None:
             QMessageBox.warning(
                 self, translate("Warning"), translate("Please load data first.")
             )
@@ -116,7 +116,7 @@ class AnalysisPanelSelectionMixin:
         """Toggle confidence ellipse display."""
         try:
             state_gateway.set_draw_selection_ellipse(
-                not getattr(app_state, 'draw_selection_ellipse', False)
+                not app_state.draw_selection_ellipse
             )
             from visualization.events import refresh_selection_overlay
 

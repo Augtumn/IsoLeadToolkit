@@ -25,8 +25,8 @@ class ExportPanelCommonMixin:
 
     def _resolve_group_col(self) -> str | None:
         """Resolve group column using current state fallback rules."""
-        group_col = getattr(app_state, 'last_group_col', None)
-        group_cols = list(getattr(app_state, 'group_cols', []) or [])
+        group_col = app_state.last_group_col
+        group_cols = list(app_state.group_cols or [])
         if not group_col or group_col not in group_cols:
             if group_cols:
                 return group_cols[0]
@@ -35,16 +35,16 @@ class ExportPanelCommonMixin:
 
     def _default_numeric_cols(self) -> list[str]:
         """Return numeric data columns available in current dataframe."""
-        df_global = getattr(app_state, 'df_global', None)
+        df_global = app_state.df_global
         if df_global is None:
             return []
-        data_cols = list(getattr(app_state, 'data_cols', []) or [])
+        data_cols = list(app_state.data_cols or [])
         return [c for c in data_cols if c in df_global.columns]
 
     def _resolve_2d_cols(self) -> list[str]:
         """Return valid 2D column selection with fallback defaults."""
         available = self._default_numeric_cols()
-        selected = [c for c in list(getattr(app_state, 'selected_2d_cols', []) or []) if c in available]
+        selected = [c for c in list(app_state.selected_2d_cols or []) if c in available]
         if len(selected) >= 2:
             return selected[:2]
         return available[:2]
@@ -52,7 +52,7 @@ class ExportPanelCommonMixin:
     def _resolve_3d_cols(self) -> list[str]:
         """Return valid 3D column selection with fallback defaults."""
         available = self._default_numeric_cols()
-        selected = [c for c in list(getattr(app_state, 'selected_3d_cols', []) or []) if c in available]
+        selected = [c for c in list(app_state.selected_3d_cols or []) if c in available]
         if len(selected) >= 3:
             return selected[:3]
         return available[:3]
@@ -61,19 +61,19 @@ class ExportPanelCommonMixin:
         """Render current mode synchronously onto app_state.fig/app_state.ax."""
         from visualization.plotting import plot_2d_data, plot_3d_data, plot_embedding
 
-        render_mode = str(getattr(app_state, 'render_mode', '') or '')
+        render_mode = str(app_state.render_mode or '')
         group_col = self._resolve_group_col()
         if not group_col:
             logger.warning("No group column available for image export")
             return False
 
-        size = int(point_size if point_size is not None else getattr(app_state, 'point_size', 60))
+        size = int(point_size if point_size is not None else app_state.point_size)
 
         if render_mode == '2D':
             cols_2d = self._resolve_2d_cols()
             if len(cols_2d) != 2:
                 return False
-            is_kde = bool(getattr(app_state, 'show_kde', False) or getattr(app_state, 'show_2d_kde', False))
+            is_kde = bool(app_state.show_kde or getattr(app_state, 'show_2d_kde', False))
             return bool(plot_2d_data(group_col, cols_2d, size=size, show_kde=is_kde))
 
         if render_mode == '3D':
@@ -98,19 +98,19 @@ class ExportPanelCommonMixin:
         )
 
         precomputed_meta = {
-            'last_pca_variance': getattr(app_state, 'last_pca_variance', None),
-            'last_pca_components': getattr(app_state, 'last_pca_components', None),
-            'current_feature_names': getattr(app_state, 'current_feature_names', None),
+            'last_pca_variance': app_state.last_pca_variance,
+            'last_pca_components': app_state.last_pca_components,
+            'current_feature_names': app_state.current_feature_names,
         }
 
         return bool(
             plot_embedding(
                 group_col,
                 render_mode,
-                umap_params=getattr(app_state, 'umap_params', None),
-                tsne_params=getattr(app_state, 'tsne_params', None),
-                pca_params=getattr(app_state, 'pca_params', None),
-                robust_pca_params=getattr(app_state, 'robust_pca_params', None),
+                umap_params=app_state.umap_params,
+                tsne_params=app_state.tsne_params,
+                pca_params=app_state.pca_params,
+                robust_pca_params=app_state.robust_pca_params,
                 size=size,
                 precomputed_embedding=cached_embedding if use_cached_embedding else None,
                 precomputed_meta=precomputed_meta if use_cached_embedding else None,
@@ -329,10 +329,10 @@ class ExportPanelCommonMixin:
             'overlay_curve_label_data',
         )
         backup = {
-            'fig': getattr(app_state, 'fig', None),
-            'ax': getattr(app_state, 'ax', None),
-            'overlay_label_refreshing': bool(getattr(app_state, 'overlay_label_refreshing', False)),
-            'adjust_text_in_progress': bool(getattr(app_state, 'adjust_text_in_progress', False)),
+            'fig': app_state.fig,
+            'ax': app_state.ax,
+            'overlay_label_refreshing': bool(app_state.overlay_label_refreshing),
+            'adjust_text_in_progress': bool(app_state.adjust_text_in_progress),
         }
         for key in keys:
             backup[key] = getattr(app_state, key, [])

@@ -18,9 +18,6 @@ class DisplayThemeMixin:
 
     def _refresh_theme_list(self):
         """从磁盘加载主题并刷新下拉列表"""
-        if not hasattr(app_state, 'saved_themes'):
-            state_gateway.set_saved_themes({})
-
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         if theme_file.exists():
             try:
@@ -45,7 +42,7 @@ class DisplayThemeMixin:
             return
 
         # Overwriting an existing theme is destructive; confirm first.
-        existing = getattr(app_state, 'saved_themes', {}) or {}
+        existing = app_state.saved_themes or {}
         if name in existing:
             reply = QMessageBox.question(
                 self,
@@ -57,12 +54,9 @@ class DisplayThemeMixin:
             if reply != QMessageBox.Yes:
                 return
 
-        if not hasattr(app_state, 'saved_themes'):
-            state_gateway.set_saved_themes({})
-
         theme_data = {
             'grid': bool(self.grid_check.isChecked()) if self.grid_check else False,
-            'color_scheme': self.color_combo.currentText() if self.color_combo else getattr(app_state, 'color_scheme', 'vibrant'),
+            'color_scheme': self.color_combo.currentText() if self.color_combo else app_state.color_scheme,
             'primary_font': self.primary_font_combo.currentText() if self.primary_font_combo else '',
             'cjk_font': self.cjk_font_combo.currentText() if self.cjk_font_combo else '',
             'font_sizes': {k: v.value() for k, v in self.font_size_spins.items()},
@@ -96,23 +90,23 @@ class DisplayThemeMixin:
             'scatter_edgewidth': self.scatter_edgewidth_spin.value() if self.scatter_edgewidth_spin else 0.4,
             # Width/legend-frame controls are not built in this panel; read
             # the live app_state values so themes round-trip real state.
-            'model_curve_width': self.model_curve_width_spin.value() if self.model_curve_width_spin else getattr(app_state, 'model_curve_width', 1.2),
-            'paleoisochron_width': self.paleoisochron_width_spin.value() if self.paleoisochron_width_spin else getattr(app_state, 'paleoisochron_width', 0.9),
-            'model_age_line_width': self.model_age_width_spin.value() if self.model_age_width_spin else getattr(app_state, 'model_age_line_width', 0.7),
-            'isochron_line_width': self.isochron_width_spin.value() if self.isochron_width_spin else getattr(app_state, 'isochron_line_width', 1.5),
-            'line_styles': getattr(app_state, 'line_styles', {}),
+            'model_curve_width': self.model_curve_width_spin.value() if self.model_curve_width_spin else app_state.model_curve_width,
+            'paleoisochron_width': self.paleoisochron_width_spin.value() if self.paleoisochron_width_spin else app_state.paleoisochron_width,
+            'model_age_line_width': self.model_age_width_spin.value() if self.model_age_width_spin else app_state.model_age_line_width,
+            'isochron_line_width': self.isochron_width_spin.value() if self.isochron_width_spin else app_state.isochron_line_width,
+            'line_styles': app_state.line_styles,
             'label_color': self._get_color_control_value(self.label_color_edit, '#1f2937'),
             'label_weight': self.label_weight_combo.currentText() if self.label_weight_combo else 'normal',
             'label_pad': self.label_pad_spin.value() if self.label_pad_spin else 6.0,
             'title_color': self._get_color_control_value(self.title_color_edit, '#111827'),
             'title_weight': self.title_weight_combo.currentText() if self.title_weight_combo else 'bold',
             'title_pad': self.title_pad_spin.value() if self.title_pad_spin else 20.0,
-            'legend_location': getattr(app_state, 'legend_location', 'outside_right'),
-            'legend_position': getattr(app_state, 'legend_position', None),
-            'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check else bool(getattr(app_state, 'legend_frame_on', True)),
-            'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin else float(getattr(app_state, 'legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA)),
-            'legend_frame_facecolor': self.legend_frame_face_edit.text() if self.legend_frame_face_edit else str(getattr(app_state, 'legend_frame_facecolor', '#ffffff')),
-            'legend_frame_edgecolor': self.legend_frame_edge_edit.text() if self.legend_frame_edge_edit else str(getattr(app_state, 'legend_frame_edgecolor', '#cbd5f5')),
+            'legend_location': app_state.legend_location,
+            'legend_position': app_state.legend_position,
+            'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check else bool(app_state.legend_frame_on),
+            'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin else float(app_state.legend_frame_alpha),
+            'legend_frame_facecolor': self.legend_frame_face_edit.text() if self.legend_frame_face_edit else str(app_state.legend_frame_facecolor),
+            'legend_frame_edgecolor': self.legend_frame_edge_edit.text() if self.legend_frame_edge_edit else str(app_state.legend_frame_edgecolor),
             'adjust_text_force_text': [
                 self.adjust_force_text_x_spin.value() if self.adjust_force_text_x_spin else 0.8,
                 self.adjust_force_text_y_spin.value() if self.adjust_force_text_y_spin else 1.0,
@@ -129,7 +123,7 @@ class DisplayThemeMixin:
             'adjust_text_time_lim': self.adjust_time_lim_spin.value() if self.adjust_time_lim_spin else 0.25,
         }
 
-        saved_themes = dict(getattr(app_state, 'saved_themes', {}) or {})
+        saved_themes = dict(app_state.saved_themes or {})
         saved_themes[name] = theme_data
         state_gateway.set_saved_themes(saved_themes)
 
@@ -151,7 +145,7 @@ class DisplayThemeMixin:
 
     def _load_theme(self, *_args):
         """加载选中的主题"""
-        if self.theme_load_combo is None or not hasattr(app_state, 'saved_themes'):
+        if self.theme_load_combo is None:
             return
 
         name = self.theme_load_combo.currentText()
@@ -179,7 +173,7 @@ class DisplayThemeMixin:
             if self.color_combo:
                 self.color_combo.setCurrentText(data.get('color_scheme', 'vibrant'))
             else:
-                state_gateway.set_color_scheme(data.get('color_scheme', getattr(app_state, 'color_scheme', 'vibrant')))
+                state_gateway.set_color_scheme(data.get('color_scheme', app_state.color_scheme))
 
             primary_font = data.get('primary_font', '') or '<Default>'
             if self.primary_font_combo:
@@ -293,15 +287,15 @@ class DisplayThemeMixin:
                 return fallback
 
             adjust_force_text = _pair(
-                data.get('adjust_text_force_text', getattr(app_state, 'adjust_text_force_text', (0.8, 1.0))),
+                data.get('adjust_text_force_text', app_state.adjust_text_force_text),
                 (0.8, 1.0),
             )
             adjust_force_static = _pair(
-                data.get('adjust_text_force_static', getattr(app_state, 'adjust_text_force_static', (0.4, 0.6))),
+                data.get('adjust_text_force_static', app_state.adjust_text_force_static),
                 (0.4, 0.6),
             )
             adjust_expand = _pair(
-                data.get('adjust_text_expand', getattr(app_state, 'adjust_text_expand', (1.08, 1.20))),
+                data.get('adjust_text_expand', app_state.adjust_text_expand),
                 (1.08, 1.20),
             )
             if self.adjust_force_text_x_spin:
@@ -317,9 +311,9 @@ class DisplayThemeMixin:
             if self.adjust_expand_y_spin:
                 self.adjust_expand_y_spin.setValue(float(adjust_expand[1]))
             if self.adjust_iter_lim_spin:
-                self.adjust_iter_lim_spin.setValue(int(data.get('adjust_text_iter_lim', getattr(app_state, 'adjust_text_iter_lim', 120))))
+                self.adjust_iter_lim_spin.setValue(int(data.get('adjust_text_iter_lim', app_state.adjust_text_iter_lim)))
             if self.adjust_time_lim_spin:
-                self.adjust_time_lim_spin.setValue(float(data.get('adjust_text_time_lim', getattr(app_state, 'adjust_text_time_lim', 0.25))))
+                self.adjust_time_lim_spin.setValue(float(data.get('adjust_text_time_lim', app_state.adjust_text_time_lim)))
 
             legend_outside = data.get('legend_location', None)
             legend_inside = data.get('legend_position', None)
@@ -361,8 +355,8 @@ class DisplayThemeMixin:
         if reply != QMessageBox.Yes:
             return
 
-        if hasattr(app_state, 'saved_themes') and name in app_state.saved_themes:
-            saved_themes = dict(getattr(app_state, 'saved_themes', {}) or {})
+        if name in app_state.saved_themes:
+            saved_themes = dict(app_state.saved_themes or {})
             saved_themes.pop(name, None)
             state_gateway.set_saved_themes(saved_themes)
 
@@ -429,10 +423,7 @@ class DisplayThemeMixin:
         except Exception as exc:
             logger.warning("Failed to apply matplotlib theme: %s", exc)
 
-        try:
-            self._on_change()
-        except Exception:
-            pass
+        self._on_change()
 
 
 def _build_theme_qss(theme: dict) -> str:

@@ -219,7 +219,7 @@ def get_robust_pca_embedding(params: dict) -> np.ndarray | None:
 
 def _build_group_palette(unique_cats: list[Any]) -> dict[Any, str]:
     """Build or reuse a stable group -> color mapping."""
-    palette = dict(getattr(app_state, 'current_palette', {}) or {})
+    palette = dict(app_state.current_palette or {})
 
     prop_cycle = plt.rcParams.get('axes.prop_cycle', None)
     cycle_colors = []
@@ -238,7 +238,7 @@ def _build_group_palette(unique_cats: list[Any]) -> dict[Any, str]:
             changed = True
 
     # Keep StateStore snapshot and runtime palette in sync.
-    if changed or not isinstance(getattr(app_state, 'current_palette', None), dict):
+    if changed or not isinstance(app_state.current_palette, dict):
         state_gateway.set_current_palette(palette)
 
     return {cat: palette.get(cat, '#333333') for cat in unique_cats}

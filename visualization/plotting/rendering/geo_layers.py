@@ -31,20 +31,20 @@ def _render_geo_overlays(
     if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
         geochemistry, _ = _lazy_import_geochemistry()
         params = geochemistry.engine.get_parameters() if geochemistry else {}
-        if getattr(app_state, 'show_model_curves', True):
+        if app_state.show_model_curves:
             _draw_model_curves(app_state.ax, actual_algorithm, [params])
 
-        if getattr(app_state, 'show_isochrons', True):
+        if app_state.show_isochrons:
             _draw_isochron_overlays(app_state.ax, actual_algorithm)
 
         if app_state.selected_isochron_data is not None:
             _draw_selected_isochron(app_state.ax)
 
-        if getattr(app_state, 'show_paleoisochrons', True):
-            ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
+        if app_state.show_paleoisochrons:
+            ages = app_state.paleoisochron_ages
             _draw_paleoisochrons(app_state.ax, actual_algorithm, ages, params)
 
-        if getattr(app_state, 'show_model_age_lines', True):
+        if app_state.show_model_age_lines:
             df_subset, _ = _get_subset_dataframe()
             if df_subset is not None:
                 col_206, col_207, _ = _get_pb_columns(df_subset.columns)
@@ -60,14 +60,14 @@ def _render_geo_overlays(
                             _draw_model_age_lines_86(app_state.ax, pb206, pb207, pb208, params)
 
     if actual_algorithm in ('PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86'):
-        if getattr(app_state, 'show_paleoisochrons', True):
+        if app_state.show_paleoisochrons:
             _draw_plumbotectonics_isoage_lines(app_state.ax, actual_algorithm)
-        if getattr(app_state, 'show_plumbotectonics_curves', True):
+        if app_state.show_plumbotectonics_curves:
             _draw_plumbotectonics_curves(app_state.ax, actual_algorithm)
 
     if actual_algorithm in ('PB_MU_AGE', 'PB_KAPPA_AGE'):
-        if getattr(app_state, 'show_paleoisochrons', True):
-            ages = getattr(app_state, 'paleoisochron_ages', [3000, 2000, 1000, 0])
+        if app_state.show_paleoisochrons:
+            ages = app_state.paleoisochron_ages
             _draw_mu_kappa_paleoisochrons(app_state.ax, ages)
 
     if app_state.ax is prev_ax and prev_xlim and prev_ylim:

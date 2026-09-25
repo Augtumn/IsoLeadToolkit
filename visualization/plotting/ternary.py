@@ -30,13 +30,13 @@ def resolve_ternary_limit_mode(mode: Any = None) -> str:
     """Resolve ternary limit mode from explicit value or app state fallback."""
     candidate = mode
     if candidate is None:
-        candidate = getattr(app_state, 'ternary_limit_mode', None)
+        candidate = app_state.ternary_limit_mode
 
     token = str(candidate).strip().lower() if candidate is not None else ''
     if token in _VALID_LIMIT_MODES:
         return token
 
-    anchor = str(getattr(app_state, 'ternary_limit_anchor', 'min')).strip().lower()
+    anchor = str(app_state.ternary_limit_anchor).strip().lower()
     if anchor in ('min', 'max'):
         return anchor
     return 'min'
@@ -51,7 +51,7 @@ def _sanitize_limit_value(value: Any, default: float) -> float:
 
 
 def _resolve_manual_limits() -> tuple[float, float, float, float, float, float]:
-    manual = getattr(app_state, 'ternary_manual_limits', {}) or {}
+    manual = app_state.ternary_manual_limits or {}
 
     tmin = _sanitize_limit_value(manual.get('tmin', 0.0), 0.0)
     tmax = _sanitize_limit_value(manual.get('tmax', 1.0), 1.0)
@@ -155,14 +155,14 @@ def configure_ternary_axis(
         except Exception:
             logger.debug("Failed to set ternary axis labels", exc_info=True)
 
-    mode = resolve_ternary_limit_mode(getattr(app_state, 'ternary_limit_mode', None))
+    mode = resolve_ternary_limit_mode(app_state.ternary_limit_mode)
     state_gateway.set_ternary_limit_mode(mode)
 
     tmin, tmax, lmin, lmax, rmin, rmax = _FULL_TERNARY_LIMITS
 
     try:
         if auto_zoom:
-            use_manual = bool(getattr(app_state, 'ternary_manual_limits_enabled', False))
+            use_manual = bool(app_state.ternary_manual_limits_enabled)
             if use_manual:
                 tmin, tmax, lmin, lmax, rmin, rmax = _resolve_manual_limits()
             else:
@@ -172,7 +172,7 @@ def configure_ternary_axis(
             # clipped when the figure is enlarged. mpltern's clip path can
             # exclude points exactly at the boundary due to floating-point
             # precision in the data-to-display coordinate transform chain.
-            m = float(getattr(app_state, 'ternary_render_margin', _TERNARY_RENDER_MARGIN))
+            m = float(app_state.ternary_render_margin)
             tmin = max(0.0, tmin - m)
             tmax = min(1.0, tmax + m)
             lmin = max(0.0, lmin - m)

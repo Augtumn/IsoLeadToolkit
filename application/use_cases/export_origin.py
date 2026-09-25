@@ -93,7 +93,7 @@ def _extract_scatter_groups(ax: Any) -> list[dict[str, Any]]:
         return []
 
     groups: list[dict[str, Any]] = []
-    marker_map = getattr(app_state, "group_marker_map", {}) or {}
+    marker_map = app_state.group_marker_map or {}
     seen: set[str] = set()
 
     for coll in getattr(ax, "collections", []):
@@ -137,7 +137,7 @@ def _extract_scatter_groups_3d(ax: Any) -> list[dict[str, Any]]:
         return []
 
     groups: list[dict[str, Any]] = []
-    marker_map = getattr(app_state, "group_marker_map", {}) or {}
+    marker_map = app_state.group_marker_map or {}
     seen: set[str] = set()
 
     for coll in getattr(ax, "collections", []):
@@ -197,15 +197,15 @@ def _extract_ternary_data(ax: Any) -> list[dict[str, Any]]:
         logger.debug("_extract_ternary_data: no embedding or <3 columns")
         return []
 
-    group_col = getattr(app_state, "last_group_col", None)
+    group_col = app_state.last_group_col
     if group_col is None:
         return []
 
-    df = getattr(getattr(app_state, "data", app_state), "df_global", getattr(app_state, "df_global", None))
+    df = getattr(app_state.data, "df_global", app_state.df_global)
     if df is None:
         return []
 
-    indices = getattr(app_state, "active_subset_indices", None)
+    indices = app_state.active_subset_indices
     if indices is not None and len(indices) > 0:
         df_sub = df.iloc[sorted(indices)]
         groups_series = df_sub[group_col].fillna("Unknown").astype(str).values
@@ -217,9 +217,9 @@ def _extract_ternary_data(ax: Any) -> list[dict[str, Any]]:
     embedding = embedding[:n]
     groups_series = groups_series[:n]
 
-    marker_map = getattr(app_state, "group_marker_map", {}) or {}
-    palette = getattr(app_state, "current_palette", {}) or {}
-    ternary_cols = getattr(app_state, "selected_ternary_cols", ["Top", "Left", "Right"])
+    marker_map = app_state.group_marker_map or {}
+    palette = app_state.current_palette or {}
+    ternary_cols = app_state.selected_ternary_cols
 
     groups_out: list[dict[str, Any]] = []
     for cat in sorted(set(groups_series)):
@@ -254,7 +254,7 @@ def _extract_isochron_lines(ax: Any) -> list[dict[str, Any]]:
     *intercept_err*, *n_points*, *mswd*, and optionally *age_ma*.
     We export each as a line overlay covering the current axis x-range.
     """
-    results = getattr(app_state, "isochron_results", {}) or {}
+    results = app_state.isochron_results or {}
     if not results:
         return []
 
@@ -343,7 +343,7 @@ def _extract_pb_evolution_overlay_data(
         return result
 
     # ── model curves ──────────────────────────────────────────────
-    if getattr(app_state, "show_model_curves", True):
+    if app_state.show_model_curves:
         curves: list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]] = []
         try:
             t_vals = np.linspace(0, 4500, 500)
@@ -368,9 +368,9 @@ def _extract_pb_evolution_overlay_data(
             result["model_curves"] = curves
 
     # ── paleoisochrons ────────────────────────────────────────────
-    if getattr(app_state, "show_paleoisochrons", True):
+    if app_state.show_paleoisochrons:
         equations: list[tuple[np.ndarray, np.ndarray, str, dict[str, Any]]] = []
-        ages = getattr(app_state, "paleoisochron_ages", [3000, 2000, 1000, 0])
+        ages = app_state.paleoisochron_ages
         age_step = getattr(app_state, "paleoisochron_age_step", 1000)
         if not ages and age_step > 0:
             ages = list(range(0, 4501, age_step))
@@ -470,9 +470,9 @@ def _extract_equation_overlays(
     *label*, *color*, *linewidth*, *linestyle*, *alpha*, and *enabled* flag.
     Returns a list of dicts with *x*, *y*, *label*, and *equation*.
     """
-    eqs = getattr(app_state, "equation_overlays", None)
+    eqs = app_state.equation_overlays
     if eqs is None:
-        overlay_state = getattr(app_state, "overlay", None)
+        overlay_state = app_state.overlay
         if overlay_state is not None:
             eqs = getattr(overlay_state, "equation_overlays", [])
         else:
@@ -812,7 +812,7 @@ def export_to_origin(file_path: str) -> bool:
         logger.warning("Origin export requested but originpro is not installed.")
         return False
 
-    ax = getattr(app_state, "ax", None)
+    ax = app_state.ax
     if ax is None:
         logger.warning("No axes available for Origin export.")
         return False
@@ -827,7 +827,7 @@ def export_to_origin(file_path: str) -> bool:
 
 def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
     """Extract plot data for the current render mode and build the project."""
-    mode = str(getattr(app_state, "render_mode", "UMAP")).upper()
+    mode = str(app_state.render_mode).upper()
     logger.info("Origin export: render_mode=%s", mode)
 
     # ── scatter data ──────────────────────────────────────────────
@@ -892,12 +892,12 @@ def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
         )
 
         # Isochron regression lines
-        if getattr(app_state, "show_isochrons", False):
+        if app_state.show_isochrons:
             isochron_lines = _extract_isochron_lines(ax)
             logger.info("Origin export: %d isochron lines extracted", len(isochron_lines))
 
         # Equation overlays
-        if getattr(app_state, "show_equation_overlays", False):
+        if app_state.show_equation_overlays:
             try:
                 xlim = ax.get_xlim()
                 x_min, x_max = float(xlim[0]), float(xlim[1])
@@ -914,7 +914,7 @@ def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
         )
 
     # PLUMBOTECTONICS modes may also include equation overlays
-    if mode in _plumbo_modes and getattr(app_state, "show_equation_overlays", False):
+    if mode in _plumbo_modes and app_state.show_equation_overlays:
         try:
             xlim = ax.get_xlim()
             x_min, x_max = float(xlim[0]), float(xlim[1])

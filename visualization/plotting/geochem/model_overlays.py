@@ -60,7 +60,7 @@ def _draw_model_curves(
                 'model_curve',
                 {
                     'color': None,
-                    'linewidth': getattr(app_state, 'model_curve_width', 1.2),
+                    'linewidth': app_state.model_curve_width,
                     'linestyle': '-',
                     'alpha': 0.8
                 }
@@ -92,13 +92,13 @@ def _draw_model_curves(
 
             label_text = _format_label_text(
                 label_opts.get('label_text'),
-                index=len(getattr(app_state, 'overlay_curve_label_data', [])) + 1
+                index=len(app_state.overlay_curve_label_data) + 1
             )
             if label_text:
                 text_artist = ax.text(
                     x_vals[0], y_vals[0],
                     label_text,
-                    color=line_color or style.get('color') or getattr(app_state, 'label_color', '#1f2937'),
+                    color=line_color or style.get('color') or app_state.label_color,
                     fontsize=label_opts['label_fontsize'],
                     va='center',
                     ha='center',
@@ -136,7 +136,7 @@ def _draw_mu_kappa_paleoisochrons(ax: Any, ages: Sequence[object] | None) -> Non
             'paleoisochron',
             {
                 'color': None,
-                'linewidth': getattr(app_state, 'paleoisochron_width', 0.9),
+                'linewidth': app_state.paleoisochron_width,
                 'linestyle': '--',
                 'alpha': 0.85
             }
@@ -184,7 +184,7 @@ def _draw_mu_kappa_paleoisochrons(ax: Any, ages: Sequence[object] | None) -> Non
                 age_val,
                 label_y,
                 _format_label_text(label_opts.get('label_text'), age_val) or f" {age_val:.0f} Ma",
-                color=line_color or paleo_style.get('color') or getattr(app_state, 'label_color', '#1f2937'),
+                color=line_color or paleo_style.get('color') or app_state.label_color,
                 fontsize=label_opts['label_fontsize'],
                 rotation=90,
                 va='top',

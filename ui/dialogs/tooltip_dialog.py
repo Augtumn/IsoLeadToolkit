@@ -116,7 +116,7 @@ class TooltipConfigDialog(QDialog):
 
     def _load_current_selection(self):
         """加载当前选择"""
-        current_cols = getattr(app_state, 'tooltip_columns', [])
+        current_cols = app_state.tooltip_columns
         if not current_cols and app_state.df_global is not None:
             # 默认选择前几列
             current_cols = list(app_state.df_global.columns[:5])

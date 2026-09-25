@@ -57,7 +57,7 @@ class _DataPanelColoringBuild:
         tooltip_check_layout = QHBoxLayout()
         self.tooltip_check = QCheckBox(translate("Show Tooltip"))
         self.tooltip_check.setProperty("translate_key", "Show Tooltip")
-        self.tooltip_check.setChecked(getattr(app_state, "show_tooltip", True))
+        self.tooltip_check.setChecked(app_state.show_tooltip)
         self.tooltip_check.stateChanged.connect(self._on_tooltip_change)
         tooltip_check_layout.addWidget(self.tooltip_check)
 

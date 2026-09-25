@@ -58,7 +58,7 @@ class GeoPanel(BasePanel):
             from application.use_cases import geochemistry as geochem_usecase
             available_models = geochem_usecase.get_available_models()
             self.geo_model_combo.addItems(available_models)
-            current_model = getattr(app_state, 'geo_model_name', 'Stacey & Kramers (2nd Stage)')
+            current_model = app_state.geo_model_name
             if current_model in available_models:
                 self.geo_model_combo.setCurrentText(current_model)
         except Exception as e:

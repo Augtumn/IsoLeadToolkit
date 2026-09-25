@@ -623,7 +623,7 @@ def test_legend_columns_for_layout_rules() -> None:
     assert _legend_columns_for_layout(["a", "b"], ax=None, location_key="upper right") is None
 
 
-def test_style_legend_uses_named_default_alpha_when_state_missing(monkeypatch) -> None:
+def test_style_legend_uses_state_frame_alpha(monkeypatch) -> None:
     class _FakeFrame:
         def __init__(self) -> None:
             self.alpha = None
@@ -680,6 +680,7 @@ def test_style_legend_uses_named_default_alpha_when_state_missing(monkeypatch) -
         legend_position = None
         legend_offset = (0.0, 0.0)
         legend_frame_on = True
+        legend_frame_alpha = _DEFAULT_LEGEND_FRAME_ALPHA
         legend_frame_facecolor = "#ffffff"
         legend_frame_edgecolor = "#cbd5f5"
         plot_font_sizes = {"legend": 10, "label": 12}

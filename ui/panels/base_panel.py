@@ -325,19 +325,19 @@ class BasePanel(QWidget):
         if not getattr(self, "_is_initialized", False):
             return
 
-        previous_scheme = getattr(app_state, 'color_scheme', None)
+        previous_scheme = app_state.color_scheme
         previous_fonts = (
-            getattr(app_state, 'custom_primary_font', ''),
-            getattr(app_state, 'custom_cjk_font', '')
+            app_state.custom_primary_font,
+            app_state.custom_cjk_font
         )
-        previous_font_sizes = dict(getattr(app_state, 'plot_font_sizes', {}))
-        previous_show_title = bool(getattr(app_state, 'show_plot_title', False))
-        previous_title_pad = float(getattr(app_state, 'title_pad', 20.0))
+        previous_font_sizes = dict(app_state.plot_font_sizes)
+        previous_show_title = bool(app_state.show_plot_title)
+        previous_title_pad = float(app_state.title_pad)
         previous_line_widths = (
-            getattr(app_state, 'model_curve_width', 1.2),
-            getattr(app_state, 'paleoisochron_width', 0.9),
-            getattr(app_state, 'model_age_line_width', 0.7),
-            getattr(app_state, 'isochron_line_width', 1.5),
+            app_state.model_curve_width,
+            app_state.paleoisochron_width,
+            app_state.model_age_line_width,
+            app_state.isochron_line_width,
         )
 
         # ---- 数据驱动: 从 _STYLE_WIDGET_MAP 批量提取样式更新 ----
@@ -386,30 +386,25 @@ class BasePanel(QWidget):
             style_updates['legend_frame_edgecolor'] = legend_frame_edge_edit.text() or '#cbd5f5'
 
         # ---- line_styles 同步（拷贝后经 gateway 提交，避免被 store 回滚） ----
-        if hasattr(app_state, 'line_styles'):
-            line_styles = dict(getattr(app_state, 'line_styles', {}) or {})
-            line_width_updates = {
-                'model_curve': float(style_updates.get('model_curve_width', app_state.model_curve_width)),
-                'paleoisochron': float(style_updates.get('paleoisochron_width', app_state.paleoisochron_width)),
-                'model_age_line': float(style_updates.get('model_age_line_width', app_state.model_age_line_width)),
-                'isochron': float(style_updates.get('isochron_line_width', app_state.isochron_line_width)),
-            }
-            changed = False
-            for key, width in line_width_updates.items():
-                entry = dict(line_styles.get(key, {}) or {})
-                if entry.get('linewidth') != width:
-                    entry['linewidth'] = width
-                    line_styles[key] = entry
-                    changed = True
-            if changed:
-                state_gateway.set_line_styles(line_styles)
+        line_styles = dict(app_state.line_styles or {})
+        line_width_updates = {
+            'model_curve': float(style_updates.get('model_curve_width', app_state.model_curve_width)),
+            'paleoisochron': float(style_updates.get('paleoisochron_width', app_state.paleoisochron_width)),
+            'model_age_line': float(style_updates.get('model_age_line_width', app_state.model_age_line_width)),
+            'isochron': float(style_updates.get('isochron_line_width', app_state.isochron_line_width)),
+        }
+        changed = False
+        for key, width in line_width_updates.items():
+            entry = dict(line_styles.get(key, {}) or {})
+            if entry.get('linewidth') != width:
+                entry['linewidth'] = width
+                line_styles[key] = entry
+                changed = True
+        if changed:
+            state_gateway.set_line_styles(line_styles)
 
         # ---- 保存快照（撤销用） ----
-        self._style_snapshot = {
-            key: getattr(app_state, key, None)
-            for key in style_updates
-            if hasattr(app_state, key)
-        }
+        self._style_snapshot = {key: getattr(app_state, key, None) for key in style_updates}
 
         # ---- 提交到状态网关 ----
         if style_updates:

@@ -46,7 +46,7 @@ class _DataPanelGeochemBuild:
             row.addWidget(chk)
 
             if style_key:
-                style = getattr(app_state, "line_styles", {}).get(style_key, {}) or {}
+                style = app_state.line_styles.get(style_key, {}) or {}
                 swatch_color = style.get("color") or "#e2e8f0"
                 swatch = QLabel()
                 swatch.setFixedSize(16, 16)
@@ -63,21 +63,21 @@ class _DataPanelGeochemBuild:
 
         self.modeling_show_model_check = _add_geochem_toggle(
             "Show Model Curves",
-            getattr(app_state, "show_model_curves", True),
+            app_state.show_model_curves,
             self._on_model_curves_change,
             style_key="model_curve",
         )
 
         self.modeling_show_paleoisochron_check = _add_geochem_toggle(
             "Show Paleoisochrons",
-            getattr(app_state, "show_paleoisochrons", True),
+            app_state.show_paleoisochrons,
             self._on_paleoisochron_change,
             style_key="paleoisochron",
         )
 
         self.modeling_show_plumbotectonics_check = _add_geochem_toggle(
             "Show Plumbotectonics Curves",
-            getattr(app_state, "show_plumbotectonics_curves", True),
+            app_state.show_plumbotectonics_curves,
             self._on_plumbotectonics_curves_change,
             style_key="plumbotectonics_curve",
         )
@@ -102,7 +102,7 @@ class _DataPanelGeochemBuild:
         self.paleo_step_spin = QSpinBox()
         self.paleo_step_spin.setRange(50, 5000)
         self.paleo_step_spin.setSingleStep(50)
-        self.paleo_step_spin.setValue(getattr(app_state, "paleoisochron_step", 1000))
+        self.paleo_step_spin.setValue(app_state.paleoisochron_step)
         self._connect_spinbox_deferred(self.paleo_step_spin, self._on_paleo_step_change)
         paleo_step_layout.addWidget(self.paleo_step_spin)
         paleo_step_layout.addStretch()
@@ -110,21 +110,21 @@ class _DataPanelGeochemBuild:
 
         self.modeling_show_model_age_check = _add_geochem_toggle(
             "Show Model Age Lines",
-            getattr(app_state, "show_model_age_lines", True),
+            app_state.show_model_age_lines,
             self._on_model_age_change,
             style_key="model_age_line",
         )
 
         self.modeling_show_growth_curve_check = _add_geochem_toggle(
             "Show Growth Curves",
-            getattr(app_state, "show_growth_curves", True),
+            app_state.show_growth_curves,
             self._on_growth_curves_change,
             style_key="growth_curve",
         )
 
         self.modeling_use_real_age_check = _add_geochem_toggle(
             "Use Real Age for Mu/Kappa",
-            getattr(app_state, "use_real_age_for_mu_kappa", False),
+            app_state.use_real_age_for_mu_kappa,
             self._on_mu_kappa_real_age_change,
         )
 
@@ -150,7 +150,7 @@ class _DataPanelGeochemBuild:
         self.calc_isochron_btn = QPushButton(translate("Calculate Isochron Age"))
         self.calc_isochron_btn.setProperty("translate_key", "Calculate Isochron Age")
         self.calc_isochron_btn.clicked.connect(self._on_calculate_isochron)
-        if getattr(app_state, "show_isochrons", False):
+        if app_state.show_isochrons:
             self.calc_isochron_btn.setText(translate("Hide Isochron"))
         isochron_row.addWidget(self.calc_isochron_btn)
 
@@ -159,7 +159,7 @@ class _DataPanelGeochemBuild:
         self.isochron_settings_btn.clicked.connect(self._on_isochron_settings)
         isochron_row.addWidget(self.isochron_settings_btn)
 
-        iso_style = getattr(app_state, "line_styles", {}).get("isochron", {}) or {}
+        iso_style = app_state.line_styles.get("isochron", {}) or {}
         iso_color = iso_style.get("color") or "#e2e8f0"
         self.isochron_swatch = QLabel()
         self.isochron_swatch.setFixedSize(16, 16)

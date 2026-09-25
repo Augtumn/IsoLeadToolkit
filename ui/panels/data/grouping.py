@@ -177,7 +177,7 @@ class DataPanelGroupingMixin:
                     translate("Please select at least one grouping column."),
                 )
                 return
-            state_gateway.set_group_data_columns(selected, list(getattr(app_state, "data_cols", []) or []))
+            state_gateway.set_group_data_columns(selected, list(app_state.data_cols or []))
             if app_state.last_group_col not in app_state.group_cols:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
                 state_gateway.set_visible_groups(None)

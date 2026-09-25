@@ -56,8 +56,8 @@ def refresh_isochron_after_selection() -> None:
         return
 
     is_active = bool(
-        getattr(app_state, 'show_isochrons', False)
-        or getattr(app_state, 'selected_isochron_data', None)
+        app_state.show_isochrons
+        or app_state.selected_isochron_data
         or app_state.selection_tool == 'isochron'
     )
     if not is_active:
@@ -72,7 +72,7 @@ def refresh_isochron_after_selection() -> None:
         if had_selected:
             state_gateway.set_show_isochrons(True)
 
-    if getattr(app_state, 'show_isochrons', False) or app_state.selected_isochron_data is not None or had_selected:
+    if app_state.show_isochrons or app_state.selected_isochron_data is not None or had_selected:
         try:
             from visualization.events import on_slider_change
             on_slider_change()

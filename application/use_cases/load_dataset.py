@@ -110,7 +110,7 @@ def load_dataset(
                 default_sheet=app_state.sheet_name,
                 default_group_cols=app_state.group_cols,
                 default_data_cols=app_state.data_cols,
-                default_render_mode=getattr(app_state, "render_mode", "2D"),
+                default_render_mode=app_state.render_mode,
             )
 
             if dialog_result is None:

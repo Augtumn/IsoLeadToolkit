@@ -56,7 +56,7 @@ def on_hover(event: Any) -> None:
 
         if event.inaxes != app_state.ax or app_state.annotation is None:
             return
-        if not getattr(app_state, 'show_tooltip', True):
+        if not app_state.show_tooltip:
             try:
                 app_state.annotation.set_visible(False)
             except Exception:
@@ -100,7 +100,7 @@ def on_hover(event: Any) -> None:
                     row=row,
                     df_columns=df.columns,
                     sample_idx=sample_idx,
-                    tooltip_columns=getattr(app_state, 'tooltip_columns', None),
+                    tooltip_columns=app_state.tooltip_columns,
                     selected=sample_idx in app_state.selected_indices,
                     selected_status_label=translate('Status: Selected'),
                 )

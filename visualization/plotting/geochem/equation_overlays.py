@@ -116,10 +116,10 @@ def _safe_eval_expression(expression: str, x_vals: np.ndarray) -> Any:
 
 def _draw_equation_overlays(ax: Any) -> None:
     """Draw configured equation overlays on the current axes."""
-    if not getattr(app_state, 'show_equation_overlays', False):
+    if not app_state.show_equation_overlays:
         return
 
-    overlays = getattr(app_state, 'equation_overlays', []) or []
+    overlays = app_state.equation_overlays or []
     if not overlays:
         return
 
@@ -153,7 +153,7 @@ def _draw_equation_overlays(ax: Any) -> None:
             style_key = f"equation:{overlay_id}"
             overlay['style_key'] = style_key
 
-        existing_style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+        existing_style = app_state.line_styles.get(style_key, {}) or {}
         fallback_color = None if existing_style.get('color', '__missing__') in (None, '') else overlay.get('color', '#ef4444')
         style = ensure_line_style(
             app_state,

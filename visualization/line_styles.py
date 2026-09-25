@@ -8,7 +8,7 @@ def resolve_line_style(app_state, style_key: str, fallback: dict) -> dict:
     """Resolve line style with app_state overrides."""
     style = {}
     try:
-        style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+        style = app_state.line_styles.get(style_key, {}) or {}
     except Exception:
         style = {}
 

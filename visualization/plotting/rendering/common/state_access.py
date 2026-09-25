@@ -7,7 +7,7 @@ from core import app_state
 
 
 def _data_state() -> Any:
-    return getattr(app_state, 'data', app_state)
+    return app_state.data
 
 
 def _df_global() -> Any:

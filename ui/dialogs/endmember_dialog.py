@@ -54,7 +54,7 @@ class EndmemberAnalysisDialog(QDialog):
         self.radio_all = QRadioButton(translate("All data"))
         self.radio_selected = QRadioButton(translate("Selected data only"))
 
-        selected_count = len(getattr(app_state, 'selected_indices', set()))
+        selected_count = len(app_state.selected_indices)
         total_count = len(app_state.df_global) if app_state.df_global is not None else 0
 
         if selected_count > 0:
@@ -427,14 +427,14 @@ class EndmemberAnalysisDialog(QDialog):
         # Commit through the gateway so the StateStore snapshot stays in sync.
         state_gateway.set_dataframe_and_source(
             df,
-            file_path=getattr(app_state, 'file_path', ''),
-            sheet_name=getattr(app_state, 'sheet_name', None),
+            file_path=app_state.file_path,
+            sheet_name=app_state.sheet_name,
         )
 
-        groups = list(getattr(app_state, 'group_cols', []) or [])
+        groups = list(app_state.group_cols or [])
         if col_name not in groups:
             groups.append(col_name)
-        data_cols = list(getattr(app_state, 'data_cols', []) or [])
+        data_cols = list(app_state.data_cols or [])
         state_gateway.set_group_data_columns(groups, data_cols)
         state_gateway.set_last_group_col(col_name)
         state_gateway.set_visible_groups(None)

@@ -79,12 +79,12 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             ys = pd.to_numeric(subset[data_columns[1]], errors='coerce').values
             zs = pd.to_numeric(subset[data_columns[2]], errors='coerce').values
 
-            marker_size = getattr(app_state, 'plot_marker_size', size)
-            marker_alpha = getattr(app_state, 'plot_marker_alpha', 0.85)
+            marker_size = app_state.plot_marker_size
+            marker_alpha = app_state.plot_marker_alpha
             marker_shape = resolve_group_marker(app_state, cat)
-            show_edge = bool(getattr(app_state, 'scatter_show_edge', True))
-            edge_color = getattr(app_state, 'scatter_edgecolor', '#1e293b') if show_edge else 'none'
-            edge_width = getattr(app_state, 'scatter_edgewidth', 0.4) if show_edge else 0.0
+            show_edge = bool(app_state.scatter_show_edge)
+            edge_color = app_state.scatter_edgecolor if show_edge else 'none'
+            edge_width = app_state.scatter_edgewidth if show_edge else 0.0
             sc = app_state.ax.scatter(
                 xs,
                 ys,
@@ -128,8 +128,8 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             f'Colored by {group_col}'
         )
         state_gateway.set_current_plot_title(title)
-        if getattr(app_state, 'show_plot_title', True):
-            app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0))
+        if app_state.show_plot_title:
+            app_state.ax.set_title(title, pad=app_state.title_pad)
         else:
             app_state.ax.set_title('')
         app_state.ax.set_xlabel(data_columns[0])

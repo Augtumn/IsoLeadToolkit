@@ -108,7 +108,7 @@ class ProvenanceMLBuildMixin:
         self.radio_all = QRadioButton(translate("All data"))
         self.radio_selected = QRadioButton(translate("Selected data only"))
 
-        selected_count = len(getattr(app_state, 'selected_indices', set()))
+        selected_count = len(app_state.selected_indices)
         total_count = len(app_state.df_global) if app_state.df_global is not None else 0
 
         if selected_count > 0:

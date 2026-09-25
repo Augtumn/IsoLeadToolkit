@@ -155,12 +155,9 @@ def create_section_dialog(
         # Re-register the language listener: _on_close removes it and the
         # dialog is cached, so a reopened dialog must re-subscribe or it
         # stops reacting to language switches.
-        listeners = getattr(app_state, 'language_listeners', [])
+        listeners = app_state.language_listeners
         if _on_language_refresh not in listeners:
-            try:
-                app_state.register_language_listener(_on_language_refresh)
-            except Exception:
-                pass
+            app_state.register_language_listener(_on_language_refresh)
         QTimer.singleShot(0, _apply_adaptive_size)
 
     def _on_language_refresh():
@@ -168,16 +165,13 @@ def create_section_dialog(
         QTimer.singleShot(0, _try_lightweight_update)
 
     def _on_close(_event):
-        listeners = getattr(app_state, 'language_listeners', [])
+        listeners = app_state.language_listeners
         if _on_language_refresh in listeners:
             listeners.remove(_on_language_refresh)
 
     dialog.showEvent = _on_show
     dialog.closeEvent = _on_close
-    try:
-        app_state.register_language_listener(_on_language_refresh)
-    except Exception:
-        pass
+    app_state.register_language_listener(_on_language_refresh)
 
     # Ctrl+Z 样式撤销快捷键（输入框聚焦时让位给原生撤销）
     from PyQt5.QtGui import QKeySequence

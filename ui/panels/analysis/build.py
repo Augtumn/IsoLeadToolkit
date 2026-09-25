@@ -76,7 +76,7 @@ class AnalysisPanelBuildMixin:
 
         kde_row = QHBoxLayout()
         kde_check_row, self.tools_kde_check = labeled_checkbox("Show Kernel Density",
-                                                   getattr(app_state, 'show_kde', False),
+                                                   app_state.show_kde,
                                                    self._on_kde_change)
         kde_row.addWidget(kde_check_row)
 
@@ -91,7 +91,7 @@ class AnalysisPanelBuildMixin:
 
         mkde_row = QHBoxLayout()
         mkde_check_row, self.tools_marginal_kde_check = labeled_checkbox("Show Marginal KDE",
-                                                            getattr(app_state, 'show_marginal_kde', False),
+                                                            app_state.show_marginal_kde,
                                                             self._on_marginal_kde_change)
         mkde_row.addWidget(mkde_check_row)
 

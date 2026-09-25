@@ -100,7 +100,7 @@ class DataPanelGeochemMixin:
         none_label = translate("None")
         items = [none_label] + numeric_cols
 
-        current = getattr(app_state, "mu_kappa_age_col", None)
+        current = app_state.mu_kappa_age_col
         if current in items:
             current_index = items.index(current)
         else:
@@ -140,7 +140,7 @@ class DataPanelGeochemMixin:
         """Refresh Mu/Kappa age label."""
         if self.mu_kappa_age_label is None:
             return
-        label = getattr(app_state, "mu_kappa_age_col", None) or translate("Not Selected")
+        label = app_state.mu_kappa_age_col or translate("Not Selected")
         self.mu_kappa_age_label.setText(label)
 
     def _refresh_plumbotectonics_models(self):
@@ -162,7 +162,7 @@ class DataPanelGeochemMixin:
             for key, label in variants:
                 combo.addItem(translate(label), key)
                 self.plumbotectonics_model_keys.append(key)
-            current_key = str(getattr(app_state, "plumbotectonics_variant", "0"))
+            current_key = str(app_state.plumbotectonics_variant)
             if current_key in self.plumbotectonics_model_keys:
                 combo.setCurrentIndex(self.plumbotectonics_model_keys.index(current_key))
             else:
@@ -188,7 +188,7 @@ class DataPanelGeochemMixin:
         """Refresh Mu/Kappa age-related controls."""
         mode = self._normalize_render_mode(app_state.render_mode)
         enabled = mode in ("PB_MU_AGE", "PB_KAPPA_AGE")
-        has_col = bool(getattr(app_state, "mu_kappa_age_col", None))
+        has_col = bool(app_state.mu_kappa_age_col)
 
         if self.mu_kappa_age_title_label is not None:
             self.mu_kappa_age_title_label.setVisible(enabled)
@@ -207,7 +207,7 @@ class DataPanelGeochemMixin:
             self.modeling_use_real_age_check.setVisible(enabled)
             self.modeling_use_real_age_check.setEnabled(enabled and has_col)
             self.modeling_use_real_age_check.setChecked(
-                bool(getattr(app_state, "use_real_age_for_mu_kappa", False)) and has_col
+                bool(app_state.use_real_age_for_mu_kappa) and has_col
             )
             self.modeling_use_real_age_check.blockSignals(False)
 
@@ -254,15 +254,12 @@ class DataPanelGeochemMixin:
             )
             return
 
-        if getattr(app_state, "show_isochrons", False) or getattr(app_state, "selected_isochron_data", None):
+        if app_state.show_isochrons or app_state.selected_isochron_data:
             state_gateway.set_show_isochrons(False)
             state_gateway.set_isochron_results({})
             state_gateway.set_selected_isochron_data(None)
             self._update_isochron_btn_text()
-            try:
-                on_slider_change()
-            except Exception:
-                pass
+            on_slider_change()
             return
 
         if app_state.render_mode == "3D":
@@ -284,7 +281,7 @@ class DataPanelGeochemMixin:
         if not self._ensure_isochron_error_settings():
             return
 
-        selected = set(getattr(app_state, "selected_indices", set()) or set())
+        selected = set(app_state.selected_indices or set())
 
         if selected:
             calculate_selected_isochron()
@@ -306,20 +303,20 @@ class DataPanelGeochemMixin:
         btn = getattr(self, "calc_isochron_btn", None)
         if btn is None:
             return
-        if getattr(app_state, "show_isochrons", False) or getattr(app_state, "selected_isochron_data", None):
+        if app_state.show_isochrons or app_state.selected_isochron_data:
             btn.setText(translate("Hide Isochron"))
         else:
             btn.setText(translate("Calculate Isochron Age"))
 
     def _ensure_isochron_error_settings(self):
         """Ensure isochron error settings are usable before calculation."""
-        mode = getattr(app_state, "isochron_error_mode", "fixed")
+        mode = app_state.isochron_error_mode
         if mode != "columns":
             return True
 
-        df = getattr(app_state, "df_global", None)
-        sx_col = getattr(app_state, "isochron_sx_col", "")
-        sy_col = getattr(app_state, "isochron_sy_col", "")
+        df = app_state.df_global
+        sx_col = app_state.isochron_sx_col
+        sy_col = app_state.isochron_sy_col
 
         if df is None or not sx_col or not sy_col:
             return self._on_isochron_settings()
@@ -366,8 +363,8 @@ class DataPanelGeochemMixin:
         """Handle paleoisochron step changes."""
         step_val = max(10, int(value))
         state_gateway.set_paleoisochron_step(step_val)
-        min_age = int(getattr(app_state, "paleoisochron_min_age", 0))
-        max_age = int(getattr(app_state, "paleoisochron_max_age", 3000))
+        min_age = int(app_state.paleoisochron_min_age)
+        max_age = int(app_state.paleoisochron_max_age)
         if max_age < min_age:
             max_age, min_age = min_age, max_age
         ages = list(range(max_age, min_age - 1, -step_val))

@@ -47,11 +47,11 @@ def group_legend_items(
 
     Each entry: ``{'type': 'group', 'label', 'color', 'marker', 'visible'}``
     """
-    _palette = palette if palette is not None else getattr(app_state, 'current_palette', {})
-    _marker_map = marker_map if marker_map is not None else getattr(app_state, 'group_marker_map', {})
+    _palette = palette if palette is not None else app_state.current_palette
+    _marker_map = marker_map if marker_map is not None else app_state.group_marker_map
     _visible = set(visible_groups) if visible_groups is not None else None
-    groups = all_groups if all_groups is not None else list(getattr(app_state, 'available_groups', []))
-    default_marker = getattr(app_state, 'plot_marker_shape', 'o')
+    groups = all_groups if all_groups is not None else list(app_state.available_groups)
+    default_marker = app_state.plot_marker_shape
 
     entries: list[dict] = []
     for group in groups:
@@ -74,38 +74,38 @@ def overlay_legend_items(
 
     Each entry: ``{'type': 'overlay', 'label_key', 'style_key', 'fallback', 'default_color'}``
     """
-    mode = actual_algorithm or normalize_render_mode(render_mode or getattr(app_state, 'render_mode', ''))
+    mode = actual_algorithm or normalize_render_mode(render_mode or app_state.render_mode)
     is_pb_evol = mode in ('PB_EVOL_76', 'PB_EVOL_86')
     is_plumb = mode in ('PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86')
     is_mu_kappa = mode in ('PB_MU_AGE', 'PB_KAPPA_AGE')
 
     entries: list[dict] = []
-    if is_pb_evol and (include_disabled or getattr(app_state, 'show_model_curves', True)):
+    if is_pb_evol and (include_disabled or app_state.show_model_curves):
         entries.append({
             'type': 'overlay',
             'label_key': 'Model Curves',
             'style_key': 'model_curve',
             'fallback': {
                 'color': None,
-                'linewidth': getattr(app_state, 'model_curve_width', 1.2),
+                'linewidth': app_state.model_curve_width,
                 'linestyle': '-',
                 'alpha': 0.8
             },
             'default_color': get_overlay_default_color('model_curve')
         })
 
-    if is_plumb and (include_disabled or getattr(app_state, 'show_plumbotectonics_curves', True)):
+    if is_plumb and (include_disabled or app_state.show_plumbotectonics_curves):
         group_entries = get_plumbotectonics_group_entries()
         if group_entries:
             base_fallback = {
                 'color': None,
-                'linewidth': getattr(app_state, 'plumbotectonics_curve_width', 1.2),
+                'linewidth': app_state.plumbotectonics_curve_width,
                 'linestyle': '-',
                 'alpha': 0.85
             }
             base_style = resolve_line_style(app_state, 'plumbotectonics_curve', base_fallback)
             group_palette = get_plumbotectonics_group_palette()
-            group_visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+            group_visibility = app_state.plumbotectonics_group_visibility or {}
             for entry in group_entries:
                 if not include_disabled and not group_visibility.get(entry['style_key'], True):
                     continue
@@ -124,7 +124,7 @@ def overlay_legend_items(
                 'style_key': 'plumbotectonics_curve',
                 'fallback': {
                     'color': None,
-                    'linewidth': getattr(app_state, 'plumbotectonics_curve_width', 1.2),
+                    'linewidth': app_state.plumbotectonics_curve_width,
                     'linestyle': '-',
                     'alpha': 0.85
                 },
@@ -132,7 +132,7 @@ def overlay_legend_items(
             })
 
     if (is_pb_evol or is_plumb or is_mu_kappa) and (
-        include_disabled or getattr(app_state, 'show_paleoisochrons', True)
+        include_disabled or app_state.show_paleoisochrons
     ):
         entries.append({
             'type': 'overlay',
@@ -140,21 +140,21 @@ def overlay_legend_items(
             'style_key': 'paleoisochron',
             'fallback': {
                 'color': None,
-                'linewidth': getattr(app_state, 'paleoisochron_width', 0.9),
+                'linewidth': app_state.paleoisochron_width,
                 'linestyle': '--',
                 'alpha': 0.85
             },
             'default_color': get_overlay_default_color('paleoisochron')
         })
 
-    if is_pb_evol and (include_disabled or getattr(app_state, 'show_model_age_lines', True)):
+    if is_pb_evol and (include_disabled or app_state.show_model_age_lines):
         entries.append({
             'type': 'overlay',
             'label_key': 'Model Age Lines',
             'style_key': 'model_age_line',
             'fallback': {
                 'color': None,
-                'linewidth': getattr(app_state, 'model_age_line_width', 0.7),
+                'linewidth': app_state.model_age_line_width,
                 'linestyle': '-',
                 'alpha': 0.7
             },
@@ -163,8 +163,8 @@ def overlay_legend_items(
 
     if is_pb_evol and (
         include_disabled
-        or getattr(app_state, 'show_isochrons', False)
-        or getattr(app_state, 'selected_isochron_data', None) is not None
+        or app_state.show_isochrons
+        or app_state.selected_isochron_data is not None
     ):
         entries.append({
             'type': 'overlay',
@@ -172,7 +172,7 @@ def overlay_legend_items(
             'style_key': 'isochron',
             'fallback': {
                 'color': None,
-                'linewidth': getattr(app_state, 'isochron_line_width', 1.5),
+                'linewidth': app_state.isochron_line_width,
                 'linestyle': '-',
                 'alpha': 0.8
             },

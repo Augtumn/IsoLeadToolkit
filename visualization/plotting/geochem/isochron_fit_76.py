@@ -43,7 +43,7 @@ def render_isochron1_group(
         if age_ma is not None and age_ma >= 0:
             # Copy-then-submit: an in-place write here would be rolled back
             # by the next StateStore sync, leaving export/UI without the age.
-            results = dict(getattr(app_state, 'isochron_results', {}) or {})
+            results = dict(app_state.isochron_results or {})
             entry = dict(results.get(grp, {}) or {})
             entry['age_ma'] = age_ma
             results[grp] = entry
@@ -122,7 +122,7 @@ def render_isochron1_group(
             'growth_curve',
             {
                 'color': None,
-                'linewidth': getattr(app_state, 'model_curve_width', 1.2),
+                'linewidth': app_state.model_curve_width,
                 'linestyle': ':',
                 'alpha': 0.6,
             },

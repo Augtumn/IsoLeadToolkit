@@ -228,7 +228,7 @@ class ClusteringDialog(QDialog):
     def _on_apply(self):
         if self._result is None:
             return
-        df = getattr(app_state, "df_global", None)
+        df = app_state.df_global
         if df is None:
             return
 
@@ -258,18 +258,18 @@ class ClusteringDialog(QDialog):
         df[col_label] = display_labels
         df[col_prob] = probs
 
-        current_groups = list(getattr(app_state, "group_cols", []) or [])
+        current_groups = list(app_state.group_cols or [])
         if col_label not in current_groups:
             current_groups.append(col_label)
         state_gateway.set_dataframe_and_source(
             df,
-            file_path=getattr(app_state, "file_path", ""),
-            sheet_name=getattr(app_state, "sheet_name", None),
+            file_path=app_state.file_path,
+            sheet_name=app_state.sheet_name,
         )
         state_gateway.bump_data_version()
         state_gateway.set_group_data_columns(
             current_groups,
-            list(getattr(app_state, "data_cols", []) or []),
+            list(app_state.data_cols or []),
         )
         state_gateway.set_last_group_col(col_label)
 

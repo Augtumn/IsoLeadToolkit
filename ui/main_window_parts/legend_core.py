@@ -56,7 +56,7 @@ class MainWindowLegendCoreMixin:
             }
 
     def _overlay_entries_for_legend(self):
-        mode = normalize_render_mode(getattr(app_state, "render_mode", ""))
+        mode = normalize_render_mode(app_state.render_mode)
         return list(overlay_legend_items(render_mode=mode, include_disabled=True))
 
     def _is_plumbotectonics_group_style(self, style_key):
@@ -72,7 +72,7 @@ class MainWindowLegendCoreMixin:
 
     def _overlay_artists_for_style(self, style_key, overlay_map=None):
         if overlay_map is None:
-            overlay_map = getattr(app_state, "overlay_artists", {}) or {}
+            overlay_map = app_state.overlay_artists or {}
         artists = []
 
         def _extend_artists(value):
@@ -116,11 +116,11 @@ class MainWindowLegendCoreMixin:
                 if text_artist is not None:
                     artists.append(text_artist)
 
-        _extend_text_artists(getattr(app_state, "overlay_curve_label_data", []))
+        _extend_text_artists(app_state.overlay_curve_label_data)
         if style_key == "paleoisochron":
-            _extend_text_artists(getattr(app_state, "paleoisochron_label_data", []))
-            _extend_text_artists(getattr(app_state, "plumbotectonics_isoage_label_data", []))
-            _extend_text_artists(getattr(app_state, "plumbotectonics_label_data", []))
+            _extend_text_artists(app_state.paleoisochron_label_data)
+            _extend_text_artists(app_state.plumbotectonics_isoage_label_data)
+            _extend_text_artists(app_state.plumbotectonics_label_data)
 
         if not artists:
             return []
@@ -138,7 +138,7 @@ class MainWindowLegendCoreMixin:
     def _apply_legend_z_order(self):
         if not hasattr(self, "_legend_list") or self._legend_list is None:
             return
-        ax = getattr(app_state, "ax", None)
+        ax = app_state.ax
         if ax is None:
             return
 
@@ -167,8 +167,8 @@ class MainWindowLegendCoreMixin:
             pass
 
         target_z = max_z + len(order)
-        overlay_map = getattr(app_state, "overlay_artists", {}) or {}
-        group_map = getattr(app_state, "group_to_scatter", {}) or {}
+        overlay_map = app_state.overlay_artists or {}
+        group_map = app_state.group_to_scatter or {}
 
         # Parent groups form stacking blocks: a top-level parent row occupies
         # one z-slot shared by ALL descendant groups (nested parents expand
@@ -227,9 +227,9 @@ class MainWindowLegendCoreMixin:
 
     def _rebuild_legend_after_reorder(self):
         self._apply_legend_z_order()
-        title = getattr(app_state, "legend_last_title", None)
-        handles = getattr(app_state, "legend_last_handles", None)
-        labels = getattr(app_state, "legend_last_labels", None)
+        title = app_state.legend_last_title
+        handles = app_state.legend_last_handles
+        labels = app_state.legend_last_labels
         if not title or handles is None or labels is None:
             return
         self._update_legend_panel(title, handles, labels)
@@ -261,9 +261,9 @@ class MainWindowLegendCoreMixin:
             [self._legend_order_key(current_type, current_key) for current_type, current_key in new_order],
         )
 
-        title = getattr(app_state, "legend_last_title", None)
-        handles = getattr(app_state, "legend_last_handles", None)
-        labels = getattr(app_state, "legend_last_labels", None)
+        title = app_state.legend_last_title
+        handles = app_state.legend_last_handles
+        labels = app_state.legend_last_labels
         if title and handles is not None and labels is not None:
             self._update_legend_panel(title, handles, labels)
         else:
@@ -271,13 +271,13 @@ class MainWindowLegendCoreMixin:
 
     def _overlay_checked_state(self, style_key):
         if self._is_plumbotectonics_group_style(style_key):
-            visibility = getattr(app_state, "plumbotectonics_group_visibility", {}) or {}
-            return bool(getattr(app_state, "show_plumbotectonics_curves", True) and visibility.get(style_key, True))
+            visibility = app_state.plumbotectonics_group_visibility or {}
+            return bool(app_state.show_plumbotectonics_curves and visibility.get(style_key, True))
         attr = OVERLAY_TOGGLE_MAP.get(style_key)
         if attr:
             return bool(getattr(app_state, attr, True))
         if style_key == "isochron":
-            return bool(getattr(app_state, "show_isochrons", False) or getattr(app_state, "selected_isochron_data", None))
+            return bool(app_state.show_isochrons or app_state.selected_isochron_data)
         return True
 
 

@@ -26,7 +26,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
 
     layout = QVBoxLayout(dialog)
 
-    style = getattr(app_state, 'line_styles', {}).get(style_key, {}) or {}
+    style = app_state.line_styles.get(style_key, {}) or {}
     color_val = style.get('color') or ''
 
     color_row = QHBoxLayout()
@@ -97,7 +97,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         label_layout.setContentsMargins(8, 6, 8, 6)
         label_layout.setSpacing(4)
 
-        opts = getattr(app_state, 'isochron_label_options', {})
+        opts = app_state.isochron_label_options
         label_items = [
             ('show_age', translate("Age")),
             ('show_n_points', translate("Sample Count (n)")),
@@ -114,7 +114,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
 
         layout.addWidget(label_group)
 
-    if style_key in getattr(app_state, 'line_styles', {}):
+    if style_key in app_state.line_styles:
         label_settings = QGroupBox(translate("Curve Label Settings"))
         label_layout = QVBoxLayout(label_settings)
         label_layout.setContentsMargins(8, 6, 8, 6)
@@ -204,7 +204,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
     def _apply():
         # Copy-then-submit: mutating app_state.line_styles in place is
         # silently rolled back by the next StateStore sync, losing edits.
-        current_styles = dict(getattr(app_state, 'line_styles', {}) or {})
+        current_styles = dict(app_state.line_styles or {})
         style_ref = dict(current_styles.get(style_key, {}) or {})
         if auto_color_check.isChecked():
             style_ref['color'] = None
@@ -245,7 +245,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         elif style_key == 'isochron':
             state_gateway.set_isochron_line_width(style_ref['linewidth'])
             if label_checks:
-                options = dict(getattr(app_state, 'isochron_label_options', {}) or {})
+                options = dict(app_state.isochron_label_options or {})
                 for key, chk in label_checks.items():
                     options[key] = chk.isChecked()
                 state_gateway.set_isochron_label_options(options)

@@ -30,7 +30,7 @@ def _reset_plot_dataframe(
             base['_emb_t'] = embedding[:, 0]
             base['_emb_l'] = embedding[:, 1]
             base['_emb_r'] = embedding[:, 2]
-        elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
+        elif actual_algorithm in ('PCA', 'RobustPCA'):
             idx_x = app_state.pca_component_indices[0]
             idx_y = app_state.pca_component_indices[1]
 

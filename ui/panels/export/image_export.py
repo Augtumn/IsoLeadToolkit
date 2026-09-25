@@ -60,10 +60,10 @@ class ExportPanelImageExportMixin:
 
     def _on_export_image_clicked(self):
         """Export figure directly using profile defaults (no panel param widgets)."""
-        if getattr(app_state, 'df_global', None) is None or len(app_state.df_global) == 0:
+        if app_state.df_global is None or len(app_state.df_global) == 0:
             QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
             return
-        if getattr(app_state, 'fig', None) is None:
+        if app_state.fig is None:
             QMessageBox.warning(self, translate("Warning"), translate("Plot figure is not initialized."))
             return
 
@@ -151,15 +151,15 @@ class ExportPanelImageExportMixin:
         original_fig = app_state.fig
         original_ax = app_state.ax
         original_view = self._capture_axis_view(original_ax)
-        original_palette = dict(getattr(app_state, 'current_palette', {}) or {})
-        original_marker_map = dict(getattr(app_state, 'group_marker_map', {}) or {})
+        original_palette = dict(app_state.current_palette or {})
+        original_marker_map = dict(app_state.group_marker_map or {})
         locked_palette = self._palette_from_axis_collections(original_ax, original_palette)
         locked_marker_map = dict(original_marker_map)
-        original_marginal_axes = getattr(app_state, 'marginal_axes', None)
-        original_show_marginal_kde = bool(getattr(app_state, 'show_marginal_kde', False))
+        original_marginal_axes = app_state.marginal_axes
+        original_show_marginal_kde = bool(app_state.show_marginal_kde)
         original_has_marginal_axes = bool(original_fig is not None and len(getattr(original_fig, 'axes', [])) > 1)
-        original_marker_size = int(getattr(app_state, 'plot_marker_size', 60))
-        original_font_sizes = dict(getattr(app_state, 'plot_font_sizes', {}) or {})
+        original_marker_size = int(app_state.plot_marker_size)
+        original_font_sizes = dict(app_state.plot_font_sizes or {})
 
         from PyQt5.QtWidgets import QApplication
 
@@ -230,7 +230,7 @@ class ExportPanelImageExportMixin:
             state_gateway.set_show_marginal_kde(original_show_marginal_kde)
             state_gateway.set_marginal_axes(original_marginal_axes)
             try:
-                self._render_current_mode_sync(point_size=int(getattr(app_state, 'point_size', 60)))
+                self._render_current_mode_sync(point_size=int(app_state.point_size))
                 # Restore the user's zoom/pan on the interactive canvas: the
                 # re-render above resets limits, but the captured view must
                 # be reapplied so exports do not silently reset the plot.
@@ -251,10 +251,10 @@ class ExportPanelImageExportMixin:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 
-        if getattr(app_state, 'df_global', None) is None or len(app_state.df_global) == 0:
+        if app_state.df_global is None or len(app_state.df_global) == 0:
             QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
             return
-        if getattr(app_state, 'fig', None) is None:
+        if app_state.fig is None:
             QMessageBox.warning(self, translate("Warning"), translate("Plot figure is not initialized."))
             return
 

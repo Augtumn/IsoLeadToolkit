@@ -60,7 +60,7 @@ def _render_title_labels(
     title_font_dict = {}
     has_cjk = any('\u4e00' <= char <= '\u9fff' for char in title)
     if has_cjk:
-        cjk_font = getattr(app_state, 'custom_cjk_font', '')
+        cjk_font = app_state.custom_cjk_font
         if cjk_font:
             title_font_dict['fontname'] = cjk_font
         else:
@@ -74,8 +74,8 @@ def _render_title_labels(
                 pass
 
     state_gateway.set_current_plot_title(title)
-    if getattr(app_state, 'show_plot_title', True):
-        app_state.ax.set_title(title, pad=getattr(app_state, 'title_pad', 20.0), **title_font_dict)
+    if app_state.show_plot_title:
+        app_state.ax.set_title(title, pad=app_state.title_pad, **title_font_dict)
     else:
         app_state.ax.set_title('')
 
@@ -96,7 +96,7 @@ def _render_title_labels(
         app_state.ax.set_ylabel('Kappa (232Th/238U)')
     elif actual_algorithm == 'TERNARY':
         app_state.ax.set_aspect('equal')
-    elif actual_algorithm in ('PCA', 'RobustPCA') and hasattr(app_state, 'pca_component_indices'):
+    elif actual_algorithm in ('PCA', 'RobustPCA'):
         idx_x = app_state.pca_component_indices[0] + 1
         idx_y = app_state.pca_component_indices[1] + 1
         app_state.ax.set_xlabel(f'PC{idx_x}')

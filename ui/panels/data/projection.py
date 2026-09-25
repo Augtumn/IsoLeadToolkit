@@ -263,7 +263,7 @@ class DataPanelProjectionMixin:
 
     def _refresh_ternary_limit_controls_enabled(self):
         """Enable/disable ternary limit controls based on auto-zoom/manual toggles."""
-        auto_zoom_enabled = bool(getattr(app_state, "ternary_auto_zoom", True))
+        auto_zoom_enabled = bool(app_state.ternary_auto_zoom)
         base_widgets = [
             getattr(self, "ternary_limit_mode_combo", None),
             getattr(self, "ternary_manual_limits_check", None),
@@ -272,7 +272,7 @@ class DataPanelProjectionMixin:
             if widget is not None:
                 widget.setEnabled(auto_zoom_enabled)
 
-        manual_enabled = auto_zoom_enabled and bool(getattr(app_state, "ternary_manual_limits_enabled", False))
+        manual_enabled = auto_zoom_enabled and bool(app_state.ternary_manual_limits_enabled)
         for spin in (getattr(self, "ternary_limit_spins", None) or {}).values():
             spin.setEnabled(manual_enabled)
 
@@ -296,7 +296,7 @@ class DataPanelProjectionMixin:
 
     def _on_ternary_limit_param_change(self, key, value):
         """Update a single manual ternary limit parameter."""
-        manual = dict(getattr(app_state, "ternary_manual_limits", {}) or {})
+        manual = dict(app_state.ternary_manual_limits or {})
         try:
             val = float(value)
         except (TypeError, ValueError):
@@ -304,7 +304,7 @@ class DataPanelProjectionMixin:
         manual[key] = max(0.0, min(1.0, val))
         state_gateway.set_ternary_manual_limits(manual)
 
-        if bool(getattr(app_state, "ternary_manual_limits_enabled", False)):
+        if bool(app_state.ternary_manual_limits_enabled):
             self._on_change()
 
     def _refresh_2d_axis_combos(self):
@@ -314,13 +314,13 @@ class DataPanelProjectionMixin:
         if app_state.df_global is None:
             return
 
-        cols = [c for c in getattr(app_state, "data_cols", []) if c in app_state.df_global.columns]
+        cols = [c for c in app_state.data_cols if c in app_state.df_global.columns]
         self.xaxis_combo.clear()
         self.yaxis_combo.clear()
         self.xaxis_combo.addItems(cols)
         self.yaxis_combo.addItems(cols)
 
-        current = getattr(app_state, "selected_2d_cols", [])
+        current = app_state.selected_2d_cols
         if (not current or len(current) != 2) and len(cols) >= 2:
             current = [cols[0], cols[1]]
             state_gateway.set_selected_2d_columns(current, confirmed=True)

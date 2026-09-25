@@ -57,13 +57,10 @@ def configure_constrained_layout(
 
 def refresh_plot_style() -> None:
     """Refresh plot styling without recomputing embeddings."""
-    try:
-        _apply_current_style()
-    except Exception:
-        pass
+    _apply_current_style()
 
-    ax = getattr(app_state, 'ax', None)
-    fig = getattr(app_state, 'fig', None)
+    ax = app_state.ax
+    fig = app_state.fig
 
     axes = []
     if fig is not None:
@@ -81,14 +78,14 @@ def refresh_plot_style() -> None:
         except Exception:
             pass
         try:
-            _style_legend(target_ax.get_legend(), show_marginal_kde=getattr(app_state, 'show_marginal_kde', False))
+            _style_legend(target_ax.get_legend(), show_marginal_kde=app_state.show_marginal_kde)
         except Exception:
             pass
         # Keep title show/hide responsive via style-only refresh.
         if target_ax is ax:
             try:
-                show_title = bool(getattr(app_state, 'show_plot_title', True))
-                title_pad = float(getattr(app_state, 'title_pad', 20.0))
+                show_title = bool(app_state.show_plot_title)
+                title_pad = float(app_state.title_pad)
                 current_title = getattr(app_state, 'current_plot_title', '') or target_ax.get_title()
                 if show_title:
                     target_ax.set_title(current_title, pad=title_pad)
@@ -98,11 +95,11 @@ def refresh_plot_style() -> None:
                 pass
 
     try:
-        base_size = getattr(app_state, 'plot_marker_size', 60)
-        base_alpha = getattr(app_state, 'plot_marker_alpha', 0.8)
-        edgecolor = getattr(app_state, 'scatter_edgecolor', '#1e293b')
-        edgewidth = getattr(app_state, 'scatter_edgewidth', 0.4)
-        show_edge = bool(getattr(app_state, 'scatter_show_edge', True))
+        base_size = app_state.plot_marker_size
+        base_alpha = app_state.plot_marker_alpha
+        edgecolor = app_state.scatter_edgecolor
+        edgewidth = app_state.scatter_edgewidth
+        show_edge = bool(app_state.scatter_show_edge)
         resolved_edgecolor = edgecolor if show_edge else 'none'
         resolved_edgewidth = edgewidth if show_edge else 0.0
 
@@ -114,7 +111,7 @@ def refresh_plot_style() -> None:
         }
 
         if current_params != _last_style_params:
-            for sc in list(getattr(app_state, 'scatter_collections', [])):
+            for sc in list(app_state.scatter_collections):
                 if sc is None:
                     continue
                 try:
@@ -131,7 +128,7 @@ def refresh_plot_style() -> None:
         pass
 
     try:
-        if getattr(app_state, 'selected_indices', None):
+        if app_state.selected_indices:
             refresh_selection_overlay_safe()
     except Exception:
         pass

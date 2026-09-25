@@ -20,8 +20,8 @@ def refresh_overlay_styles() -> None:
         return
 
     try:
-        overlay_artists = getattr(app_state, 'overlay_artists', {})
-        line_styles = getattr(app_state, 'line_styles', {})
+        overlay_artists = app_state.overlay_artists
+        line_styles = app_state.line_styles
 
         # Artists are registered under singular style keys (see
         # geochem/overlay_common._register_overlay_artist), possibly with a
@@ -67,22 +67,22 @@ def refresh_overlay_visibility() -> None:
         return
 
     try:
-        overlay_artists = getattr(app_state, 'overlay_artists', {}) or {}
+        overlay_artists = app_state.overlay_artists or {}
 
         style_visibility = {
             style_key: bool(getattr(app_state, toggle_attr, True))
             for style_key, toggle_attr in OVERLAY_TOGGLE_MAP.items()
         }
         style_visibility['selected_isochron'] = bool(
-            getattr(app_state, 'show_isochrons', False)
-            or getattr(app_state, 'selected_isochron_data', None) is not None
+            app_state.show_isochrons
+            or app_state.selected_isochron_data is not None
         )
 
         def _resolve_visible(style_key: str) -> bool:
             if isinstance(style_key, str) and style_key.startswith('plumbotectonics_curve:'):
-                group_visibility = getattr(app_state, 'plumbotectonics_group_visibility', {}) or {}
+                group_visibility = app_state.plumbotectonics_group_visibility or {}
                 return bool(
-                    getattr(app_state, 'show_plumbotectonics_curves', True)
+                    app_state.show_plumbotectonics_curves
                     and group_visibility.get(style_key, True)
                 )
             if style_key in style_visibility:
@@ -114,10 +114,10 @@ def refresh_overlay_visibility() -> None:
                 style_key = entry.get('style_key') or fallback_style_key
                 _set_artist_visible(style_key, text_artist)
 
-        _set_label_visibility(getattr(app_state, 'overlay_curve_label_data', []), 'model_curve')
-        _set_label_visibility(getattr(app_state, 'paleoisochron_label_data', []), 'paleoisochron')
-        _set_label_visibility(getattr(app_state, 'plumbotectonics_label_data', []), 'plumbotectonics_curve')
-        _set_label_visibility(getattr(app_state, 'plumbotectonics_isoage_label_data', []), 'paleoisochron')
+        _set_label_visibility(app_state.overlay_curve_label_data, 'model_curve')
+        _set_label_visibility(app_state.paleoisochron_label_data, 'paleoisochron')
+        _set_label_visibility(app_state.plumbotectonics_label_data, 'plumbotectonics_curve')
+        _set_label_visibility(app_state.plumbotectonics_isoage_label_data, 'paleoisochron')
 
         canvas = None
         if app_state.fig is not None and app_state.fig.canvas is not None:

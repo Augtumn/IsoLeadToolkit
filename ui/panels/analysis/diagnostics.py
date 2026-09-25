@@ -18,7 +18,7 @@ class AnalysisPanelDiagnosticsMixin:
 
     def _require_embedding(self) -> bool:
         """Warn the user when diagnostics cannot run; return True when OK."""
-        if getattr(app_state, "df_global", None) is None:
+        if app_state.df_global is None:
             QMessageBox.warning(self, translate("Warning"), translate(_NEEDS_DATA_MSG))
             return False
         if getattr(app_state, "last_embedding", None) is None:

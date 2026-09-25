@@ -21,12 +21,12 @@ def _legend_layout_config(
     location_key: str | None = None,
 ) -> tuple[Any, tuple[float, float] | None, None, None]:
     """Resolve in-plot legend location, bbox, and layout options."""
-    loc = location_key if location_key else getattr(app_state, 'legend_position', None)
+    loc = location_key if location_key else app_state.legend_position
     if not loc:
         return 'best', None, None, None
     if isinstance(loc, str) and loc.startswith('outside_'):
         return 'best', None, None, None
-    offsets = getattr(app_state, 'legend_offset', (0.0, 0.0)) or (0.0, 0.0)
+    offsets = app_state.legend_offset or (0.0, 0.0)
     try:
         dx, dy = float(offsets[0]), float(offsets[1])
     except Exception:
@@ -89,21 +89,21 @@ def _style_legend(
             except Exception:
                 pass
 
-    frame_on = bool(getattr(app_state, 'legend_frame_on', True))
+    frame_on = bool(app_state.legend_frame_on)
     legend.set_frame_on(frame_on)
     frame = legend.get_frame()
     if frame_on:
         try:
-            frame.set_facecolor(getattr(app_state, 'legend_frame_facecolor', '#ffffff'))
-            frame.set_edgecolor(getattr(app_state, 'legend_frame_edgecolor', '#cbd5f5'))
+            frame.set_facecolor(app_state.legend_frame_facecolor)
+            frame.set_edgecolor(app_state.legend_frame_edgecolor)
             frame.set_alpha(
-                float(getattr(app_state, 'legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA))
+                float(app_state.legend_frame_alpha)
             )
         except Exception:
             pass
 
-    legend_size = getattr(app_state, 'plot_font_sizes', {}).get('legend', 10)
-    text_color = getattr(app_state, 'label_color', '#1f2937')
+    legend_size = app_state.plot_font_sizes.get('legend', 10)
+    text_color = app_state.label_color
     for text in legend.get_texts():
         try:
             text.set_fontsize(legend_size)
@@ -112,8 +112,8 @@ def _style_legend(
             pass
     try:
         title = legend.get_title()
-        title.set_fontsize(getattr(app_state, 'plot_font_sizes', {}).get('label', 12))
+        title.set_fontsize(app_state.plot_font_sizes.get('label', 12))
         title.set_color(text_color)
-        title.set_fontweight(getattr(app_state, 'label_weight', 'normal'))
+        title.set_fontweight(app_state.label_weight)
     except Exception:
         pass
