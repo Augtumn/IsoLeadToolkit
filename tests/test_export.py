@@ -23,6 +23,7 @@ from application.use_cases.export_image import (
 )
 from core import app_state, state_gateway
 from ui.panels.export.common import ExportPanelCommonMixin
+from ui.panels.export.export_legends import ExportPanelLegendMixin
 from ui.panels.export.data_export import ExportPanelDataExportMixin
 
 
@@ -314,7 +315,7 @@ class _FakeAxis:
         return _FakeRebuiltLegend()
 
 
-class _FakePanel(ExportPanelCommonMixin):
+class _FakePanel(ExportPanelLegendMixin, ExportPanelCommonMixin):
     @staticmethod
     def _apply_legend_marker_size_from_point(_legend, _point_size: float) -> None:
         return None

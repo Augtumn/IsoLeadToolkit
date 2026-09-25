@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
-from .panel import ExportPanel, PANEL_META
+from .export_legends import ExportPanelLegendMixin
+from .export_prep import ExportPanelPrepMixin
+from .panel import PANEL_META, ExportPanel, PANEL_META
 
 __all__ = ["ExportPanel", "PANEL_META"]

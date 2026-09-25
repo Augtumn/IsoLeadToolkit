@@ -5,6 +5,8 @@ from __future__ import annotations
 from ..base_panel import BasePanel
 from .build import ExportPanelBuildMixin
 from .common import ExportPanelCommonMixin
+from .export_legends import ExportPanelLegendMixin
+from .export_prep import ExportPanelPrepMixin
 from .data_export import ExportPanelDataExportMixin
 from .image_export import ExportPanelImageExportMixin
 from .origin_export import ExportPanelOriginExportMixin
@@ -25,6 +27,8 @@ class ExportPanel(
     ExportPanelImageExportMixin,
     ExportPanelOriginExportMixin,
     ExportPanelCommonMixin,
+    ExportPanelLegendMixin,
+    ExportPanelPrepMixin,
     BasePanel,
 ):
     """导出面板 - 数据导出功能"""
