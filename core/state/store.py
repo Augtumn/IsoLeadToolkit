@@ -550,8 +550,8 @@ class StateStore:
     def restore_snapshot(self, payload: dict[str, Any]) -> bool:
         """Bulk-restore persisted fields without going through the gateway.
 
-        Used by the persistence layer on startup (see docs/persistence_plan.md
-        §4). Only whitelisted, persisted fields are accepted so a hand-edited
+        Used by the persistence layer on startup (see docs/persistence.md
+        §2). Only whitelisted, persisted fields are accepted so a hand-edited
         file can never smuggle junk into the live snapshot. Returns True when
         the payload was applied; a value that breaks the sync is rolled back
         and reported as False instead of raising.

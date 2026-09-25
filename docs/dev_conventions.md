@@ -1235,13 +1235,13 @@ chore: 更新依赖版本
 
 ### 16.2 变更计划记录
 
-非 trivial 的变更（新功能、重构、Bug 修复）在动手编码前，必须将开发计划写入 `docs/development_plan.md` 对应模块章节，包括：
+非 trivial 的变更（新功能、重构、Bug 修复）在动手编码前，将计划写入 `docs/development_plan.md` 的待办小节，包括：
 
 - 问题描述与现状
 - 预期方案或目标结构
 - 涉及的文件与影响范围
 
-完成后将状态标记为 ✅ 已完成。
+完成后**删除该条目**。`docs/development_plan.md` 只保留未完成事项，不写"已完成/阶段进展"流水账——过程记录由 git 历史承担。
 
 ### 16.3 文档同步
 
@@ -1276,91 +1276,11 @@ pyinstaller build.spec
 
 ---
 
-## 18. 架构演进记录
-
-### 18.1 图例与覆盖层可视化重构 (2026-02)
-
-**背景**：原 `app_state` 包含 330+ 字段，图例和覆盖层状态散落其中；`geo.py` 中 10+ 个 `_draw_*` 函数重复实现样式解析、artist 注册、标签定位逻辑；图例条目在 `render.py`、`main_window.py`、`legend_model.py` 三处定义；样式变更触发全量重绘（含 embedding 重算）。
-
-**目标**：状态内聚、消除重复、轻量刷新。
-
-#### 18.1.1 Phase 1: 状态组合
-
-**新增文件**：
-- `core/overlay_state.py` — 封装 40+ 覆盖层相关字段
-- `core/legend_state.py` — 封装 10+ 图例相关字段
-
-**修改文件**：
-- `core/state/app_state.py` + `core/state/_compat_builders.py` — 创建 `self.overlay` 和 `self.legend` 子对象，添加 property 委托实现向后兼容
-
-**效果**：
-- `app_state` 字段按职责分组，避免 God Object
-- 旧代码通过 property 透明访问，无需修改
-- 新代码优先使用 `app_state.overlay.xxx` / `app_state.legend.xxx`
-
-#### 18.1.2 Phase 2: 统一图例数据源
-
-**修改文件**：
-- `visualization/plotting/legend_model.py` — 新增 `OVERLAY_TOGGLE_MAP`、`overlay_legend_items()`
-- `visualization/plotting/render.py` — 提取 `_place_inline_legend()` 辅助函数，消除三处重复图例构建代码
-- `ui/main_window.py` — 使用 `OVERLAY_TOGGLE_MAP` 统一覆盖层开关查询
-
-**效果**：
-- 图例条目定义集中在 `legend_model.py`
-- 消除 200+ 行重复代码
-- UI 层与渲染层使用相同数据源
-
-#### 18.1.3 Phase 3: 覆盖层绘制工具
-
-**新增文件**：
-- `visualization/plotting/geochem/overlay_common.py` — 提供 `_register_overlay_artist()`、`_resolve_label_options()`、`_format_label_text()` 等通用函数（`overlay_helpers.py` 为兼容 facade）
-
-**效果**：
-- `geo.py` 中的 `_draw_*` 函数复用通用工具，代码量减半
-- 标签定位、样式解析、artist 注册逻辑统一
-- 新增覆盖层类型更容易实现
-
-#### 18.1.4 Phase 4: 轻量刷新机制
-
-**修改文件**：
-- `visualization/plotting/style.py` — 新增 `refresh_overlay_styles()`、`refresh_overlay_visibility()`
-- `ui/main_window.py` — 覆盖层开关切换优先使用轻量刷新
-- `ui/panels/base_panel.py` — 覆盖层样式变更调用 `refresh_overlay_styles()`
-
-**效果**：
-- 样式变更耗时从 ~100ms 降至 ~10ms
-- 覆盖层开关切换无闪烁
-- 图例位置调整无需重绘散点
-
-#### 18.1.5 关键设计决策
-
-1. **向后兼容优先**：使用 property 委托而非直接重命名字段，避免破坏现有代码
-2. **渐进式重构**：分 4 个阶段，每阶段结束后应用可正常运行
-3. **数据驱动**：图例条目、覆盖层映射通过数据结构定义，减少硬编码
-4. **性能优化**：区分完整重绘与轻量刷新路径，避免不必要的计算
-
-#### 18.1.6 文件变更汇总
-
-| 阶段 | 新增 | 修改 |
-|------|------|------|
-| P1 | `core/overlay_state.py`, `core/legend_state.py` | `core/state/app_state.py` |
-| P2 | — | `visualization/plotting/legend_model.py`, `render.py`, `ui/main_window.py` |
-| P3 | `visualization/plotting/geochem/overlay_common.py` | `visualization/plotting/geo.py` |
-| P4 | — | `visualization/plotting/style.py`, `ui/main_window.py`, `ui/panels/base_panel.py` |
-
-#### 18.1.7 后续改进方向
-
-- 将 `geo.py` 中的 `_draw_*` 函数进一步重构为数据驱动模式
-- 考虑将覆盖层配置（年龄范围、步长等）移入独立配置文件
-- 为覆盖层添加交互式编辑功能（拖拽标签、调整曲线参数）
-
----
-
-## 19. 现代架构治理规范（2026Q2 起执行）
+## 18. 现代架构治理规范（2026Q2 起执行）
 
 本节用于约束“架构现代化改造方案”的日常落地，目标是避免重构期间出现边改边坏、边界回退、长期双轨无法收敛。
 
-### 19.1 分层边界与依赖方向
+### 18.1 分层边界与依赖方向
 
 采用四层模型：`presentation`、`application`、`domain`、`infrastructure`。
 
@@ -1380,27 +1300,27 @@ domain -> (不得依赖外层)
 3. `infrastructure` 可依赖第三方库，但不得反向依赖 `ui/`。
 4. 跨层新增依赖必须在 PR 描述中写明原因与退出计划。
 
-### 19.2 状态治理约束（StateStore 迁移期）
+### 18.2 状态治理约束（StateStore 迁移期）
 
 1. 新增功能禁止直接新增 `app_state.xxx` 可变字段，优先放入分层状态对象。
 2. 新写入路径必须通过 action/command 触发，UI 事件回调仅做参数采集。
 3. 迁移期允许旧路径存在，但每次重构必须减少直接写入点，禁止净增加。
 4. 涉及状态迁移的 PR 必须附“旧值/新值一致性检查”说明。
 
-### 19.3 用例（UseCase）与接口规范
+### 18.3 用例（UseCase）与接口规范
 
 1. 业务编排统一放在 `application/use_cases/`，命名为 `*UseCase`。
 2. 用例输入输出优先使用 DTO（`dataclass` 或 TypedDict），避免传递裸 `dict`。
 3. Command/Query 分离：修改状态的流程不得复用只读查询函数回写结果。
 4. UI 层不得出现跨 2 个以上业务分支的流程判断。
 
-### 19.4 适配器与第三方依赖规则
+### 18.4 适配器与第三方依赖规则
 
 1. 渲染、文件导入导出、会话持久化通过适配器封装，不在 UI 直接调用第三方 API。
 2. 可选依赖必须提供“探测 + 回退”路径，禁止因包缺失导致主流程不可用。
 3. 外部能力的异常必须转换为项目内部可识别错误类型并统一日志。
 
-### 19.5 架构重构分支与合并策略
+### 18.5 架构重构分支与合并策略
 
 针对跨模块重构，采用“Epic + 子分支”双层策略：
 
@@ -1419,7 +1339,7 @@ dev
      └─ refactor/a3-render-adapter
 ```
 
-### 19.6 PR 门禁（重构类变更强制）
+### 18.6 PR 门禁（重构类变更强制）
 
 架构/重构 PR 合并前必须满足：
 
@@ -1427,17 +1347,17 @@ dev
 2. 提供影响面说明：涉及模块、兼容性风险、回滚点。
 3. 至少包含 1 条回归验证：自动化测试或可复现实验步骤。
 4. 如涉及状态或渲染链路，附性能对比（基线 vs 当前）。
-5. 同步更新受影响文档（至少 `docs/development_plan.md` + 对应模块文档）。
+5. 同步更新受影响文档（对应模块文档 + `docs/architecture.md` 的模块/指标表；若改动改变了待办范围，同时更新 `docs/development_plan.md`）。
 
-### 19.7 Feature Flag 与回滚
+### 18.7 Feature Flag 与回滚
 
 1. 跨模块新链路默认 behind flag（默认关闭，灰度开启）。
 2. 每个阶段必须保留上一稳定链路，直到新链路至少稳定 1 个迭代。
 3. 回滚必须在 30 分钟内可执行，且有明确命令或配置步骤。
 
-### 19.8 KPI 驱动的规范执行
+### 18.8 KPI 驱动的规范执行
 
-每周在 `docs/development_plan.md` 更新以下指标：
+每周在 `docs/architecture.md` 的指标表更新以下数据（`docs/development_plan.md` 只放待办，不放指标）：
 
 1. 超大文件数量（>900 行）。
 2. `app_state` 直接写入点变化。

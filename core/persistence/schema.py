@@ -1,6 +1,6 @@
 """Persistence schemas: which StateStore fields are saved where.
 
-Design (see docs/persistence_plan.md §8):
+Design (see docs/persistence.md §3):
 - ``SESSION_FIELDS``  → params.json  (session-level: algorithm, params, data refs)
 - ``UI_STATE_FIELDS`` → ui_state.json (user configuration: styles, overlays,
   legend, ternary/KDE settings, presets, recent files)

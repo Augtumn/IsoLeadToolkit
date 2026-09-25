@@ -1,4 +1,4 @@
-"""Unified persistence facade (see docs/persistence_plan.md).
+"""Unified persistence facade (see docs/persistence.md).
 
 One entry point for everything the app persists:
 
