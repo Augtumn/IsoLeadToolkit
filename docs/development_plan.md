@@ -10,7 +10,7 @@
 - **`reference/` 归类**：`papers/`（论文）、`r_packages/`（ASTR、PbIso、IsoplotR、liaendmembers）、`apps/`（SilverQuest_v1、shereea）、`python/`（SciencePlots）、`origin_samples/`（OriginLab 样例）、`mineru/`（论文解析产物）、`silver_ml_shnyr/`（原 `18343221/`，Shnyr 等腓尼基银器 ML 论文仓库）；删除与解压目录重复的 `SilverQuest_v1.zip`。新增 `reference/README.md` 索引，逐项写明用途与"我们用它验证了什么"（ASTR→AJ84 对照、SilverQuest 库→AJ84 真实数据验证源等）。
 - **`.gitignore` 重写**：按用途分组（Python 生成物 / 运行产物 / 数据 / 第三方与用户数据 / 工具 / 其它），去掉重复条目（`*.xlsx`、`*.csv`、`.cursor/` 各出现两次），补充 `logs/`、`exports/`、`_viewcheck/`；`!tests/data/*.xlsx` 例外保留并验证通过（基准数据集仍可入库）。
 - **`_viewcheck/` 精简**：仅保留可复现脚本（`select_benchmark_rows.py`、`write_benchmark.py`，路径已更新为 `reference/apps/SilverQuest_v1/`）与公式复核用的两张放大图，其余一次性探针/比对 CSV 删除。
-- **收尾**：`reference/SilverQuest_v1/Pb_DB_20240310AllGalenas.xlsx`（及其 `~$` 锁文件）与根目录 `1.csv`/`2.csv` 当时被 **Excel 占用**，未强移；关闭 Excel 后手动移入 `reference/apps/SilverQuest_v1/` 与 `exports/` 即可。
+- **收尾**：`reference/SilverQuest_v1/Pb_DB_20240310AllGalenas.xlsx`（810,065 B，6939 行；含 407 行负年龄）与根目录 `1.csv`/`2.csv` 初次整理时被 Excel 占用，关闭 Excel 后已移入 `reference/apps/SilverQuest_v1/` 与 `exports/`，空的 `reference/SilverQuest_v1/` 删除、残留 `~$` 锁文件清理；移动后重新读取数据库校验（sheet/行数/负年龄数均与移动前一致）。
 
 ## 阶段进展（2026-09-10 · 测试套件整理精简）
 
