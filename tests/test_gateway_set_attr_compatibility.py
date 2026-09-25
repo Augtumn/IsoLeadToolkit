@@ -1,7 +1,5 @@
 """Compatibility checks for legacy state_gateway.set_attr routing."""
 
-from __future__ import annotations
-
 import pytest
 
 from core import app_state, state_gateway

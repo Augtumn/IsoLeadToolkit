@@ -1,7 +1,5 @@
 """Tests for parent-group marker resolution and state integration."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 
 import pytest

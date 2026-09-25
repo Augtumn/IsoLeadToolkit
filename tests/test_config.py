@@ -1,6 +1,4 @@
 """Tests for user config loading and merging."""
-from __future__ import annotations
-
 import json
 import tempfile
 from pathlib import Path

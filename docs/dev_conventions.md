@@ -1068,20 +1068,59 @@ app_state.notify_language_change()
 
 ```
 tests/
-├── test_geochemistry.py    # 年龄计算、Delta、V1V2
-├── test_cache.py           # 嵌入缓存
-├── test_session.py         # 会话持久化
-├── test_localization.py    # 翻译系统
-├── test_endmember.py       # 端元识别
-├── test_mixing.py          # 混合模型
-└── test_provenance_ml.py   # ML 管线
+├── conftest.py                     # 公共环境: sys.path、Agg 后端、Qt offscreen
+├── guard_helpers.py                # 守卫脚本调用封装
+├── data/isotope_benchmark.xlsx     # 文献基准 + 真实矿石数据 (含 AJ84 参考值)
+├── test_validate_test_dataset.py   # 基准数据集校验 (真实数据保证)
+├── test_state_store.py             # StateStore 行为
+├── test_gateway_set_attr_compatibility.py
+├── test_state_store_guards.py      # schema / bootstrap 守卫
+├── test_persistence.py             # 原子写、autosave
+├── test_session.py                 # 会话归档与 IO
+├── test_geochemistry_engine.py     # 引擎、模型同步、运行时默认值
+├── test_geochemistry_age_isochron.py
+├── test_geochemistry_source.py
+├── test_geochemistry_albarede.py   # AJ84 T–μ–κ 模型
+├── test_plotting_unit.py           # plotting 辅助函数
+├── test_plotting_kde.py
+├── test_rendering_helpers.py
+├── test_rendering_pipeline.py      # 渲染管线行为 (含事件同步)
+├── test_embedding_compute.py
+├── test_v1v2_embedding.py
+├── test_geochem_overlays.py        # 模型曲线/等时线/方程叠加
+├── test_export.py                  # 导出用例与导出面板
+├── test_legend.py                  # 图例显示/内联/样式
+├── test_styling.py                 # 样式与局部化行型
+├── test_selection.py               # 选择叠加、tooltip、置信椭圆
+├── test_ui_panels.py               # 面板构建
+├── test_ui_helpers.py              # 画布/事件辅助
+├── test_grouping.py
+├── test_label_layout_settings.py
+├── test_plugins.py                 # 插件管理/邻域/混合
+├── test_logger.py
+├── test_config.py
+└── test_guards.py                  # 守卫脚本自身 (含反例检测)
 ```
+
+**组织约定**（避免历史上出现过的碎片化）：
+
+1. **按子系统组织**，一个子系统一个模块（最多两个：行为测试 + 辅助函数单元测试）；
+   禁止"每个修复批次一个文件"的堆积方式——回归测试写进对应子系统的模块。
+2. 跨文件的辅助函数只放 `tests/guard_helpers.py` 或 `conftest.py`，不在各测试模块里重复定义。
+3. 公共测试环境（`sys.path`、`matplotlib.use("Agg")`、`QT_QPA_PLATFORM=offscreen`）只在
+   `conftest.py` 配置一次，测试模块内不再重复设置。
+4. 导入顺序同生产代码：stdlib → 第三方 → 项目模块，组间空行。
+5. `test_gateway_set_attr_compatibility.py` 被守卫脚本白名单按文件名引用，不得改名或合并。
+6. 涉及模型正确性的用例优先使用 `tests/data/isotope_benchmark.xlsx` 中的**真实数据 + 独立
+   参考值**（见 §16.8 的 AJ84 部分），自洽的合成往返只作为补充。
 
 ### 13.3 测试规则
 
 1. 修复 bug 必须提供回归测试或最小复现步骤。
 2. 算法逻辑优先单元测试，UI 逻辑优先集成测试或验收清单。
 3. 关键重构需提供性能与行为一致性说明。
+4. 重组/精简测试时，用 `pytest --collect-only` 的用例集合（或 AST 提取的测试函数名集合）
+   做前后比对，确保**用例零丢失**后再提交。
 
 ---
 

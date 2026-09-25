@@ -1,7 +1,5 @@
 """Tests for visualization.plotting.label_layout settings normalization."""
 
-from __future__ import annotations
-
 import matplotlib.pyplot as plt
 import pytest
 

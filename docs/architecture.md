@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~53,700 行 |
+| Python 代码总量 | ~53,500 行 |
 | 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
 | Python 文件数 | 301 个 |
 | 对话框数 | 15+ 个 |
@@ -92,7 +92,7 @@ Excel/CSV 文件
 | visualization/ | [docs/visualization.md](visualization.md) | 9,252 | 66 文件 |
 | utils/ | [docs/utils.md](utils.md) | 252 | |
 | plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
-| tests/ | - | 11,392 | 76 文件，505 用例 |
+| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 11,105 | 29 文件，505 用例（按子系统组织） |
 
 ---
 

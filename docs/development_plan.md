@@ -2,6 +2,18 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-09-10 · 测试套件整理精简）
+
+`tests/` 从 **74 个文件**（大量 1–3 用例的 `test_*_helpers.py` 碎片，外加一个按"修复批次"堆放的 `test_review_correctness_fixes.py`）重组为 **29 个按子系统划分的模块**，测试函数 424 个 / 505 用例**零丢失**。
+
+- **按主题合并**：plotting/rendering/embedding/geochem overlays/export/legend/styling/selection/ui/plugins/logger/guards/session/state-guards 各自归并为一个模块；`test_review_correctness_fixes.py` 的 12 个用例按主题拆入 selection(4)/export(2)/rendering_pipeline(3)/legend(1)/persistence(2) 后删除该文件。
+- **减重**：测试行数 11,450 → 11,105（去掉重复的 docstring/import/环境设置样板）；仓库 Python 总量 301 → 256 文件、53,721 → 53,484 行。
+- **公共环境集中**：`conftest.py` 统一 `sys.path`、`matplotlib.use("Agg")`、`QT_QPA_PLATFORM=offscreen`；各测试模块不再重复设置，`test_validate_test_dataset.py` 的冗余 sys.path 代码删除。
+- **导入规范化**：222 → 201 条 import（同模块 from-import 合并、去重、按 stdlib → 三方 → 项目分组排序），缩进/空行按仓库约定修正。
+- **合并中修掉的真实缺陷**：① `test_plotting_kde` 合并后 `kde_helpers` 被两个不同模块重复绑定而互相覆盖 → 改用 `plotting_kde`/`rendering_kde` 明确别名；② 搬移的用例缺少源文件的模块级 import（`pytest`/`numpy`）→ 按实际使用补齐。
+- **验证**：以 AST 提取的测试函数名集合比对 git HEAD 与合并结果（424 = 424，无丢失/无新增/无重名）；`pytest --collect-only` 505 用例不变；全量测试通过（exit 0）、5 个守护脚本 TOTAL=0、locale 检查 0。
+- **约定固化**：`docs/dev_conventions.md` §13.2 重写为真实目录树，并新增 6 条组织约定（一子系统一模块、禁止按修复批次建文件、公共环境只在 conftest、跨文件辅助函数只放 guard_helpers/conftest、白名单文件名不得改动、模型正确性优先用真实基准数据）；原 §13.2 列的测试文件早已不存在，一并更正。
+
 ## 阶段进展（2026-09-10 · 加入 Albarède & Juteau (1984) T–μ–κ 模型）
 
 起因：先按用户提供的 `Albarède et al. (2012), Archaeometry 54(5), 853-867` PDF（MinerU 解析 + 页面图像视觉复核）实现了 2012 版；随后核对 `reference/` 下的两个第三方项目后**改用 AJ84**：

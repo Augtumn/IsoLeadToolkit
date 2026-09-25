@@ -1,7 +1,5 @@
 """Tests for StateStore-backed gateway mutations."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from core import app_state, state_gateway
@@ -1687,7 +1685,6 @@ def test_restore_snapshot_ignores_metadata_keys_silently(caplog) -> None:
         })
         assert "session_version" not in caplog.text
         assert app_state.state_store.snapshot()["algorithm"] == "UMAP"
-
 
 
 def test_render_mode_listener_fires_on_dispatch() -> None:

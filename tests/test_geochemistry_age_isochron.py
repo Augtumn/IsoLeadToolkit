@@ -1,17 +1,13 @@
 """Regression tests for geochemistry age and isochron helpers."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 
-from data.geochemistry import age as age_module
-from data.geochemistry import engine
-from data.geochemistry import isochron as isochron_module
+from data.geochemistry import age as age_module, engine, isochron as isochron_module
 from data.geochemistry.isochron import (
-    calculate_paleoisochron_line,
     calculate_isochron1_growth_curve,
     calculate_isochron_age_from_slope,
+    calculate_paleoisochron_line,
     calculate_pbpb_age_from_ratio,
     calculate_source_kappa_from_slope,
     calculate_source_mu_from_isochron,

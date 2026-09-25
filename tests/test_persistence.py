@@ -1,7 +1,5 @@
 """Persistence facade tests: atomic I/O, autosave hook, restore, cache."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -270,3 +268,34 @@ def test_cache_drops_stale_signature(tmp_path: Path) -> None:
     fresh = EmbeddingCache(max_entries=8)
     assert load_cache(fresh, state, cache_file) == 1
     assert fresh.get(("embed", "UMAP", "{}", "all", stale_signature)) is None
+
+
+def test_immediate_save_actions_are_real_actions() -> None:
+    """Every immediate-save action name must exist as a dispatch action."""
+    import re
+    from pathlib import Path
+
+    from core.persistence import IMMEDIATE_SAVE_ACTIONS
+
+    repo_root = Path(__file__).resolve().parents[1]
+    handlers = (repo_root / "core" / "state" / "_dispatch_handlers.py").read_text(encoding="utf-8")
+    gateway = (repo_root / "core" / "state" / "gateway.py").read_text(encoding="utf-8")
+    known = set(re.findall(r'action_type == "([A-Z_]+)"', handlers))
+    known |= set(re.findall(r'_dispatch\("([A-Z_]+)"', gateway))
+    assert IMMEDIATE_SAVE_ACTIONS <= known, sorted(IMMEDIATE_SAVE_ACTIONS - known)
+
+
+def test_restore_snapshot_rolls_back_on_bad_value(caplog) -> None:
+    """A wrong-typed persisted value must not crash or corrupt the snapshot."""
+    import logging
+
+    from core import app_state
+
+    store = app_state.state_store
+    before = store.snapshot()
+    with caplog.at_level(logging.ERROR, logger="core.state.store"):
+        ok = store.restore_snapshot({"plot_dpi": "not-a-number"})
+    assert ok is False
+    assert "Failed to apply restored snapshot" in caplog.text
+    after = store.snapshot()
+    assert after["plot_dpi"] == before["plot_dpi"]

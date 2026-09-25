@@ -1,18 +1,16 @@
-"""Targeted rendering sub-function unit tests: scatter, KDE, geochem overlay, legend, title."""
-
-from __future__ import annotations
+"""Rendering pipeline behaviour tests (dispatch, rollback, embedding diagnostics, event sync)."""
 
 import matplotlib
-matplotlib.use("Agg")  # headless backend — no display required
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from core import app_state, state_gateway
+from visualization import events
 
 
 # ── State snapshot helpers (follow existing test conventions) ──────────
+
 
 def _snapshot_rendering_state() -> dict[str, object]:
     keys = [
@@ -67,6 +65,7 @@ def _make_test_df(n_samples: int = 10, n_groups: int = 3) -> pd.DataFrame:
 
 
 # ── Test 1: scatter rendering produces valid figure (via PCA) ───────────
+
 
 def test_render_scatter_produces_valid_figure():
     """plot_embedding with PCA on test data should produce a Figure with axes.
@@ -136,6 +135,7 @@ def test_render_scatter_with_umap_produces_valid_figure():
 
 # ── Test 2: KDE contour rendering handles edge cases ────────────────────
 
+
 def test_kde_rendering_handles_single_point():
     """KDE with single data point should not crash — verify import and callable."""
     from visualization.plotting.kde import clear_marginal_axes, draw_marginal_kde
@@ -145,6 +145,7 @@ def test_kde_rendering_handles_single_point():
 
 
 # ── Test 3: legend rendering produces handles or scatter collections ────
+
 
 def test_legend_rendering_after_embedding():
     """After plot_embedding, figure axes should have a legend or scatter output."""
@@ -180,6 +181,7 @@ def test_legend_rendering_after_embedding():
 
 # ── Test 4: title rendering applies correctly ───────────────────────────
 
+
 def test_plot_title_applies_to_figure():
     """Setting current_plot_title via gateway should be retrievable."""
     snapshot = _snapshot_rendering_state()
@@ -191,6 +193,7 @@ def test_plot_title_applies_to_figure():
 
 
 # ── Test 5: geochem overlay import chain works ──────────────────────────
+
 
 def test_geochem_overlay_imports():
     """All geochem overlay sub-modules should be importable."""
@@ -219,3 +222,125 @@ def test_geochem_overlay_imports():
     assert plumbotectonics_isoage is not None
     assert overlay_common is not None
     assert equation_overlays is not None
+
+
+class _DummyVar:
+    def __init__(self) -> None:
+        self.value = None
+        self.calls = 0
+
+    def set(self, value) -> None:
+        self.value = value
+        self.calls += 1
+
+
+class _DummyPanel:
+    def __init__(self, var: _DummyVar) -> None:
+        self.radio_vars = {"render_mode": var}
+
+
+def test_sync_render_mode_updates_state_and_panel_var() -> None:
+    original_mode = getattr(app_state, "render_mode", "2D")
+    original_panel = getattr(app_state, "control_panel_ref", None)
+    try:
+        state_gateway.set_render_mode("2D")
+        dummy_var = _DummyVar()
+        setattr(app_state, "control_panel_ref", _DummyPanel(dummy_var))
+
+        events._sync_render_mode("PCA")
+
+        assert app_state.render_mode == "PCA"
+        assert dummy_var.value == "PCA"
+        assert dummy_var.calls == 1
+    finally:
+        setattr(app_state, "control_panel_ref", original_panel)
+        state_gateway.set_render_mode(str(original_mode))
+
+
+def test_sync_render_mode_noop_when_mode_unchanged() -> None:
+    original_mode = getattr(app_state, "render_mode", "2D")
+    original_panel = getattr(app_state, "control_panel_ref", None)
+    try:
+        state_gateway.set_render_mode("2D")
+        dummy_var = _DummyVar()
+        setattr(app_state, "control_panel_ref", _DummyPanel(dummy_var))
+
+        events._sync_render_mode("2D")
+
+        assert app_state.render_mode == "2D"
+        assert dummy_var.calls == 0
+    finally:
+        setattr(app_state, "control_panel_ref", original_panel)
+        state_gateway.set_render_mode(str(original_mode))
+
+
+def test_precomputed_embedding_with_empty_meta_keeps_pca_diagnostics() -> None:
+    """Cache-hit renders must not wipe last_pca_variance/components."""
+    from core import app_state, state_gateway
+    from visualization.plotting.rendering.embedding import compute_ml
+
+    original = (
+        getattr(app_state, "last_pca_variance", None),
+        getattr(app_state, "last_pca_components", None),
+        list(getattr(app_state, "current_feature_names", []) or []),
+    )
+    try:
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=[0.5, 0.3],
+            last_pca_components=[[1.0, 0.0], [0.0, 1.0]],
+            current_feature_names=["a", "b"],
+        )
+        compute_ml.apply_precomputed_embedding(
+            "PCA", np.array([[0.0, 0.0], [1.0, 1.0]]), {}
+        )
+        assert list(app_state.last_pca_variance) == [0.5, 0.3]
+        assert list(app_state.current_feature_names) == ["a", "b"]
+    finally:
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=original[0],
+            last_pca_components=original[1],
+            current_feature_names=original[2],
+        )
+
+
+def test_precomputed_embedding_with_meta_updates_diagnostics() -> None:
+    from core import app_state, state_gateway
+    from visualization.plotting.rendering.embedding import compute_ml
+
+    original = (
+        getattr(app_state, "last_pca_variance", None),
+        getattr(app_state, "last_pca_components", None),
+        list(getattr(app_state, "current_feature_names", []) or []),
+    )
+    try:
+        compute_ml.apply_precomputed_embedding(
+            "PCA",
+            np.array([[0.0, 0.0], [1.0, 1.0]]),
+            {"last_pca_variance": [0.9, 0.1]},
+        )
+        assert list(app_state.last_pca_variance) == [0.9, 0.1]
+    finally:
+        state_gateway.set_pca_diagnostics(
+            last_pca_variance=original[0],
+            last_pca_components=original[1],
+            current_feature_names=original[2],
+        )
+
+
+def test_set_algorithm_updates_render_mode() -> None:
+    """set_algorithm must not be a silent no-op in embedding modes."""
+    from core import app_state, state_gateway
+
+    original = (
+        state_gateway.snapshot()["render_mode"],
+        state_gateway.snapshot()["algorithm"],
+    )
+    try:
+        state_gateway.set_algorithm("PCA")
+        assert app_state.algorithm == "PCA"
+        assert app_state.render_mode == "PCA"
+        state_gateway.set_render_mode("UMAP")
+        state_gateway.set_algorithm("tSNE")
+        assert app_state.render_mode == "tSNE"
+    finally:
+        state_gateway.set_render_mode(original[0])

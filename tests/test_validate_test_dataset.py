@@ -16,19 +16,12 @@ the SilverQuest_v1 galena database), so the T–μ–κ inversion is checked aga
 measured ore compositions rather than synthetic round-trips.
 """
 
-from __future__ import annotations
-
 import argparse
 from pathlib import Path
-import sys
 
 import numpy as np
 import pandas as pd
 import pytest
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 from data.geochemistry import calculate_albarede_parameters, calculate_all_parameters, engine
 

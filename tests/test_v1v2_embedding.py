@@ -1,7 +1,5 @@
 """Tests for V1V2 embedding computation with missing-data handling."""
 
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 
@@ -9,9 +7,7 @@ from core import app_state, state_gateway
 from visualization.plotting.rendering.embedding.compute_geochem import (
     compute_v1v2_embedding,
 )
-from visualization.plotting.rendering.embedding.dataframe import (
-    prepare_plot_dataframe,
-)
+from visualization.plotting.rendering.embedding.dataframe import prepare_plot_dataframe
 
 
 def _setup_df_with_nan(n_nan_rows: int = 1) -> pd.DataFrame:

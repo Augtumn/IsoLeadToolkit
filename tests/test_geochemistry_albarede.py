@@ -17,8 +17,6 @@ slope), ``age`` (model age), ``source`` (Δμ/μ, Δκ/κ) and the package facad
 (one-call inversion).
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from scipy import optimize
@@ -52,6 +50,7 @@ from data.geochemistry import (
     calculate_modelcurve,
     engine,
 )
+
 
 _MODEL = "Albarède & Juteau (1984)"
 _DEFAULT_MODEL = "Stacey & Kramers (2nd Stage)"
