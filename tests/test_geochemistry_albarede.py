@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from scipy import optimize
 
 from data.geochemistry import (
+    ALBAREDE_AGE_SENSITIVITY_KEY,
     ALBAREDE_DELTA_KAPPA_KEY,
     ALBAREDE_DELTA_MU_KEY,
     ALBAREDE_KAPPA_KEY,
@@ -31,6 +33,7 @@ from data.geochemistry import (
     ALBAREDE_Z_STAR,
     PRESET_MODELS,
     albarede_model_age_residual,
+    calculate_albarede_age_sensitivity,
     calculate_albarede_delta_kappa,
     calculate_albarede_delta_mu,
     calculate_albarede_kappa,
@@ -191,6 +194,7 @@ def test_roundtrip_through_the_public_parameter_dict() -> None:
         ALBAREDE_OMEGA_KEY,
         ALBAREDE_DELTA_MU_KEY,
         ALBAREDE_DELTA_KAPPA_KEY,
+        ALBAREDE_AGE_SENSITIVITY_KEY,
     }
     np.testing.assert_allclose(result[ALBAREDE_T_MODEL_KEY], [120.0, 750.0], atol=1e-4)
     np.testing.assert_allclose(result[ALBAREDE_MU_KEY], [9.80, 9.55], rtol=1e-9)
@@ -202,11 +206,49 @@ def test_roundtrip_through_the_public_parameter_dict() -> None:
     np.testing.assert_allclose(
         result[ALBAREDE_DELTA_KAPPA_KEY], result[ALBAREDE_KAPPA_KEY] - ALBAREDE_KAPPA_STAR
     )
+    assert np.isfinite(result[ALBAREDE_AGE_SENSITIVITY_KEY]).all()
+
+
+# --------------------------------------------------------- error propagation
+def test_age_sensitivity_matches_finite_difference_on_t0() -> None:
+    """式 (16) 的解析灵敏度必须等于"扰动 T0 后重解式 (12)"的数值导数。
+
+    这是对 (16) 读法 (λ'/λ 与 137.88 的位置) 的独立验证: 只用到式 (12) 的
+    求解器, 不依赖 (16) 本身的实现。
+    """
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+    t_true = 300.0
+    x, y, _z = _forward_sample(t_true, 9.90, 4.05, params)
+
+    age = float(calculate_albarede_model_age(x, y, params))
+    mu = float(calculate_albarede_mu(x, y, age, params))
+    analytic = float(calculate_albarede_age_sensitivity(age, mu - ALBAREDE_MU_STAR, mu, params))
+
+    def solve_with_t0(t0_years: float) -> float:
+        def residual(t_years: float) -> float:
+            dx = x - ALBAREDE_X_STAR
+            s_t0_t = calculate_model_slope(t0_years, t_years, params)
+            s_t_0 = calculate_model_slope(t_years, 0.0, params)
+            return (
+                (y - ALBAREDE_Y_STAR) / dx
+                - s_t0_t
+                - (ALBAREDE_MU_STAR * (np.exp(params["lambda_238"] * t_years) - 1.0) / dx)
+                * (s_t0_t - s_t_0)
+            )
+
+        return float(optimize.brentq(residual, 0.0, t0_years, xtol=1e-6))
+
+    step = 1.0e6  # 1 Ma, 以年为单位
+    numeric = (solve_with_t0(ALBAREDE_T0 + step) - solve_with_t0(ALBAREDE_T0)) / step
+
+    assert numeric != 0.0
+    assert analytic == pytest.approx(numeric, rel=1e-3)
 
 
 # --------------------------------------- printed-form defects (paper typos)
 # 论文 p.857 式 (12) 与 p.858 式 (15) 的印刷版式无法与式 (11)/(14) 自洽;
-# 以下两例把这一判断钉成回归测试 (排版已用 MinerU 页面图像复核), 防止有人
+# 以下两例把这一判断钉成回归测试 (排版已用 MinerU 页面图像放大复核), 防止有人
 # 按印刷版"修正"实现。
 
 def test_printed_equation_12_lambda_prime_cannot_reproduce_the_model_age() -> None:

@@ -387,3 +387,55 @@ def calculate_albarede_model_age(
     return np.array(ages, dtype=float).reshape(x.shape)
 
 
+def calculate_albarede_age_sensitivity(
+    t_Ma: np.ndarray | float | None,
+    delta_mu: np.ndarray | float,
+    mu_value: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray | float:
+    """
+    Albarède et al. (2012) 误差传播 dT_i/dT_0 — 式 (16)
+
+    参考模型 T0 的选择对模式年龄的影响 (无量纲):
+
+        dT_i = (Δμ_i/μ_i) · [λ'e^{λ'T0} − 137.88 λ s(T0,T_i) e^{λT0}]
+                          / [λ'e^{λ'T_i} − 137.88 λ s(T0,T_i) e^{λT_i}] · dT0
+
+    (分子/分母的 137.88 = 1/U_ratio; 指数以"年"为量纲。)
+
+    Args:
+        t_Ma: 模式年龄 T_i (Ma), 由 calculate_albarede_model_age 得到
+        delta_mu: Δμ_i = μ_i − μ* (由 calculate_albarede_delta_mu 得到)
+        mu_value: μ_i
+        params: 参数字典 (可选)
+
+    Returns:
+        np.ndarray or float: dT_i/dT_0; μ_i 无效时为 NaN
+    """
+    if params is None:
+        params = engine.params
+
+    l238 = float(params['lambda_238'])
+    l235 = float(params['lambda_235'])
+    u8u5 = 1.0 / float(params['U_ratio'])
+
+    # Ma → 年 (None/NaN 保留为 NaN), 与非负夹紧一致于其他年龄入口。
+    t_years = np.maximum(np.asarray(t_Ma, dtype=float), 0.0) * 1e6
+
+    delta_mu_arr = np.asarray(delta_mu, dtype=float)
+    mu_arr = np.asarray(mu_value, dtype=float)
+    mu_safe = np.where(np.abs(mu_arr) < EPSILON, np.copysign(EPSILON, mu_arr), mu_arr)
+
+    s_t0_t = calculate_model_slope(ALBAREDE_T0, t_years, params)
+    numerator = l235 * np.exp(l235 * ALBAREDE_T0) - u8u5 * l238 * s_t0_t * np.exp(l238 * ALBAREDE_T0)
+    denominator = l235 * np.exp(l235 * t_years) - u8u5 * l238 * s_t0_t * np.exp(l238 * t_years)
+    denominator = np.where(
+        np.abs(denominator) < EPSILON, np.copysign(EPSILON, denominator), denominator
+    )
+
+    result = (delta_mu_arr / mu_safe) * numerator / denominator
+    if np.ndim(result) == 0:
+        return float(result)
+    return result
+
+

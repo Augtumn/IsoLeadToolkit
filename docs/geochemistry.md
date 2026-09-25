@@ -1007,6 +1007,7 @@ calculate_all_parameters(Pb206, Pb207, Pb208, t_Ma=None, a=None, b=None, c=None)
 | `calculate_model_slope` | `engine` | T0, T (年) | s(T0, T) — 式 (4) |
 | `calculate_albarede_model_age` | `age` | 206/204, 207/204 | T_i (Ma)；无解 → NaN / None |
 | `albarede_model_age_residual` | `age` | T_i, 206/204, 207/204 | 式 (12) 残差 |
+| `calculate_albarede_age_sensitivity` | `age` | T_i, Δμ_i, μ_i | 式 (16) dT_i/dT_0 (无量纲) |
 | `calculate_albarede_delta_mu` | `source` | 206/204, 207/204, T_i | Δμ_i = μ_i − μ\* |
 | `calculate_albarede_mu` | `source` | 同上 | μ_i = 238U/204Pb |
 | `calculate_albarede_delta_kappa` | `source` | 206/204, 208/204, T_i, μ_i | Δκ_i = κ_i − κ\* |
@@ -1016,7 +1017,8 @@ calculate_all_parameters(Pb206, Pb207, Pb208, t_Ma=None, a=None, b=None, c=None)
 ```python
 calculate_albarede_parameters(Pb206, Pb207, Pb208)
 → {'t_Albarede (Ma)': T_i, 'mu_Albarede': μ, 'kappa_Albarede': κ,
-   'omega_Albarede': μ·κ, 'Delta_mu_Albarede': Δμ, 'Delta_kappa_Albarede': Δκ}
+   'omega_Albarede': μ·κ, 'Delta_mu_Albarede': Δμ, 'Delta_kappa_Albarede': Δκ,
+   'dT_dT0_Albarede': dT_i/dT_0}
 ```
 
 该入口独立于 `calculate_all_parameters()`：两者的参考组成与年龄口径不同（PbIso 系列
@@ -1240,7 +1242,22 @@ T_i = 300 Ma、μ_i = 9.90、κ_i = 4.05 正演得到的合成样品，
 即式 (15) **对一般样品没有不动点解**，只有 `Δκ_i^true + 2κ* Δμ_i/μ_i = 0` 的特殊样品
 才成立。本实现按式 (14) 的代数正确重排（上表公式），正演–反演往返测试覆盖。
 
-### 16.6 与 PbIso 口径反演的区别
+### 16.6 误差传播 (论文式 16)
+
+参考模型 T0 的选择对模式年龄的影响：
+
+```
+dT_i = (Δμ_i/μ_i) · [λ'e^{λ'T₀} − 137.88·λ·s(T₀,T_i)·e^{λT₀}]
+                  / [λ'e^{λ'T_i} − 137.88·λ·s(T₀,T_i)·e^{λT_i}] · dT₀
+```
+
+实现 `calculate_albarede_age_sensitivity()`（返回无量纲的 dT_i/dT_0）。
+验证方式：与"把 T0 扰动 1 Ma 后重解式 (12)"的数值导数对比——对由
+T_i = 300 Ma、μ_i = 9.90 正演的样品，解析值 −0.104997 vs 数值 −0.104960
+（相对差 3.5 × 10⁻⁴，即差分截断误差量级）。这也印证论文的说法：T0 的选择
+只带来约 10% 的模式年龄漂移。
+
+### 16.7 与 PbIso 口径反演的区别
 
 | | PbIso 口径 (§7) | Albarède et al. (2012) |
 |---|---|---|
@@ -1254,7 +1271,7 @@ T_i = 300 Ma、μ_i = 9.90、κ_i = 4.05 正演得到的合成样品，
 仍由既有管线按该预设的标准字段计算（参考组成已换成 x\*/y\*/z\* 反推的原始铅），
 与 §16.5 的论文口径反演结果互为交叉验证。
 
-### 16.7 示例 (合成数据往返)
+### 16.8 示例 (合成数据往返)
 
 ```python
 from data.geochemistry import calculate_albarede_parameters, engine

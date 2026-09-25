@@ -48,6 +48,7 @@ from .age import (
     calculate_single_stage_age,
     calculate_two_stage_age,
     calculate_albarede_model_age,
+    calculate_albarede_age_sensitivity,
     albarede_model_age_residual,
 )
 from .source import (
@@ -322,6 +323,8 @@ ALBAREDE_KAPPA_KEY = 'kappa_Albarede'
 ALBAREDE_OMEGA_KEY = 'omega_Albarede'
 ALBAREDE_DELTA_MU_KEY = 'Delta_mu_Albarede'
 ALBAREDE_DELTA_KAPPA_KEY = 'Delta_kappa_Albarede'
+#: 式 (16): dT_i/dT_0 (无量纲), 参考模型 T0 选择对模式年龄的灵敏度
+ALBAREDE_AGE_SENSITIVITY_KEY = 'dT_dT0_Albarede'
 
 
 def calculate_albarede_parameters(
@@ -334,14 +337,14 @@ def calculate_albarede_parameters(
     Albarède et al. (2012) T–μ–κ 一站式反演
 
     先由式 (12) 自解模式年龄 T_i, 再按式 (11)/(14) 求 Δμ_i/μ_i 与 Δκ_i/κ_i
-    (ω_i = μ_i·κ_i)。无解样品为 NaN。
+    (ω_i = μ_i·κ_i), 并按式 (16) 给出 dT_i/dT_0。无解样品为 NaN。
 
     Args:
         Pb206_204_S, Pb207_204_S, Pb208_204_S: 样品 206/204、207/204、208/204
         params: 参数字典 (可选)
 
     Returns:
-        dict: 键为 ALBAREDE_*_KEY 常量 (T_i, μ, κ, ω, Δμ, Δκ)
+        dict: 键为 ALBAREDE_*_KEY 常量 (T_i, μ, κ, ω, Δμ, Δκ, dT/dT0)
     """
     if params is None:
         params = engine.params
@@ -352,14 +355,16 @@ def calculate_albarede_parameters(
 
     mu = calculate_albarede_mu(Pb206_204_S, Pb207_204_S, age, params)
     kappa = calculate_albarede_kappa(Pb206_204_S, Pb208_204_S, age, mu, params)
+    delta_mu = mu - ALBAREDE_MU_STAR
 
     return {
         ALBAREDE_T_MODEL_KEY: age,
         ALBAREDE_MU_KEY: mu,
         ALBAREDE_KAPPA_KEY: kappa,
         ALBAREDE_OMEGA_KEY: mu * kappa,
-        ALBAREDE_DELTA_MU_KEY: mu - ALBAREDE_MU_STAR,
+        ALBAREDE_DELTA_MU_KEY: delta_mu,
         ALBAREDE_DELTA_KAPPA_KEY: kappa - ALBAREDE_KAPPA_STAR,
+        ALBAREDE_AGE_SENSITIVITY_KEY: calculate_albarede_age_sensitivity(age, delta_mu, mu, params),
     }
 
 __all__ = [
@@ -405,6 +410,7 @@ __all__ = [
     'calculate_deltas',
     'calculate_v1v2_coordinates',
     'calculate_albarede_model_age',
+    'calculate_albarede_age_sensitivity',
     'albarede_model_age_residual',
     'calculate_albarede_mu',
     'calculate_albarede_delta_mu',
@@ -417,6 +423,7 @@ __all__ = [
     'ALBAREDE_OMEGA_KEY',
     'ALBAREDE_DELTA_MU_KEY',
     'ALBAREDE_DELTA_KAPPA_KEY',
+    'ALBAREDE_AGE_SENSITIVITY_KEY',
     'calculate_paleoisochron_line',
     'calculate_isochron1_growth_curve',
     'calculate_isochron2_growth_curve',

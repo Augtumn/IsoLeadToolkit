@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~53,400 行 |
+| Python 代码总量 | ~53,600 行 |
 | 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
 | Python 文件数 | 301 个 |
 | 对话框数 | 15+ 个 |
@@ -86,13 +86,13 @@ Excel/CSV 文件
 | 模块 | 文档路径 | 行数（2026-09 实测，含空行） | 备注 |
 |------|----------|------|------|
 | core/ | — | 6,871 | 含 state/ 子包（store 829, gateway 893, app_state 899, _normalizers 537, _views 326, _compat_builders 332, _dispatch_handlers 838, bootstrap 227）、persistence/、session/ |
-| data/ | [docs/data.md](data.md) | 2,535 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède et al. (2012) T–μ–κ 模型 |
+| data/ | [docs/data.md](data.md) | 2,607 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède et al. (2012) T–μ–κ 模型 |
 | ui/ | [docs/ui.md](ui.md) | 17,121 | 85 文件 |
 | application/ | [docs/export.md](export.md) | 2,829 | 用例层（13 use cases） |
 | visualization/ | [docs/visualization.md](visualization.md) | 9,252 | 66 文件 |
 | utils/ | [docs/utils.md](utils.md) | 252 | |
 | plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
-| tests/ | - | 11,212 | 76 文件，497 用例 |
+| tests/ | - | 11,314 | 76 文件，500 用例 |
 
 ---
 

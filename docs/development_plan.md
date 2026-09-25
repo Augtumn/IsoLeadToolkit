@@ -7,10 +7,11 @@
 按 `Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867`（本地 PDF，MinerU 解析）实现论文的 T–μ–κ 方法。**只走既有扩展点**，未改动共享架构：
 
 - **预设（engine.py）**：新增 `Albarède et al. (2012)` 一条**标准字段**预设（age_model/T1/T2/Tsec、a0/a1…、mu_M、omega_M），无新增参数键；参考常量 `ALBAREDE_T0/X_STAR/Y_STAR/Z_STAR/MU_STAR/KAPPA_STAR/OMEGA_STAR` 与反推原始铅 `ALBAREDE_X0/Y0/Z0`（使模板曲线在 t=0 恰好通过 x\*/y\*/z\*）随该节常量放置。模型选择、曲线绘制、`t_Model/mu_model/kappa_model` 全部由既有管线产出。
-- **模式年龄（age.py）**：论文式 (12) 的残差 `albarede_model_age_residual()` 与求解器 `calculate_albarede_model_age()`——端点括根 + 区间扫描，区间 (0, T0)，无解返回 NaN/None。
+- **模式年龄（age.py）**：论文式 (12) 的残差 `albarede_model_age_residual()`、求解器 `calculate_albarede_model_age()`（端点括根 + 区间扫描，区间 (0, T0)，无解返回 NaN/None）与式 (16) 误差传播 `calculate_albarede_age_sensitivity()`。
 - **源区反演（source.py）**：式 (11) 的 `calculate_albarede_delta_mu/mu`、式 (14) 的 `calculate_albarede_delta_kappa/kappa`（相对现代上地壳参考的 Δμ/Δκ）。
 - **曲线斜率（engine.py）**：式 (4) 的 `calculate_model_slope()`，T=T0 的 0/0 返回洛必达切线极限。
-- **集成入口（`__init__.py`）**：`calculate_albarede_parameters()` 一站式返回 T/μ/κ/ω/Δμ/Δκ（键名常量化）；**刻意不并入** `calculate_all_parameters()`——两者参考组成与年龄口径不同，混在同一字典会让下游误用错参考。
+- **集成入口（`__init__.py`）**：`calculate_albarede_parameters()` 一站式返回 T/μ/κ/ω/Δμ/Δκ/dT_dT0（键名常量化）；**刻意不并入** `calculate_all_parameters()`——两者参考组成与年龄口径不同，混在同一字典会让下游误用错参考。
+- **印刷版缺陷（视觉复核 + 数值钉死）**：用 MinerU 页面图像 3× 放大核对原刊排版，确认 p.857 式 (12) 分子确为 `e^{λ'T_i}−1`（²³⁵U）、p.858 式 (15) 右端仍含 `μ_iΔκ_i`。(12) 代入 T_i=300 Ma 正演样品得 f=+6.62、根≈47.6 Ma（与式 (11) 矛盾），(15) 则因 Δκ_i 相消而一般无不动点解；实现取与 (11)/(14) 自洽的等价形式，并新增两例回归测试防止按印刷版"改回去"。
 - **测试**：`tests/test_geochemistry_albarede.py` 17 例——已知 (T_i, μ_i, κ_i) 正演→反演往返、式 (4)/(12) 校验、数组/NaN/奇异样本/模型族外样本退化、预设只含标准字段。全套测试通过、守护脚本 TOTAL=0。
 - **文档**：`docs/geochemistry.md` 新增 §16（建模思路/参考模型/式 4、11、12、14/与 PbIso 口径对照/示例）并更新 §2 预设表与 §14 API 速查；`docs/data.md` 预设表补该模型并写明"新增模型只加标准字段预设"的约定。
 - **未做（有意）**：不把 T–μ–κ 列加入导出列清单、不在 `calculate_all_parameters` 内做模型分支、不向 `engine.params` 增加模型专属键——避免为单一模型改动共享管线；如需在导出/界面直接展示论文口径 Δμ/Δκ，应作为独立需求评估。
