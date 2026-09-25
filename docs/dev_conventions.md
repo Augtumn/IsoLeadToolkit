@@ -878,12 +878,12 @@ def calculate_single_stage_age(
 
 ```python
 # ✅ 正确
-panel = getattr(app_state, 'control_panel_ref', None)
+panel = getattr(app_state, 'overlay_artists', None)
 if panel is None:
     return
 
 # ❌ 禁止
-panel = app_state.control_panel_ref  # 可能抛 AttributeError
+panel = app_state.overlay_artists  # 字段始终存在，直接读取
 ```
 
 ### 11.3 安全回调执行

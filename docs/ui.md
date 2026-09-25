@@ -243,7 +243,7 @@ ui/
     │   └── dialogs/       # 该段专属对话框（导入流程、2D/3D/三元、tooltip…）
     ├── display/           # panel.py + build.py + themes.py + helpers.py + dialogs/
     ├── geochemistry/      # panel.py（模型参数）+ overlays.py（叠加开关）+ overlays_build.py + dialogs/
-    ├── analysis/          # panel.py + build/selection/diagnostics/equations/kde_style/mixing/ml + dialogs/
+    ├── analysis/          # panel.py + build/selection/diagnostics/equations/mixing/ml + dialogs/
     ├── export/            # panel.py + build/common/data_export/image_export/origin_export
     └── legend/            # panel.py + build/editors/actions
 ```
@@ -380,9 +380,9 @@ def _delete_theme(self)   # 删除已保存主题
 - `panels/display/themes.py`：主题保存/加载/删除、自动布局与 UI 主题切换。
 
 ### AnalysisPanel
-- KDE、选择工具、分析/混合/端元/ML
+- 选择工具、方程叠加、分析/混合/端元/ML（KDE 样式已归 Display 段）
 - 选择状态同步与配置对话框
-- 使用 `QToolBox` 折叠分区：KDE、方程叠加、选择工具、数据分析、子集分析、混合、端元识别、ML、置信椭圆
+- 使用 `QToolBox` 折叠分区：方程叠加、选择工具、数据分析、子集分析、混合、端元识别、ML、置信椭圆
 
 模块拆分说明（2026-04）:
 - `panels/analysis/panel.py` 仅保留 `AnalysisPanel` 组装类与 `PANEL_META`。
@@ -390,7 +390,7 @@ def _delete_theme(self)   # 删除已保存主题
 - `panels/analysis/build.py`：分析页 `QToolBox` 构建与控件初始化。
 - `panels/analysis/diagnostics.py`：相关性热图、轴相关、Shepard 图入口。
 - `panels/analysis/selection.py`：选择工具、tooltip、置信区间切换。
-- `panels/analysis/equations.py`：KDE 与方程叠加管理、样式对话框。
+- `panels/analysis/equations.py`：自定义方程叠加管理；KDE 曲线样式在 `panels/display/kde_style.py`（画布页由 `panels/display/kde_build.py` 构建）。
 - `panels/analysis/mixing.py`：混合组、端元、溯源 ML 与状态文案。
 
 ### ExportPanel
