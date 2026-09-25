@@ -201,7 +201,6 @@ class MainWindowLegendActionsMixin:
                 state_gateway.set_selected_isochron_data(None)
                 state_gateway.set_isochron_results({})
 
-            self._sync_geochem_toggle_panels(style_key)
             self._refresh_plot()
             return
         attr = OVERLAY_TOGGLE_MAP.get(style_key)
@@ -212,7 +211,6 @@ class MainWindowLegendActionsMixin:
             state_gateway.set_selected_isochron_data(None)
             state_gateway.set_isochron_results({})
 
-        self._sync_geochem_toggle_panels(style_key)
         self._refresh_plot()
 
     def _on_legend_item_double_clicked(self, item):
@@ -280,7 +278,6 @@ class MainWindowLegendActionsMixin:
                         app_state.fig.canvas.draw_idle()
                 except Exception as exc:
                     logger.warning("Failed to update color for %s: %s", group, exc)
-            self._sync_legend_panel_ui(refresh=True)
 
     def _set_group_shape_value(self, group, marker_value, swatch):
         self._ensure_marker_shape_map()
@@ -290,7 +287,6 @@ class MainWindowLegendActionsMixin:
         palette = dict(getattr(app_state, "current_palette", {}) or {})
         state_gateway.set_palette_and_marker_map(palette, updated_marker_map)
         self._update_marker_swatch(group, swatch)
-        self._sync_legend_panel_ui(refresh=True)
         self._refresh_plot()
 
     def _show_color_shape_menu(self, group, swatch):
@@ -622,7 +618,6 @@ class MainWindowLegendActionsMixin:
         else:
             state_gateway.set_visible_groups(sorted(current_visible))
 
-        self._sync_legend_panel_ui()
         self._refresh_plot()
 
     def _bring_to_front(self, group):

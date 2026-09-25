@@ -269,7 +269,6 @@ def test_confidence_ellipse_uses_tracked_confidence_level() -> None:
             selection_overlay.refresh_selection_overlay_state(
                 state=state,
                 state_write=_StateWrite(),
-                notify_selection_ui=lambda: None,
             )
         finally:
             selection_overlay.draw_confidence_ellipse = original_draw

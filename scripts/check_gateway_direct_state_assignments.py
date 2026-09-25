@@ -15,7 +15,6 @@ ALLOWED_DIRECT_FIELDS = {
     "ax",
     "canvas",
     "legend_ax",
-    "control_panel_ref",
     "legend_update_callback",
     "embedding_progress_callback",
     "group_marker_map",

@@ -30,7 +30,6 @@ class RenderPlotUseCase:
         plot_3d_data: Callable[..., bool],
         refresh_selection_overlay: Callable[[], None],
         sync_selection_tools: Callable[[], None],
-        notify_selection_ui: Callable[[], None],
         disable_rectangle_selector: Callable[[], None],
         state_write: Any = state_gateway,
     ) -> None:
@@ -47,7 +46,6 @@ class RenderPlotUseCase:
         self._plot_3d_data = plot_3d_data
         self._refresh_selection_overlay = refresh_selection_overlay
         self._sync_selection_tools = sync_selection_tools
-        self._notify_selection_ui = notify_selection_ui
         self._disable_rectangle_selector = disable_rectangle_selector
 
     def execute(self) -> None:
@@ -89,7 +87,6 @@ class RenderPlotUseCase:
             logger.debug("Plot rendered successfully, calling draw_idle")
             self._refresh_selection_overlay()
             self._sync_selection_tools()
-            self._notify_selection_ui()
             try:
                 self._state.fig.canvas.draw_idle()
                 self._state.fig.canvas.flush_events()
@@ -197,7 +194,6 @@ class RenderPlotUseCase:
                 self._state_write.disable_selection_mode()
                 self._disable_rectangle_selector()
                 self._refresh_selection_overlay()
-                self._notify_selection_ui()
                 logger.info("Selection mode automatically disabled for 3D view.")
             if len(selected_columns_3d) != 3:
                 logger.warning("Invalid 3D column selection; skipping plot")
@@ -257,7 +253,6 @@ class RenderPlotUseCase:
         if fallback_ok:
             self._refresh_selection_overlay()
             self._sync_selection_tools()
-            self._notify_selection_ui()
             try:
                 self._state.fig.canvas.draw_idle()
                 self._state.fig.canvas.flush_events()

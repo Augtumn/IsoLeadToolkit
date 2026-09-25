@@ -374,9 +374,6 @@ class AppStateGateway:
     def set_paleo_label_refreshing(self, refreshing: bool) -> None:
         self._dispatch("SET_PALEO_LABEL_REFRESHING", refreshing=bool(refreshing))
 
-    def set_control_panel_ref(self, panel: Any) -> None:
-        self._state.control_panel_ref = panel
-
     def set_confidence_level(self, level: float) -> None:
         self._dispatch("SET_CONFIDENCE_LEVEL", level=float(level))
 

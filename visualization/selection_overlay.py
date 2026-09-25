@@ -90,7 +90,6 @@ def refresh_selection_overlay_state(
     *,
     state: Any,
     state_write: Any,
-    notify_selection_ui: Any,
 ) -> None:
     """Refresh selection overlay artists for current state."""
     try:
@@ -101,7 +100,6 @@ def refresh_selection_overlay_state(
                 except Exception:
                     pass
                 state_write.set_selection_overlay(None)
-            notify_selection_ui()
             return
 
         if state.selection_overlay is not None:
@@ -121,7 +119,6 @@ def refresh_selection_overlay_state(
         valid_indices = [idx for idx in state.selected_indices if idx in state.sample_coordinates]
         if not valid_indices:
             state.fig.canvas.draw_idle()
-            notify_selection_ui()
             return
 
         current_xlim = state.ax.get_xlim()
@@ -180,6 +177,5 @@ def refresh_selection_overlay_state(
         state.ax.set_ylim(current_ylim)
 
         state.fig.canvas.draw_idle()
-        notify_selection_ui()
     except Exception as err:
         logger.warning("Unable to refresh selection overlay: %s", err)

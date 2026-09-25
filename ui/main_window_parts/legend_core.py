@@ -280,50 +280,6 @@ class MainWindowLegendCoreMixin:
             return bool(getattr(app_state, "show_isochrons", False) or getattr(app_state, "selected_isochron_data", None))
         return True
 
-    def _sync_geochem_toggle_panels(self, style_key):
-        panel = getattr(app_state, "control_panel_ref", None)
-        data_panel = getattr(panel, "data_panel", None) if panel is not None else None
-        if data_panel is None:
-            return
-        try:
-            if style_key == "model_curve":
-                data_panel._sync_geochem_toggle_widgets(
-                    app_state.show_model_curves,
-                    getattr(data_panel, "modeling_show_model_check", None),
-                    getattr(data_panel, "show_model_check", None),
-                )
-            elif style_key == "plumbotectonics_curve":
-                data_panel._sync_geochem_toggle_widgets(
-                    app_state.show_plumbotectonics_curves,
-                    getattr(data_panel, "modeling_show_plumbotectonics_check", None),
-                )
-            elif style_key == "paleoisochron":
-                data_panel._sync_geochem_toggle_widgets(
-                    app_state.show_paleoisochrons,
-                    getattr(data_panel, "modeling_show_paleoisochron_check", None),
-                    getattr(data_panel, "show_paleoisochron_check", None),
-                )
-            elif style_key == "model_age_line":
-                data_panel._sync_geochem_toggle_widgets(
-                    app_state.show_model_age_lines,
-                    getattr(data_panel, "modeling_show_model_age_check", None),
-                    getattr(data_panel, "show_model_age_check", None),
-                )
-            elif style_key == "isochron":
-                data_panel._sync_geochem_toggle_widgets(
-                    app_state.show_isochrons,
-                    getattr(data_panel, "modeling_show_isochron_check", None),
-                    getattr(data_panel, "show_isochron_check", None),
-                )
-                if hasattr(data_panel, "_update_isochron_btn_text"):
-                    data_panel._update_isochron_btn_text()
-            elif style_key == "growth_curve":
-                data_panel._sync_geochem_toggle_widgets(
-                    app_state.show_growth_curves,
-                    getattr(data_panel, "modeling_show_growth_curve_check", None),
-                )
-        except Exception:
-            pass
 
     def _update_marker_swatch(self, group, swatch):
         from visualization.plotting.grouping import resolve_group_marker
@@ -336,14 +292,3 @@ class MainWindowLegendCoreMixin:
         swatch.setProperty("keepStyle", True)  # survive _NativeStyleFilter
         swatch.setStyleSheet("border: 1px solid #111827; border-radius: 3px; background: transparent;")
 
-    def _sync_legend_panel_ui(self, refresh=False):
-        panel = getattr(app_state, "control_panel_ref", None)
-        if panel is None or not hasattr(panel, "legend_checkboxes"):
-            return
-        try:
-            if refresh and hasattr(panel, "_update_group_list"):
-                panel._update_group_list()
-            elif hasattr(panel, "sync_legend_ui"):
-                panel.sync_legend_ui()
-        except Exception:
-            pass

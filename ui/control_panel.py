@@ -147,7 +147,6 @@ def create_section_dialog(
         dialog.setWindowTitle(new_title)
 
     def _on_show(_event):
-        state_gateway.set_control_panel_ref(panel)
         try:
             if hasattr(panel, 'update_selection_controls'):
                 panel.update_selection_controls()
@@ -169,8 +168,6 @@ def create_section_dialog(
         QTimer.singleShot(0, _try_lightweight_update)
 
     def _on_close(_event):
-        if getattr(app_state, 'control_panel_ref', None) is panel:
-            state_gateway.set_control_panel_ref(None)
         listeners = getattr(app_state, 'language_listeners', [])
         if _on_language_refresh in listeners:
             listeners.remove(_on_language_refresh)

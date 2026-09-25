@@ -76,12 +76,6 @@ class Qt5AppPlottingMixin:
         logger.info("Plot figure created.")
         plt.ion()
 
-    def _setup_control_panel(self):
-        """Disable legacy control panel references in menu-driven UI mode."""
-        logger.info("Control panel disabled; using top menu dialogs.")
-        if hasattr(self, "control_panel"):
-            self.control_panel = None
-        state_gateway.set_control_panel_ref(None)
 
     def _connect_event_handlers(self):
         """Connect interactive matplotlib handlers."""

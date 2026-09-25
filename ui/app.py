@@ -176,9 +176,6 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
                 pass
             self.main_window.set_matplotlib_figure(app_state.fig)
 
-            # 设置控制面板
-            self._setup_control_panel()
-
             # 连接事件处理器
             self._connect_event_handlers()
 

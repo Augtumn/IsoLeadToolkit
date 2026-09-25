@@ -140,8 +140,6 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.sample_index_map = {}
     state.annotation = None
     state.exported_indices = set()
-    state.control_panel_button = None
-    state.control_panel_ref = None
     state.initial_render_done = False
 
     # Tooltip configuration

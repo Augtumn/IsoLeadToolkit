@@ -12,7 +12,6 @@ from .shared import (
     SELECTION_USE_CASE,
     app_state,
     logger,
-    notify_selection_ui,
     state_gateway,
 )
 
@@ -159,7 +158,6 @@ def _handle_rectangle_select(eclick: Any, erelease: Any) -> None:
             logger.info('Selected %d samples via box selection.', len(indices_in_box))
 
         refresh_selection_overlay()
-        notify_selection_ui()
         refresh_isochron_after_selection()
     except Exception as err:
         logger.warning('Rectangle selection failed: %s', err)
@@ -190,7 +188,6 @@ def _handle_lasso_select(vertices: Any) -> None:
             logger.info('Selected %d samples via custom shape.', len(indices_in_shape))
 
         refresh_selection_overlay()
-        notify_selection_ui()
         refresh_isochron_after_selection()
     except Exception as err:
         logger.warning('Custom shape selection failed: %s', err)
@@ -238,7 +235,6 @@ def toggle_selection_mode(tool_type: str = 'export') -> None:
             _disable_rectangle_selector()
             _disable_lasso_selector()
 
-        notify_selection_ui()
         refresh_selection_overlay()
 
         if new_tool is None and app_state.selection_tool is None:

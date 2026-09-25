@@ -26,19 +26,3 @@ SELECTION_USE_CASE = SelectionInteractionUseCase(
 )
 SELECTED_ISOCHRON_USE_CASE = SelectedIsochronUseCase()
 TOOLTIP_CONTENT_USE_CASE = TooltipContentUseCase()
-
-
-def notify_selection_ui() -> None:
-    """Ask the control panel to refresh selection-related widgets."""
-    panel = getattr(app_state, 'control_panel_ref', None)
-    if panel is None:
-        return
-
-    update_fn = getattr(panel, 'update_selection_controls', None)
-    if not callable(update_fn):
-        return
-
-    try:
-        update_fn()
-    except Exception as err:
-        logger.warning('Unable to update selection controls: %s', err)

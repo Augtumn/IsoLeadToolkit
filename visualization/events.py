@@ -8,7 +8,6 @@ from application import RenderPlotUseCase
 from core import app_state, state_gateway
 from visualization.event_handlers import (
     _disable_rectangle_selector,
-    _notify_selection_ui,
     calculate_selected_isochron,
     on_click,
     on_hover,
@@ -84,17 +83,11 @@ def shutdown_embedding_worker() -> None:
 
 
 def _sync_render_mode(render_mode: str) -> None:
-    """Update app_state and control panel if render_mode changed."""
+    """Update app_state if render_mode changed."""
     if render_mode == app_state.render_mode:
         return
     logger.debug('Adjusted render mode: %s -> %s', app_state.render_mode, render_mode)
     state_gateway.set_render_mode(render_mode)
-    try:
-        panel = getattr(app_state, 'control_panel_ref', None)
-        if panel is not None and 'render_mode' in panel.radio_vars:
-            panel.radio_vars['render_mode'].set(render_mode)
-    except Exception as sync_err:
-        logger.warning('Unable to sync control panel render mode: %s', sync_err)
 
 
 def _cancel_embedding_task(reason: str = '') -> None:
@@ -188,7 +181,6 @@ def _render_embedding_result(group_col: str, algorithm: str, payload: dict) -> b
                 logger.warning('Failed to cache embedding: %s', cache_err)
         refresh_selection_overlay()
         sync_selection_tools()
-        _notify_selection_ui()
         try:
             app_state.fig.canvas.draw_idle()
             app_state.fig.canvas.flush_events()
@@ -351,7 +343,6 @@ def _build_render_use_case() -> RenderPlotUseCase:
         plot_3d_data=plot_3d_data,
         refresh_selection_overlay=refresh_selection_overlay,
         sync_selection_tools=sync_selection_tools,
-        notify_selection_ui=_notify_selection_ui,
         disable_rectangle_selector=_disable_rectangle_selector,
     )
 

@@ -61,13 +61,6 @@ def on_legend_click(event: Any) -> None:
                 )
                 state_gateway.set_visible_groups(visible_groups)
 
-                panel = getattr(app_state, 'control_panel_ref', None)
-                if panel is not None and hasattr(panel, 'sync_legend_ui'):
-                    try:
-                        panel.sync_legend_ui()
-                    except Exception as err:
-                        logger.warning('Failed to sync legend UI: %s', err)
-
                 logger.info('Toggled visibility for: %s to %s', label, new_visible)
                 try:
                     app_state.fig.canvas.draw_idle()
