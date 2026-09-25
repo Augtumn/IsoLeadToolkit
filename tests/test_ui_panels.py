@@ -84,7 +84,7 @@ def test_configure_matplotlib_fonts_applies_preferred_font_and_dpi(monkeypatch) 
 
 
 def test_create_section_dialog_invalid_key_returns_none() -> None:
-    from ui import control_panel
+    from ui import sections as control_panel
 
     result = control_panel.create_section_dialog("unknown", callback=lambda: None)
 

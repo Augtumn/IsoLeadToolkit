@@ -18,7 +18,7 @@ from core import app_state, translate
 logger = logging.getLogger(__name__)
 
 
-class _DataPanelSelectionBuild:
+class DataPanelRenderBuildMixin:
     """Build render mode, V1V2, and axis selection UI controls for data panel."""
 
     def _build_render_controls(self, layout):

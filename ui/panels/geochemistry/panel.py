@@ -21,6 +21,15 @@ _GEO_PARAM_DEFAULT_STEP = 0.001
 _GEO_PARAM_SCIENTIFIC_STEP = 1e-11
 
 
+#: Section metadata used by ui.sections to build the menu dialogs.
+PANEL_META = {
+    "key": "geochemistry",
+    "title": "Geochemistry",
+    "shortcut": "Ctrl+G",
+    "order": 6,
+}
+
+
 class GeoPanel(BasePanel):
     """地球化学标签页"""
 

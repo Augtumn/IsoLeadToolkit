@@ -10,6 +10,15 @@ from .image_export import ExportPanelImageExportMixin
 from .origin_export import ExportPanelOriginExportMixin
 
 
+#: Section metadata used by ui.sections to build the menu dialogs.
+PANEL_META = {
+    "key": "export",
+    "title": "Export",
+    "shortcut": "Ctrl+E",
+    "order": 4,
+}
+
+
 class ExportPanel(
     ExportPanelBuildMixin,
     ExportPanelDataExportMixin,

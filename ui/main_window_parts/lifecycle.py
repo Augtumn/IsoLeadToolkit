@@ -217,7 +217,7 @@ class MainWindowLifecycleMixin:
 
         dialog = self._section_dialogs.get(section_key)
         if dialog is None:
-            from ui.control_panel import create_section_dialog
+            from ui.sections import create_section_dialog
             from visualization.events import on_slider_change
 
             dialog = create_section_dialog(section_key, on_slider_change, parent=self)

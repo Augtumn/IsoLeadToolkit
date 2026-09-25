@@ -24,7 +24,7 @@ from core import app_state, state_gateway, translate
 logger = logging.getLogger(__name__)
 
 
-class _DataPanelProjectionBuild:
+class DataPanelProjectionBuildMixin:
     """Build UMAP/t-SNE/PCA/RobustPCA/Ternary parameter UI controls for data panel."""
 
     def _build_projection_params(self, layout):

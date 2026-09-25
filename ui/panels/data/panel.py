@@ -9,6 +9,15 @@ from .grouping import DataPanelGroupingMixin
 from .projection import DataPanelProjectionMixin
 
 
+#: Section metadata used by ui.sections to build the menu dialogs.
+PANEL_META = {
+    "key": "data",
+    "title": "Data",
+    "shortcut": "Ctrl+D",
+    "order": 1,
+}
+
+
 class DataPanel(
     DataPanelBuildMixin,
     DataPanelProjectionMixin,

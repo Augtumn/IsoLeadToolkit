@@ -10,6 +10,15 @@ from .mixing import AnalysisPanelMixingMixin
 from .selection import AnalysisPanelSelectionMixin
 
 
+#: Section metadata used by ui.sections to build the menu dialogs.
+PANEL_META = {
+    "key": "analysis",
+    "title": "Analysis",
+    "shortcut": "Ctrl+Shift+A",
+    "order": 3,
+}
+
+
 class AnalysisPanel(
     AnalysisPanelBuildMixin,
     AnalysisPanelDiagnosticsMixin,

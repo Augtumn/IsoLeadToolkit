@@ -1,7 +1,8 @@
 """Section dialog factory for the menu-driven UI.
 
-Each menu entry opens one dialog built by :func:`create_section_dialog`,
-which wraps a panel class and keeps it in sync with language switches.
+Every panel package declares ``PANEL_META`` (key, title, shortcut, order); this
+module aggregates them into the section registry and hosts each panel in a
+dialog. Adding a section therefore only touches its own package.
 """
 from __future__ import annotations
 
@@ -12,14 +13,17 @@ from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtWidgets import QFrame, QLabel
 
 from core import app_state, state_gateway, translate
-from ui.panels import (
-    AnalysisPanel,
-    DataPanel,
-    DisplayPanel,
-    ExportPanel,
-    GeoPanel,
-    LegendPanel,
-)
+from ui.panels import SECTIONS as _SECTIONS
+
+#: section key -> (title, panel class), ordered for the prev/next navigation.
+SECTION_MAP: dict[str, tuple[str, type]] = {
+    meta["key"]: (meta["title"], cls)
+    for meta, cls in sorted(_SECTIONS, key=lambda pair: pair[0]["order"])
+}
+#: section key -> keyboard shortcut shown in the dialog title.
+SECTION_SHORTCUTS: dict[str, str] = {meta["key"]: meta["shortcut"] for meta, _ in _SECTIONS}
+#: navigation order (same as SECTION_MAP's insertion order).
+SECTION_ORDER: list[str] = list(SECTION_MAP)
 
 logger = logging.getLogger(__name__)
 
@@ -33,28 +37,17 @@ def create_section_dialog(
     from PyQt5.QtWidgets import QApplication, QDialog, QHBoxLayout, QPushButton, QScrollArea, QVBoxLayout
     section_key = (section_key or '').lower()
 
-    section_map = {
-        'data': ("Data", DataPanel),
-        'display': ("Display", DisplayPanel),
-        'analysis': ("Analysis", AnalysisPanel),
-        'export': ("Export", ExportPanel),
-        'legend': ("Legend", LegendPanel),
-        'geochemistry': ("Geochemistry", GeoPanel),
-    }
-
-    if section_key not in section_map:
+    if section_key not in SECTION_MAP:
         return None
 
-    title_key, panel_cls = section_map[section_key]
+    title_key, panel_cls = SECTION_MAP[section_key]
     title = translate(title_key)
 
     dialog = QDialog(parent)
     if parent is not None:
         dialog.setWindowModality(Qt.WindowModal)
     dialog.setWindowTitle(title)
-    shortcuts = {"data": "Ctrl+D", "display": "Ctrl+Shift+D", "analysis": "Ctrl+Shift+A",
-                 "export": "Ctrl+E", "legend": "Ctrl+L", "geochemistry": "Ctrl+G"}
-    shortcut = shortcuts.get(section_key, "")
+    shortcut = SECTION_SHORTCUTS.get(section_key, "")
     dialog.setWindowTitle(f"{title}  ({shortcut})" if shortcut else title)
     dialog.resize(480, 400)
 
@@ -71,7 +64,7 @@ def create_section_dialog(
     next_btn = QPushButton("▶")
     next_btn.setFixedWidth(28)
     next_btn.setToolTip(translate("Next Panel"))
-    section_order = ['data', 'display', 'analysis', 'export', 'legend', 'geochemistry']
+    section_order = SECTION_ORDER
     current_idx = section_order.index(section_key) if section_key in section_order else -1
     if current_idx >= 0:
         prev_idx = (current_idx - 1) % len(section_order)

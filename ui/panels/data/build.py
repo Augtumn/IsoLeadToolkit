@@ -9,20 +9,20 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from ._coloring import _DataPanelColoringBuild
-from ._geochem import _DataPanelGeochemBuild
-from ._projection import _DataPanelProjectionBuild
-from ._selection import _DataPanelSelectionBuild
+from .coloring_build import DataPanelColoringBuildMixin
+from .geochem_build import DataPanelGeochemBuildMixin
+from .projection_build import DataPanelProjectionBuildMixin
+from .render_build import DataPanelRenderBuildMixin
 from core import translate
 
 logger = logging.getLogger(__name__)
 
 
 class DataPanelBuildMixin(
-    _DataPanelColoringBuild,
-    _DataPanelGeochemBuild,
-    _DataPanelProjectionBuild,
-    _DataPanelSelectionBuild,
+    DataPanelColoringBuildMixin,
+    DataPanelGeochemBuildMixin,
+    DataPanelProjectionBuildMixin,
+    DataPanelRenderBuildMixin,
 ):
     """Construct and initialize the data panel UI."""
 

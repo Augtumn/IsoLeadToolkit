@@ -18,7 +18,7 @@ from core import app_state, translate
 logger = logging.getLogger(__name__)
 
 
-class _DataPanelColoringBuild:
+class DataPanelColoringBuildMixin:
     """Build coloring/grouping and tooltip UI controls for data panel."""
 
     def _build_coloring_grouping(self, layout):
