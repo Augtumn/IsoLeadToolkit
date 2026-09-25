@@ -92,7 +92,7 @@ def test_create_section_dialog_invalid_key_returns_none() -> None:
 
 
 def test_get_data_configuration_returns_result_when_accepted(monkeypatch) -> None:
-    from ui.dialogs import data_config
+    from ui.panels.data.dialogs import data_config
 
     class _FakeDialog:
         Accepted = 1
@@ -111,7 +111,7 @@ def test_get_data_configuration_returns_result_when_accepted(monkeypatch) -> Non
 
 
 def test_get_file_sheet_selection_returns_none_when_rejected(monkeypatch) -> None:
-    from ui.dialogs import file_dialog
+    from ui.panels.data.dialogs import file_dialog
 
     class _FakeDialog:
         Accepted = 1
@@ -128,7 +128,7 @@ def test_get_file_sheet_selection_returns_none_when_rejected(monkeypatch) -> Non
 
 
 def test_get_isochron_error_settings_returns_settings_when_accepted(monkeypatch) -> None:
-    from ui.dialogs import isochron_dialog
+    from ui.panels.geochemistry.dialogs import isochron_dialog
 
     class _FakeDialog:
         def __init__(self, *_args, **_kwargs):
@@ -148,7 +148,7 @@ def test_get_isochron_error_settings_returns_settings_when_accepted(monkeypatch)
 
 
 def test_get_sheet_selection_returns_selected_sheet(monkeypatch) -> None:
-    from ui.dialogs import sheet_dialog
+    from ui.panels.data.dialogs import sheet_dialog
 
     class _FakeDialog:
         Accepted = 1
@@ -165,7 +165,7 @@ def test_get_sheet_selection_returns_selected_sheet(monkeypatch) -> None:
 
 
 def test_get_ternary_column_selection_returns_result(monkeypatch) -> None:
-    from ui.dialogs import ternary_dialog
+    from ui.panels.data.dialogs import ternary_dialog
 
     class _FakeDialog:
         Accepted = 1
@@ -186,7 +186,7 @@ def test_get_ternary_column_selection_returns_result(monkeypatch) -> None:
 
 
 def test_get_3d_and_2d_selection_wrappers(monkeypatch) -> None:
-    from ui.dialogs import three_d_dialog, two_d_dialog
+    from ui.panels.data.dialogs import three_d_dialog, two_d_dialog
 
     class _Fake3DDialog:
         Accepted = 1
@@ -214,7 +214,7 @@ def test_get_3d_and_2d_selection_wrappers(monkeypatch) -> None:
 
 
 def test_get_tooltip_configuration_returns_selected_columns(monkeypatch) -> None:
-    from ui.dialogs import tooltip_dialog
+    from ui.panels.data.dialogs import tooltip_dialog
 
     class _FakeDialog:
         def __init__(self, *_args, **_kwargs):
@@ -232,7 +232,7 @@ def test_get_tooltip_configuration_returns_selected_columns(monkeypatch) -> None
 
 
 def test_show_dialog_wrappers_execute_dialog(monkeypatch) -> None:
-    from ui.dialogs import endmember_dialog, mixing_dialog, provenance_ml_dialog
+    from ui.panels.analysis.dialogs import endmember_dialog, mixing_dialog, provenance_ml_dialog
 
     calls: list[str] = []
 

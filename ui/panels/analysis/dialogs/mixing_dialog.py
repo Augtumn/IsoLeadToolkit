@@ -143,7 +143,7 @@ class MixingCalculatorDialog(QDialog):
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication
 
-        from ui.dialogs.analysis_worker import AnalysisWorker
+        from ui.panels.analysis.dialogs.analysis_worker import AnalysisWorker
 
         def _on_finished(plugin_results):
             QApplication.restoreOverrideCursor()
@@ -183,7 +183,7 @@ class MixingCalculatorDialog(QDialog):
         self._mixing_worker.start()
 
     def closeEvent(self, event):
-        from ui.dialogs.analysis_worker import stop_analysis_worker
+        from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
 
         stop_analysis_worker(getattr(self, "_mixing_worker", None))
         super().closeEvent(event)

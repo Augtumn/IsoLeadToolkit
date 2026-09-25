@@ -103,7 +103,7 @@ def load_dataset(
     try:
         if show_file_dialog and show_config_dialog:
             logger.info("Showing unified data import dialog...")
-            from ui.dialogs.data_import_dialog import get_data_import_configuration
+            from ui.panels.data.dialogs.data_import_dialog import get_data_import_configuration
 
             dialog_result = get_data_import_configuration(
                 default_file=app_state.file_path,
@@ -135,7 +135,7 @@ def load_dataset(
 
         elif show_file_dialog:
             logger.info("Showing file selection dialog...")
-            from ui.dialogs.file_dialog import get_file_sheet_selection
+            from ui.panels.data.dialogs.file_dialog import get_file_sheet_selection
 
             file_result = get_file_sheet_selection(default_file=app_state.file_path)
             if file_result is None:
@@ -147,7 +147,7 @@ def load_dataset(
 
             if excel_file.lower().endswith((".xlsx", ".xls")):
                 logger.info("Excel file detected, showing sheet selection...")
-                from ui.dialogs.sheet_dialog import get_sheet_selection
+                from ui.panels.data.dialogs.sheet_dialog import get_sheet_selection
 
                 selected_sheet = get_sheet_selection(excel_file, default_sheet=app_state.sheet_name)
                 if selected_sheet is None:
@@ -196,7 +196,7 @@ def load_dataset(
                 progress = None
 
             logger.info("Showing data configuration dialog...")
-            from ui.dialogs.data_config import get_data_configuration
+            from ui.panels.data.dialogs.data_config import get_data_configuration
 
             config_result = get_data_configuration(
                 df,

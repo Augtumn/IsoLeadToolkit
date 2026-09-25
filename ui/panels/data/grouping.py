@@ -69,7 +69,7 @@ class DataPanelGroupingMixin:
 
     def _open_line_style_dialog(self, style_key, swatch):
         """Open line style dialog for selected style key."""
-        from ui.dialogs.line_style_dialog import open_line_style_dialog
+        from ui.panels.display.dialogs.line_style_dialog import open_line_style_dialog
 
         open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._on_change)
 
@@ -193,7 +193,7 @@ class DataPanelGroupingMixin:
     def _on_configure_tooltip(self):
         """Open tooltip configuration dialog."""
         try:
-            from ui.dialogs.tooltip_dialog import get_tooltip_configuration
+            from ui.panels.data.dialogs.tooltip_dialog import get_tooltip_configuration
 
             result = get_tooltip_configuration(self)
             if result:

@@ -134,7 +134,7 @@ class AnalysisPanelMixingMixin:
             return
 
         try:
-            from ui.dialogs.mixing_dialog import show_mixing_calculator
+            from ui.panels.analysis.dialogs.mixing_dialog import show_mixing_calculator
 
             show_mixing_calculator(self)
         except Exception as error:
@@ -155,7 +155,7 @@ class AnalysisPanelMixingMixin:
             )
             return
         try:
-            from ui.dialogs.endmember_dialog import show_endmember_analysis
+            from ui.panels.analysis.dialogs.endmember_dialog import show_endmember_analysis
 
             show_endmember_analysis(self)
         except Exception as error:
@@ -183,7 +183,7 @@ class AnalysisPanelMixingMixin:
             )
             return
         try:
-            from ui.dialogs.clustering_dialog import ClusteringDialog
+            from ui.panels.analysis.dialogs.clustering_dialog import ClusteringDialog
 
             dialog = ClusteringDialog(self)
             dialog.exec_()
@@ -205,7 +205,7 @@ class AnalysisPanelMixingMixin:
             )
             return
         try:
-            from ui.dialogs.provenance_ml_dialog import show_provenance_ml
+            from ui.panels.analysis.dialogs.provenance_ml_dialog import show_provenance_ml
 
             show_provenance_ml(self)
         except Exception as error:
@@ -233,7 +233,7 @@ class AnalysisPanelMixingMixin:
             )
             return
         try:
-            from ui.dialogs.neighborhood_dialog import show_neighborhood_search
+            from ui.panels.analysis.dialogs.neighborhood_dialog import show_neighborhood_search
 
             show_neighborhood_search(self)
         except Exception as error:

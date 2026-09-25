@@ -308,7 +308,7 @@ class GeoPanelOverlaysMixin:
     def _on_isochron_settings(self):
         """Open isochron regression settings dialog."""
         try:
-            from ui.dialogs.isochron_dialog import get_isochron_error_settings
+            from ui.panels.geochemistry.dialogs.isochron_dialog import get_isochron_error_settings
         except Exception as exc:
             QMessageBox.warning(
                 self,

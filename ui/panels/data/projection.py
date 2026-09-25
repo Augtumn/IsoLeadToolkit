@@ -316,7 +316,7 @@ class DataPanelProjectionMixin:
 
     def _show_2d_column_dialog(self):
         """Show 2D column selection dialog."""
-        from ui.dialogs.two_d_dialog import get_2d_column_selection
+        from ui.panels.data.dialogs.two_d_dialog import get_2d_column_selection
 
         result = get_2d_column_selection()
         if result:
@@ -326,7 +326,7 @@ class DataPanelProjectionMixin:
 
     def _show_3d_column_dialog(self):
         """Show 3D column selection dialog."""
-        from ui.dialogs.three_d_dialog import get_3d_column_selection
+        from ui.panels.data.dialogs.three_d_dialog import get_3d_column_selection
 
         result = get_3d_column_selection()
         if result:
@@ -336,7 +336,7 @@ class DataPanelProjectionMixin:
 
     def _show_ternary_column_dialog(self):
         """Show ternary column selection dialog."""
-        from ui.dialogs.ternary_dialog import get_ternary_column_selection
+        from ui.panels.data.dialogs.ternary_dialog import get_ternary_column_selection
 
         result = get_ternary_column_selection()
         if result:

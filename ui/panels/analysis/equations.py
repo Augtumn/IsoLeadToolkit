@@ -73,7 +73,7 @@ class AnalysisPanelEquationMixin:
 
     def _open_equation_style_dialog(self, overlay, swatch):
         """Open line style dialog for equation overlay."""
-        from ui.dialogs.line_style_dialog import open_line_style_dialog
+        from ui.panels.display.dialogs.line_style_dialog import open_line_style_dialog
 
         style_key, style = self._ensure_equation_style(overlay)
         if style_key is None:

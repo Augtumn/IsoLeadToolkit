@@ -130,7 +130,7 @@ class MainWindowLegendActionsMixin:
     """Legend user interaction handlers and UI updates."""
 
     def _open_line_style_dialog(self, style_key, swatch):
-        from ui.dialogs.line_style_dialog import open_line_style_dialog
+        from ui.panels.display.dialogs.line_style_dialog import open_line_style_dialog
 
         open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._refresh_plot)
 

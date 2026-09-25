@@ -1,20 +1,11 @@
 """
-UI module - User interface components
-"""
-from .dialogs.file_dialog import Qt5FileDialog, get_file_sheet_selection
-from .dialogs.sheet_dialog import Qt5SheetDialog, get_sheet_selection
-from .dialogs.data_config import Qt5DataConfigDialog, get_data_configuration
-from .dialogs.isochron_dialog import get_isochron_error_settings
-from .dialogs.data_import_dialog import Qt5DataImportDialog, get_data_import_configuration
+UI 层入口。
 
-__all__ = [
-    'Qt5FileDialog',
-    'get_file_sheet_selection',
-    'Qt5SheetDialog',
-    'get_sheet_selection',
-    'Qt5DataConfigDialog',
-    'get_data_configuration',
-    'Qt5DataImportDialog',
-    'get_data_import_configuration',
-    'get_isochron_error_settings',
-]
+面板与对话框按归属组织：每段一个包（``ui.panels.<section>``），该段专属对话框
+放在 ``ui.panels.<section>.dialogs``；``ui.dialogs`` 只保留跨层共享的对话框。
+段注册表见 ``ui.panels.SECTIONS``，菜单对话框工厂见 ``ui.sections``。
+"""
+
+from __future__ import annotations
+
+__all__: list[str] = []
