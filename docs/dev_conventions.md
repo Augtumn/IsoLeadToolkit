@@ -1119,6 +1119,11 @@ tests/
 3. 关键重构需提供性能与行为一致性说明。
 4. 重组/精简测试时，用 `pytest --collect-only` 的用例集合（或 AST 提取的测试函数名集合）
    做前后比对，确保**用例零丢失**后再提交。
+5. **离屏测试的边界**：面板构建类测试（`panel.build()`）在 `QT_QPA_PLATFORM=offscreen` 下可靠；
+   但**导出预览对话框**（`ExportPanelImageExportMixin._on_preview_image_clicked`）在离屏环境构造即
+   触发原生崩溃（access violation `0xC0000005`，即使桩掉 canvas 与 toolbar 也一样），因此该路径
+   没有自动化覆盖，只能手工验证。改动它时须在真实 GUI 下逐项核对：预设切换、格式切换、
+   DPI 滑条↔微调框联动、Tight bbox / Transparent、Save 落盘。
 
 ---
 
