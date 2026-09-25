@@ -7,13 +7,13 @@
 - 数据导出：将当前选中样本导出为 CSV/Excel，或追加写入已有 Excel。
 - 图像导出：对当前图进行离屏重绘并导出为位图/矢量格式。
 
-导出入口位于 `ui/panels/export_panel.py`，具体实现采用“UI 交互层 + Application 用例层”的分层结构。
+导出入口位于 `ui/panels/export/panel.py`，具体实现采用“UI 交互层 + Application 用例层”的分层结构。
 
 ## 模块结构
 
 ```text
 ui/panels/
-├── export_panel.py            # ExportPanel 组装类（薄入口）
+├── panel.py                   # ExportPanel 组装类（薄入口）
 └── export/
     ├── __init__.py            # 子包公开 API（mixin 导出）
     ├── build.py               # UI 构建、控件初始化、信号连接

@@ -13,11 +13,11 @@
 | `app_parts/` | 421 | 应用启动 mixin 分层实现（styles/session/plotting） |
 | `main_window.py` | 35 | 主窗口组合入口 (Qt5MainWindow) |
 | `main_window_parts/` | 2,035 | 主窗口 mixin 分层实现（setup/legend*/canvas/lifecycle） |
-| `control_panel.py` | 199 | 控制面板组装 + 对话框入口 |
+| `sections.py` | 191 | 段落对话框工厂（注册表来自各面板的 `PANEL_META`） |
 | `icons.py` | 191 | UI 色块/标记图标渲染工具 |
 | `widgets.py` | 22 | 通用小部件 |
-| `panels/` | 8,624 | 6 个标签页的面板实现（40 文件） |
-| `dialogs/` | 5,352 | 专用对话框（19 文件，含 `data_import/`、`provenance_ml/` 子包） |
+| `panels/` | 13,440 | 每段一个包：`panel.py` 定义公共面板类与 `PANEL_META`，其余为按职责拆分的 mixin，段专属对话框在 `<段>/dialogs/` |
+| `dialogs/` | 242 | 跨层共享对话框（`progress_dialog.py`、`log_viewer.py`） |
 
 ---
 
@@ -218,63 +218,37 @@ def _zoom_out_view(self)
 
 ---
 
-## 3. control_panel.py — 控制面板组装
+## 3. sections.py — 段落对话框工厂
 
 ### 职责
-负责控制面板整体布局、状态区、标签页组装，以及分区对话框入口。
+把每个面板段装进一个独立对话框，并提供 ◀/▶ 段间导航。段落元数据不在这里维护：
+每个面板包的 `panel.py` 声明 `PANEL_META`（key/title/shortcut/order），
+`ui/panels/__init__.py` 汇总为 `SECTIONS`，本模块据此派生 `SECTION_MAP` /
+`SECTION_SHORTCUTS` / `SECTION_ORDER`。新增一段只需改自己的包 + 注册表一行。
 
-### Qt5ControlPanel 类 (组装器)
-
-```python
-class Qt5ControlPanel(QWidget):
-    parameter_changed = pyqtSignal(str, object)
-
-    def __init__(self, callback=None, parent=None, build_ui=True)
-```
-
-### 面板拆分
+### 统一的面板包结构
 
 ```
 ui/
-├── control_panel.py
+├── sections.py            # 段落对话框工厂
+├── dialogs/               # 仅跨层共享对话框（progress、log_viewer）
 └── panels/
-    ├── base_panel.py
-    ├── data_panel.py  # 组装器
+    ├── base_panel.py      # BasePanel：共享工具（分组页、spinbox 延迟连接、render mode 归一化…）
+    ├── __init__.py        # SECTIONS 注册表（元数据来自各段）
     ├── data/
-    │   ├── __init__.py
-    │   ├── build.py
-    │   ├── projection.py
-    │   ├── geochem.py
-    │   └── grouping.py
-    ├── display_panel.py  # 组装器
-    ├── display/
-    │   ├── __init__.py
-    │   └── panel.py
-    ├── analysis_panel.py  # 组装器
-    ├── analysis/
-    │   ├── __init__.py
-    │   ├── panel.py
-    │   ├── build.py
-    │   ├── diagnostics.py
-    │   ├── selection.py
-    │   ├── equations.py
-    │   └── mixing.py
-    ├── export_panel.py
-    ├── export/
-    │   ├── __init__.py
-    │   ├── build.py
-    │   ├── selection.py
-    │   ├── data_export.py
-    │   ├── image_export.py
-    │   └── common.py
-    ├── legend_panel.py  # 组装器
-    ├── legend/
-    │   ├── __init__.py
-    │   └── panel.py
-    └── geo_panel.py
+    │   ├── __init__.py    # 导出 DataPanel + PANEL_META
+    │   ├── panel.py       # 公共面板类（mixin 组合）
+    │   ├── build.py             coloring_build.py / projection_build.py
+    │   ├── render_build.py      grouping.py / projection.py
+    │   └── dialogs/       # 该段专属对话框（导入流程、2D/3D/三元、tooltip…）
+    ├── display/           # panel.py + build.py + themes.py + helpers.py + dialogs/
+    ├── geochemistry/      # panel.py（模型参数）+ overlays.py（叠加开关）+ overlays_build.py + dialogs/
+    ├── analysis/          # panel.py + build/selection/diagnostics/equations/kde_style/mixing/ml + dialogs/
+    ├── export/            # panel.py + build/common/data_export/image_export/origin_export
+    └── legend/            # panel.py + build/editors/actions
 ```
 
-### 6 个标签页 (对应面板)
+### 6 个段落 (对应面板)
 
 #### Data (数据)
 - 数据加载状态
@@ -399,7 +373,7 @@ def _delete_theme(self)   # 删除已保存主题
 - 使用 `QToolBox` 折叠分区：`Presets & Themes`、`Text & Markers`、`Axes, Grid & Canvas`
 
 模块拆分说明（2026-04）:
-- `panels/display_panel.py` 仅保留 `DisplayPanel` 组装类。
+- `panels/display/panel.py` 仅保留 `DisplayPanel` 组装类与 `PANEL_META`。
 - `panels/display/panel.py` 作为 mixin 组合层。
 - `panels/display/build.py`：控件初始化与 `QToolBox` 页面构建。
 - `panels/display/helpers.py`：颜色控件辅助方法、图例位置按钮同步。
@@ -411,7 +385,7 @@ def _delete_theme(self)   # 删除已保存主题
 - 使用 `QToolBox` 折叠分区：KDE、方程叠加、选择工具、数据分析、子集分析、混合、端元识别、ML、置信椭圆
 
 模块拆分说明（2026-04）:
-- `panels/analysis_panel.py` 仅保留 `AnalysisPanel` 组装类。
+- `panels/analysis/panel.py` 仅保留 `AnalysisPanel` 组装类与 `PANEL_META`。
 - `panels/analysis/panel.py` 作为 mixin 组合层。
 - `panels/analysis/build.py`：分析页 `QToolBox` 构建与控件初始化。
 - `panels/analysis/diagnostics.py`：相关性热图、轴相关、Shepard 图入口。
@@ -430,7 +404,7 @@ def _delete_theme(self)   # 删除已保存主题
 - 专题文档：`docs/export.md`
 
 模块拆分说明（2026-03）:
-- `panels/export_panel.py` 仅保留 `ExportPanel` 组装类与轻量入口方法。
+- `panels/export/panel.py` 仅保留 `ExportPanel` 组装类与轻量入口方法。
 - `panels/export/build.py`：UI 构建、控件初始化、信号连接。
 - `panels/export/selection.py`：选择状态同步、选择工具联动。
 - `panels/export/data_export.py`：CSV/Excel/追加导出流程。
@@ -445,7 +419,7 @@ def _delete_theme(self)   # 删除已保存主题
 - 使用 `QToolBox` 折叠分区：`Legend Position`、`Inline Legend Style`
 
 模块拆分说明（2026-04）:
-- `panels/legend_panel.py` 仅保留 `LegendPanel` 组装类。
+- `panels/legend/panel.py` 仅保留 `LegendPanel` 组装类与 `PANEL_META`。
 - `panels/legend/panel.py` 作为 mixin 组合层。
 - `panels/legend/build.py`：图例页面构建与位置按钮同步。
 - `panels/legend/editors.py`：色阶/形状自定义对话框、图标生成与列表编辑。
@@ -572,13 +546,14 @@ app.py
   └→ visualization.events
 
 main_window.py
-  ├→ control_panel.py (create_section_dialog)
+  ├→ sections.py (create_section_dialog)
   ├→ visualization.events
   └→ data.loader
 
-control_panel.py
+sections.py
   ├→ core (app_state, translate)
-  └→ panels/*
+  ├→ panels/*（段落注册表 SECTIONS）
+  └→ panels.<段>.dialogs/*
 
 panels/*
   ├→ core (app_state, CONFIG, translate)

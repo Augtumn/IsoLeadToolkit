@@ -19,7 +19,7 @@
 
 | 类型 | 风格 | 示例 |
 |------|------|------|
-| 模块文件 | `snake_case.py` | `data_panel.py`, `style_manager.py` |
+| 模块文件 | `snake_case.py` | `projection_build.py`, `style_manager.py` |
 | 类名 | `PascalCase` | `AppState`, `StyleManager`, `Qt5MainWindow` |
 | 函数/方法 | `snake_case` | `plot_embedding()`, `load_data()` |
 | 私有方法 | `_leading_underscore` | `_lazy_import_ml()`, `_on_style_change()` |
