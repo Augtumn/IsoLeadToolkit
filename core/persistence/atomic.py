@@ -42,9 +42,9 @@ def read_json_isolated(path: Path) -> dict[str, Any] | None:
         return data
     except Exception as exc:
         logger.warning("Unreadable persistence file %s: %s", path, exc)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        corrupt = path.with_name(f"{path.stem}.corrupt-{stamp}{path.suffix}")
         try:
-            stamp = time.strftime("%Y%m%d-%H%M%S")
-            corrupt = path.with_name(f"{path.stem}.corrupt-{stamp}{path.suffix}")
             path.replace(corrupt)
             logger.warning("Isolated corrupt file as %s", corrupt)
         except OSError:

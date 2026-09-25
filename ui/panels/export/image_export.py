@@ -241,10 +241,7 @@ class ExportPanelImageExportMixin:
                 logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
             # Keep the wait cursor through the restore re-render so the user
             # does not see a frozen UI without feedback after exporting.
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
 
     def _on_preview_image_clicked(self):
         """Preview export result with full parameter adjustment in a separate dialog."""

@@ -228,19 +228,16 @@ class DataPanelGeochemMixin:
         except Exception:
             return
 
-        try:
-            params = {}
-            if self.v1v2_t1_spin is not None:
-                params["T1"] = self.v1v2_t1_spin.value() * 1e6
-            if self.v1v2_t2_spin is not None:
-                params["T2"] = self.v1v2_t2_spin.value() * 1e6
+        params = {}
+        if self.v1v2_t1_spin is not None:
+            params["T1"] = self.v1v2_t1_spin.value() * 1e6
+        if self.v1v2_t2_spin is not None:
+            params["T2"] = self.v1v2_t2_spin.value() * 1e6
 
-            if params:
-                geochem_usecase.update_parameters(params)
-                if app_state.render_mode == "V1V2":
-                    self._on_change()
-        except Exception:
-            pass
+        if params:
+            geochem_usecase.update_parameters(params)
+            if app_state.render_mode == "V1V2":
+                self._on_change()
 
     def _on_calculate_isochron(self):
         """Calculate or hide selected isochron."""

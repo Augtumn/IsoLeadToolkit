@@ -146,10 +146,7 @@ class MixingCalculatorDialog(QDialog):
         from ui.dialogs.analysis_worker import AnalysisWorker
 
         def _on_finished(plugin_results):
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
             self.run_btn.setEnabled(True)
             self._mixing_worker = None
             for r in plugin_results:
@@ -168,10 +165,7 @@ class MixingCalculatorDialog(QDialog):
                 self.result_table.setItem(i, 3, QTableWidgetItem(f"{result['residual']:.4f}"))
 
         def _on_failed(message):
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
             self.run_btn.setEnabled(True)
             self._mixing_worker = None
             logger.error("Mixing calculation failed: %s", message)

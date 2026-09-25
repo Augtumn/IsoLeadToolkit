@@ -169,11 +169,8 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
 
             # 创建主窗口
             self.main_window = Qt5MainWindow()
-            try:
-                if self.app is not None:
-                    self.main_window.setWindowIcon(self.app.windowIcon())
-            except Exception:
-                pass
+            if self.app is not None:
+                self.main_window.setWindowIcon(self.app.windowIcon())
             self.main_window.set_matplotlib_figure(app_state.fig)
 
             # 连接事件处理器

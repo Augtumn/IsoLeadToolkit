@@ -69,18 +69,9 @@ def refresh_plot_style() -> None:
         axes.append(ax)
 
     for target_ax in axes:
-        try:
-            _enforce_plot_style(target_ax)
-        except Exception:
-            pass
-        try:
-            _apply_axis_text_style(target_ax)
-        except Exception:
-            pass
-        try:
-            _style_legend(target_ax.get_legend(), show_marginal_kde=app_state.show_marginal_kde)
-        except Exception:
-            pass
+        _enforce_plot_style(target_ax)
+        _apply_axis_text_style(target_ax)
+        _style_legend(target_ax.get_legend(), show_marginal_kde=app_state.show_marginal_kde)
         # Keep title show/hide responsive via style-only refresh.
         if target_ax is ax:
             try:

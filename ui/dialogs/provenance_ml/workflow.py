@@ -217,10 +217,7 @@ class ProvenanceMLWorkflowMixin:
         from ui.dialogs.analysis_worker import AnalysisWorker
 
         def _on_finished(payload):
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
             if self.run_btn is not None:
                 self.run_btn.setEnabled(True)
             self._ml_worker = None
@@ -241,10 +238,7 @@ class ProvenanceMLWorkflowMixin:
                 )
 
         def _on_failed(message):
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
             if self.run_btn is not None:
                 self.run_btn.setEnabled(True)
             self._ml_worker = None

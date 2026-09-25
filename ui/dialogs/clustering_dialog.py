@@ -172,10 +172,7 @@ class ClusteringDialog(QDialog):
         from ui.dialogs.analysis_worker import AnalysisWorker
 
         def _on_finished(result):
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
             self.run_btn.setEnabled(True)
             self._cluster_worker = None
             if result is None:
@@ -199,10 +196,7 @@ class ClusteringDialog(QDialog):
             self.apply_btn.setVisible(True)
 
         def _on_failed(message):
-            try:
-                QApplication.restoreOverrideCursor()
-            except Exception:
-                pass
+            QApplication.restoreOverrideCursor()
             self.run_btn.setEnabled(True)
             self._cluster_worker = None
             logger.error("Clustering failed: %s", message)

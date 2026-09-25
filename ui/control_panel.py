@@ -147,11 +147,8 @@ def create_section_dialog(
         dialog.setWindowTitle(new_title)
 
     def _on_show(_event):
-        try:
-            if hasattr(panel, 'update_selection_controls'):
-                panel.update_selection_controls()
-        except Exception:
-            pass
+        if hasattr(panel, 'update_selection_controls'):
+            panel.update_selection_controls()
         # Re-register the language listener: _on_close removes it and the
         # dialog is cached, so a reopened dialog must re-subscribe or it
         # stops reacting to language switches.
