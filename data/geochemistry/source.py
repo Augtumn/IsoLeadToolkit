@@ -391,14 +391,21 @@ def calculate_initial_ratio_84(
 
 
 # =============================================================================
-# Albarède et al. (2012) T–μ–κ 模型 — 源区参数 (式 11 / 式 14)
+# Albarède & Juteau (1984) T–μ–κ 模型 — 源区参数
 # =============================================================================
-# 参考: Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867,
-#       https://doi.org/10.1111/j.1475-4754.2011.00653.x
-# 参考组成 (Stacey & Kramers 1975; Albarède & Juteau 1984):
-#   x*/y*/z* = 18.750/15.63/38.83, μ* = 9.66, κ* = 3.90, T0 = 4.43 Ga。
-# 与本节前面的 PbIso 口径反演不同, 这里相对"现代上地壳参考"给出 Δμ = μ − μ*
-# 与 Δκ = κ − κ*, 使用论文式 (11) / 式 (14) 的精确重排式。
+# 参考: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
+#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+#       doi:10.1016/0016-7037(84)90364-8
+# 参考组成 (常数见 engine.py §1.9, 与 R 包 ASTR::albarede_juteau_1984() 一致):
+#   x*/y*/z* = 18.750/15.63/38.83, μ* = 9.66, κ* = 3.90, T0 = 3.8 Ga,
+#   ²³⁸U/²³⁵U = 137.79。AJ84 直接同时解出 (T_i, μ_i) 并由 z 求 κ_i:
+#       μ_i = (x_i − x0) / (e^{λT0} − e^{λT_i})
+#       κ_i = (z_i − z0) / [(e^{λ''T0} − e^{λ''T_i}) · μ_i]
+#   下面给出的是相对现代 common Pb 参考的 Δμ/Δκ 记法 (源自 2012 版论文的
+#   记号), 与上面的绝对量等价: μ_i = μ* + Δμ_i, κ_i = κ* + Δκ_i。
+# 注意: ASTR 源码写作 z* = 38.86, 但 SilverQuest 矿石库 6938 条数据实测
+#   以 38.83 才能复现 (κ 残差 1e-5; 用 38.86 则 κ 系统性偏 −0.016),
+#   故此处取 38.83 (亦为 2012 版印刷值)。
 
 def calculate_albarede_delta_mu(
     Pb206_204_S: np.ndarray | float,
@@ -407,10 +414,14 @@ def calculate_albarede_delta_mu(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
-    Albarède et al. (2012) Δμ_i = μ_i − μ* (式 11)
+    Albarède & Juteau (1984) 源区 Δμ_i = μ_i − μ*
 
-    由 x_i = x* − μ*(e^{λT_i} − 1) + Δμ_i (e^{λT0} − e^{λT_i}) 解出:
-        Δμ_i = [x_i − x* + μ*(e^{λT_i} − 1)] / (e^{λT0} − e^{λT_i})
+    由 x 生长方程 (x0 为 AJ84 反推的原始铅锚点, x0 = x* − μ*(e^{λT0} − 1)):
+        x_i = x0 + μ_i (e^{λT0} − e^{λT_i})
+    ⇒  Δμ_i = μ_i − μ* = [x_i − x* + μ*(e^{λT_i} − 1)] / (e^{λT0} − e^{λT_i})
+
+    Δμ 是相对现代 common Pb 参考的记法 (源自 2012 版论文记号), 与 AJ84 直接解出
+    的 μ_i 等价。
 
     Args:
         Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
@@ -440,7 +451,7 @@ def calculate_albarede_mu(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
-    Albarède et al. (2012) 源区 μ_i = 238U/204Pb = μ* + Δμ_i (式 11)
+    Albarède & Juteau (1984) 源区 μ_i = ²³⁸U/²⁰⁴Pb = μ* + Δμ_i
 
     Returns:
         np.ndarray: μ_i
@@ -458,19 +469,17 @@ def calculate_albarede_delta_kappa(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
-    Albarède et al. (2012) Δκ_i = κ_i − κ* (式 14)
+    Albarède & Juteau (1984) 源区 Δκ_i = κ_i − κ*
 
-    由 z_i = z* − μ*κ*(e^{λ''T_i} − 1) + (μ_i Δκ_i + κ* Δμ_i)
-             · (e^{λ''T0} − e^{λ''T_i}) 解出:
-        Δκ_i = { [z_i − z* + μ*κ*(e^{λ''T_i} − 1)] / (e^{λ''T0} − e^{λ''T_i})
-                 − κ* Δμ_i } / μ_i
+    由 z 生长方程 (z0 为 AJ84 反推的原始铅锚点, z0 = z* − μ*κ*(e^{λ''T0} − 1)):
+        z_i = z0 + μ_i κ_i (e^{λ''T0} − e^{λ''T_i})
+    ⇒  Δκ_i = { [z_i − z* + μ*κ*(e^{λ''T_i} − 1)] / (e^{λ''T0} − e^{λ''T_i})
+                − κ* Δμ_i } / μ_i
 
-    论文 p.858 式 (15) 的印刷版把 (14) 的 (μ_i Δκ_i + κ* Δμ_i)(...) 原样留在
-    右端分子 (已用 MinerU 页面图像放大复核), 于是两侧的 μ_i Δκ_i 相消:
-    "右端 − Δκ_i" 恒等于 Δκ_i^true + 2κ* Δμ_i/μ_i, 与试探值无关 —— 即式 (15)
-    对一般样品没有不动点解 (只有 Δκ_i^true + 2κ* Δμ_i/μ_i = 0 的特殊样品成立)。
-    此处按式 (14) 的代数正确重排实现, 正演-反演往返测试见
-    tests/test_geochemistry_albarede.py。
+    历史备注: 2012 版论文 p.858 式 (15) 的印刷版把 (14) 的 (μ_i Δκ_i + κ* Δμ_i)(…)
+    原样留在右端分子, 于是两侧的 μ_i Δκ_i 相消 ("右端 − Δκ_i" 恒为
+    Δκ_i^true + 2κ* Δμ_i/μ_i), 对一般样品没有不动点解。本工程实现 AJ84, 上式即
+    其 z 方程的代数正确解; 正演-反演往返测试见 tests/test_geochemistry_albarede.py。
 
     Args:
         Pb206_204_S, Pb208_204_S: 样品 206Pb/204Pb、208Pb/204Pb
@@ -509,7 +518,7 @@ def calculate_albarede_kappa(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
-    Albarède et al. (2012) 源区 κ_i = 232Th/238U = κ* + Δκ_i (式 14)
+    Albarède & Juteau (1984) 源区 κ_i = ²³²Th/²³⁸U = κ* + Δκ_i
 
     Returns:
         np.ndarray: κ_i

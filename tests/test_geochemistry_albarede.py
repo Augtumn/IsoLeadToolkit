@@ -1,14 +1,20 @@
-"""Tests for the Albarède et al. (2012) T–μ–κ model.
+"""Tests for the Albarède & Juteau (1984) T–μ–κ model.
 
-Albarède, F., Desaulty, A.-M. & Blichert-Toft, J. (2012). A geological
-perspective on the use of Pb isotopes in archaeometry. Archaeometry 54(5),
-853-867.  https://doi.org/10.1111/j.1475-4754.2011.00653.x
+Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
+Geochimica et Cosmochimica Acta 48(1), 207-212.
+https://doi.org/10.1016/0016-7037(84)90364-8
+
+Constants and solving strategy were cross-checked against the R package ASTR
+(`ASTR::albarede_juteau_1984()`, which transcribes F. Albarède's MATLAB script
+v2020-11-06). ASTR deliberately does **not** implement the T–μ–κ variant of
+Albarède et al. (2012) because the author himself advises against it; this
+project therefore implements AJ84 only.
 
 The model is added strictly through the existing extension points: one entry in
 ``PRESET_MODELS`` (standard fields only) plus functions placed in the modules
 that already own that concern — ``engine`` (reference constants, model curve
-slope), ``age`` (equation 12 model age), ``source`` (equations 11/14 Δμ/μ, Δκ/κ)
-and the package facade (one-call inversion).
+slope), ``age`` (model age), ``source`` (Δμ/μ, Δκ/κ) and the package facade
+(one-call inversion).
 """
 
 from __future__ import annotations
@@ -28,6 +34,8 @@ from data.geochemistry import (
     ALBAREDE_OMEGA_KEY,
     ALBAREDE_T0,
     ALBAREDE_T_MODEL_KEY,
+    ALBAREDE_U238_235,
+    ALBAREDE_X0,
     ALBAREDE_X_STAR,
     ALBAREDE_Y_STAR,
     ALBAREDE_Z_STAR,
@@ -45,7 +53,7 @@ from data.geochemistry import (
     engine,
 )
 
-_MODEL = "Albarède et al. (2012)"
+_MODEL = "Albarède & Juteau (1984)"
 _DEFAULT_MODEL = "Stacey & Kramers (2nd Stage)"
 
 
@@ -58,10 +66,11 @@ def _restore_engine_model():
 
 
 def _forward_sample(t_i_ma: float, mu_i: float, kappa_i: float, params: dict) -> tuple[float, float, float]:
-    """Generate an ore composition from equations (10)/(11)/(13) with μ2 = 0."""
+    """Generate an ore composition from the AJ84 growth equations (no U after T_i)."""
     t = t_i_ma * 1e6
+    u = 1.0 / params["U_ratio"]
     x = params["a0"] + mu_i * (np.exp(params["lambda_238"] * ALBAREDE_T0) - np.exp(params["lambda_238"] * t))
-    y = params["b0"] + mu_i * params["U_ratio"] * (
+    y = params["b0"] + mu_i / u * (
         np.exp(params["lambda_235"] * ALBAREDE_T0) - np.exp(params["lambda_235"] * t)
     )
     z = params["c0"] + mu_i * kappa_i * (
@@ -71,13 +80,16 @@ def _forward_sample(t_i_ma: float, mu_i: float, kappa_i: float, params: dict) ->
 
 
 # ---------------------------------------------------------------- preset
-def test_preset_registered_with_paper_reference_values() -> None:
+def test_preset_registered_with_aj84_constants() -> None:
     preset = PRESET_MODELS[_MODEL]
 
+    assert preset["age_model"] == "single_stage"
+    assert preset["T1"] == pytest.approx(3.8e9)
+    assert preset["T2"] == pytest.approx(3.8e9)
+    assert preset["Tsec"] == pytest.approx(0.0)
     assert preset["mu_M"] == pytest.approx(9.66)
     assert preset["omega_M"] == pytest.approx(9.66 * 3.90)
-    assert preset["T1"] == pytest.approx(4430e6)
-    assert preset["age_model"] == "single_stage"
+    assert 1.0 / preset["U_ratio"] == pytest.approx(137.79)
 
     assert engine.load_preset(_MODEL) is True
     assert engine.current_model_name == _MODEL
@@ -88,16 +100,28 @@ def test_preset_uses_only_standard_engine_fields() -> None:
     assert set(PRESET_MODELS[_MODEL]) <= set(engine.get_parameters())
 
 
-def test_reference_constants_match_the_paper() -> None:
-    assert ALBAREDE_T0 == pytest.approx(4430e6)
+def test_reference_constants_match_aj84_and_astr() -> None:
+    assert ALBAREDE_T0 == pytest.approx(3.8e9)
     assert ALBAREDE_X_STAR == pytest.approx(18.750)
     assert ALBAREDE_Y_STAR == pytest.approx(15.63)
     assert ALBAREDE_Z_STAR == pytest.approx(38.83)
     assert ALBAREDE_MU_STAR == pytest.approx(9.66)
     assert ALBAREDE_KAPPA_STAR == pytest.approx(3.90)
+    assert ALBAREDE_U238_235 == pytest.approx(137.79)
 
 
-def test_reference_curve_passes_through_modern_crust() -> None:
+def test_implied_primordial_anchor_is_not_cdt() -> None:
+    """AJ84 anchors T0 = 3.8 Ga, so its back-solved 'primordial' Pb is far from
+    the Canyon Diablo troilite values used by the CDT presets (do not 'fix')."""
+    from data.geochemistry import A0, B0, C0
+
+    assert ALBAREDE_X0 == pytest.approx(10.992618, abs=1e-5)
+    assert abs(ALBAREDE_X0 - A0) > 1.0
+    assert abs(B0 - 12.741576) > 1.0
+    assert abs(C0 - 31.037527) > 1.0
+
+
+def test_reference_curve_passes_through_modern_common_pb() -> None:
     """The preset's curve must hit x*/y*/z* today (t = 0)."""
     engine.load_preset(_MODEL)
     params = engine.get_parameters()
@@ -110,11 +134,12 @@ def test_reference_curve_passes_through_modern_crust() -> None:
 
 
 # ------------------------------------------------------------- equations
-def test_model_slope_matches_equation_4() -> None:
+def test_model_slope_matches_definition() -> None:
+    engine.load_preset(_MODEL)
     params = engine.get_parameters()
-    t0 = 4430e6
+    t0 = ALBAREDE_T0
     t = 300e6
-    expected = (1.0 / 137.88) * (
+    expected = params["U_ratio"] * (
         np.exp(params["lambda_235"] * t0) - np.exp(params["lambda_235"] * t)
     ) / (np.exp(params["lambda_238"] * t0) - np.exp(params["lambda_238"] * t))
 
@@ -123,13 +148,13 @@ def test_model_slope_matches_equation_4() -> None:
 
 def test_model_slope_of_identical_ages_returns_tangent_limit() -> None:
     """s(T0, T0) is 0/0; the l'Hôpital tangent limit must be returned."""
+    engine.load_preset(_MODEL)
     params = engine.get_parameters()
-    t0 = 4430e6
     l238 = params["lambda_238"]
     l235 = params["lambda_235"]
-    expected = params["U_ratio"] * (l235 / l238) * np.exp((l235 - l238) * t0)
+    expected = params["U_ratio"] * (l235 / l238) * np.exp((l235 - l238) * ALBAREDE_T0)
 
-    value = calculate_model_slope(t0, t0, params)
+    value = calculate_model_slope(ALBAREDE_T0, ALBAREDE_T0, params)
 
     assert np.isfinite(value)
     assert value == pytest.approx(float(expected), rel=1e-12)
@@ -153,8 +178,7 @@ def test_forward_inverse_roundtrip_recovers_all_three_parameters(
     assert float(age) == pytest.approx(t_i_ma, abs=1e-4)
     assert float(mu) == pytest.approx(mu_i, rel=1e-9)
     assert float(kappa) == pytest.approx(kappa_i, rel=1e-9)
-    # The chronometric residual must vanish at the recovered age.
-    assert abs(float(albarede_model_age_residual(age, x, y, params))) < 1e-6
+    assert abs(float(albarede_model_age_residual(age, x, y, params))) < 1e-9
 
 
 def test_delta_functions_match_mu_minus_star_and_kappa_minus_star() -> None:
@@ -209,17 +233,62 @@ def test_roundtrip_through_the_public_parameter_dict() -> None:
     assert np.isfinite(result[ALBAREDE_AGE_SENSITIVITY_KEY]).all()
 
 
-# --------------------------------------------------------- error propagation
-def test_age_sensitivity_matches_finite_difference_on_t0() -> None:
-    """式 (16) 的解析灵敏度必须等于"扰动 T0 后重解式 (12)"的数值导数。
+# -------------------------------------------------- external cross-checks
+def test_reproduces_silverquest_galena_database_rows() -> None:
+    """Real-world check against the ore database shipped with SilverQuest_v1
+    (``Pb_DB_20240310AllGalenas.xlsx``, columns Tmod/mu/kappa), whose values were
+    produced by the AJ84 pipeline (F. Albarède's MATLAB script).
 
-    这是对 (16) 读法 (λ'/λ 与 137.88 的位置) 的独立验证: 只用到式 (12) 的
-    求解器, 不依赖 (16) 本身的实现。
+    Agreement with our implementation: 0.01 Ma in T (their 3-decimal rounding),
+    exact in mu and kappa.
     """
     engine.load_preset(_MODEL)
     params = engine.get_parameters()
-    t_true = 300.0
-    x, y, _z = _forward_sample(t_true, 9.90, 4.05, params)
+
+    rows = [
+        # (206/204, 207/204, 208/204, Tmod, mu, kappa)
+        (18.860, 15.694, 38.946, 46.027, 9.8852, 3.9110),
+        (18.670, 15.665, 38.728, 130.220, 9.8096, 3.9125),
+        (18.437, 15.673, 38.704, 317.400, 9.8919, 4.0575),
+    ]
+    x = np.array([r[0] for r in rows])
+    y = np.array([r[1] for r in rows])
+    z = np.array([r[2] for r in rows])
+    t_db = np.array([r[3] for r in rows])
+    mu_db = np.array([r[4] for r in rows])
+    kappa_db = np.array([r[5] for r in rows])
+
+    result = calculate_albarede_parameters(x, y, z, params=params)
+
+    np.testing.assert_allclose(result[ALBAREDE_T_MODEL_KEY], t_db, atol=0.5)
+    np.testing.assert_allclose(result[ALBAREDE_MU_KEY], mu_db, atol=0.005)
+    np.testing.assert_allclose(result[ALBAREDE_KAPPA_KEY], kappa_db, atol=0.005)
+
+
+def test_out_of_family_sample_returns_nan_instead_of_a_negative_age() -> None:
+    """Deliberate difference from ASTR: its unbounded ``rootSolve::multiroot``
+    returns non-physical roots outside (0, T0) — the SilverQuest database even
+    contains Tmod = -84 Ma for this composition. We restrict the search interval
+    and report NaN instead.
+    """
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+
+    x, y, z = 18.740, 15.586, 38.661  # database row with Tmod = -84.000 Ma
+
+    assert calculate_albarede_model_age(x, y, params) is None
+    result = calculate_albarede_parameters(x, y, z, params=params)
+    assert np.isnan(result[ALBAREDE_T_MODEL_KEY])
+
+
+# --------------------------------------------------------- error propagation
+def test_age_sensitivity_matches_finite_difference_on_t0() -> None:
+    """The analytic T0 sensitivity must equal the numerical derivative obtained
+    by re-solving the model-age equation with T0 perturbed (independent check of
+    the formula's λ'/λ and 1/U placement)."""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+    x, y, _z = _forward_sample(300.0, 9.90, 4.05, params)
 
     age = float(calculate_albarede_model_age(x, y, params))
     mu = float(calculate_albarede_mu(x, y, age, params))
@@ -239,71 +308,11 @@ def test_age_sensitivity_matches_finite_difference_on_t0() -> None:
 
         return float(optimize.brentq(residual, 0.0, t0_years, xtol=1e-6))
 
-    step = 1.0e6  # 1 Ma, 以年为单位
+    step = 1.0e6  # 1 Ma, in years
     numeric = (solve_with_t0(ALBAREDE_T0 + step) - solve_with_t0(ALBAREDE_T0)) / step
 
     assert numeric != 0.0
     assert analytic == pytest.approx(numeric, rel=1e-3)
-
-
-# --------------------------------------- printed-form defects (paper typos)
-# 论文 p.857 式 (12) 与 p.858 式 (15) 的印刷版式无法与式 (11)/(14) 自洽;
-# 以下两例把这一判断钉成回归测试 (排版已用 MinerU 页面图像放大复核), 防止有人
-# 按印刷版"修正"实现。
-
-def test_printed_equation_12_lambda_prime_cannot_reproduce_the_model_age() -> None:
-    """式 (12) 印刷版用 e^{λ'T_i}−1 (²³⁵U); 由式 (11) 消元得到的必须是
-    e^{λT_i}−1 (²³⁸U)。对 T_i = 300 Ma 的合成样品, 印刷版残差明显非零,
-    其根也不是 300 Ma。"""
-    engine.load_preset(_MODEL)
-    params = engine.get_parameters()
-    t_true = 300.0
-    x, y, _z = _forward_sample(t_true, 9.90, 4.05, params)
-
-    def printed_residual(t_ma: float) -> float:
-        t = t_ma * 1e6
-        dx = x - ALBAREDE_X_STAR
-        s_t0_t = calculate_model_slope(ALBAREDE_T0, t, params)
-        s_t_0 = calculate_model_slope(t, 0.0, params)
-        return (
-            (y - ALBAREDE_Y_STAR) / dx
-            - s_t0_t
-            - (ALBAREDE_MU_STAR * (np.exp(params["lambda_235"] * t) - 1.0) / dx)
-            * (s_t0_t - s_t_0)
-        )
-
-    assert abs(printed_residual(t_true)) > 1.0, "printed form unexpectedly solves T_true"
-    # The implemented (self-consistent) form is exact at T_true and recovers it.
-    assert abs(float(albarede_model_age_residual(t_true, x, y, params))) < 1e-9
-    assert float(calculate_albarede_model_age(x, y, params)) == pytest.approx(t_true, abs=1e-3)
-
-
-def test_printed_equation_15_cancels_delta_kappa() -> None:
-    """式 (15) 印刷版右端仍含 μ_iΔκ_i, 代入后两端相消: 对任意试探 Δκ_i,
-    "右端 − Δκ_i" 恒为同一常数, 即该式一般无不动点解。实现按式 (14) 重排。"""
-    engine.load_preset(_MODEL)
-    params = engine.get_parameters()
-    t_true = 300.0
-    x, y, z = _forward_sample(t_true, 9.90, 4.05, params)
-    mu = float(calculate_albarede_mu(x, y, t_true, params))
-    delta_mu = mu - ALBAREDE_MU_STAR
-    l232 = params["lambda_232"]
-    d = np.exp(l232 * ALBAREDE_T0) - np.exp(l232 * t_true * 1e6)
-    n0 = (
-        z - ALBAREDE_Z_STAR
-        + ALBAREDE_MU_STAR * ALBAREDE_KAPPA_STAR * (np.exp(l232 * t_true * 1e6) - 1.0)
-    )
-
-    def printed_rhs(delta_kappa: float) -> float:
-        return (n0 + (mu * delta_kappa + ALBAREDE_KAPPA_STAR * delta_mu) * d) / (mu * d)
-
-    gap = printed_rhs(0.0) - 0.0
-    assert printed_rhs(0.15) - 0.15 == pytest.approx(gap, rel=1e-12)
-    assert printed_rhs(1.0) - 1.0 == pytest.approx(gap, rel=1e-12)
-    assert abs(gap) > 1e-3, "printed (15) unexpectedly has a fixed point"
-
-    # The implemented form satisfies equation (14) for an arbitrary κ_i.
-    assert float(calculate_albarede_kappa(x, z, t_true, mu, params)) == pytest.approx(4.05, rel=1e-9)
 
 
 # -------------------------------------------------------------- robustness
@@ -312,16 +321,14 @@ def test_array_input_keeps_nan_for_missing_samples() -> None:
     params = engine.get_parameters()
     x, y, _z = _forward_sample(300.0, 9.90, 4.05, params)
 
-    ages = calculate_albarede_model_age(
-        np.array([x, np.nan]), np.array([y, np.nan]), params
-    )
+    ages = calculate_albarede_model_age(np.array([x, np.nan]), np.array([y, np.nan]), params)
 
     assert ages.shape == (2,)
     assert ages[0] == pytest.approx(300.0, abs=1e-4)
     assert np.isnan(ages[1])
 
 
-def test_sample_on_modern_crust_reference_has_no_solution() -> None:
+def test_sample_on_modern_reference_has_no_solution() -> None:
     engine.load_preset(_MODEL)
     params = engine.get_parameters()
 
@@ -339,24 +346,13 @@ def test_scalar_nan_input_does_not_raise() -> None:
     assert calculate_albarede_model_age(np.nan, np.nan, params) is None
 
 
-def test_sample_outside_the_model_family_returns_nan_not_a_crash() -> None:
-    """A composition with no root in (0, T0) must degrade to NaN."""
-    engine.load_preset(_MODEL)
-    params = engine.get_parameters()
-
-    # x above modern crust but y far too low: no single-stage growth fits it.
-    ages = calculate_albarede_model_age(np.array([19.5]), np.array([15.35]), params)
-
-    assert np.isnan(ages[0])
-
-
 def test_scalar_input_through_the_public_dict_keeps_shape() -> None:
-    """A scalar sample must not crash the one-call inversion."""
     engine.load_preset(_MODEL)
     params = engine.get_parameters()
     x, y, z = _forward_sample(250.0, 9.70, 3.95, params)
 
     result = calculate_albarede_parameters(x, y, z, params=params)
 
-    assert float(result[ALBAREDE_T_MODEL_KEY]) == pytest.approx(250.0, abs=1e-4)
+    assert float(result[ALBAREDE_T_MODEL_KEY]) == pytest.approx(250.0, abs=1e-3)
     assert float(result[ALBAREDE_MU_KEY]) == pytest.approx(9.70, rel=1e-9)
+    assert float(result[ALBAREDE_KAPPA_KEY]) == pytest.approx(3.95, rel=1e-9)

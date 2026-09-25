@@ -75,24 +75,32 @@ E2_DEFAULT = 0.0
 E1_CUMMING_RICHARDS = 5e-11
 E2_CUMMING_RICHARDS = 3.7e-11
 
-# 1.9 Albarède et al. (2012) T–μ–κ 参考模型参数
-# 来源: Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867,
-#       "Reference models" 一节 (数据取自 Stacey & Kramers 1975;
-#       Albarède & Juteau 1984)。衰变常数与前文一致。
-ALBAREDE_T0 = 4430e6          # T0 = 4.43 Ga (地球/地壳分异时间, 单位: 年)
-ALBAREDE_X_STAR = 18.750      # 现代上地壳 206Pb/204Pb (x*)
-ALBAREDE_Y_STAR = 15.63       # 现代上地壳 207Pb/204Pb (y*)
-ALBAREDE_Z_STAR = 38.83       # 现代上地壳 208Pb/204Pb (z*)
-ALBAREDE_MU_STAR = 9.66       # 现代上地壳 238U/204Pb (μ*)
-ALBAREDE_KAPPA_STAR = 3.90    # 现代上地壳 232Th/238U (κ*)
+# 1.9 Albarède & Juteau (1984) 参考模型参数 (T–μ–κ)
+# 来源: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
+#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+#       doi:10.1016/0016-7037(84)90364-8
+# 常数与解法按 R 包 ASTR::albarede_juteau_1984() 复核 (该函数转写自 F. Albarède
+# 的 MATLAB 脚本 v2020-11-06)。注意: Albarède et al. (2012, Archaeometry) 的
+# T–μ–κ 版本作者本人明确表示不应使用 (见 ASTR 与 man/age_models.Rd 的说明),
+# 故本工程只实现 AJ84 版本。
+ALBAREDE_T0 = 3.8e9           # T0 = 3.8 Ga (AJ84 的参考锚点, 单位: 年)
+ALBAREDE_X_STAR = 18.750      # 现代 common Pb 206Pb/204Pb (x*)
+ALBAREDE_Y_STAR = 15.63       # 现代 common Pb 207Pb/204Pb (y*)
+ALBAREDE_Z_STAR = 38.83       # 现代 common Pb 208Pb/204Pb (z*)
+ALBAREDE_MU_STAR = 9.66       # 现代 common Pb 238U/204Pb (μ*)
+ALBAREDE_KAPPA_STAR = 3.90    # 现代 common Pb 232Th/238U (κ*)
 #: ω* = μ*·κ* (232Th/204Pb of the reference reservoir)
 ALBAREDE_OMEGA_STAR = ALBAREDE_MU_STAR * ALBAREDE_KAPPA_STAR
-#: 由参考组成反推的"论文口径"原始铅比值, 使模型曲线在 t = 0 恰好通过
-#: x*/y*/z*: x0 = x* − μ*(e^{λT0} − 1), y0 = y* − (μ*/137.88)(e^{λ'T0} − 1),
-#: z0 = z* − μ*κ*(e^{λ''T0} − 1)。与 CDT (A0/B0/C0) 相差 ≤0.12, 源于
-#: Albarède & Juteau (1984) 的参考拟合 (论文对 <1000 Ma 样品给出数十 Ma 差异)。
+#: AJ84/ASTR 使用的 238U/235U 比值 (2012 版印刷为 137.88; 两者对 T 的影响约 0.02 Ma)
+ALBAREDE_U238_235 = 137.79
+U_RATIO_AJ84 = 1.0 / ALBAREDE_U238_235
+#: 由参考组成反推的原始铅锚点 (使模型曲线在 t = 0 恰好通过 x*/y*/z*):
+#:   x0 = x* − μ*(e^{λT0} − 1), y0 = y* − (μ*/137.79)(e^{λ'T0} − 1),
+#:   z0 = z* − μ*κ*(e^{λ''T0} − 1)
+#: 得 x0/y0/z0 ≈ 10.993/12.742/31.038 —— 远离 CDT (9.307/10.294/29.476), 这是
+#: AJ84 用 T0 = 3.8 Ga 作锚点的结果, 该值不是物理原始铅, 请勿"修正"为 CDT。
 ALBAREDE_X0 = ALBAREDE_X_STAR - ALBAREDE_MU_STAR * (np.exp(LAMBDA_238 * ALBAREDE_T0) - 1.0)
-ALBAREDE_Y0 = ALBAREDE_Y_STAR - ALBAREDE_MU_STAR * U_RATIO_NATURAL * (np.exp(LAMBDA_235 * ALBAREDE_T0) - 1.0)
+ALBAREDE_Y0 = ALBAREDE_Y_STAR - ALBAREDE_MU_STAR * U_RATIO_AJ84 * (np.exp(LAMBDA_235 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Z0 = ALBAREDE_Z_STAR - ALBAREDE_OMEGA_STAR * (np.exp(LAMBDA_232 * ALBAREDE_T0) - 1.0)
 
 # =============================================================================
@@ -192,13 +200,13 @@ PRESET_MODELS = {
         'E2': E2_DEFAULT,
         'v1v2_formula': 'default',
     },
-    "Albarède et al. (2012)": {
-        # T–μ–κ 参考模型 (Archaeometry 54(5), 853-867): 原始铅自
-        # T0 = 4.43 Ga 以 μ* = 9.66、κ* = 3.90 演化至今, 现代参考组成
-        # x*/y*/z* = 18.750/15.63/38.83。矿床被当作 T_i 后不再含 U/Th 的
-        # 硫化物 (μ2 ≈ 0); 论文口径的 T_i、μ_i、κ_i 反演见
-        # data/geochemistry/albarede.py (本预设只提供标准字段, 不新增参数键)。
-        # 初始比值取参考组成反推值 (见 ALBAREDE_X0/Y0/Z0), 因此模型曲线在
+    "Albarède & Juteau (1984)": {
+        # T–μ–κ 参考模型 (GCA 48(1), 207-212): 原始铅锚点自 T0 = 3.8 Ga 以
+        # μ* = 9.66、κ* = 3.90 演化至今, 现代参考组成 x*/y*/z* =
+        # 18.750/15.63/38.83; ²³⁸U/²³⁵U = 137.79 (ASTR/MATLAB 口径)。
+        # 矿床按硫化物处理 (T_i 后不再含 U/Th), T_i、μ_i、κ_i 的反演见
+        # data/geochemistry/age.py 与 source.py (本预设只提供标准字段)。
+        # 初始比值取参考组成反推的锚点 (ALBAREDE_X0/Y0/Z0), 因此模型曲线在
         # t = 0 恰好通过 x*/y*/z*。
         'age_model': 'single_stage',
         'T1': ALBAREDE_T0,
@@ -208,7 +216,7 @@ PRESET_MODELS = {
         'a1': ALBAREDE_X0, 'b1': ALBAREDE_Y0, 'c1': ALBAREDE_Z0,
         'mu_M': ALBAREDE_MU_STAR,
         'omega_M': ALBAREDE_OMEGA_STAR,
-        'U_ratio': U_RATIO_NATURAL,
+        'U_ratio': U_RATIO_AJ84,
         'E1': E1_DEFAULT,
         'E2': E2_DEFAULT,
         'v1v2_formula': 'default',

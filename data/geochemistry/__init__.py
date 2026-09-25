@@ -43,6 +43,11 @@ from .engine import (
     ALBAREDE_MU_STAR,
     ALBAREDE_KAPPA_STAR,
     ALBAREDE_OMEGA_STAR,
+    ALBAREDE_U238_235,
+    U_RATIO_AJ84,
+    ALBAREDE_X0,
+    ALBAREDE_Y0,
+    ALBAREDE_Z0,
 )
 from .age import (
     calculate_single_stage_age,
@@ -309,13 +314,16 @@ def calculate_all_parameters(
 
 
 # =============================================================================
-# Albarède et al. (2012) T–μ–κ 结果键名与一站式反演
+# Albarède & Juteau (1984) T–μ–κ 结果键名与一站式反演
 # =============================================================================
-# 参考: Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867,
-#       https://doi.org/10.1111/j.1475-4754.2011.00653.x
-# 这三个量是独立的调用入口 (calculate_albarede_parameters), 不并入
-# calculate_all_parameters 的既有输出: 该模型的参考组成与 age_model 口径不同于
-# PbIso 系列预设, 混在同一字典里会让下游误用错参考。
+# 参考: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
+#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+#       doi:10.1016/0016-7037(84)90364-8
+# 常数与解法与 R 包 ASTR::albarede_juteau_1984() 一致; 2012 版 T–μ–κ 作者本人
+# 表示不应使用, 故未实现 (见 engine.py §1.9)。
+# 这组量与 calculate_all_parameters() 刻意分开: 它的参考组成/年龄锚点 (T0 =
+# 3.8 Ga, 现代 common Pb) 与 PbIso 系列预设 (CDT/a₁) 不同, 混在同一字典里会让
+# 下游误用错参考。
 
 ALBAREDE_T_MODEL_KEY = 't_Albarede (Ma)'
 ALBAREDE_MU_KEY = 'mu_Albarede'
@@ -334,14 +342,15 @@ def calculate_albarede_parameters(
     params: dict[str, Any] | None = None,
 ) -> dict[str, np.ndarray]:
     """
-    Albarède et al. (2012) T–μ–κ 一站式反演
+    Albarède & Juteau (1984) T–μ–κ 一站式反演
 
-    先由式 (12) 自解模式年龄 T_i, 再按式 (11)/(14) 求 Δμ_i/μ_i 与 Δκ_i/κ_i
-    (ω_i = μ_i·κ_i), 并按式 (16) 给出 dT_i/dT_0。无解样品为 NaN。
+    按 AJ84 的两条生长方程解出 (T_i, μ_i), 并由 z 生长方程求 κ_i
+    (ω_i = μ_i·κ_i); 另返回相对现代 common Pb 参考的 Δμ_i/Δκ_i 与 T0 灵敏度
+    dT_i/dT0。模型族外样品 (T_i 不在 (0, T0) 内) 返回 NaN。
 
     Args:
         Pb206_204_S, Pb207_204_S, Pb208_204_S: 样品 206/204、207/204、208/204
-        params: 参数字典 (可选)
+        params: 参数字典 (可选; 应为 AJ84 预设, 提供 U_ratio = 1/137.79)
 
     Returns:
         dict: 键为 ALBAREDE_*_KEY 常量 (T_i, μ, κ, ω, Δμ, Δκ, dT/dT0)
@@ -392,6 +401,11 @@ __all__ = [
     'ALBAREDE_MU_STAR',
     'ALBAREDE_KAPPA_STAR',
     'ALBAREDE_OMEGA_STAR',
+    'ALBAREDE_U238_235',
+    'U_RATIO_AJ84',
+    'ALBAREDE_X0',
+    'ALBAREDE_Y0',
+    'ALBAREDE_Z0',
     'PRESET_MODELS',
     'GeochemistryEngine',
     'engine',
