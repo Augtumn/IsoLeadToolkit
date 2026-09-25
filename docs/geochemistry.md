@@ -1320,9 +1320,9 @@ x\*** 的退化情形；全部 20 行通过。另有 `tests/test_geochemistry_al
 有限差分）。
 
 **数据来源与可复现性**：参考值取自 F. Albarède 的 AJ84 MATLAB 管线（经 SilverQuest_v1
-随附数据库导出）。该库本身不随仓库分发；如需重放，可从 `reference/SilverQuest_v1/`
+随附数据库导出）。该库本身不随仓库分发；如需重放，可从 `reference/apps/SilverQuest_v1/`
 下的 `Pb_DB_20240310AllGalenas.xlsx` 重新抽取（只取与 z\* = 38.83 口径一致的行，
-判据见 §16.2）。
+判据见 §16.2）。本地参考资料的组织见 `reference/README.md`。
 
 ### 16.9 示例 (合成数据往返)
 

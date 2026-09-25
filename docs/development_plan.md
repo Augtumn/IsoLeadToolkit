@@ -2,6 +2,16 @@
 
 本文件仅保留尚未完成或正在推进的事项。历史已完成条目不再重复记录。
 
+## 阶段进展（2026-09-10 · 目录整理）
+
+仓库根目录长期堆积运行产物与散落文件（本地未跟踪，但影响阅读）；第三方参考资料也平铺在一起。整理如下：
+
+- **根目录**：6 个 `isotopes_analyse*.log` 归档 → `logs/`（两个活动日志由运行中的应用持有，原地保留，因为 `utils/logger.py` 就写在 CWD）；`1.csv`/`2.csv`/`3.csv`（工具导出的 `[Equations]` 表）→ `exports/`；`__pycache__`、`.pytest_cache`、`isotopesanalyse.egg-info`、空目录 `blobs/` 删除；Albarède (2012) PDF → `reference/papers/`。用户研究数据目录 `数据/` 未改动。
+- **`reference/` 归类**：`papers/`（论文）、`r_packages/`（ASTR、PbIso、IsoplotR、liaendmembers）、`apps/`（SilverQuest_v1、shereea）、`python/`（SciencePlots）、`origin_samples/`（OriginLab 样例）、`mineru/`（论文解析产物）、`silver_ml_shnyr/`（原 `18343221/`，Shnyr 等腓尼基银器 ML 论文仓库）；删除与解压目录重复的 `SilverQuest_v1.zip`。新增 `reference/README.md` 索引，逐项写明用途与"我们用它验证了什么"（ASTR→AJ84 对照、SilverQuest 库→AJ84 真实数据验证源等）。
+- **`.gitignore` 重写**：按用途分组（Python 生成物 / 运行产物 / 数据 / 第三方与用户数据 / 工具 / 其它），去掉重复条目（`*.xlsx`、`*.csv`、`.cursor/` 各出现两次），补充 `logs/`、`exports/`、`_viewcheck/`；`!tests/data/*.xlsx` 例外保留并验证通过（基准数据集仍可入库）。
+- **`_viewcheck/` 精简**：仅保留可复现脚本（`select_benchmark_rows.py`、`write_benchmark.py`，路径已更新为 `reference/apps/SilverQuest_v1/`）与公式复核用的两张放大图，其余一次性探针/比对 CSV 删除。
+- **收尾**：`reference/SilverQuest_v1/Pb_DB_20240310AllGalenas.xlsx`（及其 `~$` 锁文件）与根目录 `1.csv`/`2.csv` 当时被 **Excel 占用**，未强移；关闭 Excel 后手动移入 `reference/apps/SilverQuest_v1/` 与 `exports/` 即可。
+
 ## 阶段进展（2026-09-10 · 测试套件整理精简）
 
 `tests/` 从 **74 个文件**（大量 1–3 用例的 `test_*_helpers.py` 碎片，外加一个按"修复批次"堆放的 `test_review_correctness_fixes.py`）重组为 **29 个按子系统划分的模块**，测试函数 424 个 / 505 用例**零丢失**。

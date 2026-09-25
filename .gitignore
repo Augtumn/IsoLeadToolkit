@@ -1,39 +1,44 @@
-# Python-generated files
+# --- Python 生成物 ---
 __pycache__/
 *.py[oc]
 build/
 dist/
 wheels/
-*.egg-info
-.xlsx
-.csv
-.lock
+*.egg-info/
+.venv/
+.pytest_cache/
 
-# Virtual environments
-.venv
+# --- 运行产物 / 日志 ---
+*.log
+isotopes_analyse.log
+logs/
+exports/
+
+# --- 数据文件 (仅保留测试基准数据集) ---
 *.xlsx
 *.csv
-uv.lock
-isotopes_analyse.log
+*.pdf
+!tests/data/*.xlsx
+
+# --- 第三方参考与用户数据 (仅本地) ---
+reference/
+数据/
 PbIso-master/
 shereea/
-.cursor/
+
+# --- 工具与编辑器 ---
 .vscode/
+.cursor/
 .claude/
-reference/
+.codex/
+.sisyphus/
+.omo
+.github
+CLAUDE.md
+_viewcheck/
+
+# --- 其它 ---
+*.lock
+locales/reports/
 test_isochron_fix.py
 ISOCHRON_FIX.md
-locales/reports/
-*.log
-.cursor/
-.codex/
-CLAUDE.md
-*.pdf
-.sisyphus/
-.github
-.omo
-.pytest_cache
-数据/
-
-# Benchmark dataset for geochemistry validation (tracked despite *.xlsx rule)
-!tests/data/*.xlsx
