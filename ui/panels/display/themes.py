@@ -5,8 +5,7 @@ import logging
 
 from PyQt5.QtWidgets import QMessageBox, QWidget
 
-from core import CONFIG, app_state, atomic_write_json, state_gateway, translate
-from core.persistence import extract_legacy_projection_presets
+from core import CONFIG, app_state, atomic_write_json, load_themes, state_gateway, translate
 from visualization.plotting.style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
@@ -25,19 +24,7 @@ class DisplayThemeMixin:
         theme_file = CONFIG['temp_dir'] / 'user_themes.json'
         if theme_file.exists():
             try:
-                loaded, legacy_presets = extract_legacy_projection_presets()
-                if legacy_presets:
-                    # Legacy: projection parameter presets used to live inside
-                    # the theme container; migrate them once into
-                    # param_presets, which is persisted separately.
-                    merged = dict(getattr(app_state, 'param_presets', {}) or {})
-                    merged.update(legacy_presets)
-                    state_gateway.set_param_presets(merged)
-                    logger.info(
-                        "Migrated %s legacy projection presets from user_themes.json",
-                        len(legacy_presets),
-                    )
-                state_gateway.set_saved_themes(loaded or {})
+                state_gateway.set_saved_themes(load_themes() or {})
             except Exception as exc:
                 logger.warning("Failed to load themes: %s", exc)
                 state_gateway.set_saved_themes({})

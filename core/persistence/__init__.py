@@ -156,38 +156,11 @@ def load_ui_state() -> dict[str, Any] | None:
     return read_json_isolated(UI_STATE_FILE)
 
 
-def extract_legacy_projection_presets() -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    """Split legacy projection presets out of the theme container.
-
-    Before the persistence rework, projection parameter presets lived inside
-    ``saved_themes["projection_presets"]`` in user_themes.json. Returns
-    ``(themes_payload, presets_payload)`` with the presets key removed from
-    the themes payload; either may be None when absent/unreadable. When
-    legacy presets were found, the cleaned container is written back to
-    user_themes.json so the migration runs exactly once (otherwise every
-    panel open re-migrates and re-dispatches).
-    """
+def load_themes() -> dict[str, Any] | None:
+    """Read the display-theme payload (corruption-isolated)."""
     from .paths import THEMES_FILE
 
-    themes = read_json_isolated(THEMES_FILE)
-    if not themes:
-        return None, None
-    presets = themes.pop("projection_presets", None)
-    presets_payload = (
-        {str(k): dict(v or {}) for k, v in presets.items()}
-        if isinstance(presets, dict)
-        else None
-    )
-    if presets_payload:
-        try:
-            atomic_write_json(THEMES_FILE, themes)
-            logger.info(
-                "Migrated %s legacy projection presets; cleaned user_themes.json",
-                len(presets_payload),
-            )
-        except Exception as exc:
-            logger.warning("Failed to persist cleaned user_themes.json: %s", exc)
-    return themes, presets_payload
+    return read_json_isolated(THEMES_FILE)
 
 
 def load_all() -> tuple[dict[str, Any] | None, dict[str, Any] | None]:

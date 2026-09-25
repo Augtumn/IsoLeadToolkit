@@ -108,24 +108,12 @@ class Qt5AppSessionMixin:
 
         Reads ui_state.json and bulk-restores it through the StateStore so
         every restore goes through the same snapshot/sync machinery instead
-        of dozens of gateway calls. Also migrates legacy projection presets
-        out of the theme container (persistence plan §8.5).
+        of dozens of gateway calls.
         """
-        from core import (
-            extract_legacy_projection_presets,
-            load_ui_state,
-            state_gateway,
-        )
+        from core import load_themes, load_ui_state, state_gateway
 
         ui_payload = load_ui_state() or {}
-        themes, legacy_presets = extract_legacy_projection_presets()
-        if legacy_presets:
-            existing = dict(ui_payload.get("param_presets") or {})
-            ui_payload["param_presets"] = {**existing, **legacy_presets}
-            logger.info(
-                "Migrated %s legacy projection presets from user_themes.json",
-                len(legacy_presets),
-            )
+        themes = load_themes()
         if themes:
             state_gateway.set_saved_themes(themes)
         if ui_payload:

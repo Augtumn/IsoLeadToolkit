@@ -188,27 +188,16 @@ def test_clean_exit_marker_roundtrip(tmp_path: Path, monkeypatch) -> None:
     assert persistence.consume_exit_marker() is False
 
 
-def test_extract_legacy_projection_presets(tmp_path: Path, monkeypatch) -> None:
+def test_load_themes_returns_payload(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(paths, "THEMES_FILE", tmp_path / "user_themes.json")
+    assert persistence.load_themes() is None
+
     (tmp_path / "user_themes.json").write_text(
-        json.dumps({
-            "My Theme": {"grid": True},
-            "projection_presets": {"P1": {"algorithm": "UMAP"}},
-        }),
+        json.dumps({"My Theme": {"grid": True}}),
         encoding="utf-8",
     )
 
-    themes, presets = persistence.extract_legacy_projection_presets()
-    assert presets == {"P1": {"algorithm": "UMAP"}}
-    assert themes == {"My Theme": {"grid": True}}
-    assert "projection_presets" not in themes
-
-    # The cleaned container is written back, so the migration runs once.
-    on_disk = json.loads((tmp_path / "user_themes.json").read_text(encoding="utf-8"))
-    assert "projection_presets" not in on_disk
-    themes2, presets2 = persistence.extract_legacy_projection_presets()
-    assert presets2 is None
-    assert themes2 == {"My Theme": {"grid": True}}
+    assert persistence.load_themes() == {"My Theme": {"grid": True}}
 
 
 def test_restore_snapshot_normalizes_set_and_tuple_fields(tmp_path: Path, monkeypatch) -> None:

@@ -96,14 +96,9 @@ def load_session_params() -> dict[str, Any] | None:
     """
     try:
         params_file = CONFIG['params_temp_file']
-        legacy_params_file = CONFIG.get('legacy_params_temp_file')
-
         if not params_file.exists():
-            if legacy_params_file is not None and legacy_params_file.exists():
-                params_file = legacy_params_file
-            else:
-                logger.info("No previous session found")
-                return None
+            logger.info("No previous session found")
+            return None
 
         with open(params_file, 'r', encoding='utf-8') as f:
             session_data = json.load(f)
@@ -124,14 +119,7 @@ def load_session_params() -> dict[str, Any] | None:
 
         session_data, migrated = migrate_session_data(session_data, current_version)
 
-        if legacy_params_file and params_file == legacy_params_file:
-            # Migrate to preferred location for faster future loads.
-            try:
-                _atomic_write_json(CONFIG['params_temp_file'], session_data)
-                logger.info("Migrated session parameters to %s", CONFIG['params_temp_file'])
-            except Exception as exc:
-                logger.warning("Failed to persist migrated session parameters: %s", exc)
-        elif migrated:
+        if migrated:
             try:
                 _atomic_write_json(CONFIG['params_temp_file'], session_data)
                 logger.info("Updated session parameters to version %s", current_version)

@@ -7,10 +7,10 @@ from typing import Any, Callable
 
 from .app_state import app_state
 from .store import StateStore
-from ._compat_builders import (
-    build_compat_attr_handlers,
+from ._panel_style_handlers import (
     build_overlay_toggle_handlers,
-    build_panel_style_allowed_keys,
+    build_panel_style_handlers,
+    panel_style_keys,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,97 +27,12 @@ class AppStateGateway:
             store = StateStore(state)
             setattr(state, "state_store", store)
         self._store = store
-        self._compat_attr_handlers = build_compat_attr_handlers(self)
+        self._panel_style_handlers = build_panel_style_handlers(self)
         self._overlay_toggle_handlers = build_overlay_toggle_handlers(self)
-        self._panel_style_allowed_keys = build_panel_style_allowed_keys()
+        self._panel_style_allowed_keys = panel_style_keys()
 
     def _dispatch(self, action_type: str, **payload: Any) -> dict[str, Any]:
         return self._store.dispatch({"type": action_type, **payload})
-
-    def _set_group_cols_compat(self, value: Any) -> None:
-        group_cols = [] if value is None else list(value)
-        self.set_group_data_columns(group_cols, list(getattr(self._state, "data_cols", []) or []))
-
-    def _set_data_cols_compat(self, value: Any) -> None:
-        data_cols = [] if value is None else list(value)
-        self.set_group_data_columns(list(getattr(self._state, "group_cols", []) or []), data_cols)
-
-    def _set_export_image_options_compat(self, value: Any) -> None:
-        if isinstance(value, dict):
-            self.set_export_image_options(**value)
-            return
-        # Keep legacy callers safe while preventing direct state bypass.
-        self.set_export_image_options()
-
-    def _set_isochron_error_mode_compat(self, value: Any) -> None:
-        mode = str(value or "fixed").strip().lower()
-        if mode == "columns":
-            self.set_isochron_error_columns(
-                str(getattr(self._state, "isochron_sx_col", "") or ""),
-                str(getattr(self._state, "isochron_sy_col", "") or ""),
-                str(getattr(self._state, "isochron_rxy_col", "") or ""),
-            )
-            return
-        self.set_isochron_error_fixed(
-            float(getattr(self._state, "isochron_sx_value", 0.001) or 0.001),
-            float(getattr(self._state, "isochron_sy_value", 0.001) or 0.001),
-            float(getattr(self._state, "isochron_rxy_value", 0.0) or 0.0),
-        )
-
-    def _set_isochron_sx_col_compat(self, value: Any) -> None:
-        self.set_isochron_error_columns(
-            str(value or ""),
-            str(getattr(self._state, "isochron_sy_col", "") or ""),
-            str(getattr(self._state, "isochron_rxy_col", "") or ""),
-        )
-
-    def _set_isochron_sy_col_compat(self, value: Any) -> None:
-        self.set_isochron_error_columns(
-            str(getattr(self._state, "isochron_sx_col", "") or ""),
-            str(value or ""),
-            str(getattr(self._state, "isochron_rxy_col", "") or ""),
-        )
-
-    def _set_isochron_rxy_col_compat(self, value: Any) -> None:
-        self.set_isochron_error_columns(
-            str(getattr(self._state, "isochron_sx_col", "") or ""),
-            str(getattr(self._state, "isochron_sy_col", "") or ""),
-            str(value or ""),
-        )
-
-    def _set_isochron_sx_value_compat(self, value: Any) -> None:
-        self.set_isochron_error_fixed(
-            float(value),
-            float(getattr(self._state, "isochron_sy_value", 0.001) or 0.001),
-            float(getattr(self._state, "isochron_rxy_value", 0.0) or 0.0),
-        )
-
-    def _set_isochron_sy_value_compat(self, value: Any) -> None:
-        self.set_isochron_error_fixed(
-            float(getattr(self._state, "isochron_sx_value", 0.001) or 0.001),
-            float(value),
-            float(getattr(self._state, "isochron_rxy_value", 0.0) or 0.0),
-        )
-
-    def _set_isochron_rxy_value_compat(self, value: Any) -> None:
-        self.set_isochron_error_fixed(
-            float(getattr(self._state, "isochron_sx_value", 0.001) or 0.001),
-            float(getattr(self._state, "isochron_sy_value", 0.001) or 0.001),
-            float(value),
-        )
-
-    def set_attr(self, name: str, value: Any) -> None:
-        """Set a single app_state attribute via gateway."""
-        handler = self._compat_attr_handlers.get(name)
-        if handler is not None:
-            handler(value)
-            return
-        logger.warning("Ignored unknown set_attr key: %s", name)
-
-    def set_attrs(self, values: dict[str, Any]) -> None:
-        """Set multiple app_state attributes via gateway."""
-        for name, value in values.items():
-            self.set_attr(name, value)
 
     def set_panel_style_updates(self, updates: dict[str, Any]) -> None:
         """Apply style-control updates collected from panel widgets."""
@@ -125,7 +40,7 @@ class AppStateGateway:
             if name not in self._panel_style_allowed_keys:
                 logger.warning("Ignored unknown panel style update key: %s", name)
                 continue
-            handler = self._compat_attr_handlers.get(name)
+            handler = self._panel_style_handlers.get(name)
             if handler is not None:
                 handler(value)
                 continue

@@ -9,9 +9,7 @@ from gateway_mutation_guard import print_scan_result, scan_generic_gateway_calls
 from source_scan_guard import repo_root
 
 EXCLUDED_PARTS = {".venv", "reference", ".git", "__pycache__"}
-ALLOWED = {
-    "tests/test_gateway_set_attr_compatibility.py",
-}
+ALLOWED: set[str] = set()
 
 
 def should_scan(path: Path, repo_root: Path) -> bool:
