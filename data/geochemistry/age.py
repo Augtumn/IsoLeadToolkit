@@ -11,7 +11,12 @@ from scipy import optimize
 
 from .engine import (
     engine,
+    ALBAREDE_MU_STAR,
+    ALBAREDE_T0,
+    ALBAREDE_X_STAR,
+    ALBAREDE_Y_STAR,
     EPSILON,
+    calculate_model_slope,
 )
 
 logger = logging.getLogger(__name__)
@@ -237,5 +242,142 @@ def calculate_two_stage_age(
         results.append(t_res / 1e6 if t_res is not None else np.nan)
 
     return np.array(results).reshape(S206.shape)
+
+
+# =============================================================================
+# Albarède et al. (2012) T–μ–κ 模型 — 模式年龄
+# =============================================================================
+# 参考: Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867,
+#       https://doi.org/10.1111/j.1475-4754.2011.00653.x
+# 参考模型: 原始铅自 T0 = 4.43 Ga 以 μ* = 9.66、κ* = 3.90 演化至今,
+#           现代上地壳 x*/y*/z* = 18.750/15.63/38.83。
+# 矿床按硫化物处理 (T_i 后 μ2 ≈ 0), 模式年龄 T_i 为式 (12) 在 (0, T0) 内的根。
+
+_ALBAREDE_SEARCH_POINTS = 400
+
+
+def albarede_model_age_residual(
+    t_Ma: np.ndarray | float,
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray | float:
+    """
+    Albarède et al. (2012) 模式年龄方程 (式 12) 的残差
+
+    论文式 (12):
+        f(T_i) = (y_i − y*)/(x_i − x*) − s(T0, T_i)
+                 − μ*(e^{λT_i} − 1)/(x_i − x*) · [s(T0, T_i) − s(T_i, 0)] = 0
+
+    第三项的指数因子取 ²³⁸U 项 (e^{λT_i} − 1): 由式 (11) 的 x/y 生长方程精确
+    消去 Δμ_i 得到的正是该形式 (因 s(T_i,0)·(e^{λT_i} − 1) = (e^{λ'T_i} − 1)/137.88);
+    论文印刷版的 λ' 无法与式 (11) 相容, 此处以实现可自洽、可往返验证的形式为准。
+
+    Args:
+        t_Ma: 待求模式年龄 (Ma)
+        Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
+        params: 参数字典 (可选)
+
+    Returns:
+        np.ndarray or float: 残差 (无量纲)
+    """
+    if params is None:
+        params = engine.params
+    t_years = np.asarray(t_Ma, dtype=float) * 1e6
+
+    x = np.asarray(Pb206_204_S, dtype=float)
+    y = np.asarray(Pb207_204_S, dtype=float)
+    dx = x - ALBAREDE_X_STAR
+    dx = np.where(np.abs(dx) < EPSILON, np.copysign(EPSILON, dx), dx)
+
+    s_t0_t = calculate_model_slope(ALBAREDE_T0, t_years, params)
+    s_t_0 = calculate_model_slope(t_years, 0.0, params)
+
+    residual = (
+        (y - ALBAREDE_Y_STAR) / dx
+        - s_t0_t
+        - (ALBAREDE_MU_STAR * (np.exp(float(params['lambda_238']) * t_years) - 1.0) / dx)
+        * (s_t0_t - s_t_0)
+    )
+    if np.ndim(residual) == 0:
+        return float(residual)
+    return residual
+
+
+def _solve_albarede_age_scalar(
+    x_i: float,
+    y_i: float,
+    params: dict[str, Any],
+) -> float | None:
+    """求解单个样品的式 (12) 根, 返回年龄 (年) 或 None."""
+    if not (np.isfinite(x_i) and np.isfinite(y_i)):
+        return None
+    if abs(x_i - ALBAREDE_X_STAR) < _RATIO_DIFF_FLOOR:
+        # x_i 落在现代上地壳参考上, 比值项奇异, 无解。
+        return None
+
+    def _f(t_years: float) -> float:
+        try:
+            value = float(albarede_model_age_residual(t_years / 1e6, x_i, y_i, params))
+        except Exception as exc:  # pragma: no cover - 数值保护
+            logger.debug("Albarède age evaluation failed at t=%s: %s", t_years, exc)
+            return np.nan
+        return value if np.isfinite(value) else np.nan
+
+    try:
+        f_low = _f(0.0)
+        f_high = _f(ALBAREDE_T0)
+        if np.isfinite(f_low) and np.isfinite(f_high) and f_low * f_high <= 0:
+            return float(optimize.brentq(_f, 0.0, ALBAREDE_T0, xtol=_AGE_SOLVER_XTOL))
+
+        # 残差在 T0 附近很陡, 端点不异号时在区间内扫描变号子区间。
+        grid = np.linspace(0.0, ALBAREDE_T0, _ALBAREDE_SEARCH_POINTS)
+        for t_left, t_right in zip(grid[:-1], grid[1:]):
+            f_left = _f(float(t_left))
+            f_right = _f(float(t_right))
+            if not (np.isfinite(f_left) and np.isfinite(f_right)):
+                continue
+            if f_left == 0.0:
+                return float(t_left)
+            if f_left * f_right < 0:
+                return float(optimize.brentq(_f, float(t_left), float(t_right), xtol=_AGE_SOLVER_XTOL))
+        return None
+    except Exception as exc:
+        logger.warning("Albarède model-age solve failed (x=%s, y=%s): %s", x_i, y_i, exc)
+        return None
+
+
+def calculate_albarede_model_age(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray | float | None:
+    """
+    Albarède et al. (2012) 模式年龄 T_i (Ma) — 式 (12)
+
+    标量输入返回标量年龄 (无解时返回 None); 数组输入返回数组, 无解位置为 NaN。
+
+    Args:
+        Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
+        params: 参数字典 (可选)
+
+    Returns:
+        np.ndarray or float or None: 模式年龄 (Ma)
+    """
+    if params is None:
+        params = engine.params
+
+    x = np.asarray(Pb206_204_S, dtype=float)
+    y = np.asarray(Pb207_204_S, dtype=float)
+
+    if x.ndim == 0:
+        t_years = _solve_albarede_age_scalar(float(x), float(y), params)
+        return None if t_years is None else t_years / 1e6
+
+    ages = []
+    for x_i, y_i in zip(x.ravel(), y.ravel()):
+        t_years = _solve_albarede_age_scalar(float(x_i), float(y_i), params)
+        ages.append(np.nan if t_years is None else t_years / 1e6)
+    return np.array(ages, dtype=float).reshape(x.shape)
 
 

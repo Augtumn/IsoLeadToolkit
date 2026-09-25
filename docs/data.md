@@ -89,6 +89,11 @@ A0, B0, C0 = 9.307, 10.294, 29.476  # CDT 原始比值
 | `Stacey & Kramers (2nd Stage)` | `two_stage` | SK 第二阶段 (3.7 Ga-今) — 默认 |
 | `Cumming & Richards` | `single_stage` | C&R 模型 (连续演化, E1/E2≠0) |
 | `Maltese & Mezger` | `single_stage` | M&M 模型 (BSE 演化) |
+| `Albarède et al. (2012)` | `single_stage` | T–μ–κ 参考模型 (x\*/y\*/z\*=18.750/15.63/38.83, μ\*=9.66, κ\*=3.90, T0=4.43 Ga)；论文口径反演见 [`docs/geochemistry.md`](geochemistry.md) §16 |
+
+> 新增模型只需在 `PRESET_MODELS` 里加一条**标准字段**的预设（engine/age/source/`__init__`
+> 的既有分层不变）；模型专属的算法按所属关注点落入对应模块（模式年龄 → `age.py`，
+> 源区反演 → `source.py`，参考常量/曲线 → `engine.py`）。
 
 ### GeochemistryEngine 类 (engine.py)
 

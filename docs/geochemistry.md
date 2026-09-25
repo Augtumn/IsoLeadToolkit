@@ -6,6 +6,7 @@
 - Stacey, J.S. & Kramers, J.D. (1975). *EPSL*, 26, 207–221.
 - Cumming, G.L. & Richards, J.R. (1975). *EPSL*, 28, 155–171.
 - Maltese, A. & Mezger, K. (2020). *GCA*, 271, 70–87.
+- Albarède, F., Desaulty, A.-M. & Blichert-Toft, J. (2012). A geological perspective on the use of Pb isotopes in archaeometry. *Archaeometry*, 54(5), 853–867. https://doi.org/10.1111/j.1475-4754.2011.00653.x
 - Zhu, B.Q. (1993; 1995; 1998). 铅同位素三维拓扑投影方法.
 - Jaffey, A.H. et al. (1971). *Phys. Rev. C*, 4, 1889. (衰变常数)
 - Steiger, R.H. & Jäger, E. (1977). *EPSL*, 36, 359–362.
@@ -16,12 +17,12 @@
 **源文件结构:**
 ```
 data/geochemistry/
-├── engine.py      → 常量、预设模型、GeochemistryEngine、模型曲线
-├── age.py         → 模式年龄求解 (单阶段/两阶段/Pb-Pb)
+├── engine.py      → 常量、预设模型、GeochemistryEngine、模型曲线、曲线斜率 s(T0,T)
+├── age.py         → 模式年龄求解 (单阶段/两阶段/Pb-Pb/Albarède 式 12)
 ├── delta.py       → Δ 值、V1-V2 投影
-├── source.py      → 源区参数反演、初始比值
+├── source.py      → 源区参数反演 (PbIso 口径 + Albarède 式 11/14)、初始比值
 ├── isochron.py    → 等时线、生长曲线、York 回归
-└── __init__.py    → 集成入口 calculate_all_parameters()
+└── __init__.py    → 集成入口 calculate_all_parameters() / calculate_albarede_parameters()
 ```
 
 ---
@@ -95,7 +96,7 @@ SK 模型两阶段过渡点 (3700 Ma) 的铅同位素组成:
 
 ## 2. 预设模型库
 
-系统内置 6 个预设模型，存储于 `PRESET_MODELS` 字典。
+系统内置 7 个预设模型，存储于 `PRESET_MODELS` 字典。
 
 ### 2.1 V1V2 (Geokit)
 
@@ -169,17 +170,34 @@ E1 = 0,  E2 = 0
 
 **特点:** BSE (Bulk Silicate Earth) 演化模型。起始于 4498 Ma 的分异组成 (a1 > a0)，表示地球核幔分异后 BSE 已积累了一定放射性成因铅。
 
-### 2.7 模型参数对照表
+### 2.7 Albarède et al. (2012)
 
-| 参数 | Geokit | Zhu93 | SK-2nd | SK-1st | CR-III | MM2020 |
-|------|--------|-------|--------|--------|--------|--------|
-| age_model | single | single | **two** | single | single | single |
-| T1 (Ma) | 4430 | 4570 | **3700** | 4570 | 4509 | 4498 |
-| T2 (Ma) | 4570 | 4570 | 4570 | 4570 | 4509 | 4498 |
-| μ_M | 7.8 | 7.8 | 9.74 | 7.2 | 10.8 | 8.63 |
-| ω_M | 31.51 | 31.51 | 36.84 | 33.2 | 41.2 | 34.8 |
-| E1 | 0 | 0 | 0 | 0 | **5e-11** | 0 |
-| E2 | 0 | 0 | 0 | 0 | **3.7e-11** | 0 |
+```
+age_model  = single_stage
+T1 = T2    = 4430 Ma,  Tsec = 0
+a0/b0/c0   = (9.204, 10.201, 29.598)   # 由参考组成反推的原始铅
+a1/b1/c1   = 同 a0/b0/c0
+μ = 9.66,  ω = 9.66 × 3.90 = 37.674,  κ = 3.90
+E1 = 0,  E2 = 0
+```
+
+**特点:** 论文的 T–μ–κ 参考模型。原始铅自 T0 = 4.43 Ga 以 μ\* = 9.66、κ\* = 3.90
+演化至今，现代上地壳参考组成 x\*/y\*/z\* = 18.750/15.63/38.83（Stacey & Kramers 1975；
+Albarède & Juteau 1984）。初始比值取 `ALBAREDE_X0/Y0/Z0`（由参考组成反推），因此模型
+曲线在 t = 0 恰好通过 x\*/y\*/z\*；它与 CDT (9.307/10.294/29.476) 相差 ≤ 0.12，源于
+Albarède & Juteau (1984) 的参考拟合。论文口径的 T–μ–κ 反演见 §16。
+
+### 2.8 模型参数对照表
+
+| 参数 | Geokit | Zhu93 | SK-2nd | SK-1st | CR-III | MM2020 | Alb12 |
+|------|--------|-------|--------|--------|--------|--------|-------|
+| age_model | single | single | **two** | single | single | single | single |
+| T1 (Ma) | 4430 | 4570 | **3700** | 4570 | 4509 | 4498 | 4430 |
+| T2 (Ma) | 4570 | 4570 | 4570 | 4570 | 4509 | 4498 | 4430 |
+| μ_M | 7.8 | 7.8 | 9.74 | 7.2 | 10.8 | 8.63 | 9.66 |
+| ω_M | 31.51 | 31.51 | 36.84 | 33.2 | 41.2 | 34.8 | 37.67 |
+| E1 | 0 | 0 | 0 | 0 | **5e-11** | 0 | 0 |
+| E2 | 0 | 0 | 0 | 0 | **3.7e-11** | 0 | 0 |
 
 ---
 
@@ -850,6 +868,7 @@ p 值: `1 − CDF_χ²(χ², n−2)` (χ² 分布)
 | `Pb208_204_S` | array | 输入数据 |
 | `tCDT (Ma)` | array | 单阶段模式年龄 |
 | `tSK (Ma)` | array | 两阶段模式年龄 |
+| `t_Model (Ma)` | array | 统一模式年龄 (two_stage → tSK, single_stage → tCDT) |
 | `Delta_alpha` | array | Δα (‰) |
 | `Delta_beta` | array | Δβ (‰) |
 | `Delta_gamma` | array | Δγ (‰) |
@@ -911,7 +930,7 @@ t_years = t_Ma × 10⁶
 
 ### 13.3 tSK 在 Tsec=0 模型下的行为
 
-对于 Zhu 1993、Cumming & Richards、Maltese & Mezger 等 Tsec=0 的模型，`calculate_two_stage_age()` 使用 T=0 求解，产生无物理意义的结果。`calculate_all_parameters()` 对这些模型不使用 tSK 进行后续计算，但 tSK 仍被导出到结果字典中。
+对于 Zhu 1993、Cumming & Richards、Maltese & Mezger、Albarède et al. (2012) 等 Tsec=0 的模型，`calculate_two_stage_age()` 使用 T=0 求解，产生无物理意义的结果。`calculate_all_parameters()` 对这些模型不使用 tSK 进行后续计算，但 tSK 仍被导出到结果字典中。
 
 ### 13.4 投影方向选择
 
@@ -978,8 +997,31 @@ t_years = t_Ma × 10⁶
 
 ```python
 calculate_all_parameters(Pb206, Pb207, Pb208, t_Ma=None, a=None, b=None, c=None)
-→ dict  # 含 19 个键的完整结果集 (见 §11.2)
+→ dict  # 含 20 个键的完整结果集 (见 §11.2)
 ```
+
+### 14.7 Albarède et al. (2012) T–μ–κ (§16)
+
+| 函数 | 所在模块 | 输入 | 输出 |
+|------|---------|------|------|
+| `calculate_model_slope` | `engine` | T0, T (年) | s(T0, T) — 式 (4) |
+| `calculate_albarede_model_age` | `age` | 206/204, 207/204 | T_i (Ma)；无解 → NaN / None |
+| `albarede_model_age_residual` | `age` | T_i, 206/204, 207/204 | 式 (12) 残差 |
+| `calculate_albarede_delta_mu` | `source` | 206/204, 207/204, T_i | Δμ_i = μ_i − μ\* |
+| `calculate_albarede_mu` | `source` | 同上 | μ_i = 238U/204Pb |
+| `calculate_albarede_delta_kappa` | `source` | 206/204, 208/204, T_i, μ_i | Δκ_i = κ_i − κ\* |
+| `calculate_albarede_kappa` | `source` | 同上 | κ_i = 232Th/238U |
+| `calculate_albarede_parameters` | `__init__` | 206/204, 207/204, 208/204 | dict (`ALBAREDE_*_KEY`) |
+
+```python
+calculate_albarede_parameters(Pb206, Pb207, Pb208)
+→ {'t_Albarede (Ma)': T_i, 'mu_Albarede': μ, 'kappa_Albarede': κ,
+   'omega_Albarede': μ·κ, 'Delta_mu_Albarede': Δμ, 'Delta_kappa_Albarede': Δκ}
+```
+
+该入口独立于 `calculate_all_parameters()`：两者的参考组成与年龄口径不同（PbIso 系列
+用 CDT/a₁ 参考，本模型用现代上地壳 x\*/y\*/z\*、μ\*、κ\*），混在同一字典里会让下游
+误用错参考，因此刻意分开。
 
 ---
 
@@ -1102,3 +1144,108 @@ Stacey-Kramers 模型曲线展示地幔铅同位素演化轨迹。
 | `model_age_line` | 模式年龄构造线 |
 
 每个样式支持 `color`, `linewidth`, `linestyle`, `alpha` 四个属性。
+
+---
+
+## 16. Albarède et al. (2012) T–μ–κ 模型
+
+参考: Albarède, F., Desaulty, A.-M. & Blichert-Toft, J. (2012). A geological
+perspective on the use of Pb isotopes in archaeometry. *Archaeometry*, 54(5),
+853–867. https://doi.org/10.1111/j.1475-4754.2011.00653.x
+
+### 16.1 建模思路
+
+传统做法把测得的 Pb 比值直接与矿石数据库比对；该文提出把比值反演为三个地质参数：
+
+| 参数 | 含义 | 适用范围 |
+|------|------|---------|
+| T_i | 模式年龄 (Ma) | 判别 Alpine / Hercynian / Cordilleran 等构造省 |
+| μ_i = ²³⁸U/²⁰⁴Pb | 源区 U/Pb | 省内分段 (如安第斯 9.60–9.85) |
+| κ_i = ²³²Th/²³⁸U | 源区 Th/U | 省内分段 (如 3.7–4.2) |
+
+金属矿床按硫化物处理：硫化物富 Pb 而几乎不含 U/Th，因此 T_i 之后 μ₂ ≈ 0，
+样品记录的是源区在 T_i 时刻冻结的组成。
+
+### 16.2 参考模型 (论文 "Reference models")
+
+| 量 | 符号 | 取值 |
+|----|------|------|
+| 地球/地壳分异时间 | T0 | 4.43 Ga |
+| 现代上地壳 | x\*, y\*, z\* | 18.750, 15.63, 38.83 |
+| 现代上地壳 | μ\*, κ\* | 9.66, 3.90 |
+| 衰变常数 | λ, λ', λ'' | 与前文 §1.1 相同 |
+
+来源: Stacey & Kramers (1975); Albarède & Juteau (1984)。
+
+### 16.3 曲线斜率 (论文式 4)
+
+s(T0, T) = 1/137.88 · (e^{λ'T0} − e^{λ'T}) / (e^{λT0} − e^{λT})
+
+实现 `calculate_model_slope()`。T = T0 时为 0/0，返回洛必达切线极限
+1/137.88 · (λ'/λ) · e^{(λ'−λ)T}，使"与地球同龄"的样品仍有有限残差。
+
+### 16.4 模式年龄 (论文式 11 → 式 12)
+
+两阶段生长方程 (T_i 后无 U)：
+
+```
+x_i = x0 + μ_i (e^{λT0} − e^{λT_i})
+y_i = y0 + (μ_i/137.88)(e^{λ'T0} − e^{λ'T_i})
+z_i = z0 + μ_i κ_i (e^{λ''T0} − e^{λ''T_i})
+```
+
+相对现代上地壳参考 (x\*, y\*, z\*)，引入 Δμ_i = μ_i − μ\* 后消去 Δμ_i 得
+
+```
+f(T_i) = (y_i − y*)/(x_i − x*) − s(T0, T_i)
+         − μ*(e^{λT_i} − 1)/(x_i − x*) · [s(T0, T_i) − s(T_i, 0)] = 0
+```
+
+**实现细节:** 第三项的指数因子取 ²³⁸U 项 (e^{λT_i} − 1)。由式 (11) 的 x/y 生长方程
+精确消去 Δμ_i 得到的正是该形式（因为 s(T_i, 0)·(e^{λT_i} − 1) = (e^{λ'T_i} − 1)/137.88）；
+论文印刷版的 λ' 无法与式 (11) 相容。往返验证见
+`tests/test_geochemistry_albarede.py`（已知 T_i/μ_i/κ_i 生成合成数据再反演）。
+
+求解区间为 (0, T0)，先用端点括根，失败则在区间内扫描变号子区间
+（残差在 T0 附近很陡）。x_i 落在 x\* 上、或样品落在模型族之外时返回 NaN。
+
+### 16.5 源区参数 (论文式 11 / 式 14)
+
+```
+Δμ_i = [x_i − x* + μ*(e^{λT_i} − 1)] / (e^{λT0} − e^{λT_i})       # 式 11
+μ_i  = μ* + Δμ_i
+
+Δκ_i = { [z_i − z* + μ*κ*(e^{λ''T_i} − 1)] / (e^{λ''T0} − e^{λ''T_i})
+         − κ* Δμ_i } / μ_i                                        # 式 14
+κ_i  = κ* + Δκ_i
+```
+
+式 (14) 由论文式 (13)/(14) 的 z 生长方程解出；ω_i = μ_i·κ_i (²³²Th/²⁰⁴Pb)。
+
+### 16.6 与 PbIso 口径反演的区别
+
+| | PbIso 口径 (§7) | Albarède et al. (2012) |
+|---|---|---|
+| 参考组成 | a₀/b₀/c₀ (CDT) 或 a₁/b₁/c₁ (SK 阶段 2) | 现代上地壳 x\*/y\*/z\* |
+| 参考 μ/κ | 模型 μ_M、ω_M | μ\* = 9.66、κ\* = 3.90 |
+| 年龄来源 | 调用方提供 t_Ma，或 tCDT/tSK | 由式 (12) 从数据自解 |
+| 输出含义 | 源区 μ/κ（相对模型参考） | Δμ/Δκ（相对现代地壳），μ/κ 绝对值 |
+| 入口 | `calculate_all_parameters()` | `calculate_albarede_parameters()` |
+
+选中 `Albarède et al. (2012)` 预设时，界面上的模型曲线与 `t_Model`/`μ_model`/`κ_model`
+仍由既有管线按该预设的标准字段计算（参考组成已换成 x\*/y\*/z\* 反推的原始铅），
+与 §16.5 的论文口径反演结果互为交叉验证。
+
+### 16.7 示例 (合成数据往返)
+
+```python
+from data.geochemistry import calculate_albarede_parameters, engine
+
+engine.load_preset("Albarède et al. (2012)")
+# 由 T_i = 300 Ma、μ_i = 9.90、κ_i = 4.05 正演得到的 (x, y, z) → 反演
+result = calculate_albarede_parameters(x, y, z)
+# result['t_Albarede (Ma)'] ≈ 300.0
+# result['mu_Albarede']      ≈ 9.90
+# result['kappa_Albarede']   ≈ 4.05
+```
+

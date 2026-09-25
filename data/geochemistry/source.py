@@ -6,7 +6,15 @@ from typing import Any
 
 import numpy as np
 
-from .engine import engine, EPSILON
+from .engine import (
+    engine,
+    ALBAREDE_KAPPA_STAR,
+    ALBAREDE_MU_STAR,
+    ALBAREDE_T0,
+    ALBAREDE_X_STAR,
+    ALBAREDE_Z_STAR,
+    EPSILON,
+)
 
 
 # =============================================================================
@@ -380,6 +388,130 @@ def calculate_initial_ratio_84(
     e2T = np.exp(params['lambda_232'] * t_ref)
     e2t = np.exp(params['lambda_232'] * t)
     return z_ref + omega * (e2T - e2t)
+
+
+# =============================================================================
+# Albarède et al. (2012) T–μ–κ 模型 — 源区参数 (式 11 / 式 14)
+# =============================================================================
+# 参考: Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867,
+#       https://doi.org/10.1111/j.1475-4754.2011.00653.x
+# 参考组成 (Stacey & Kramers 1975; Albarède & Juteau 1984):
+#   x*/y*/z* = 18.750/15.63/38.83, μ* = 9.66, κ* = 3.90, T0 = 4.43 Ga。
+# 与本节前面的 PbIso 口径反演不同, 这里相对"现代上地壳参考"给出 Δμ = μ − μ*
+# 与 Δκ = κ − κ*, 使用论文式 (11) / 式 (14) 的精确重排式。
+
+def calculate_albarede_delta_mu(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    t_Ma: np.ndarray | float | None,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray:
+    """
+    Albarède et al. (2012) Δμ_i = μ_i − μ* (式 11)
+
+    由 x_i = x* − μ*(e^{λT_i} − 1) + Δμ_i (e^{λT0} − e^{λT_i}) 解出:
+        Δμ_i = [x_i − x* + μ*(e^{λT_i} − 1)] / (e^{λT0} − e^{λT_i})
+
+    Args:
+        Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
+        t_Ma: 模式年龄 T_i (Ma), 由 calculate_albarede_model_age 得到
+        params: 参数字典 (可选)
+
+    Returns:
+        np.ndarray: Δμ_i
+    """
+    if params is None:
+        params = engine.params
+    l238 = params['lambda_238']
+
+    x = np.asarray(Pb206_204_S, dtype=float)
+    t = _prepare_age(t_Ma)
+
+    numerator = x - ALBAREDE_X_STAR + ALBAREDE_MU_STAR * (np.exp(l238 * t) - 1.0)
+    denominator = np.exp(l238 * ALBAREDE_T0) - np.exp(l238 * t)
+    denominator = _safe_denominator(denominator)
+    return numerator / denominator
+
+
+def calculate_albarede_mu(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    t_Ma: np.ndarray | float | None,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray:
+    """
+    Albarède et al. (2012) 源区 μ_i = 238U/204Pb = μ* + Δμ_i (式 11)
+
+    Returns:
+        np.ndarray: μ_i
+    """
+    if params is None:
+        params = engine.params
+    return calculate_albarede_delta_mu(Pb206_204_S, Pb207_204_S, t_Ma, params) + ALBAREDE_MU_STAR
+
+
+def calculate_albarede_delta_kappa(
+    Pb206_204_S: np.ndarray | float,
+    Pb208_204_S: np.ndarray | float,
+    t_Ma: np.ndarray | float | None,
+    mu_value: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray:
+    """
+    Albarède et al. (2012) Δκ_i = κ_i − κ* (式 14)
+
+    由 z_i = z* − μ*κ*(e^{λ''T_i} − 1) + (μ_i Δκ_i + κ* Δμ_i)
+             · (e^{λ''T0} − e^{λ''T_i}) 解出:
+        Δκ_i = { [z_i − z* + μ*κ*(e^{λ''T_i} − 1)] / (e^{λ''T0} − e^{λ''T_i})
+                 − κ* Δμ_i } / μ_i
+
+    Args:
+        Pb206_204_S, Pb208_204_S: 样品 206Pb/204Pb、208Pb/204Pb
+        t_Ma: 模式年龄 T_i (Ma)
+        mu_value: 同一样品的 μ_i (calculate_albarede_mu 的结果)
+        params: 参数字典 (可选)
+
+    Returns:
+        np.ndarray: Δκ_i
+    """
+    if params is None:
+        params = engine.params
+    l232 = params['lambda_232']
+
+    z = np.asarray(Pb208_204_S, dtype=float)
+    mu = np.asarray(mu_value, dtype=float)
+    t = _prepare_age(t_Ma)
+
+    denominator = np.exp(l232 * ALBAREDE_T0) - np.exp(l232 * t)
+    denominator = _safe_denominator(denominator)
+
+    delta_mu = mu - ALBAREDE_MU_STAR
+    combined = (
+        z - ALBAREDE_Z_STAR
+        + ALBAREDE_MU_STAR * ALBAREDE_KAPPA_STAR * (np.exp(l232 * t) - 1.0)
+    ) / denominator
+
+    return (combined - ALBAREDE_KAPPA_STAR * delta_mu) / _safe_denominator(mu)
+
+
+def calculate_albarede_kappa(
+    Pb206_204_S: np.ndarray | float,
+    Pb208_204_S: np.ndarray | float,
+    t_Ma: np.ndarray | float | None,
+    mu_value: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> np.ndarray:
+    """
+    Albarède et al. (2012) 源区 κ_i = 232Th/238U = κ* + Δκ_i (式 14)
+
+    Returns:
+        np.ndarray: κ_i
+    """
+    if params is None:
+        params = engine.params
+    return calculate_albarede_delta_kappa(
+        Pb206_204_S, Pb208_204_S, t_Ma, mu_value, params
+    ) + ALBAREDE_KAPPA_STAR
 
 
 

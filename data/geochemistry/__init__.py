@@ -15,6 +15,7 @@ from .engine import (
     GeochemistryEngine,
     engine,
     calculate_modelcurve,
+    calculate_model_slope,
     T_EARTH_1ST,
     T_EARTH_CANON,
     T_SK_STAGE2,
@@ -34,10 +35,20 @@ from .engine import (
 
     E1_DEFAULT,
     E2_DEFAULT,
+
+    ALBAREDE_T0,
+    ALBAREDE_X_STAR,
+    ALBAREDE_Y_STAR,
+    ALBAREDE_Z_STAR,
+    ALBAREDE_MU_STAR,
+    ALBAREDE_KAPPA_STAR,
+    ALBAREDE_OMEGA_STAR,
 )
 from .age import (
     calculate_single_stage_age,
     calculate_two_stage_age,
+    calculate_albarede_model_age,
+    albarede_model_age_residual,
 )
 from .source import (
     _invert_mu,
@@ -50,6 +61,10 @@ from .source import (
     calculate_initial_ratio_64,
     calculate_initial_ratio_74,
     calculate_initial_ratio_84,
+    calculate_albarede_delta_mu,
+    calculate_albarede_mu,
+    calculate_albarede_delta_kappa,
+    calculate_albarede_kappa,
 )
 from .delta import (
     calculate_deltas,
@@ -291,6 +306,62 @@ def calculate_all_parameters(
     
     return results
 
+
+# =============================================================================
+# Albarède et al. (2012) T–μ–κ 结果键名与一站式反演
+# =============================================================================
+# 参考: Albarède, Desaulty & Blichert-Toft (2012), Archaeometry 54(5), 853-867,
+#       https://doi.org/10.1111/j.1475-4754.2011.00653.x
+# 这三个量是独立的调用入口 (calculate_albarede_parameters), 不并入
+# calculate_all_parameters 的既有输出: 该模型的参考组成与 age_model 口径不同于
+# PbIso 系列预设, 混在同一字典里会让下游误用错参考。
+
+ALBAREDE_T_MODEL_KEY = 't_Albarede (Ma)'
+ALBAREDE_MU_KEY = 'mu_Albarede'
+ALBAREDE_KAPPA_KEY = 'kappa_Albarede'
+ALBAREDE_OMEGA_KEY = 'omega_Albarede'
+ALBAREDE_DELTA_MU_KEY = 'Delta_mu_Albarede'
+ALBAREDE_DELTA_KAPPA_KEY = 'Delta_kappa_Albarede'
+
+
+def calculate_albarede_parameters(
+    Pb206_204_S: np.ndarray | float,
+    Pb207_204_S: np.ndarray | float,
+    Pb208_204_S: np.ndarray | float,
+    params: dict[str, Any] | None = None,
+) -> dict[str, np.ndarray]:
+    """
+    Albarède et al. (2012) T–μ–κ 一站式反演
+
+    先由式 (12) 自解模式年龄 T_i, 再按式 (11)/(14) 求 Δμ_i/μ_i 与 Δκ_i/κ_i
+    (ω_i = μ_i·κ_i)。无解样品为 NaN。
+
+    Args:
+        Pb206_204_S, Pb207_204_S, Pb208_204_S: 样品 206/204、207/204、208/204
+        params: 参数字典 (可选)
+
+    Returns:
+        dict: 键为 ALBAREDE_*_KEY 常量 (T_i, μ, κ, ω, Δμ, Δκ)
+    """
+    if params is None:
+        params = engine.params
+
+    age = calculate_albarede_model_age(Pb206_204_S, Pb207_204_S, params)
+    if age is None:
+        age = np.full(np.shape(Pb206_204_S), np.nan, dtype=float)
+
+    mu = calculate_albarede_mu(Pb206_204_S, Pb207_204_S, age, params)
+    kappa = calculate_albarede_kappa(Pb206_204_S, Pb208_204_S, age, mu, params)
+
+    return {
+        ALBAREDE_T_MODEL_KEY: age,
+        ALBAREDE_MU_KEY: mu,
+        ALBAREDE_KAPPA_KEY: kappa,
+        ALBAREDE_OMEGA_KEY: mu * kappa,
+        ALBAREDE_DELTA_MU_KEY: mu - ALBAREDE_MU_STAR,
+        ALBAREDE_DELTA_KAPPA_KEY: kappa - ALBAREDE_KAPPA_STAR,
+    }
+
 __all__ = [
     'T_EARTH_1ST',
     'T_EARTH_CANON',
@@ -309,10 +380,18 @@ __all__ = [
     'U_RATIO_NATURAL',
     'E1_DEFAULT',
     'E2_DEFAULT',
+    'ALBAREDE_T0',
+    'ALBAREDE_X_STAR',
+    'ALBAREDE_Y_STAR',
+    'ALBAREDE_Z_STAR',
+    'ALBAREDE_MU_STAR',
+    'ALBAREDE_KAPPA_STAR',
+    'ALBAREDE_OMEGA_STAR',
     'PRESET_MODELS',
     'GeochemistryEngine',
     'engine',
     'calculate_modelcurve',
+    'calculate_model_slope',
     'calculate_single_stage_age',
     'calculate_two_stage_age',
     'calculate_source_mu',
@@ -325,6 +404,19 @@ __all__ = [
     'calculate_initial_ratio_84',
     'calculate_deltas',
     'calculate_v1v2_coordinates',
+    'calculate_albarede_model_age',
+    'albarede_model_age_residual',
+    'calculate_albarede_mu',
+    'calculate_albarede_delta_mu',
+    'calculate_albarede_kappa',
+    'calculate_albarede_delta_kappa',
+    'calculate_albarede_parameters',
+    'ALBAREDE_T_MODEL_KEY',
+    'ALBAREDE_MU_KEY',
+    'ALBAREDE_KAPPA_KEY',
+    'ALBAREDE_OMEGA_KEY',
+    'ALBAREDE_DELTA_MU_KEY',
+    'ALBAREDE_DELTA_KAPPA_KEY',
     'calculate_paleoisochron_line',
     'calculate_isochron1_growth_curve',
     'calculate_isochron2_growth_curve',
