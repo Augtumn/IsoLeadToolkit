@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~52,100 行 |
+| Python 代码总量 | ~51,800 行 |
 | 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
 | Python 文件数 | 301 个 |
 | 对话框数 | 15+ 个 |
@@ -85,14 +85,14 @@ Excel/CSV 文件
 
 | 模块 | 文档路径 | 行数（2026-09 实测，含空行） | 备注 |
 |------|----------|------|------|
-| core/ | — | 6,614 | 含 state/ 子包（store 829, gateway 808, app_state 899, _normalizers 537, _views 326, _panel_style_handlers 187, _dispatch_handlers 838, bootstrap 227）、persistence/、session/ |
-| data/ | [docs/data.md](data.md) | 2,609 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型 |
-| ui/ | [docs/ui.md](ui.md) | 17,092 | 85 文件 |
-| application/ | [docs/export.md](export.md) | 2,844 | 用例层（13 use cases） |
-| visualization/ | [docs/visualization.md](visualization.md) | 9,156 | 65 文件 |
+| core/ | — | 6,457 | 含 state/ 子包（store 829, gateway 808, app_state 899, _normalizers 537, _views 326, _panel_style_handlers 187, _dispatch_handlers 838, bootstrap 227）、persistence/、session/（io 单一入口） |
+| data/ | [docs/data.md](data.md) | 2,578 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型 |
+| ui/ | [docs/ui.md](ui.md) | 17,012 | 85 文件 |
+| application/ | [docs/export.md](export.md) | 2,834 | 用例层（13 use cases） |
+| visualization/ | [docs/visualization.md](visualization.md) | 9,113 | 65 文件 |
 | utils/ | [docs/utils.md](utils.md) | 252 | |
 | plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
-| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 10,174 | 29 文件，401 用例（按子系统组织） |
+| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 10,095 | 31 文件，401 用例（按子系统组织） |
 
 ---
 

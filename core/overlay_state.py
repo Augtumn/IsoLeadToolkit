@@ -153,7 +153,7 @@ class OverlayState:
         self.selected_isochron_data: Any | None = None
         self.isochron_results: dict[str, Any] = {}
 
-        # Line width shortcuts (kept for backward compat with display panel)
+        # Overlay line widths (persisted style fields)
         self.model_curve_width = 1.2
         self.plumbotectonics_curve_width = 1.2
         self.paleoisochron_width = 0.9

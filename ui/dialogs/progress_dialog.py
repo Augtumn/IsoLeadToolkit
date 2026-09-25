@@ -45,7 +45,7 @@ class Qt5ProgressDialog(QDialog):
 
 
 class ProgressDialog:
-    """进度对话框包装器（兼容 Tkinter 版本）"""
+    """进度对话框：封装 :class:`Qt5ProgressDialog` 供用例层调用。"""
 
     def __init__(self, title, message):
         self.dialog = Qt5ProgressDialog(title, message)

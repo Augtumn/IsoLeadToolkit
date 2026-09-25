@@ -103,7 +103,7 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
         if mode in ('single-stage', 'single stage', '1-stage', '1st', 'first'):
             return 'single_stage'
 
-    # 回退启发式 (兼容未带 age_model 的自定义参数)
+    # 自定义参数集可能不带 age_model 标记, 此时按参数特征推断
     logger.debug("age_model flag not found in params, falling back to heuristics for model '%s'", model_name)
 
     if isinstance(model_name, str):

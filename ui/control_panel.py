@@ -1,7 +1,7 @@
-"""Section dialog factory for menu-driven UI mode.
+"""Section dialog factory for the menu-driven UI.
 
-The legacy Qt5ControlPanel tabbed widget is removed; the application now
-uses per-section dialogs created by :func:`create_section_dialog`.
+Each menu entry opens one dialog built by :func:`create_section_dialog`,
+which wraps a panel class and keeps it in sync with language switches.
 """
 from __future__ import annotations
 

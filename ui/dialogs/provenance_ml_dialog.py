@@ -1,4 +1,4 @@
-"""Provenance ML dialog compatibility wrapper."""
+"""Public entry point for the Provenance ML dialog (mixin in provenance_ml/)."""
 from __future__ import annotations
 
 from PyQt5.QtWidgets import QDialog

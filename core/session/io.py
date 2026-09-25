@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from ..config import CONFIG
-from .migration import migrate_session_data
 
 logger = logging.getLogger(__name__)
 
@@ -114,18 +113,6 @@ def load_session_params() -> dict[str, Any] | None:
                 current_version,
             )
             return None
-        if version < current_version:
-            logger.info("Session data version %s -> %s", version, current_version)
-
-        session_data, migrated = migrate_session_data(session_data, current_version)
-
-        if migrated:
-            try:
-                _atomic_write_json(CONFIG['params_temp_file'], session_data)
-                logger.info("Updated session parameters to version %s", current_version)
-            except Exception:
-                logger.exception("Failed to persist migrated session parameters")
-        
         logger.info("Session parameters loaded from %s", params_file)
         logger.info("Previous algorithm: %s", session_data.get('algorithm', 'UMAP'))
         logger.info("Previous group: %s", session_data.get('group_col', 'Province'))

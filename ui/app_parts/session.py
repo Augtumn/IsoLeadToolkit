@@ -59,15 +59,7 @@ class Qt5AppSessionMixin:
         state_gateway.set_point_size(session_data.get("point_size", app_state.point_size))
 
         preserve_import_mode = bool(getattr(app_state, "preserve_import_render_mode", False))
-        render_mode = session_data.get("render_mode")
-        if not render_mode:
-            legacy_mode = session_data.get("plot_mode")
-            if legacy_mode == "3D":
-                render_mode = "3D"
-            elif legacy_mode == "2D":
-                render_mode = "2D"
-            else:
-                render_mode = app_state.algorithm
+        render_mode = session_data.get("render_mode") or app_state.algorithm
 
         if not preserve_import_mode:
             state_gateway.set_render_mode(render_mode or "UMAP")

@@ -1,5 +1,5 @@
 """
-Compatibility view classes providing layered access to AppState fields.
+Layered views over the StateStore snapshot, grouped by concern.
 Each view wraps AppState with property getter/setter pairs that delegate
 to the underlying AppState, dispatching through StateStore when available.
 """
@@ -11,7 +11,7 @@ from typing import Any
 
 @dataclass
 class DataState:
-    """Compatibility view for data-related app state fields."""
+    """Layered view for data-related app state fields."""
 
     app_state: "AppState"
 
@@ -85,7 +85,7 @@ class DataState:
 
 @dataclass
 class AlgorithmState:
-    """Compatibility view for algorithm/cache-related fields."""
+    """Layered view for algorithm/cache-related fields."""
 
     app_state: "AppState"
 
@@ -180,7 +180,7 @@ class AlgorithmState:
 
 @dataclass
 class VisualState:
-    """Compatibility view for figure/axes/rendered artist fields."""
+    """Layered view for figure/axes/rendered artist fields."""
 
     app_state: "AppState"
 
@@ -207,7 +207,7 @@ class VisualState:
 
 @dataclass
 class GeochemState:
-    """Compatibility view for geochemistry overlay related fields."""
+    """Layered view for geochemistry overlay related fields."""
 
     app_state: "AppState"
 
@@ -222,7 +222,7 @@ class GeochemState:
 
 @dataclass
 class StyleState:
-    """Compatibility view for style and palette fields."""
+    """Layered view for style and palette fields."""
 
     app_state: "AppState"
 
@@ -289,7 +289,7 @@ class StyleState:
 
 @dataclass
 class InteractionState:
-    """Compatibility view for selection and interaction fields."""
+    """Layered view for selection and interaction fields."""
 
     app_state: "AppState"
 

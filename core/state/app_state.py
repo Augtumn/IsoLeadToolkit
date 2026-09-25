@@ -59,7 +59,7 @@ class AppState:
         self.overlay = OverlayState()
         self.legend = LegendState()
 
-        # Compatibility stepping-stone for layered AppState refactor.
+        # Layered views over the shared snapshot (see core/state/_views.py).
         self.data_state = DataState(self)
         self.algorithm_state = AlgorithmState(self)
         self.visual_state = VisualState(self)
@@ -134,7 +134,7 @@ class AppState:
                 pass
 
     # ------------------------------------------------------------------ #
-    # Backward-compatible property delegation: OverlayState
+    # Flat-name access to OverlayState (persistence schema + gateway actions)
     # ------------------------------------------------------------------ #
 
     @property
@@ -671,7 +671,7 @@ class AppState:
         self.overlay.plumbotectonics_isoage_label_data = value
 
     # ------------------------------------------------------------------ #
-    # Backward-compatible property delegation: LegendState
+    # Flat-name access to LegendState (persistence schema + gateway actions)
     # ------------------------------------------------------------------ #
 
     @property

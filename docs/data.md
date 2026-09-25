@@ -13,7 +13,6 @@
 | `__init__.py` | 30 | 模块入口，PEP 562 懒加载导出地球化学 API |
 | `loader.py` | 53 | Excel/CSV 读取与列类型检测 |
 | `geochemistry/` | 1,861 | 铅同位素地球化学计算引擎 (拆分模块) |
-| `geochemistry.py` | 25 | 兼容 shim (保持旧导入可用) |
 | `plumbotectonics_data.py` | 98 | Plumbotectonics 曲线数据 |
 
 ---
@@ -53,7 +52,6 @@ Excel/CSV 文件
 
 ### 职责
 实现铅同位素地球化学的完整计算体系，包括模式年龄、Delta 值、V1V2 投影、源区参数反演。
-`data/geochemistry.py` 为兼容 shim，转发到包实现。
 
 > **详细计算原理:** 所有公式推导、物理常数来源、预设模型参数、数值实现细节及已知约定，见 [`docs/geochemistry.md`](geochemistry.md)。
 

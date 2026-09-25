@@ -1037,8 +1037,7 @@ session_data = {
 ```
 
 新增会话字段必须在 `core/persistence/schema.py` 的白名单（`SESSION_FIELDS` /
-`UI_STATE_FIELDS`）中登记，并在 `core/session/migration.py` 的
-`migrate_session_data()` 中处理旧文件的向后兼容。
+`UI_STATE_FIELDS`）中登记；旧文件缺失的字段保持默认值，由快照恢复流程处理。
 
 ### 12.5 观察者模式
 

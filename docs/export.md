@@ -26,7 +26,6 @@ application/use_cases/
 ├── export_data.py             # 数据导出用例（构建 DataFrame、写出、追加）
 ├── export_image.py            # 图像导出用例（预设、格式归一化、savefig 选项）
 ├── export_origin.py           # Origin 工程导出用例
-└── export_dataframe.py        # 兼容代理（转发到 export_data）
 ```
 
 ## 数据导出实现

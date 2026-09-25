@@ -84,9 +84,9 @@ def save_all(store: Any) -> bool:
 
     ``store`` may be a StateStore or anything exposing ``snapshot()``
     (the AppStateGateway forwards to its store). The params.json payload
-    keeps the ``session_version`` key so the legacy loader can still apply
-    its version cap on the next start. Synchronous: use ``save_all_async``
-    for the autosave path.
+    keeps the ``session_version`` key so a loader can refuse a payload written
+    by a newer app version. Synchronous: use ``save_all_async`` for the
+    autosave path.
     """
     return save_snapshot(store.snapshot())
 
@@ -166,9 +166,9 @@ def load_themes() -> dict[str, Any] | None:
 def load_all() -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     """Load session + UI state payloads.
 
-    Session payload goes through the legacy loader so version caps and
-    legacy-file migration keep working. UI state is a fresh file read with
-    corruption isolation. Returns ``(session_payload, ui_payload)``.
+    The session payload is read through ``core.session.io`` (version cap on
+    newer files); UI state is a fresh file read with corruption isolation.
+    Returns ``(session_payload, ui_payload)``.
     """
     session_payload = load_session_params()
     ui_payload = read_json_isolated(UI_STATE_FILE)
