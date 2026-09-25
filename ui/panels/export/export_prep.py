@@ -5,6 +5,8 @@ import logging
 import sys
 from pathlib import Path
 
+from PyQt5.QtCore import Qt
+
 from matplotlib.colors import to_hex
 
 from application import (
@@ -177,3 +179,113 @@ class ExportPanelPrepMixin:
             except Exception:
                 continue
         return palette
+
+    def _create_export_figure(
+        self,
+        profile: dict,
+        point_size_for_export: int,
+        legend_size_for_export: int | None = None,
+        label_size_for_export: int | None = None,
+        title_size_for_export: int | None = None,
+        tick_size_for_export: int | None = None,
+        legend_marker_size: int | None = None,
+    ):
+        """Create an offscreen figure rendered with current mode and export profile."""
+        import matplotlib.pyplot as plt
+        from matplotlib.figure import Figure
+        from visualization.plotting import refresh_paleoisochron_labels
+
+        original_fig = app_state.fig
+        original_ax = app_state.ax
+        original_view = self._capture_axis_view(original_ax)
+        original_palette = dict(app_state.current_palette or {})
+        original_marker_map = dict(app_state.group_marker_map or {})
+        locked_palette = self._palette_from_axis_collections(original_ax, original_palette)
+        locked_marker_map = dict(original_marker_map)
+        original_marginal_axes = app_state.marginal_axes
+        original_show_marginal_kde = bool(app_state.show_marginal_kde)
+        original_has_marginal_axes = bool(original_fig is not None and len(getattr(original_fig, 'axes', [])) > 1)
+        original_marker_size = int(app_state.plot_marker_size)
+        original_font_sizes = dict(app_state.plot_font_sizes or {})
+
+        from PyQt5.QtWidgets import QApplication
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            use_scienceplots = self._is_scienceplots_available()
+            style_chain = profile['styles'] if use_scienceplots else ['default']
+            with plt.style.context(style_chain):
+                if not use_scienceplots:
+                    plt.rcParams.update(self._fallback_export_rc(
+                        profile,
+                        label_fontsize=label_size_for_export,
+                        title_fontsize=title_size_for_export,
+                        tick_fontsize=tick_size_for_export,
+                    ))
+                export_fig = Figure(
+                    figsize=profile['figsize'],
+                    dpi=int(profile['dpi']),
+                    constrained_layout=True,
+                )
+                export_ax = export_fig.add_subplot(111)
+
+                state_gateway.set_figure_axes(export_fig, export_ax)
+                state_gateway.set_palette_and_marker_map(locked_palette, locked_marker_map)
+                # Override marker size so plot functions use the export value
+                state_gateway.set_plot_marker_size(point_size_for_export)
+                # Override font sizes so _apply_current_style uses export values
+                state_gateway.set_plot_font_sizes({
+                    'title': int(title_size_for_export) if title_size_for_export else 12,
+                    'label': int(label_size_for_export) if label_size_for_export else 10,
+                    'tick': int(tick_size_for_export) if tick_size_for_export else 9,
+                    'legend': int(legend_size_for_export) if legend_size_for_export else 8,
+                })
+
+                # Preserve visible marginal KDE when current interactive figure uses marginal axes.
+                if original_has_marginal_axes:
+                    state_gateway.set_show_marginal_kde(True)
+
+                render_ok = self._render_current_mode_sync(point_size=point_size_for_export)
+                if not render_ok:
+                    raise RuntimeError("Failed to render export figure.")
+
+                # Re-run overlay label placement for the export/preview canvas.
+                try:
+                    refresh_paleoisochron_labels()
+                except Exception as label_err:
+                    logger.debug("Overlay label refresh skipped: %s", label_err)
+
+                # Keep exported geometry consistent with what user sees currently.
+                self._apply_axis_view(export_ax, original_view)
+                try:
+                    refresh_paleoisochron_labels()
+                except Exception:
+                    pass
+                self._normalize_export_legends(
+                    export_fig,
+                    profile,
+                    legend_size_override=legend_size_for_export,
+                    legend_marker_override=legend_marker_size,
+                )
+                self._attach_preview_label_state(export_fig)
+                return export_fig
+        finally:
+            state_gateway.set_plot_marker_size(original_marker_size)
+            state_gateway.set_plot_font_sizes(original_font_sizes)
+            state_gateway.set_figure_axes(original_fig, original_ax)
+            state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
+            state_gateway.set_show_marginal_kde(original_show_marginal_kde)
+            state_gateway.set_marginal_axes(original_marginal_axes)
+            try:
+                self._render_current_mode_sync(point_size=int(app_state.point_size))
+                # Restore the user's zoom/pan on the interactive canvas: the
+                # re-render above resets limits, but the captured view must
+                # be reapplied so exports do not silently reset the plot.
+                self._apply_axis_view(original_ax, original_view)
+                if app_state.fig is not None and app_state.fig.canvas is not None:
+                    app_state.fig.canvas.draw_idle()
+            except Exception as restore_err:
+                logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
+            # Keep the wait cursor through the restore re-render so the user
+            # does not see a frozen UI without feedback after exporting.
+            QApplication.restoreOverrideCursor()
