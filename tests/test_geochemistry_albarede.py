@@ -204,6 +204,66 @@ def test_roundtrip_through_the_public_parameter_dict() -> None:
     )
 
 
+# --------------------------------------- printed-form defects (paper typos)
+# 论文 p.857 式 (12) 与 p.858 式 (15) 的印刷版式无法与式 (11)/(14) 自洽;
+# 以下两例把这一判断钉成回归测试 (排版已用 MinerU 页面图像复核), 防止有人
+# 按印刷版"修正"实现。
+
+def test_printed_equation_12_lambda_prime_cannot_reproduce_the_model_age() -> None:
+    """式 (12) 印刷版用 e^{λ'T_i}−1 (²³⁵U); 由式 (11) 消元得到的必须是
+    e^{λT_i}−1 (²³⁸U)。对 T_i = 300 Ma 的合成样品, 印刷版残差明显非零,
+    其根也不是 300 Ma。"""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+    t_true = 300.0
+    x, y, _z = _forward_sample(t_true, 9.90, 4.05, params)
+
+    def printed_residual(t_ma: float) -> float:
+        t = t_ma * 1e6
+        dx = x - ALBAREDE_X_STAR
+        s_t0_t = calculate_model_slope(ALBAREDE_T0, t, params)
+        s_t_0 = calculate_model_slope(t, 0.0, params)
+        return (
+            (y - ALBAREDE_Y_STAR) / dx
+            - s_t0_t
+            - (ALBAREDE_MU_STAR * (np.exp(params["lambda_235"] * t) - 1.0) / dx)
+            * (s_t0_t - s_t_0)
+        )
+
+    assert abs(printed_residual(t_true)) > 1.0, "printed form unexpectedly solves T_true"
+    # The implemented (self-consistent) form is exact at T_true and recovers it.
+    assert abs(float(albarede_model_age_residual(t_true, x, y, params))) < 1e-9
+    assert float(calculate_albarede_model_age(x, y, params)) == pytest.approx(t_true, abs=1e-3)
+
+
+def test_printed_equation_15_cancels_delta_kappa() -> None:
+    """式 (15) 印刷版右端仍含 μ_iΔκ_i, 代入后两端相消: 对任意试探 Δκ_i,
+    "右端 − Δκ_i" 恒为同一常数, 即该式一般无不动点解。实现按式 (14) 重排。"""
+    engine.load_preset(_MODEL)
+    params = engine.get_parameters()
+    t_true = 300.0
+    x, y, z = _forward_sample(t_true, 9.90, 4.05, params)
+    mu = float(calculate_albarede_mu(x, y, t_true, params))
+    delta_mu = mu - ALBAREDE_MU_STAR
+    l232 = params["lambda_232"]
+    d = np.exp(l232 * ALBAREDE_T0) - np.exp(l232 * t_true * 1e6)
+    n0 = (
+        z - ALBAREDE_Z_STAR
+        + ALBAREDE_MU_STAR * ALBAREDE_KAPPA_STAR * (np.exp(l232 * t_true * 1e6) - 1.0)
+    )
+
+    def printed_rhs(delta_kappa: float) -> float:
+        return (n0 + (mu * delta_kappa + ALBAREDE_KAPPA_STAR * delta_mu) * d) / (mu * d)
+
+    gap = printed_rhs(0.0) - 0.0
+    assert printed_rhs(0.15) - 0.15 == pytest.approx(gap, rel=1e-12)
+    assert printed_rhs(1.0) - 1.0 == pytest.approx(gap, rel=1e-12)
+    assert abs(gap) > 1e-3, "printed (15) unexpectedly has a fixed point"
+
+    # The implemented form satisfies equation (14) for an arbitrary κ_i.
+    assert float(calculate_albarede_kappa(x, z, t_true, mu, params)) == pytest.approx(4.05, rel=1e-9)
+
+
 # -------------------------------------------------------------- robustness
 def test_array_input_keeps_nan_for_missing_samples() -> None:
     engine.load_preset(_MODEL)
