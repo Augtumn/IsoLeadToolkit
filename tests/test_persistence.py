@@ -93,6 +93,23 @@ def _wait_for_file(path: Path, timeout: float = 5.0) -> bool:
     return path.exists()
 
 
+def _wait_for_idle_autosave(timeout: float = 5.0) -> bool:
+    """Wait until no autosave write is in flight (lock released).
+
+    The debounce assertions below must not race the worker thread of the
+    previous save: while that lock is held a due save is skipped by design and
+    retried on a later dispatch.
+    """
+    import time
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not persistence._async_save_lock.locked():
+            return True
+        time.sleep(0.01)
+    return not persistence._async_save_lock.locked()
+
+
 def test_autosave_hook_immediate_and_debounced(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(persistence, "SESSION_FILE", tmp_path / "params.json")
     monkeypatch.setattr(persistence, "UI_STATE_FILE", tmp_path / "ui_state.json")
@@ -104,6 +121,7 @@ def test_autosave_hook_immediate_and_debounced(tmp_path: Path, monkeypatch) -> N
         store.dispatch({"type": "SET_PARAM_PRESETS", "presets": {"p1": {}}})
         params_file = tmp_path / "params.json"
         assert _wait_for_file(params_file)
+        assert _wait_for_idle_autosave()
         first_mtime = params_file.stat().st_mtime_ns
 
         # Non-immediate dispatches inside the interval do not rewrite.
@@ -119,6 +137,39 @@ def test_autosave_hook_immediate_and_debounced(tmp_path: Path, monkeypatch) -> N
         while params_file.stat().st_mtime_ns <= first_mtime and time.monotonic() < deadline:
             time.sleep(0.02)
         assert params_file.stat().st_mtime_ns > first_mtime
+    finally:
+        store._dispatch_hook = None
+
+
+def test_autosave_retries_instead_of_dropping_a_skipped_save(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A save skipped because a write is in flight must not consume the
+    dispatch counter: the next dispatch has to flush the pending change.
+
+    Regression: ``save_all_async`` returned early while the lock was held and
+    the hook still reset its counters, so a burst of changes could be dropped
+    for the rest of the interval.
+    """
+    monkeypatch.setattr(persistence, "SESSION_FILE", tmp_path / "params.json")
+    monkeypatch.setattr(persistence, "UI_STATE_FILE", tmp_path / "ui_state.json")
+
+    store = app_state.state_store
+    persistence.install_autosave(store, interval=3600.0)
+    params_file = tmp_path / "params.json"
+    try:
+        assert persistence._async_save_lock.acquire(blocking=False)
+        try:
+            for i in range(persistence.DEFAULT_AUTOSAVE_DISPATCHES):
+                store.dispatch({"type": "SET_COLOR_SCHEME", "scheme": f"busy-{i}"})
+            assert not params_file.exists(), "no write may start while the lock is held"
+        finally:
+            persistence._async_save_lock.release()
+
+        # The counter was kept, so this single dispatch still reaches the
+        # threshold and flushes the pending change.
+        store.dispatch({"type": "SET_COLOR_SCHEME", "scheme": "after"})
+        assert _wait_for_file(params_file)
     finally:
         store._dispatch_hook = None
 

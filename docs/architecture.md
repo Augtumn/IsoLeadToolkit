@@ -92,7 +92,7 @@ Excel/CSV 文件
 | visualization/ | [docs/visualization.md](visualization.md) | 9,252 | 66 文件 |
 | utils/ | [docs/utils.md](utils.md) | 252 | |
 | plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
-| tests/ | - | 11,161 | 76 文件，496 用例 |
+| tests/ | - | 11,212 | 76 文件，497 用例 |
 
 ---
 

@@ -112,21 +112,27 @@ def save_snapshot(snapshot: dict[str, Any]) -> bool:
         return False
 
 
-def save_all_async(store: Any) -> None:
+def save_all_async(store: Any) -> bool:
     """Snapshot on the caller's thread, write on a daemon thread.
 
     Autosave ran two fsync+rename pairs synchronously inside dispatch() on
     the UI thread; coalescing to a background write keeps interaction
-    smooth. Concurrent writes are skipped (the next dispatch retries).
+    smooth.
+
+    Returns ``True`` when a write was scheduled. Returns ``False`` when a
+    previous write is still in flight (or the snapshot failed) — debounced
+    callers must keep their pending counters in that case so the next event
+    retries; consuming them here used to drop the change for good.
     """
+    if not _async_save_lock.acquire(blocking=False):
+        return False
+
     try:
         snapshot = store.snapshot()
     except Exception:
         logger.exception("Failed to capture state snapshot for autosave")
-        return
-
-    if not _async_save_lock.acquire(blocking=False):
-        return  # a write is already in flight; the next autosave covers us
+        _async_save_lock.release()
+        return False
 
     def _worker() -> None:
         try:
@@ -141,6 +147,8 @@ def save_all_async(store: Any) -> None:
     except Exception:
         _async_save_lock.release()
         logger.exception("Failed to start autosave thread")
+        return False
+    return True
 
 
 def load_ui_state() -> dict[str, Any] | None:
@@ -225,12 +233,16 @@ def _make_autosave_hook(store: Any, interval: float) -> Any:
         immediate = action_type in IMMEDIATE_SAVE_ACTIONS
         due = interval > 0 and time.monotonic() - last_save >= interval
         if immediate or due or dispatches >= DEFAULT_AUTOSAVE_DISPATCHES:
+            # Snapshot now (cheap, race-free), write on a worker thread. When a
+            # write is still in flight save_all_async() reports False: keep the
+            # pending counters so the next dispatch retries, otherwise the
+            # change would be dropped for the whole interval.
+            if not save_all_async(store):
+                return
             dispatches = 0
             last_save = time.monotonic()
-            if action_type in IMMEDIATE_SAVE_ACTIONS:
+            if immediate:
                 logger.info("Immediate save after action %s", action_type)
-            # Snapshot now (cheap, race-free), write on a worker thread.
-            save_all_async(store)
             _maybe_save_cache()
 
     def _maybe_save_cache() -> None:
