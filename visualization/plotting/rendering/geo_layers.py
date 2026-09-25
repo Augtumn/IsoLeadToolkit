@@ -8,18 +8,17 @@ import pandas as pd
 from core import app_state
 from ..core import _get_subset_dataframe, _get_pb_columns
 from ..data import _lazy_import_geochemistry
-from ..geo import (
-    _draw_equation_overlays,
-    _draw_isochron_overlays,
-    _draw_model_age_lines,
-    _draw_model_age_lines_86,
+from ..geochem.equation_overlays import _draw_equation_overlays
+from ..geochem.isochron_fits import _draw_isochron_overlays
+from ..geochem.model_age_lines import _draw_model_age_lines, _draw_model_age_lines_86
+from ..geochem.overlay_helpers import (
     _draw_model_curves,
     _draw_mu_kappa_paleoisochrons,
-    _draw_paleoisochrons,
     _draw_plumbotectonics_curves,
     _draw_plumbotectonics_isoage_lines,
-    _draw_selected_isochron,
 )
+from ..geochem.paleoisochron_overlays import _draw_paleoisochrons
+from ..geochem.selected_isochron_overlay import _draw_selected_isochron
 
 
 def _render_geo_overlays(

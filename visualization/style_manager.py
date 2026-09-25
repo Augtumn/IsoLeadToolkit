@@ -217,10 +217,6 @@ class StyleManager:
 
 style_manager_instance = StyleManager()
 
-# --- Backward Compatibility Exports ---
-COLORS = style_manager_instance.palettes
-STYLES = {'grid': style_manager_instance.GRID_STYLE}
-
 def apply_custom_style(
     show_grid: bool = False,
     color_scheme: str | None = None,

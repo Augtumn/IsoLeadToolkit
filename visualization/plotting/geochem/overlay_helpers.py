@@ -1,6 +1,6 @@
-"""Geochemistry overlay helper compatibility facade.
+"""Geochemistry overlay drawing helpers.
 
-This module keeps backward-compatible imports while implementation is split
+Implementation used to live in a single plotting module; the pieces are split
 across overlay_common, model_overlays and plumbotectonics submodules.
 """
 from __future__ import annotations

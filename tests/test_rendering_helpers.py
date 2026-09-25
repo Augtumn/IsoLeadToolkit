@@ -96,53 +96,27 @@ def test_render_geo_overlays_pb_mu_age_dispatch(monkeypatch) -> None:
         _restore_geo_state(snapshot)
 
 
-def _snapshot_kde_state() -> dict[str, object]:
-    return {
-        "kde_style": dict(getattr(app_state, "kde_style", {}) or {}),
-        "marginal_kde_style": dict(getattr(app_state, "marginal_kde_style", {}) or {}),
-    }
+def test_resolve_kde_style_uses_kde_defaults(monkeypatch) -> None:
+    monkeypatch.setattr(kde_helpers, "ensure_line_style", lambda _state, _key, fallback: fallback)
 
+    style = kde_helpers._resolve_kde_style("kde")
 
-def _restore_kde_state(snapshot: dict[str, object]) -> None:
-    setattr(app_state, "kde_style", dict(snapshot.get("kde_style", {}) or {}))
-    setattr(app_state, "marginal_kde_style", dict(snapshot.get("marginal_kde_style", {}) or {}))
-
-
-def test_resolve_kde_style_builds_fallback_from_legacy_kde_style(monkeypatch) -> None:
-    snapshot = _snapshot_kde_state()
-    try:
-        monkeypatch.setattr(kde_helpers, "ensure_line_style", lambda _state, _key, fallback: fallback)
-        setattr(
-            app_state,
-            "kde_style",
-            {"linewidth": 2.5, "alpha": 0.8, "fill": False, "levels": 7},
-        )
-
-        style = kde_helpers._resolve_kde_style("kde")
-
-        assert style["linewidth"] == 2.5
-        assert style["alpha"] == 0.8
-        assert style["fill"] is False
-        assert style["levels"] == 7
-        assert style["linestyle"] == "-"
-    finally:
-        _restore_kde_state(snapshot)
+    assert style["linewidth"] == 1.0
+    assert style["alpha"] == 0.6
+    assert style["fill"] is True
+    assert style["levels"] == 10
+    assert style["linestyle"] == "-"
 
 
 def test_resolve_kde_style_builds_marginal_defaults(monkeypatch) -> None:
-    snapshot = _snapshot_kde_state()
-    try:
-        monkeypatch.setattr(kde_helpers, "ensure_line_style", lambda _state, _key, fallback: fallback)
-        setattr(app_state, "marginal_kde_style", {"linewidth": 1.2, "alpha": 0.15, "fill": True})
+    monkeypatch.setattr(kde_helpers, "ensure_line_style", lambda _state, _key, fallback: fallback)
 
-        style = kde_helpers._resolve_kde_style("marginal")
+    style = kde_helpers._resolve_kde_style("marginal")
 
-        assert style["linewidth"] == 1.2
-        assert style["alpha"] == 0.15
-        assert style["fill"] is True
-        assert "levels" not in style
-    finally:
-        _restore_kde_state(snapshot)
+    assert style["linewidth"] == 1.0
+    assert style["alpha"] == 0.25
+    assert style["fill"] is True
+    assert "levels" not in style
 
 
 def test_build_legend_proxies_uses_patch_when_any_handle_is_patch(monkeypatch) -> None:

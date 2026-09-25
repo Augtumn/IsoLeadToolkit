@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~53,500 行 |
+| Python 代码总量 | ~52,100 行 |
 | 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
 | Python 文件数 | 301 个 |
 | 对话框数 | 15+ 个 |
@@ -85,14 +85,14 @@ Excel/CSV 文件
 
 | 模块 | 文档路径 | 行数（2026-09 实测，含空行） | 备注 |
 |------|----------|------|------|
-| core/ | — | 6,871 | 含 state/ 子包（store 829, gateway 893, app_state 899, _normalizers 537, _views 326, _compat_builders 332, _dispatch_handlers 838, bootstrap 227）、persistence/、session/ |
+| core/ | — | 6,614 | 含 state/ 子包（store 829, gateway 808, app_state 899, _normalizers 537, _views 326, _panel_style_handlers 187, _dispatch_handlers 838, bootstrap 227）、persistence/、session/ |
 | data/ | [docs/data.md](data.md) | 2,609 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型 |
-| ui/ | [docs/ui.md](ui.md) | 17,121 | 85 文件 |
-| application/ | [docs/export.md](export.md) | 2,829 | 用例层（13 use cases） |
-| visualization/ | [docs/visualization.md](visualization.md) | 9,252 | 66 文件 |
+| ui/ | [docs/ui.md](ui.md) | 17,092 | 85 文件 |
+| application/ | [docs/export.md](export.md) | 2,844 | 用例层（13 use cases） |
+| visualization/ | [docs/visualization.md](visualization.md) | 9,156 | 65 文件 |
 | utils/ | [docs/utils.md](utils.md) | 252 | |
 | plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
-| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 11,105 | 29 文件，505 用例（按子系统组织） |
+| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 10,174 | 29 文件，401 用例（按子系统组织） |
 
 ---
 
@@ -104,24 +104,7 @@ Excel/CSV 文件
 
 ## 已知 Bug 与技术债
 
-| 问题 | 位置 | 状态 |
-|------|------|------|
-| `_on_style_change` 初始化期间崩溃 | control_panel.py:3665 | ✅ 已修复 (添加 `_is_initialized` 守卫) |
-| `create_section_dialog` 未初始化属性 | control_panel.py:5614 | ✅ 已修复 (添加 `_reset_ui_state()`) |
-| numba 日志过长 | utils/logger.py | ✅ 已修复 (设置 WARNING 级别) |
-| `_reset_ui_state` 重复赋值 | control_panel.py:285-296 | ✅ 已不适用（相关实现已迁移） |
-| 全局 widget 引用 (slider_n 等) | state.py:332-344 | ✅ 已不适用（旧 state.py 已拆分为 core/state/） |
-| 循环导入风险 | visualization/plotting (旧 shim) | ✅ 已消解 (兼容入口已移除) |
-| 控制面板禁用但代码保留 | ui/app_parts/plotting.py:_setup_control_panel | ✅ 已修复 (`Qt5ControlPanel` 类与 `create_control_panel` 工厂已移除，仅保留 `create_section_dialog`) |
-| 可视化模块 docstring/导入顺序不规范 | visualization/events.py, visualization/plotting/* | ✅ 已修复 |
-| 可视化模块日志前缀残留 | visualization/events.py, visualization/plotting/* | ✅ 已修复 |
-| 可视化模块 core 导入入口不统一 | visualization/plotting/* | ✅ 已修复 |
-| 诊断图未完全国际化 | visualization/plotting/analysis_qt.py | ✅ 已修复 |
-| plotting/api.py 导出私有 helper | visualization/plotting/api.py | ✅ 已修复 |
-| plotting/geo.py & plotting/render.py 顶层副作用 | visualization/plotting/geo.py, visualization/plotting/render.py | ✅ 已修复 |
-| ui 模块 docstring/导入顺序不规范 | ui/app.py, ui/main_window.py, ui/control_panel.py, ui/dialogs/* | ✅ 已修复 |
-| ui 模块日志前缀残留 | ui/app.py, ui/main_window.py, ui/panels/*, ui/dialogs/* | ✅ 已修复 |
-| ui 模块 core 导入入口不统一 | ui/dialogs/*, ui/control_panel.py, ui/panels/* | ✅ 已修复 |
+当前没有已知未修复缺陷。历次审查发现的问题均已修复，修复过程见 git 历史；待办事项见 `docs/development_plan.md`。
 
 ---
 

@@ -149,7 +149,7 @@ class DataPanelGeochemMixin:
         if combo is None:
             return
         try:
-            from visualization.plotting.geo import get_plumbotectonics_variants
+            from visualization.plotting.geochem.overlay_helpers import get_plumbotectonics_variants
 
             variants = get_plumbotectonics_variants()
         except Exception:

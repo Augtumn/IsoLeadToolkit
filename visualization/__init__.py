@@ -10,8 +10,6 @@ from .style_manager import (
     StyleManager,
     style_manager_instance,
     apply_custom_style,
-    COLORS,
-    STYLES,
 )
 
 from .events import (
@@ -46,8 +44,6 @@ __all__ = [
     'StyleManager',
     'style_manager_instance',
     'apply_custom_style',
-    'COLORS',
-    'STYLES',
     # Events
     'on_hover',
     'on_click',

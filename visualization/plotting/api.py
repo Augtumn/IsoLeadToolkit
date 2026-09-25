@@ -19,7 +19,7 @@ from .core import (
     get_pca_embedding,
     get_robust_pca_embedding,
 )
-from .geo import refresh_paleoisochron_labels
+from .geochem.isochron_labels import refresh_paleoisochron_labels
 from .render import (
     plot_embedding,
     plot_2d_data,

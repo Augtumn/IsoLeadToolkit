@@ -11,9 +11,8 @@
 | `__init__.py` | 74 | 模块入口，导出公共 API |
 | `plotting/api.py` | 48 | 渲染入口（汇总导出） |
 | `plotting/core.py` | 283 | 嵌入计算 + 核心工具 |
-| `plotting/render.py` | 12 | 渲染兼容门面（向后兼容导出） |
+| `plotting/render.py` | 12 | 渲染入口（转发到 rendering 层） |
 | `plotting/rendering/` | 2,282 | 渲染辅助层（图例、KDE、地球化学覆盖层、embedding 算法/数据准备、raw 2D/3D） |
-| `plotting/geo.py` | 59 | 地球化学兼容门面（向后兼容导出） |
 | `plotting/geochem/` | 2,294 | 地球化学辅助函数（`isochron_fits.py`、`isochron_fit_76.py`、`isochron_fit_86.py`、`selected_isochron_overlay.py`、`paleoisochron_overlays.py`、模型年龄线、标签刷新、方程覆盖、Plumbotectonics 子域） |
 | `plotting/ternary.py` | 203 | 三元图工具 |
 | `plotting/isochron.py` | 41 | 等时线误差配置与共享工具 |
@@ -86,7 +85,7 @@
 | `custom_primary_font` / `custom_cjk_font` | 字体配置 | plotting/style.py, plotting/render.py |
 | `plot_dpi` / `plot_facecolor` / `axes_facecolor` | 全局绘图样式 | plotting/style.py |
 | `isochron_error_mode` / `isochron_*_col` | 等时线误差配置 | plotting/isochron.py |
-| `show_model_curves` / `show_isochrons` / `show_paleoisochrons` | 地球化学叠加开关 | plotting/geo.py, plotting/render.py |
+| `show_model_curves` / `show_isochrons` / `show_paleoisochrons` | 地球化学叠加开关 | plotting/geochem/, plotting/render.py |
 | `legend_update_callback` | 图例面板回调 | plotting/render.py |
 
 ---
@@ -282,7 +281,7 @@ def plot_3d_data(group_col, data_columns, size=60) -> bool
 
 `plot_umap()` 仅为兼容入口，内部调用 `plot_embedding()`。
 
-### 地球化学叠加函数 (内部实现位于 plotting/geo.py)
+### 地球化学叠加函数 (内部实现位于 plotting/geochem/)
 
 ```python
 def _draw_model_curves(ax, algorithm, params_list)
@@ -350,12 +349,12 @@ def _find_age_column(columns) -> str | None
 
 ---
 
-## 2. plotting/core.py / plotting/render.py / plotting/geo.py / plotting/ternary.py
+## 2. plotting/core.py / plotting/render.py / plotting/ternary.py
 
 ### 拆分职责
 1. `plotting/core.py`：嵌入计算 + 核心工具函数
 2. `plotting/render.py`：嵌入渲染 + 2D/3D 绘制
-3. `plotting/geo.py`：地球化学叠加与等时线相关逻辑
+3. `plotting/geochem/`：地球化学叠加与等时线相关逻辑
 4. `plotting/ternary.py`：三元图拉伸与自动因子
 
 ### plotting/core.py — 嵌入计算与缓存
@@ -402,7 +401,7 @@ def get_embedding(algorithm, ...) -> np.ndarray | None
 3. `show_model_age_lines` 控制模式年龄构造线。
 4. `show_plot_title` / `title_pad` 控制标题显示与间距。
 
-### plotting/geo.py — 地球化学叠加
+### plotting/geochem/ — 地球化学叠加
 
 **功能范围:**
 1. Stacey-Kramers 模型曲线绘制
@@ -812,13 +811,13 @@ plotting/isochron.py ← app_state
   ↓
 plotting/core.py ← plotting/data.py, app_state, sklearn (懒加载)
   ↓
-plotting/geo.py ← plotting/core.py, line_styles, plotting/isochron.py, geochemistry (lazy)
+plotting/geochem/ ← plotting/core.py, line_styles, plotting/isochron.py, geochemistry (lazy)
   ↓
 plotting/ternary.py ← app_state, scipy
   ↓
-plotting/render.py ← plotting/core.py, plotting/geo.py, plotting/ternary.py, plotting/style.py, plotting/kde.py, geochemistry (lazy)
+plotting/render.py ← plotting/core.py, plotting/geochem/, plotting/ternary.py, plotting/style.py, plotting/kde.py, geochemistry (lazy)
   ↓
-plotting/api.py ← plotting/core.py, plotting/render.py, plotting/geo.py, plotting/ternary.py
+plotting/api.py ← plotting/core.py, plotting/render.py, plotting/geochem/, plotting/ternary.py
   ↓
 events.py ← plotting/api.py, app_state
   ↓

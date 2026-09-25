@@ -15,18 +15,16 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_kde_style(target: str = 'kde') -> dict[str, Any]:
-    legacy_key = 'kde_style' if target == 'kde' else 'marginal_kde_style'
     style_key = 'kde_curve' if target == 'kde' else 'marginal_kde_curve'
-    legacy_style = getattr(app_state, legacy_key, {}) or {}
-    fallback = {
+    fallback: dict[str, Any] = {
         'color': None,
-        'linewidth': float(legacy_style.get('linewidth', 1.0)),
+        'linewidth': 1.0,
         'linestyle': '-',
-        'alpha': float(legacy_style.get('alpha', 0.6 if target == 'kde' else 0.25)),
-        'fill': bool(legacy_style.get('fill', True)),
+        'alpha': 0.6 if target == 'kde' else 0.25,
+        'fill': True,
     }
     if target == 'kde':
-        fallback['levels'] = int(legacy_style.get('levels', 10))
+        fallback['levels'] = 10
     return ensure_line_style(app_state, style_key, fallback)
 
 

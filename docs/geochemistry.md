@@ -1035,7 +1035,7 @@ calculate_albarede_parameters(Pb206, Pb207, Pb208)
 
 ### 15.1 概述
 
-地球化学计算结果通过 `visualization/plotting/geo.py` 渲染到 matplotlib 图表上。该模块支持两种 Pb 演化图模式:
+地球化学计算结果通过 `visualization/plotting/geochem/` 渲染到 matplotlib 图表上。该子包支持两种 Pb 演化图模式:
 
 | 模式 | X 轴 | Y 轴 | 等时线类型 |
 |------|------|------|-----------|

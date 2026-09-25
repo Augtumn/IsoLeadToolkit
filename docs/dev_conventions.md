@@ -455,7 +455,7 @@ def _on_finished(result, finished_token):
 | `api.py` | 公共入口，汇总导出 |
 | `core.py` | 嵌入计算 + 核心工具 |
 | `render.py` | 散点渲染 + 2D/3D 绘制 |
-| `geo.py` | 地球化学叠加/等时线 |
+| `geochem/` | 地球化学叠加/等时线 |
 | `ternary.py` | 三元图工具 |
 | `style.py` | 绘图样式 + 图例布局 + 轻量刷新 |
 | `kde.py` | KDE 渲染 |
@@ -957,7 +957,7 @@ app_state.legend.legend_columns = 2
 为保持向后兼容，`AppState` 为所有移入子对象的字段提供 property 委托：
 
 ```python
-# core/state/app_state.py（兼容 property 由 core/state/_compat_builders.py 生成）
+# core/state/app_state.py（state/ 下的分层视图与 dispatch handler 提供状态访问）
 class AppState:
     def __init__(self):
         self.overlay = OverlayState()
@@ -1073,7 +1073,7 @@ tests/
 ├── data/isotope_benchmark.xlsx     # 文献基准 + 真实矿石数据 (含 AJ84 参考值)
 ├── test_validate_test_dataset.py   # 基准数据集校验 (真实数据保证)
 ├── test_state_store.py             # StateStore 行为
-├── test_gateway_set_attr_compatibility.py
+├── test_gateway_setters.py
 ├── test_state_store_guards.py      # schema / bootstrap 守卫
 ├── test_persistence.py             # 原子写、autosave
 ├── test_session.py                 # 会话归档与 IO
@@ -1110,7 +1110,6 @@ tests/
 3. 公共测试环境（`sys.path`、`matplotlib.use("Agg")`、`QT_QPA_PLATFORM=offscreen`）只在
    `conftest.py` 配置一次，测试模块内不再重复设置。
 4. 导入顺序同生产代码：stdlib → 第三方 → 项目模块，组间空行。
-5. `test_gateway_set_attr_compatibility.py` 被守卫脚本白名单按文件名引用，不得改名或合并。
 6. 涉及模型正确性的用例优先使用 `tests/data/isotope_benchmark.xlsx` 中的**真实数据 + 独立
    参考值**（见 §16.8 的 AJ84 部分），自洽的合成往返只作为补充。
 

@@ -318,35 +318,24 @@ def draw_marginal_kde(
     ax_top = divider.append_axes("top", size=f"{top_size:.0f}%", pad=0.06, sharex=ax)
     ax_right = divider.append_axes("right", size=f"{right_size:.0f}%", pad=0.06, sharey=ax)
 
-    legacy_style = getattr(app_state, 'marginal_kde_style', {}) or {}
     style = ensure_line_style(
         app_state,
         'marginal_kde_curve',
         {
             'color': None,
-            'linewidth': float(legacy_style.get('linewidth', 1.0)),
+            'linewidth': 1.0,
             'linestyle': '-',
-            'alpha': float(legacy_style.get('alpha', 0.25)),
-            'fill': bool(legacy_style.get('fill', True)),
-            'bw_adjust': float(getattr(app_state, 'marginal_kde_bw_adjust', legacy_style.get('bw_adjust', _KDE_BW_ADJUST_DEFAULT))),
-            'bandwidth': float(getattr(app_state, 'marginal_kde_bandwidth', legacy_style.get('bandwidth', _KDE_BANDWIDTH_DEFAULT)) or 0.0),
-            'kernel': _resolve_kernel_name(
-                getattr(
-                    app_state,
-                    'marginal_kde_kernel',
-                    legacy_style.get('kernel', _KDE_KERNEL_DEFAULT),
-                )
-            ),
+            'alpha': 0.25,
+            'fill': True,
+            'bw_adjust': float(getattr(app_state, 'marginal_kde_bw_adjust', _KDE_BW_ADJUST_DEFAULT)),
+            'bandwidth': float(getattr(app_state, 'marginal_kde_bandwidth', _KDE_BANDWIDTH_DEFAULT) or 0.0),
+            'kernel': _resolve_kernel_name(getattr(app_state, 'marginal_kde_kernel', _KDE_KERNEL_DEFAULT)),
             'auto_bandwidth_method': _resolve_auto_bandwidth_method(
-                getattr(
-                    app_state,
-                    'marginal_kde_auto_bandwidth_method',
-                    legacy_style.get('auto_bandwidth_method', _KDE_AUTO_BW_METHOD_DEFAULT),
-                )
+                getattr(app_state, 'marginal_kde_auto_bandwidth_method', _KDE_AUTO_BW_METHOD_DEFAULT)
             ),
-            'gridsize': int(getattr(app_state, 'marginal_kde_gridsize', legacy_style.get('gridsize', _KDE_GRID_SIZE_DEFAULT))),
-            'cut': float(getattr(app_state, 'marginal_kde_cut', legacy_style.get('cut', _KDE_CUT_DEFAULT))),
-            'log_transform': bool(getattr(app_state, 'marginal_kde_log_transform', legacy_style.get('log_transform', False))),
+            'gridsize': int(getattr(app_state, 'marginal_kde_gridsize', _KDE_GRID_SIZE_DEFAULT)),
+            'cut': float(getattr(app_state, 'marginal_kde_cut', _KDE_CUT_DEFAULT)),
+            'log_transform': bool(getattr(app_state, 'marginal_kde_log_transform', False)),
         }
     )
     kde_alpha = float(style.get('alpha', 0.25))
