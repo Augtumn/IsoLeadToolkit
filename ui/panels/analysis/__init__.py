@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from .kde_style import AnalysisPanelKdeStyleMixin
 from .ml import AnalysisPanelMlMixin
 from .panel import AnalysisPanel, PANEL_META
 
-__all__ = ["AnalysisPanel", "AnalysisPanelKdeStyleMixin", "AnalysisPanelMlMixin", "PANEL_META"]
+__all__ = ["AnalysisPanel", "AnalysisPanelMlMixin", "PANEL_META"]

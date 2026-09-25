@@ -6,7 +6,6 @@ from ..base_panel import BasePanel
 from .build import AnalysisPanelBuildMixin
 from .diagnostics import AnalysisPanelDiagnosticsMixin
 from .equations import AnalysisPanelEquationMixin
-from .kde_style import AnalysisPanelKdeStyleMixin
 from .mixing import AnalysisPanelMixingMixin
 from .ml import AnalysisPanelMlMixin
 from .selection import AnalysisPanelSelectionMixin
@@ -26,7 +25,6 @@ class AnalysisPanel(
     AnalysisPanelDiagnosticsMixin,
     AnalysisPanelSelectionMixin,
     AnalysisPanelEquationMixin,
-    AnalysisPanelKdeStyleMixin,
     AnalysisPanelMixingMixin,
     AnalysisPanelMlMixin,
     BasePanel,

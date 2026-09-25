@@ -29,8 +29,6 @@ class AnalysisPanelBuildMixin:
 
     def reset_state(self):
         super().reset_state()
-        self.tools_kde_check = None
-        self.tools_marginal_kde_check = None
         self.selection_button = None
         self.ellipse_selection_button = None
         self.lasso_selection_button = None
@@ -70,42 +68,6 @@ class AnalysisPanelBuildMixin:
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('analysis_section_toolbox')
 
-        kde_group = QGroupBox(translate("Kernel Density"))
-        kde_group.setProperty('translate_key', 'Kernel Density')
-        kde_layout = QVBoxLayout()
-
-        kde_row = QHBoxLayout()
-        kde_check_row, self.tools_kde_check = labeled_checkbox("Show Kernel Density",
-                                                   app_state.show_kde,
-                                                   self._on_kde_change)
-        kde_row.addWidget(kde_check_row)
-
-        kde_swatch = QLabel()
-        kde_swatch.setFixedSize(16, 16)
-        apply_color_swatch(kde_swatch, '#e2e8f0')
-        kde_swatch.setProperty("keepStyle", True)
-        kde_swatch.mousePressEvent = lambda event, s=kde_swatch: self._open_kde_style_dialog('kde', s)
-        kde_row.addWidget(kde_swatch)
-        kde_row.addStretch()
-        kde_layout.addLayout(kde_row)
-
-        mkde_row = QHBoxLayout()
-        mkde_check_row, self.tools_marginal_kde_check = labeled_checkbox("Show Marginal KDE",
-                                                            app_state.show_marginal_kde,
-                                                            self._on_marginal_kde_change)
-        mkde_row.addWidget(mkde_check_row)
-
-        mkde_swatch = QLabel()
-        mkde_swatch.setFixedSize(16, 16)
-        apply_color_swatch(mkde_swatch, '#e2e8f0')
-        mkde_swatch.setProperty("keepStyle", True)
-        mkde_swatch.mousePressEvent = lambda event, s=mkde_swatch: self._open_kde_style_dialog('marginal_kde', s)
-        mkde_row.addWidget(mkde_swatch)
-        mkde_row.addStretch()
-        kde_layout.addLayout(mkde_row)
-
-        kde_group.setLayout(kde_layout)
-        BasePanel.add_group_page(section_toolbox, kde_group, 'Kernel Density')
 
         equation_group = QGroupBox(translate("Equation Overlays"))
         equation_group.setProperty('translate_key', 'Equation Overlays')

@@ -177,7 +177,7 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('display_section_toolbox')
         # Language refresh: BasePanel._update_translations re-labels the tabs.
-        section_toolbox.setProperty('toolbox_tab_keys', '["Presets & Themes", "Text & Markers", "Axes, Grid & Canvas"]')
+        section_toolbox.setProperty('toolbox_tab_keys', '["Presets & Themes", "Text & Markers", "Axes, Grid & Canvas", "Kernel Density"]')
         self._section_toolbox = section_toolbox
 
         presets_page = QWidget()
@@ -203,6 +203,7 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
         section_toolbox.addItem(presets_page, translate("Presets & Themes"))
         section_toolbox.addItem(style_page, translate("Text & Markers"))
         section_toolbox.addItem(axes_page, translate("Axes, Grid & Canvas"))
+        self._build_kde_page(section_toolbox)
         self._restore_toolbox_state(section_toolbox, 'display')
         layout.addWidget(section_toolbox)
 

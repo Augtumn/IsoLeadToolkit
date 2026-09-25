@@ -27,8 +27,8 @@ from ui.icons import apply_color_swatch
 from visualization.line_styles import ensure_line_style
 
 
-class AnalysisPanelKdeStyleMixin:
-    """KDE curve style handlers and dialog for the analysis panel."""
+class DisplayPanelKdeStyleMixin:
+    """KDE curve style handlers and dialog for the display panel."""
 
     def _on_kde_change(self, state):
         """Handle KDE visibility change."""
