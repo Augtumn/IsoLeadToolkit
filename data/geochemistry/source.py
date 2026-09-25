@@ -354,9 +354,7 @@ def calculate_initial_ratio_64(
         params = engine.params
     mu = calculate_model_mu(Pb206_204_S, Pb207_204_S, t_Ma, params)
     x_ref, _, _, t_ref = _model_reference_params(params)
-    # Same age handling as the mu/kappa inversions (None-safe, clamped to
-    # >= 0): the raw np.asarray(t_Ma) crashed on None and disagreed with
-    # the clamped age used for mu, corrupting the initial ratios.
+    # 与 μ/κ 反演用同一套年龄处理 (None → NaN, 夹紧 ≥ 0), 否则与 μ 所用年龄不一致。
     t = _prepare_age(t_Ma)
     e8T = np.exp(params['lambda_238'] * t_ref)
     e8t = np.exp(params['lambda_238'] * t)
@@ -408,22 +406,15 @@ def calculate_initial_ratio_84(
 # =============================================================================
 # Albarède & Juteau (1984) T–μ–κ 模型 — 源区参数
 # =============================================================================
-# 参考: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
-#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+# 参考: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
 #       doi:10.1016/0016-7037(84)90364-8
-# 参考组成 (常数见 engine.py §1.9, 与 R 包 ASTR::albarede_juteau_1984() 一致):
-#   x*/y*/z* = 18.750/15.63/38.83, μ* = 9.66, κ* = 3.90, T0 = 3.8 Ga,
-#   ²³⁸U/²³⁵U = 137.79。AJ84 直接同时解出 (T_i, μ_i) 并由 z 求 κ_i:
-#       μ_i = (x_i − x0) / (e^{λT0} − e^{λT_i})
-#       κ_i = (z_i − z0) / [(e^{λ''T0} − e^{λ''T_i}) · μ_i]
-#   下面给出的是相对现代 common Pb 参考的 Δμ/Δκ 记法 (源自 2012 版论文的
-#   记号), 与上面的绝对量等价: μ_i = μ* + Δμ_i, κ_i = κ* + Δκ_i。
-#   T_i 可为负 (负模式年龄有物理含义, 见 age.py 的说明), 故这些函数用
-#   _prepare_age_signed() 而不是会夹紧到 0 的 _prepare_age()。
-# 注意: z* 有两套约定 —— 38.83 (本工程采用; AJ84/2012 印刷值) 与 38.86
-#   (ASTR 源码)。二者只影响 κ (约 0.016), 不影响 T/μ。SilverQuest 矿石库
-#   6938 行实测为混合: 90.0% 与 38.83 一致、9.9% 与 38.86 一致, 并按文献来源
-#   分批 (38.86 组多为 Frei 1992 / Caron et al. 1997 / Pernicka et al. 1993)。
+# 常数见 engine.py §1.9。AJ84 由 x/z 生长方程直接得绝对量:
+#     μ_i = (x_i − x0) / (e^{λT0} − e^{λT_i})
+#     κ_i = (z_i − z0) / [(e^{λ''T0} − e^{λ''T_i}) · μ_i]
+# 下面同时给出相对现代 common Pb 参考的 Δμ/Δκ 记法 (源自 2012 版记号):
+# μ_i = μ* + Δμ_i, κ_i = κ* + Δκ_i。
+# T_i 可为负 (负模式年龄有物理含义, 见 age.py), 故用 _prepare_age_signed()
+# 而非夹紧到 0 的 _prepare_age()。
 
 def calculate_albarede_delta_mu(
     Pb206_204_S: np.ndarray | float,
@@ -432,14 +423,8 @@ def calculate_albarede_delta_mu(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
-    Albarède & Juteau (1984) 源区 Δμ_i = μ_i − μ*
-
-    由 x 生长方程 (x0 为 AJ84 反推的原始铅锚点, x0 = x* − μ*(e^{λT0} − 1)):
-        x_i = x0 + μ_i (e^{λT0} − e^{λT_i})
-    ⇒  Δμ_i = μ_i − μ* = [x_i − x* + μ*(e^{λT_i} − 1)] / (e^{λT0} − e^{λT_i})
-
-    Δμ 是相对现代 common Pb 参考的记法 (源自 2012 版论文记号), 与 AJ84 直接解出
-    的 μ_i 等价。
+    Albarède & Juteau (1984) 源区 Δμ_i = μ_i − μ* = [x_i − x* + μ*(e^{λT_i} − 1)]
+    / (e^{λT0} − e^{λT_i}), 即 x 生长方程 (x0 = x* − μ*(e^{λT0} − 1)) 的解。
 
     Args:
         Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
@@ -487,17 +472,13 @@ def calculate_albarede_delta_kappa(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
-    Albarède & Juteau (1984) 源区 Δκ_i = κ_i − κ*
+    Albarède & Juteau (1984) 源区 Δκ_i = κ_i − κ*, 由 z 生长方程 (z0 = z* −
+    μ*κ*(e^{λ''T0} − 1)) 得:
+        Δκ_i = { [z_i − z* + μ*κ*(e^{λ''T_i} − 1)] / (e^{λ''T0} − e^{λ''T_i})
+                 − κ* Δμ_i } / μ_i
 
-    由 z 生长方程 (z0 为 AJ84 反推的原始铅锚点, z0 = z* − μ*κ*(e^{λ''T0} − 1)):
-        z_i = z0 + μ_i κ_i (e^{λ''T0} − e^{λ''T_i})
-    ⇒  Δκ_i = { [z_i − z* + μ*κ*(e^{λ''T_i} − 1)] / (e^{λ''T0} − e^{λ''T_i})
-                − κ* Δμ_i } / μ_i
-
-    历史备注: 2012 版论文 p.858 式 (15) 的印刷版把 (14) 的 (μ_i Δκ_i + κ* Δμ_i)(…)
-    原样留在右端分子, 于是两侧的 μ_i Δκ_i 相消 ("右端 − Δκ_i" 恒为
-    Δκ_i^true + 2κ* Δμ_i/μ_i), 对一般样品没有不动点解。本工程实现 AJ84, 上式即
-    其 z 方程的代数正确解; 正演-反演往返测试见 tests/test_geochemistry_albarede.py。
+    (2012 版式 (15) 的印刷版使 Δκ_i 自相消、一般无不动点解, 故不采用; 见
+    docs/geochemistry.md §16.5。)
 
     Args:
         Pb206_204_S, Pb208_204_S: 样品 206Pb/204Pb、208Pb/204Pb

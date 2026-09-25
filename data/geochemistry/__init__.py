@@ -94,7 +94,7 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
     if model_name is None:
         model_name = getattr(engine, 'current_model_name', '')
 
-    # Prefer explicit flag
+    # 优先取显式 age_model 标志
     age_model = params.get('age_model')
     if isinstance(age_model, str):
         mode = age_model.strip().lower().replace('_', '-')
@@ -103,7 +103,7 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
         if mode in ('single-stage', 'single stage', '1-stage', '1st', 'first'):
             return 'single_stage'
 
-    # Fallback heuristics (for backward compatibility with custom params)
+    # 回退启发式 (兼容未带 age_model 的自定义参数)
     logger.debug("age_model flag not found in params, falling back to heuristics for model '%s'", model_name)
 
     if isinstance(model_name, str):
@@ -191,13 +191,11 @@ def calculate_all_parameters(
     if calculate_ages:
         tSK = calculate_two_stage_age(Pb206, Pb207)
     else:
-        # Callers that only need single-stage quantities (V1V2 discrimination)
-        # skip the two-stage age; degrade to tCDT so t_model/t_input stay finite.
+        # 只取单阶段量的调用方 (V1V2 判别) 跳过两阶段求解, 退化为 tCDT 以保持有限值。
         tSK = tCDT
 
     t_model = tSK if is_two_stage else tCDT
-    # Finite fallback: a two-stage solve can fail (None/NaN) while the
-    # single-stage age is still valid, and vice versa.
+    # 两阶段求解可能失败 (None/NaN) 而单阶段仍有效, 反之亦然: 相互回退。
     if is_two_stage:
         if t_model is None:
             t_model = tCDT
@@ -218,9 +216,8 @@ def calculate_all_parameters(
     
     results['tCDT (Ma)'] = tCDT
     results['tSK (Ma)'] = tSK
-    # Unified model-age output: each parameter set yields exactly one model
-    # age, chosen by the resolved age model (two-stage → tSK, single-stage →
-    # tCDT). This is the canonical "模式年龄" column used by UI/export/validation.
+    # 唯一模型年龄输出: 由解析出的 age_model 决定取 tSK 还是 tCDT,
+    # 即 UI/导出/校验所用的 "模式年龄" 列。
     results['t_Model (Ma)'] = t_model
     
     # 3. Delta 值计算
@@ -236,13 +233,11 @@ def calculate_all_parameters(
         # 单阶段逻辑: Geokit 用 T1 计算年龄，但 Delta 地幔参考采用 T2 口径
         t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, params=params_calc, initial_age=params_calc.get('T2'))
         if t_calc is None:
-            # Scalar solve failed; degrade to the CDT model age instead of
-            # crashing in np.maximum below.
+            # 标量求解失败: 退化为 tCDT, 避免在下面 np.maximum 处崩溃。
             logger.warning("Single-stage age solve failed; falling back to tCDT")
             t_calc = tCDT
         if t_calc is None:
-            # Both solves failed: keep going with NaN so the remaining
-            # outputs degrade instead of raising TypeError.
+            # 两种求解都失败: 用 NaN 继续, 让其余输出一并退化而不是抛 TypeError。
             logger.warning("No finite single-stage age available; deltas will be NaN")
             t_calc = np.nan
         if is_geokit or params_calc.get('v1v2_formula') == 'zhu1993':
@@ -287,8 +282,7 @@ def calculate_all_parameters(
     mu_val = _invert_mu(Pb206, Pb207, t_input, X_ref, Y_ref, T_ref, params_calc)
     omega_val = _invert_omega(Pb208, t_input, Z_ref, T_ref, params_calc)
     if mu_val is None:
-        # Solver failure: degrade to NaN instead of crashing downstream in
-        # calculate_source_nu / initial-ratio inversion.
+        # 求解失败: 用 NaN 继续, 避免在 calculate_source_nu / 初始比值反演处崩溃。
         logger.warning("Mu inversion failed; using NaN for affected samples")
         mu_val = np.nan
     if omega_val is None:
@@ -316,14 +310,11 @@ def calculate_all_parameters(
 # =============================================================================
 # Albarède & Juteau (1984) T–μ–κ 结果键名与一站式反演
 # =============================================================================
-# 参考: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
-#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+# 参考: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
 #       doi:10.1016/0016-7037(84)90364-8
-# 常数与解法与 R 包 ASTR::albarede_juteau_1984() 一致; 2012 版 T–μ–κ 作者本人
-# 表示不应使用, 故未实现 (见 engine.py §1.9)。
-# 这组量与 calculate_all_parameters() 刻意分开: 它的参考组成/年龄锚点 (T0 =
-# 3.8 Ga, 现代 common Pb) 与 PbIso 系列预设 (CDT/a₁) 不同, 混在同一字典里会让
-# 下游误用错参考。
+# 常数与解法见 engine.py §1.9 (与 ASTR::albarede_juteau_1984() 一致)。
+# 与 calculate_all_parameters() 分开: 本组量的参考组成/年龄锚点 (T0 = 3.8 Ga,
+# 现代 common Pb) 不同于 PbIso 系列预设 (CDT/a₁), 混在一个字典会让下游误用错参考。
 
 ALBAREDE_T_MODEL_KEY = 't_Albarede (Ma)'
 ALBAREDE_MU_KEY = 'mu_Albarede'
@@ -331,7 +322,7 @@ ALBAREDE_KAPPA_KEY = 'kappa_Albarede'
 ALBAREDE_OMEGA_KEY = 'omega_Albarede'
 ALBAREDE_DELTA_MU_KEY = 'Delta_mu_Albarede'
 ALBAREDE_DELTA_KAPPA_KEY = 'Delta_kappa_Albarede'
-#: 式 (16): dT_i/dT_0 (无量纲), 参考模型 T0 选择对模式年龄的灵敏度
+#: dT_i/dT_0 (无量纲): 参考模型 T0 选择对模式年龄的灵敏度 (式出自 2012 版式 16)
 ALBAREDE_AGE_SENSITIVITY_KEY = 'dT_dT0_Albarede'
 
 
@@ -346,7 +337,7 @@ def calculate_albarede_parameters(
 
     按 AJ84 的两条生长方程解出 (T_i, μ_i), 并由 z 生长方程求 κ_i
     (ω_i = μ_i·κ_i); 另返回相对现代 common Pb 参考的 Δμ_i/Δκ_i 与 T0 灵敏度
-    dT_i/dT0。模型族外样品 (T_i 不在 (0, T0) 内) 返回 NaN。
+    dT_i/dT0。T_i 在 (−4·T0, T0) 内无根时为 NaN (负年龄为合法结果)。
 
     Args:
         Pb206_204_S, Pb207_204_S, Pb208_204_S: 样品 206/204、207/204、208/204

@@ -1,20 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Geochemistry parameters and model engine."""
-# -*- coding: utf-8 -*-
-"""
-核心地球化学算法库 (Geochemistry Core Library)
+"""核心地球化学算法库 (Geochemistry Core Library)。
 
-本模块实现了铅同位素地球化学计算的核心算法，包括：
-1. 模型年龄计算 (单阶段模式年龄、Stacey-Kramers 两阶段模式年龄)
-2. 源区特征参数反演 (Mu, Omega, Kappa)
-3. 初始铅同位素比值计算
-4. Δ值计算及 V1-V2 判别图投影
-5. 等时线相关参数计算
+提供: 模式年龄 (单阶段 / Stacey-Kramers 两阶段)、源区参数 (μ/ω/κ) 反演、
+初始铅比值、Δ 值与 V1-V2 判别投影、等时线参数。
 
-算法来源：
-- 主要适配自 Geokit (V1V2) 及其 Python 实现
-- R 语言 PbIso 软件包 (用于 Stacey-Kramers 模型参数反演)
-- 经典文献: Stacey & Kramers (1975), Jaffey et al. (1971), Tatsumoto et al. (1973)
+来源: Geokit (V1V2 投影)、R 包 PbIso (两阶段参数反演), 以及文献
+Stacey & Kramers (1975)、Jaffey et al. (1971)、Tatsumoto et al. (1973)。
 """
 
 from typing import Any
@@ -75,36 +66,26 @@ E2_DEFAULT = 0.0
 E1_CUMMING_RICHARDS = 5e-11
 E2_CUMMING_RICHARDS = 3.7e-11
 
-# 1.9 Albarède & Juteau (1984) 参考模型参数 (T–μ–κ)
-# 来源: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
-#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+# 1.9 Albarède & Juteau (1984) T–μ–κ 参考模型参数
+# 来源: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
 #       doi:10.1016/0016-7037(84)90364-8
-# 常数与解法按 R 包 ASTR::albarede_juteau_1984() 复核 (该函数转写自 F. Albarède
-# 的 MATLAB 脚本 v2020-11-06)。注意: Albarède et al. (2012, Archaeometry) 的
-# T–μ–κ 版本作者本人明确表示不应使用 (见 ASTR 与 man/age_models.Rd 的说明),
-# 故本工程只实现 AJ84 版本。
-ALBAREDE_T0 = 3.8e9           # T0 = 3.8 Ga (AJ84 的参考锚点, 单位: 年)
+# 常数与解法按 ASTR::albarede_juteau_1984() 复核 (转写自 Albarède 的 MATLAB
+# 脚本 v2020-11-06)。2012 年 Archaeometry 那版 T–μ–κ 作者本人不建议使用,
+# 故只实现 AJ84; 与第三方矿石库的比对见 docs/geochemistry.md §16。
+ALBAREDE_T0 = 3.8e9           # T0 = 3.8 Ga (参考锚点, 年)
 ALBAREDE_X_STAR = 18.750      # 现代 common Pb 206Pb/204Pb (x*)
 ALBAREDE_Y_STAR = 15.63       # 现代 common Pb 207Pb/204Pb (y*)
-ALBAREDE_Z_STAR = 38.83       # 现代 common Pb 208Pb/204Pb (z*); 另有 38.86 约定, 见下
+ALBAREDE_Z_STAR = 38.83       # 现代 common Pb 208Pb/204Pb (z*; ASTR 取 38.86)
 ALBAREDE_MU_STAR = 9.66       # 现代 common Pb 238U/204Pb (μ*)
 ALBAREDE_KAPPA_STAR = 3.90    # 现代 common Pb 232Th/238U (κ*)
-#: ω* = μ*·κ* (232Th/204Pb of the reference reservoir)
+#: ω* = μ*·κ*
 ALBAREDE_OMEGA_STAR = ALBAREDE_MU_STAR * ALBAREDE_KAPPA_STAR
-#: AJ84/ASTR 使用的 238U/235U 比值 (2012 版印刷为 137.88; 两者对 T 的影响约 0.02 Ma)
+#: AJ84/ASTR 的 ²³⁸U/²³⁵U (2012 版印刷为 137.88, 对 T 的影响约 0.02 Ma)
 ALBAREDE_U238_235 = 137.79
 U_RATIO_AJ84 = 1.0 / ALBAREDE_U238_235
-#: 由参考组成反推的原始铅锚点 (使模型曲线在 t = 0 恰好通过 x*/y*/z*):
-#:   x0 = x* − μ*(e^{λT0} − 1), y0 = y* − (μ*/137.79)(e^{λ'T0} − 1),
-#:   z0 = z* − μ*κ*(e^{λ''T0} − 1)
-#: 得 x0/y0/z0 ≈ 10.993/12.742/31.038 —— 远离 CDT (9.307/10.294/29.476), 这是
-#: AJ84 用 T0 = 3.8 Ga 作锚点的结果, 该值不是物理原始铅, 请勿"修正"为 CDT。
-#:
-#: z* 的两套约定: 38.83 (AJ84/2012 印刷值; ASTR 之外的多数文献) 与 38.86
-#: (ASTR::albarede_juteau_1984() 采用)。二者只影响 κ (T/μ 不受影响):
-#: z0 相差 0.03 ⇒ κ 相差约 0.016。SilverQuest 矿石库 6938 行实测为混合——
-#: 90.0% 与 38.83 一致、9.9% 与 38.86 一致, 且按文献来源分批 (38.86 组多为
-#: Frei 1992 / Caron et al. 1997 / Pernicka et al. 1993)。本工程取 38.83。
+#: 由参考组成反推的原始铅锚点, 使模型曲线在 t = 0 通过 x*/y*/z*:
+#: x0 = x* − μ*(e^{λT0} − 1) 等。得 10.993/12.742/31.038, 远离 CDT —— 这是
+#: T0 = 3.8 Ga 锚点的结果, 不是物理原始铅, 勿"修正"为 CDT。
 ALBAREDE_X0 = ALBAREDE_X_STAR - ALBAREDE_MU_STAR * (np.exp(LAMBDA_238 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Y0 = ALBAREDE_Y_STAR - ALBAREDE_MU_STAR * U_RATIO_AJ84 * (np.exp(LAMBDA_235 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Z0 = ALBAREDE_Z_STAR - ALBAREDE_OMEGA_STAR * (np.exp(LAMBDA_232 * ALBAREDE_T0) - 1.0)
@@ -207,13 +188,8 @@ PRESET_MODELS = {
         'v1v2_formula': 'default',
     },
     "Albarède & Juteau (1984)": {
-        # T–μ–κ 参考模型 (GCA 48(1), 207-212): 原始铅锚点自 T0 = 3.8 Ga 以
-        # μ* = 9.66、κ* = 3.90 演化至今, 现代参考组成 x*/y*/z* =
-        # 18.750/15.63/38.83; ²³⁸U/²³⁵U = 137.79 (ASTR/MATLAB 口径)。
-        # 矿床按硫化物处理 (T_i 后不再含 U/Th), T_i、μ_i、κ_i 的反演见
-        # data/geochemistry/age.py 与 source.py (本预设只提供标准字段)。
-        # 初始比值取参考组成反推的锚点 (ALBAREDE_X0/Y0/Z0), 因此模型曲线在
-        # t = 0 恰好通过 x*/y*/z*。
+        # 常数见 §1.9。初始比值取反推锚点, 故曲线在 t = 0 通过 x*/y*/z*;
+        # 矿床按硫化物处理 (T_i 后不再含 U/Th), T_i/μ_i/κ_i 反演见 age.py、source.py。
         'age_model': 'single_stage',
         'T1': ALBAREDE_T0,
         'T2': ALBAREDE_T0,
@@ -335,13 +311,10 @@ def calculate_model_slope(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray | float:
     """
-    参考演化曲线斜率 s(T0, T) (Albarède et al. 2012, 式 4)
+    参考演化曲线斜率 s(T0, T) = (1/U)·(e^{λ'T0} − e^{λ'T}) / (e^{λT0} − e^{λT})
 
-    s(T0, T) = 1/137.88 · (e^{λ'T0} − e^{λ'T}) / (e^{λT0} − e^{λT})
-    为 207Pb/204Pb — 206Pb/204Pb 生长线在时刻 T 的斜率。
-
-    当 T = T0 时为 0/0, 返回洛必达极限 1/137.88 · (λ'/λ) · e^{(λ'−λ)T},
-    使"与地球同龄"的样品仍能得到有限残差。
+    即 207Pb/204Pb — 206Pb/204Pb 生长线在时刻 T 的斜率 (U 取自 params['U_ratio'])。
+    T0 = T (含 T = 0 自比) 时为 0/0, 返回洛必达极限 (1/U)·(λ'/λ)·e^{(λ'−λ)T}。
 
     Args:
         t0_years, t_years: 参考起始时间与求值时间 (年), 标量或数组
@@ -363,9 +336,8 @@ def calculate_model_slope(
     with np.errstate(divide='ignore', invalid='ignore'):
         result = u_ratio * numerator / denominator
 
-    # 年龄差极小时闭式解因相消而失去有效位 (甚至 e^{λT0} − e^{λT} 下溢为 0), 切线
-    # 极限是精确值。判据同时用"年差"与"指数差": 后者对两者都接近 0 的情形
-    # (如 s(T, 0), T → 0) 是必需的 —— 此时年差判据的相对尺度失效。
+    # 年龄差极小时闭式解相消 (e^{λT0} − e^{λT} 甚至会下溢为 0), 切线极限才是精确值。
+    # 判据需含指数差: 年差判据在两者都接近 0 时 (如 s(T, 0), T → 0) 相对尺度失效。
     nearly_equal = (np.abs(t0 - t) < 1e-9 * np.maximum(np.abs(t0), 1.0)) | (
         np.abs(l238 * (t0 - t)) < 1e-9
     )

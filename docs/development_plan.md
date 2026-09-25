@@ -16,6 +16,7 @@
 - **测试**：`tests/test_geochemistry_albarede.py` 25 例——AJ84 常数/锚点/曲线过现代 common Pb、正演→反演往返、真实矿石库 3 行常规样本 + 1 行负年龄 + 1 行最负（−8980 Ma）+ 1 行 206/204 = x\*、无根样本返回 NaN、现代参考组成年龄为 0、T0 切线极限与 T→0 切线极限、T0 灵敏度有限差分、数组/NaN 退化、预设只含标准字段。
 - **文档**：`docs/geochemistry.md` §2.7/§2.8 预设与对照表、§14.7 API、§16 全节重写（含 ASTR 对照、z\* 与求解区间差异、外部验证表）；`docs/data.md` 预设表；`docs/architecture.md` 模块备注。
 - **未做（有意）**：不把 T–μ–κ 列加入导出列清单、不在 `calculate_all_parameters` 内做模型分支、不向 `engine.params` 增加模型专属键。
+- **注释清理**：`data/geochemistry/` 六个文件按"注释讲清约束与理由、细节留给 `docs/geochemistry.md`"的原则重写——删除复述公式的散文、跨文件重复的常数说明与过程/历史旁白，注释行 192 → 144（data 包 2,685 → 2,609 行），并用 AST 比对（剥离字符串语句后逐文件对比）确认**代码零改动**；同时修掉 `calculate_albarede_parameters` docstring 中过期的"T_i 不在 (0, T0) 内返回 NaN"（区间已改为 (−4·T0, T0)）。
 
 ## 阶段进展（2026-09-10 · 项目全量审查修复批，6 commits）
 

@@ -247,28 +247,22 @@ def calculate_two_stage_age(
 # =============================================================================
 # Albarède & Juteau (1984) T–μ–κ 模型 — 模式年龄
 # =============================================================================
-# 参考: Albarède, F. & Juteau, M. (1984). Unscrambling the lead model ages.
-#       Geochimica et Cosmochimica Acta 48(1), 207-212.
+# 参考: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
 #       doi:10.1016/0016-7037(84)90364-8
-# 参考模型 (常数见 engine.py §1.9, 与 R 包 ASTR::albarede_juteau_1984() 一致):
-#   原始铅锚点自 T0 = 3.8 Ga 以 μ* = 9.66、κ* = 3.90 演化至现代 common Pb
-#   x*/y*/z* = 18.750/15.63/38.83; ²³⁸U/²³⁵U = 137.79。
-# 矿床按硫化物处理 (T_i 后不再含 U/Th)。AJ84 的解法是对两条生长方程
+# 常数见 engine.py §1.9 (与 ASTR::albarede_juteau_1984() 一致)。
+#
+# AJ84 对两条生长方程同时求解 (T_i, μ_i) (原脚本/ASTR 用 rootSolve::multiroot):
 #     x_i = x0 + μ_i (e^{λT0} − e^{λT_i})
 #     y_i = y0 + (μ_i/U)(e^{λ'T0} − e^{λ'T_i})
-# 同时解出 (T_i, μ_i) (Albarède 的 MATLAB 脚本 / ASTR 用 rootSolve::multiroot);
-# 下面的残差是这两式消去 μ_i 后的等价 1-D 形式 (已数值验证: 同一常数下两者
-# 相差 ≤ 3.5e-12 Ma)。
+# 本模块用消去 μ_i 后的等价 1-D 残差 (同一常数下两者相差 ≤ 3.5e-12 Ma)。
 #
-# 求解区间: T_i ∈ (−SPAN·T0, T0), SPAN = 4, 即约 (−15.2 Ga, 3.8 Ga)。
-# **负模式年龄是有意义的**: 当样品的 207Pb/204Pb 比现代参考更低 (比现代 common Pb
-# 更不放射成因) 时, 生长曲线交点落在 T = 0 之外, 表示源区 μ 低于参考值 μ* (U 相对
-# 贫化)。Albarède 的 MATLAB 脚本、ASTR 与 SilverQuest 矿石库都保留这类结果
-# (该库 6938 行中有 407 行 Tmod < 0, 最低 −8980 Ma)。只有整个区间内都无根时才返回
-# NaN —— 这与 ASTR 的无界 Newton 的差别仅在"无根"情形的处理, 不再丢弃负年龄。
+# 求解区间 T_i ∈ (−4·T0, T0) ≈ (−15.2 Ga, 3.8 Ga):
+#   负年龄是合法结果 —— ²⁰⁷Pb/²⁰⁴Pb 低于现代参考即源区 μ < μ* (U 相对贫化),
+#   参考矿石库 6938 行中有 407 行 Tmod < 0 (最低 −8980 Ma)。
+#   区间内无根才返回 NaN (如 206/204 = x* 时, y 只在 (14.06, 22.68) 内有解)。
 
 _ALBAREDE_SEARCH_POINTS = 400
-#: 负向扫描跨度 (以 T0 为单位): 覆盖到约 −15 Ga, 足以涵盖参考生长曲线的负年龄分支。
+#: 负向扫描跨度 (以 T0 为单位), 覆盖参考生长曲线的负年龄分支。
 _ALBAREDE_NEGATIVE_SPAN = 4.0
 
 
@@ -281,29 +275,22 @@ def albarede_model_age_residual(
     """
     Albarède & Juteau (1984) 模式年龄方程的残差
 
-    AJ84 同时解 (T_i, μ_i); 消去 μ_i 后等价于:
+    消去 μ_i 后 (s 见 engine.calculate_model_slope, U = params['U_ratio']):
         f(T_i) = (y_i − y*)/(x_i − x*) − s(T0, T_i)
-                 − μ*(e^{λT_i} − 1)/(x_i − x*) · [s(T0, T_i) − s(T_i, 0)] = 0
-    其中 s 为 engine.calculate_model_slope() (式: s(T0,T) = (1/U)(e^{λ'T0} − e^{λ'T})
-    / (e^{λT0} − e^{λT})), U = 137.79 (AJ84/ASTR 口径, 由预设的 U_ratio 提供)。
+                 − μ*(e^{λT_i} − 1)/(x_i − x*) · [s(T0, T_i) − s(T_i, 0)]
 
-    历史备注: Albarède et al. (2012, Archaeometry) 给出过同一模型族的 T–μ–κ
-    版本, 其式 (12) 印刷版第三项分子为 e^{λ'T_i} − 1 (²³⁵U), 与式 (11) 的消元
-    结果 (²³⁸U 项) 不一致; 且作者本人表示 2012 版不应使用 (见 ASTR 文档)。
-    因此本工程实现 AJ84, 不实现 2012 版。
+    实际返回清分母形式 g = (x_i − x*)·f: 零点与 f 相同, 但 x_i = x* (即 206/204 =
+    18.750, 实测常见) 时不奇异, 退化为极限方程
+        (y_i − y*) = μ*(e^{λT_i} − 1)·[s(T0, T_i) − s(T_i, 0)]。
 
     Args:
-        t_Ma: 待求模式年龄 (Ma)
+        t_Ma: 待求模式年龄 (Ma, 可为负)
         Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
-        params: 参数字典 (可选; 需为 AJ84 预设, 以提供 U_ratio = 1/137.79)
+        params: 参数字典 (可选; 需为 AJ84 预设, 提供 U_ratio = 1/137.79)
 
     Returns:
-        np.ndarray or float: 残差 (无量纲; = f·(x_i − x*), 见下文)
+        np.ndarray or float: 残差 (无量纲; = f·(x_i − x*))
     """
-    # 返回"清分母"形式 g = (x_i − x*)·f: 与本函数文档中的 f 零点相同, 但 x_i = x*
-    # (现代参考值; 实测数据把 206Pb/204Pb 取整到 18.750 很常见) 时不再奇异, 自动退化
-    # 为极限方程 (y_i − y*) = μ*(e^{λT_i} − 1)[s(T0,T_i) − s(T_i,0)]。
-    # 该退化形式与第三方矿石库一致 (18.750/15.770 → T_i ≈ 270 Ma)。
     if params is None:
         params = engine.params
     t_years = np.asarray(t_Ma, dtype=float) * 1e6
@@ -375,9 +362,8 @@ def calculate_albarede_model_age(
     """
     Albarède & Juteau (1984) 模式年龄 T_i (Ma)
 
-    标量输入返回标量年龄 (无解时返回 None); 数组输入返回数组, 无解位置为 NaN。
-    求解区间 (−4·T0, T0), 即约 (−15.2 Ga, 3.8 Ga); **负年龄是合法结果** (样品的
-    ²⁰⁷Pb/²⁰⁴Pb 低于现代参考 → 源区 μ 低于 μ*, 比现代 common Pb 更不放射成因)。
+    标量输入返回标量 (无解为 None); 数组输入返回数组 (无解位置 NaN)。
+    区间 (−4·T0, T0); 负年龄是合法结果 (²⁰⁷Pb/²⁰⁴Pb 低于现代参考 → 源区 μ < μ*)。
 
     Args:
         Pb206_204_S, Pb207_204_S: 样品 206Pb/204Pb、207Pb/204Pb
@@ -410,20 +396,17 @@ def calculate_albarede_age_sensitivity(
     params: dict[str, Any] | None = None,
 ) -> np.ndarray | float:
     """
-    参考模型 T0 选择对模式年龄的灵敏度 dT_i/dT_0 (无量纲)
+    参考模型 T0 对模式年龄的灵敏度 dT_i/dT_0 (无量纲)
 
         dT_i = (Δμ_i/μ_i) · [λ'e^{λ'T0} − U·λ·s(T0,T_i)·e^{λT0}]
                           / [λ'e^{λ'T_i} − U·λ·s(T0,T_i)·e^{λT_i}] · dT0
 
-    (U = 1/U_ratio = 137.79 (AJ84); 指数以"年"为量纲。)
-
-    出处: 该式由 Albarède et al. (2012, Archaeometry) 式 (16) 给出 (AJ84 原文
-    未列此式), 此处作为本模型族的 T0 灵敏度诊断量保留; 与所选模型的参考常数
-    自动一致。验证方式: 与"把 T0 扰动后重解模式年龄方程"的数值导数对比 (见
-    tests/test_geochemistry_albarede.py)。
+    出处为 Albarède et al. (2012) 式 (16) (AJ84 原文未列), 用作本模型族的 T0
+    灵敏度诊断量; U = 1/U_ratio, 指数以"年"为量纲。正确性由"扰动 T0 后重解模式
+    年龄"的数值导数验证, 见 tests/test_geochemistry_albarede.py。
 
     Args:
-        t_Ma: 模式年龄 T_i (Ma), 由 calculate_albarede_model_age 得到
+        t_Ma: 模式年龄 T_i (Ma), 可为负
         delta_mu: Δμ_i = μ_i − μ* (由 calculate_albarede_delta_mu 得到)
         mu_value: μ_i
         params: 参数字典 (可选)

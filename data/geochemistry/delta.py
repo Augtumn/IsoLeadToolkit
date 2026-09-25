@@ -84,9 +84,7 @@ def calculate_deltas(
     ref207 = b_ref + v_M * (_exp_evolution_term(l235, T, E1_val) - _exp_evolution_term(l235, t_val, E1_val))
     ref208 = c_ref + omega_M * (_exp_evolution_term(l232, T, E2_val) - _exp_evolution_term(l232, t_val, E2_val))
     
-    # 计算偏差 (千分比)
-    # 注意: 若 t 为标量而 Pb 为数组，numpy会自动广播 ref 值
-    # 若 t 和 Pb 均为数组，形状需匹配或可广播
+    # 偏差 (千分比); ref 与 Pb 由 numpy 广播, t 与 Pb 形状需匹配或可广播。
     
     with np.errstate(divide='ignore', invalid='ignore'):
         d_alpha = ((Pb206 / ref206) - 1) * 1000

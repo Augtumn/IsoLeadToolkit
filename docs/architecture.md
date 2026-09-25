@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~53,800 行 |
+| Python 代码总量 | ~53,700 行 |
 | 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
 | Python 文件数 | 301 个 |
 | 对话框数 | 15+ 个 |
@@ -86,7 +86,7 @@ Excel/CSV 文件
 | 模块 | 文档路径 | 行数（2026-09 实测，含空行） | 备注 |
 |------|----------|------|------|
 | core/ | — | 6,871 | 含 state/ 子包（store 829, gateway 893, app_state 899, _normalizers 537, _views 326, _compat_builders 332, _dispatch_handlers 838, bootstrap 227）、persistence/、session/ |
-| data/ | [docs/data.md](data.md) | 2,685 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型 |
+| data/ | [docs/data.md](data.md) | 2,609 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型 |
 | ui/ | [docs/ui.md](ui.md) | 17,121 | 85 文件 |
 | application/ | [docs/export.md](export.md) | 2,829 | 用例层（13 use cases） |
 | visualization/ | [docs/visualization.md](visualization.md) | 9,252 | 66 文件 |

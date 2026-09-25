@@ -238,8 +238,7 @@ def york_regression(
     else:
         rxy = np.asarray(rxy, dtype=float)
 
-    # Drop non-finite rows up front: polyfit and the weighted sums would
-    # otherwise silently produce nan slope/intercept.
+    # 先剔除非有限行: 否则 polyfit 与加权和会静默产生 nan 斜率/截距。
     finite = (
         np.isfinite(x)
         & np.isfinite(y)
