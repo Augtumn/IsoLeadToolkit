@@ -14,13 +14,14 @@ from .compute_ternary import compute_ternary_embedding
 logger = logging.getLogger(__name__)
 
 
-def _resolve_legacy_aliases(value: str) -> str | None:
-    """Map legacy render-mode/algorithm aliases to canonical names.
+def _resolve_mode_aliases(value: str) -> str | None:
+    """Map alternate render-mode/algorithm names to their canonical form.
 
-    Shared by :func:`normalize_algorithm` and the legend module's
-    ``normalize_render_mode`` so the PB_MODELS / ISOCHRON alias mapping
-    lives in exactly one place. Returns ``None`` when *value* is not a
-    legacy alias (callers apply their own case convention).
+    The isochron overlay code emits ISOCHRON1/ISOCHRON2 (and group selection
+    produces PB_MODELS_*), so both spellings reach normalize_algorithm and the
+    legend's ``normalize_render_mode``; the mapping lives here once. Returns
+    ``None`` when *value* needs no mapping (callers apply their own case
+    convention).
 
     Note: *value* must already be normalized to the caller's case
     convention (upper for algorithms, verbatim for legend render modes).
@@ -33,11 +34,11 @@ def _resolve_legacy_aliases(value: str) -> str | None:
 
 
 def normalize_algorithm(algorithm: str) -> str:
-    """Normalize legacy algorithm aliases to canonical names."""
+    """Normalize alternate algorithm names to canonical names."""
     actual_algorithm = algorithm.strip().upper() if isinstance(algorithm, str) else str(algorithm)
     if actual_algorithm == 'ROBUSTPCA':
         return 'RobustPCA'
-    canonical = _resolve_legacy_aliases(actual_algorithm)
+    canonical = _resolve_mode_aliases(actual_algorithm)
     if canonical is not None:
         return canonical
     return actual_algorithm

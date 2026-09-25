@@ -20,7 +20,7 @@ from visualization.plotting.rendering.embedding.compute_algorithms import (
 )
 
 
-def test_normalize_algorithm_handles_legacy_aliases() -> None:
+def test_normalize_algorithm_handles_alternate_names() -> None:
     assert normalize_algorithm("robustpca") == "RobustPCA"
     assert normalize_algorithm("PB_MODELS_76") == "PB_EVOL_76"
     assert normalize_algorithm("PB_MODELS_86") == "PB_EVOL_86"

@@ -8,7 +8,7 @@ from .geochem.overlay_helpers import (
     get_plumbotectonics_group_palette,
     get_overlay_default_color,
 )
-from .rendering.embedding.algorithm import _resolve_legacy_aliases
+from .rendering.embedding.algorithm import _resolve_mode_aliases
 
 
 # Maps overlay style_key → app_state toggle attribute name
@@ -23,15 +23,15 @@ OVERLAY_TOGGLE_MAP: dict[str, str] = {
 
 
 def normalize_render_mode(mode: str | None) -> str:
-    """Normalize legacy render-mode aliases (PB_MODELS/ISOCHRON) verbatim.
+    """Normalize alternate render-mode names (PB_MODELS/ISOCHRON) verbatim.
 
     Unlike :func:`visualization.plotting.rendering.embedding.algorithm.
     normalize_algorithm` (which upper-cases), this preserves the input's
     original casing because legend render-mode matching is case-sensitive.
-    The alias mapping itself is shared via ``_resolve_legacy_aliases``.
+    The mapping itself is shared via ``_resolve_mode_aliases``.
     """
     value = str(mode or '').strip()
-    canonical = _resolve_legacy_aliases(value)
+    canonical = _resolve_mode_aliases(value)
     if canonical is not None:
         return canonical
     return value
