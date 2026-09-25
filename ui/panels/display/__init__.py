@@ -1,7 +1,7 @@
-"""Display panel package."""
+"""Display panel mixins and public panel class."""
 
 from __future__ import annotations
 
-from .panel import DisplayPanelMixin
+from .panel import DisplayPanel
 
-__all__ = ["DisplayPanelMixin"]
+__all__ = ["DisplayPanel"]

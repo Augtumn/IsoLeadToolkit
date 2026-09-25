@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import translate, app_state, state_gateway
-from .base_panel import BasePanel
+from ..base_panel import BasePanel
 
 logger = logging.getLogger(__name__)
 _GEO_DECAY_LAMBDA_238_DEFAULT = 1.55125e-10

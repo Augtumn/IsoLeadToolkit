@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication
 
 from core import app_state
 from data.geochemistry import LAMBDA_232, LAMBDA_235, LAMBDA_238
-from ui.panels import geo_panel as geo_panel_module
+from ui.panels.geochemistry import panel as geo_panel_module
 
 
 pytest.importorskip("PyQt5")
@@ -493,13 +493,13 @@ PANEL_SPECS = [
     ("analysis", "AnalysisPanel"),
     ("export", "ExportPanel"),
     ("legend", "LegendPanel"),
-    ("geo", "GeoPanel"),
+    ("geochemistry", "GeoPanel"),
 ]
 
 
 @pytest.mark.parametrize("module_name,class_name", PANEL_SPECS)
 def test_panel_builds_offscreen(module_name: str, class_name: str) -> None:
-    module = __import__(f"ui.panels.{module_name}_panel", fromlist=[class_name])
+    module = __import__(f"ui.panels.{module_name}.panel", fromlist=[class_name])
     panel_cls = getattr(module, class_name)
     panel = panel_cls(callback=lambda: None, parent=None)
     panel.reset_state()

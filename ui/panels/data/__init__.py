@@ -1,14 +1,7 @@
-"""Data panel mixins."""
+"""Data panel mixins and public panel class."""
+
 from __future__ import annotations
 
-from .build import DataPanelBuildMixin
-from .geochem import DataPanelGeochemMixin
-from .grouping import DataPanelGroupingMixin
-from .projection import DataPanelProjectionMixin
+from .panel import DataPanel
 
-__all__ = [
-    "DataPanelBuildMixin",
-    "DataPanelGeochemMixin",
-    "DataPanelGroupingMixin",
-    "DataPanelProjectionMixin",
-]
+__all__ = ["DataPanel"]

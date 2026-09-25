@@ -1,7 +1,7 @@
-"""Legend panel package."""
+"""Legend panel mixins and public panel class."""
 
 from __future__ import annotations
 
-from .panel import LegendPanelMixin
+from .panel import LegendPanel
 
-__all__ = ["LegendPanelMixin"]
+__all__ = ["LegendPanel"]

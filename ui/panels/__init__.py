@@ -1,18 +1,19 @@
-"""面板模块 - 控制面板各标签页的独立实现"""
+"""面板模块 - 每个段落一个包：panel.py 定义公共面板类，其余模块是按职责拆分的 mixin。"""
+
 from __future__ import annotations
 
-from .data_panel import DataPanel
-from .display_panel import DisplayPanel
-from .analysis_panel import AnalysisPanel
-from .export_panel import ExportPanel
-from .legend_panel import LegendPanel
-from .geo_panel import GeoPanel
+from .analysis import AnalysisPanel
+from .data import DataPanel
+from .display import DisplayPanel
+from .export import ExportPanel
+from .geochemistry import GeoPanel
+from .legend import LegendPanel
 
 __all__ = [
-    'DataPanel',
-    'DisplayPanel',
-    'AnalysisPanel',
-    'ExportPanel',
-    'LegendPanel',
-    'GeoPanel',
+    "AnalysisPanel",
+    "DataPanel",
+    "DisplayPanel",
+    "ExportPanel",
+    "GeoPanel",
+    "LegendPanel",
 ]

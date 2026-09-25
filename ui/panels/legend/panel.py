@@ -1,11 +1,12 @@
-"""Legend panel mixin composition."""
+"""Legend panel: colours, shapes and legend layout controls."""
+
 from __future__ import annotations
 
+from ..base_panel import BasePanel
 from .actions import LegendActionsMixin
 from .build import LegendBuildMixin
 from .editors import LegendEditorsMixin
 
 
-class LegendPanelMixin(LegendBuildMixin, LegendEditorsMixin, LegendActionsMixin):
-    """图例标签页"""
-
+class LegendPanel(LegendBuildMixin, LegendEditorsMixin, LegendActionsMixin, BasePanel):
+    """图例面板 - 颜色和形状设置"""
