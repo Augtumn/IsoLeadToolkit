@@ -170,8 +170,5 @@ def on_click(event: Any) -> None:
                 refresh_selection_overlay()
             return
 
-        logger.info(translate('Click export has been removed. Use the control panel export instead.'))
-        return
-
     except Exception as err:
         logger.warning('Click handler error: %s', err)
