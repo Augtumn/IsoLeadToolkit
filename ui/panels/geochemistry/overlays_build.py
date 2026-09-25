@@ -21,8 +21,8 @@ from ui.icons import apply_color_swatch
 logger = logging.getLogger(__name__)
 
 
-class DataPanelGeochemBuildMixin:
-    """Build geochemistry plot controls UI for data panel."""
+class GeoPanelOverlaysBuildMixin:
+    """Build the geochemistry overlay plot controls."""
 
     def _build_geochem_controls(self, layout):
         """Build geochemistry plot controls group.

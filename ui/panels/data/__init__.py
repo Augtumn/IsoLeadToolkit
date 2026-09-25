@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from .panel import DataPanel, PANEL_META
+from .panel import PANEL_META, DataPanel
 
 __all__ = ["DataPanel", "PANEL_META"]

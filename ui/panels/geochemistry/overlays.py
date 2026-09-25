@@ -11,7 +11,7 @@ from core import app_state, state_gateway, translate
 logger = logging.getLogger(__name__)
 
 
-class DataPanelGeochemMixin:
+class GeoPanelOverlaysMixin:
     """Geochemistry-related handlers for data panel."""
 
     def _on_model_curves_change(self, state):
@@ -221,24 +221,6 @@ class DataPanelGeochemMixin:
         )
         self._on_change()
 
-    def _on_v1v2_param_change(self):
-        """Update V1V2 time parameters."""
-        try:
-            from application.use_cases import geochemistry as geochem_usecase
-        except Exception:
-            return
-
-        params = {}
-        if self.v1v2_t1_spin is not None:
-            params["T1"] = self.v1v2_t1_spin.value() * 1e6
-        if self.v1v2_t2_spin is not None:
-            params["T2"] = self.v1v2_t2_spin.value() * 1e6
-
-        if params:
-            geochem_usecase.update_parameters(params)
-            if app_state.render_mode == "V1V2":
-                self._on_change()
-
     def _on_calculate_isochron(self):
         """Calculate or hide selected isochron."""
         try:
@@ -369,3 +351,90 @@ class DataPanelGeochemMixin:
             ages.append(min_age)
         state_gateway.set_paleoisochron_ages(ages)
         self._on_change()
+
+    def reset_state(self):
+        """Overlay widgets are rebuilt with the panel."""
+        super().reset_state()
+        if not hasattr(super(), "reset_state"):
+            return
+        self.geochem_plot_group = None
+        self.modeling_show_model_check = None
+        self.modeling_show_paleoisochron_check = None
+        self.modeling_show_plumbotectonics_check = None
+        self.modeling_show_model_age_check = None
+        self.modeling_show_isochron_check = None
+        self.modeling_show_growth_curve_check = None
+        self.modeling_use_real_age_check = None
+        self.mu_kappa_age_title_label = None
+        self.mu_kappa_age_label = None
+        self.mu_kappa_age_button = None
+        self.show_model_check = None
+        self.show_paleoisochron_check = None
+        self.show_model_age_check = None
+        self.show_isochron_check = None
+        self.paleo_step_spin = None
+        self.calc_isochron_btn = None
+        self.isochron_settings_btn = None
+        self.isochron_swatch = None
+        self.plumbotectonics_model_label = None
+        self.plumbotectonics_model_combo = None
+
+    def _sync_geochem_toggle_widgets(self, checked, *widgets):
+        """Synchronize geochemistry toggle states."""
+        for widget in widgets:
+            if widget is None:
+                continue
+            if widget.isChecked() != checked:
+                widget.blockSignals(True)
+                widget.setChecked(checked)
+                widget.blockSignals(False)
+
+    def _update_overlay_visibility(self) -> None:
+        """Show only the overlay controls that apply to the current render mode."""
+        mode = self._normalize_render_mode(app_state.render_mode)
+        if self.geochem_plot_group is not None:
+            self.geochem_plot_group.setVisible(
+                mode in (
+                    "PB_EVOL_76",
+                    "PB_EVOL_86",
+                    "PB_MU_AGE",
+                    "PB_KAPPA_AGE",
+                    "PLUMBOTECTONICS_76",
+                    "PLUMBOTECTONICS_86",
+                )
+            )
+
+        is_pb_evol = mode in ("PB_EVOL_76", "PB_EVOL_86")
+        is_pb_evol_76 = mode == "PB_EVOL_76"
+        is_plumbotectonics = mode in ("PLUMBOTECTONICS_76", "PLUMBOTECTONICS_86")
+
+        def _toggle(widget, visible):
+            if widget is None:
+                return
+            widget.setVisible(visible)
+            swatch = getattr(widget, "_style_swatch", None)
+            if swatch is not None:
+                swatch.setVisible(visible)
+
+        _toggle(self.modeling_show_model_check, is_pb_evol)
+        _toggle(self.modeling_show_plumbotectonics_check, is_plumbotectonics)
+        _toggle(self.modeling_show_model_age_check, is_pb_evol)
+        _toggle(self.modeling_show_growth_curve_check, False)
+
+        if self.calc_isochron_btn is not None:
+            self.calc_isochron_btn.setVisible(is_pb_evol_76)
+        if self.isochron_settings_btn is not None:
+            self.isochron_settings_btn.setVisible(is_pb_evol_76)
+        if self.isochron_swatch is not None:
+            self.isochron_swatch.setVisible(is_pb_evol_76)
+
+        if self.plumbotectonics_model_label is not None:
+            self.plumbotectonics_model_label.setVisible(is_plumbotectonics)
+            self.plumbotectonics_model_label.setEnabled(is_plumbotectonics)
+        if self.plumbotectonics_model_combo is not None:
+            self.plumbotectonics_model_combo.setVisible(is_plumbotectonics)
+            self.plumbotectonics_model_combo.setEnabled(is_plumbotectonics)
+            if is_plumbotectonics:
+                self._refresh_plumbotectonics_models()
+
+        self._refresh_mu_kappa_age_controls()

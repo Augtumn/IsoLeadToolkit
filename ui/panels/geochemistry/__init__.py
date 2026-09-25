@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
-from .panel import GeoPanel, PANEL_META
+from .overlays import GeoPanelOverlaysMixin
+from .overlays_build import GeoPanelOverlaysBuildMixin
+from .panel import PANEL_META, GeoPanel
 
-__all__ = ["GeoPanel", "PANEL_META"]
+__all__ = [
+    "GeoPanel",
+    "GeoPanelOverlaysBuildMixin",
+    "GeoPanelOverlaysMixin",
+    "PANEL_META",
+]

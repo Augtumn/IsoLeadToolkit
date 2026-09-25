@@ -57,23 +57,6 @@ class DataPanelGroupingMixin:
         if geochem_usecase.load_preset(target_model):
             state_gateway.set_geo_model_name(target_model)
 
-        panel = getattr(self, "geo_panel", None)
-        combo = getattr(panel, "geo_model_combo", None) if panel is not None else None
-        if combo is not None:
-            combo.blockSignals(True)
-            combo.setCurrentText(target_model)
-            combo.blockSignals(False)
-
-    def _sync_geochem_toggle_widgets(self, checked, *widgets):
-        """Synchronize geochemistry toggle states."""
-        for widget in widgets:
-            if widget is None:
-                continue
-            if widget.isChecked() != checked:
-                widget.blockSignals(True)
-                widget.setChecked(checked)
-                widget.blockSignals(False)
-
     def _sync_toggle_widgets(self, checked, *widgets):
         """Synchronize generic toggle states."""
         for widget in widgets:
@@ -192,17 +175,6 @@ class DataPanelGroupingMixin:
         layout.addLayout(btn_row)
 
         dialog.exec_()
-
-    def _normalize_render_mode(self, mode):
-        """Normalize render mode aliases."""
-        if not mode:
-            return "UMAP"
-        value = str(mode)
-        if value in ("t-SNE", "TSNE", "tSNE"):
-            return "tSNE"
-        if value in ("PB_MODELS_76", "PB_MODELS_86"):
-            return "PB_EVOL_76" if value.endswith("_76") else "PB_EVOL_86"
-        return value
 
     def _normalize_algorithm(self, algorithm):
         """Normalize algorithm aliases."""

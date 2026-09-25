@@ -1,4 +1,4 @@
-"""地球化学面板 - 模型选择与参数管理"""
+"""Geochemistry panel: model parameters plus overlay plot controls."""
 from __future__ import annotations
 
 import logging
@@ -10,6 +10,8 @@ from PyQt5.QtWidgets import (
 
 from core import translate, app_state, state_gateway
 from ..base_panel import BasePanel
+from .overlays import GeoPanelOverlaysMixin
+from .overlays_build import GeoPanelOverlaysBuildMixin
 
 logger = logging.getLogger(__name__)
 _GEO_DECAY_LAMBDA_238_DEFAULT = 1.55125e-10
@@ -30,7 +32,7 @@ PANEL_META = {
 }
 
 
-class GeoPanel(BasePanel):
+class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
     """地球化学标签页"""
 
     def reset_state(self):
@@ -40,7 +42,7 @@ class GeoPanel(BasePanel):
         self.geo_section_labels = {}
         self.geo_model_combo = None
 
-    def build(self) -> QWidget:
+    def _build_params_section(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -364,3 +366,12 @@ class GeoPanel(BasePanel):
                 translate("Error"),
                 translate("Failed to reset parameters: {error}").format(error=str(e))
             )
+
+    def build(self) -> QWidget:
+        """Build the parameter sections plus the overlay plot controls."""
+        widget = self._build_params_section()
+        layout = widget.layout()
+        self._build_geochem_controls(layout)
+        self._update_overlay_visibility()
+        self._is_initialized = True
+        return widget

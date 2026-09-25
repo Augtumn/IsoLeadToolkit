@@ -64,60 +64,6 @@ class DataPanelProjectionMixin:
         if mode == "2D":
             self._refresh_2d_axis_combos()
 
-        if self.geochem_plot_group is not None:
-            self.geochem_plot_group.setVisible(
-                mode in (
-                    "PB_EVOL_76",
-                    "PB_EVOL_86",
-                    "PB_MU_AGE",
-                    "PB_KAPPA_AGE",
-                    "PLUMBOTECTONICS_76",
-                    "PLUMBOTECTONICS_86",
-                )
-            )
-
-        is_pb_evol = mode in ("PB_EVOL_76", "PB_EVOL_86")
-        is_pb_evol_76 = mode == "PB_EVOL_76"
-        is_plumbotectonics = mode in ("PLUMBOTECTONICS_76", "PLUMBOTECTONICS_86")
-
-        if self.modeling_show_model_check is not None:
-            self.modeling_show_model_check.setVisible(is_pb_evol)
-            swatch = getattr(self.modeling_show_model_check, "_style_swatch", None)
-            if swatch is not None:
-                swatch.setVisible(is_pb_evol)
-        if self.modeling_show_plumbotectonics_check is not None:
-            self.modeling_show_plumbotectonics_check.setVisible(is_plumbotectonics)
-            swatch = getattr(self.modeling_show_plumbotectonics_check, "_style_swatch", None)
-            if swatch is not None:
-                swatch.setVisible(is_plumbotectonics)
-        if self.modeling_show_model_age_check is not None:
-            self.modeling_show_model_age_check.setVisible(is_pb_evol)
-            swatch = getattr(self.modeling_show_model_age_check, "_style_swatch", None)
-            if swatch is not None:
-                swatch.setVisible(is_pb_evol)
-        if self.modeling_show_growth_curve_check is not None:
-            self.modeling_show_growth_curve_check.setVisible(False)
-            swatch = getattr(self.modeling_show_growth_curve_check, "_style_swatch", None)
-            if swatch is not None:
-                swatch.setVisible(False)
-
-        if self.calc_isochron_btn is not None:
-            self.calc_isochron_btn.setVisible(is_pb_evol_76)
-        if self.isochron_settings_btn is not None:
-            self.isochron_settings_btn.setVisible(is_pb_evol_76)
-        if self.isochron_swatch is not None:
-            self.isochron_swatch.setVisible(is_pb_evol_76)
-
-        if self.plumbotectonics_model_label is not None:
-            self.plumbotectonics_model_label.setVisible(is_plumbotectonics)
-            self.plumbotectonics_model_label.setEnabled(is_plumbotectonics)
-        if self.plumbotectonics_model_combo is not None:
-            self.plumbotectonics_model_combo.setVisible(is_plumbotectonics)
-            self.plumbotectonics_model_combo.setEnabled(is_plumbotectonics)
-            if is_plumbotectonics:
-                self._refresh_plumbotectonics_models()
-
-        self._refresh_mu_kappa_age_controls()
 
     def _on_umap_slider_changed(self, param, value, label, slider):
         """Handle UMAP slider move."""
@@ -260,6 +206,24 @@ class DataPanelProjectionMixin:
         state_gateway.set_ternary_auto_zoom(state == Qt.Checked)
         self._refresh_ternary_limit_controls_enabled()
         self._on_change()
+
+    def _on_v1v2_param_change(self):
+            """Update V1V2 time parameters."""
+            try:
+                from application.use_cases import geochemistry as geochem_usecase
+            except Exception:
+                return
+
+            params = {}
+            if self.v1v2_t1_spin is not None:
+                params["T1"] = self.v1v2_t1_spin.value() * 1e6
+            if self.v1v2_t2_spin is not None:
+                params["T2"] = self.v1v2_t2_spin.value() * 1e6
+
+            if params:
+                geochem_usecase.update_parameters(params)
+                if app_state.render_mode == "V1V2":
+                    self._on_change()
 
     def _refresh_ternary_limit_controls_enabled(self):
         """Enable/disable ternary limit controls based on auto-zoom/manual toggles."""

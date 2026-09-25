@@ -10,7 +10,6 @@ from PyQt5.QtWidgets import (
 )
 
 from .coloring_build import DataPanelColoringBuildMixin
-from .geochem_build import DataPanelGeochemBuildMixin
 from .projection_build import DataPanelProjectionBuildMixin
 from .render_build import DataPanelRenderBuildMixin
 from core import translate
@@ -20,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 class DataPanelBuildMixin(
     DataPanelColoringBuildMixin,
-    DataPanelGeochemBuildMixin,
     DataPanelProjectionBuildMixin,
     DataPanelRenderBuildMixin,
 ):
@@ -29,7 +27,6 @@ class DataPanelBuildMixin(
     def __init__(self, callback=None, parent=None):
         super().__init__(callback, parent)
         self.legend_panel = None
-        self.geo_panel = None
 
     def reset_state(self):
         super().reset_state()
@@ -51,25 +48,6 @@ class DataPanelBuildMixin(
         self.ternary_limit_spins = {}
         self.ternary_render_margin_spin = None
         self.spinboxes = {}
-        self.geochem_plot_group = None
-        self.modeling_show_model_check = None
-        self.modeling_show_paleoisochron_check = None
-        self.modeling_show_plumbotectonics_check = None
-        self.modeling_show_model_age_check = None
-        self.modeling_show_isochron_check = None
-        self.modeling_show_growth_curve_check = None
-        self.modeling_use_real_age_check = None
-        self.mu_kappa_age_title_label = None
-        self.mu_kappa_age_label = None
-        self.mu_kappa_age_button = None
-        self.show_model_check = None
-        self.show_paleoisochron_check = None
-        self.show_model_age_check = None
-        self.show_isochron_check = None
-        self.paleo_step_spin = None
-        self.calc_isochron_btn = None
-        self.isochron_settings_btn = None
-        self.isochron_swatch = None
         self.v1v2_group = None
         self.v1v2_t1_spin = None
         self.v1v2_t2_spin = None
@@ -81,8 +59,6 @@ class DataPanelBuildMixin(
         self.rpca_x_spin = None
         self.rpca_y_spin = None
         self.metric_combo = None
-        self.plumbotectonics_model_label = None
-        self.plumbotectonics_model_combo = None
         self.plumbotectonics_model_keys = []
 
     def _update_translations(self, root: QWidget | None = None) -> None:
@@ -102,18 +78,6 @@ class DataPanelBuildMixin(
             combo.addItem(translate("Both Ends"), "both")
             self._set_combo_value(combo, current_mode)
             combo.blockSignals(False)
-
-    def _connect_spinbox_deferred(self, spinbox, callback, *, pass_value: bool = True) -> None:
-        """Apply spinbox changes only when editing is finished."""
-        try:
-            spinbox.setKeyboardTracking(False)
-        except Exception:
-            pass
-
-        if pass_value:
-            spinbox.editingFinished.connect(lambda s=spinbox: callback(s.value()))
-        else:
-            spinbox.editingFinished.connect(callback)
 
     def build(self) -> QWidget:
         widget = self._build_data_section()
@@ -155,18 +119,11 @@ class DataPanelBuildMixin(
         self._build_render_controls(layout)
         self._build_projection_params(layout)
         self._build_v1v2_params(layout)
-        self._build_geochem_controls(layout)
         self._build_axis_selection(layout)
 
         self._update_algorithm_visibility()
 
         layout.addStretch()
         return widget
-
-
-
-
-
-
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from ..base_panel import BasePanel
 from .build import DataPanelBuildMixin
-from .geochem import DataPanelGeochemMixin
 from .grouping import DataPanelGroupingMixin
 from .projection import DataPanelProjectionMixin
 
@@ -21,7 +20,6 @@ PANEL_META = {
 class DataPanel(
     DataPanelBuildMixin,
     DataPanelProjectionMixin,
-    DataPanelGeochemMixin,
     DataPanelGroupingMixin,
     BasePanel,
 ):

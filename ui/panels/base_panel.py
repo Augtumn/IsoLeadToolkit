@@ -112,6 +112,30 @@ class BasePanel(QWidget):
     """所有面板的基类，提供共享工具方法"""
 
     @staticmethod
+    def _normalize_render_mode(mode) -> str:
+        """Normalize render mode aliases."""
+        if not mode:
+            return "UMAP"
+        value = str(mode)
+        if value in ("t-SNE", "TSNE", "tSNE"):
+            return "tSNE"
+        if value in ("PB_MODELS_76", "PB_MODELS_86"):
+            return "PB_EVOL_76" if value.endswith("_76") else "PB_EVOL_86"
+        return value
+
+    def _connect_spinbox_deferred(self, spinbox, callback, *, pass_value: bool = True) -> None:
+            """Apply spinbox changes only when editing is finished."""
+            try:
+                spinbox.setKeyboardTracking(False)
+            except Exception:
+                pass
+
+            if pass_value:
+                spinbox.editingFinished.connect(lambda s=spinbox: callback(s.value()))
+            else:
+                spinbox.editingFinished.connect(callback)
+
+    @staticmethod
     def add_group_page(section_toolbox, group_widget, title_key) -> None:
         """Add a QGroupBox as a labelled toolbox page (shared by all panels)."""
         page = QWidget()
