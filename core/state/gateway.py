@@ -630,12 +630,6 @@ class AppStateGateway:
             rxy_value=float(rxy_value),
         )
 
-    def set_kde_style(self, style: Any) -> None:
-        self._dispatch("SET_KDE_STYLE", style=dict(style or {}))
-
-    def set_marginal_kde_style(self, style: Any) -> None:
-        self._dispatch("SET_MARGINAL_KDE_STYLE", style=dict(style or {}))
-
     def set_ml_last_result(self, result: Any) -> None:
         self._dispatch("SET_ML_LAST_RESULT", result=result)
 

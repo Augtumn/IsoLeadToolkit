@@ -37,8 +37,6 @@ _SYNCED_DICT_FIELDS: set[str] = {
     "mixing_endmembers",
     "mixing_mixtures",
     "ternary_ranges",
-    "kde_style",
-    "marginal_kde_style",
     "isochron_label_options",
     "parent_groups",
     "parent_shape_map",

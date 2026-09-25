@@ -619,12 +619,6 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
     elif action_type == "SET_TERNARY_RANGES":
         store._snapshot["ternary_ranges"] = dict(action.get("ranges") or {})
 
-    elif action_type == "SET_KDE_STYLE":
-        store._snapshot["kde_style"] = dict(action.get("style") or {})
-
-    elif action_type == "SET_MARGINAL_KDE_STYLE":
-        store._snapshot["marginal_kde_style"] = dict(action.get("style") or {})
-
     elif action_type == "SET_ML_LAST_RESULT":
         store._snapshot["ml_last_result"] = action.get("result")
 

@@ -183,8 +183,6 @@ def _snapshot_state() -> dict[str, Any]:
         "mixing_endmembers": dict(getattr(app_state, "mixing_endmembers", {}) or {}),
         "mixing_mixtures": dict(getattr(app_state, "mixing_mixtures", {}) or {}),
         "ternary_ranges": dict(getattr(app_state, "ternary_ranges", {}) or {}),
-        "kde_style": dict(getattr(app_state, "kde_style", {}) or {}),
-        "marginal_kde_style": dict(getattr(app_state, "marginal_kde_style", {}) or {}),
         "ml_last_result": getattr(app_state, "ml_last_result", None),
         "ml_last_model_meta": getattr(app_state, "ml_last_model_meta", None),
         "preserve_import_render_mode": bool(getattr(app_state, "preserve_import_render_mode", False)),
@@ -392,8 +390,6 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_mixing_endmembers(snapshot["mixing_endmembers"])
     state_gateway.set_mixing_mixtures(snapshot["mixing_mixtures"])
     state_gateway.set_ternary_ranges(snapshot["ternary_ranges"])
-    state_gateway.set_kde_style(snapshot["kde_style"])
-    state_gateway.set_marginal_kde_style(snapshot["marginal_kde_style"])
     state_gateway.set_ml_last_result(snapshot["ml_last_result"])
     state_gateway.set_ml_last_model_meta(snapshot["ml_last_model_meta"])
     state_gateway.set_preserve_import_render_mode(bool(snapshot["preserve_import_render_mode"]))
@@ -1101,7 +1097,13 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_legend_nudge_step(0.125)
         state_gateway.set_legend_offset((0.2, -0.1))
         state_gateway.set_recent_files(["d:/tmp/a.xlsx", "d:/tmp/b.csv"])
-        state_gateway.set_line_styles({"model_curve": {"linewidth": 2.2, "alpha": 0.5}})
+        state_gateway.set_line_styles(
+            {
+                "model_curve": {"linewidth": 2.2, "alpha": 0.5},
+                "kde_curve": {"alpha": 0.5, "linewidth": 1.7, "fill": False, "levels": 8},
+                "marginal_kde_curve": {"alpha": 0.22, "linewidth": 1.3, "fill": True},
+            }
+        )
         state_gateway.set_saved_themes({"my_theme": {"color_scheme": "vibrant"}})
         state_gateway.set_custom_palettes({"my_palette": ["#112233", "#445566"]})
         state_gateway.set_custom_shape_sets({"my_shapes": ["o", "s", "^"]})
@@ -1109,17 +1111,8 @@ def test_state_store_session_preference_domains() -> None:
         state_gateway.set_mixing_endmembers({"EM1": [1, 2, 3]})
         state_gateway.set_mixing_mixtures({"M1": [4, 5]})
         state_gateway.set_ternary_ranges({"tmin": 0.1, "tmax": 0.9})
-        state_gateway.set_kde_style({"alpha": 0.5, "linewidth": 1.7, "fill": False, "levels": 8})
-        state_gateway.set_marginal_kde_style(
-            {
-                "alpha": 0.22,
-                "linewidth": 1.3,
-                "fill": True,
-                "bw_adjust": 1.4,
-                "gridsize": 320,
-                "cut": 0.7,
-                "log_transform": True,
-            }
+        state_gateway.set_marginal_kde_compute_options(
+            bw_adjust=1.4, gridsize=320, cut=0.7, log_transform=True
         )
         state_gateway.set_ml_last_result({"status": "ok", "score": 0.93})
         state_gateway.set_ml_last_model_meta({"model": "xgb", "classes": 4})
@@ -1198,8 +1191,8 @@ def test_state_store_session_preference_domains() -> None:
         assert app_state.mixing_endmembers == {"EM1": [1, 2, 3]}
         assert app_state.mixing_mixtures == {"M1": [4, 5]}
         assert app_state.ternary_ranges == {"tmin": 0.1, "tmax": 0.9}
-        assert app_state.kde_style["alpha"] == 0.5
-        assert app_state.marginal_kde_style["gridsize"] == 320
+        assert app_state.line_styles["kde_curve"]["alpha"] == 0.5
+        assert app_state.marginal_kde_gridsize == 320
         assert app_state.ml_last_result == {"status": "ok", "score": 0.93}
         assert app_state.ml_last_model_meta == {"model": "xgb", "classes": 4}
         assert app_state.geo_model_name == "V1V2 (Zhu 1993)"
@@ -1268,8 +1261,8 @@ def test_state_store_session_preference_domains() -> None:
         assert store_snapshot["mixing_endmembers"] == {"EM1": [1, 2, 3]}
         assert store_snapshot["mixing_mixtures"] == {"M1": [4, 5]}
         assert store_snapshot["ternary_ranges"] == {"tmin": 0.1, "tmax": 0.9}
-        assert store_snapshot["kde_style"]["alpha"] == 0.5
-        assert store_snapshot["marginal_kde_style"]["gridsize"] == 320
+        assert store_snapshot["line_styles"]["kde_curve"]["alpha"] == 0.5
+        assert store_snapshot["marginal_kde_gridsize"] == 320
         assert store_snapshot["ml_last_result"] == {"status": "ok", "score": 0.93}
         assert store_snapshot["ml_last_model_meta"] == {"model": "xgb", "classes": 4}
         assert store_snapshot["geo_model_name"] == "V1V2 (Zhu 1993)"

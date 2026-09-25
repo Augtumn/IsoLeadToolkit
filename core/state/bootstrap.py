@@ -9,15 +9,15 @@ DEFAULT_ELLIPSE_CONFIDENCE = 0.95
 
 def sync_overlay_kde_styles(state: Any) -> None:
     """Initialize KDE style defaults and mirror them into overlay line styles."""
-    state.kde_style = {
+    state.overlay.line_styles.setdefault('kde_curve', {}).update({
+        'linewidth': 1.0,
         'alpha': 0.6,
+        'fill': True,
         'levels': 10,
+    })
+    state.overlay.line_styles.setdefault('marginal_kde_curve', {}).update({
         'linewidth': 1.0,
-        'fill': True
-    }
-    state.marginal_kde_style = {
         'alpha': 0.25,
-        'linewidth': 1.0,
         'fill': True,
         'bw_adjust': 1.0,
         'bandwidth': 0.0,
@@ -26,24 +26,6 @@ def sync_overlay_kde_styles(state: Any) -> None:
         'gridsize': 256,
         'cut': 1.0,
         'log_transform': False,
-    }
-    state.overlay.line_styles.setdefault('kde_curve', {}).update({
-        'linewidth': state.kde_style.get('linewidth', 1.0),
-        'alpha': state.kde_style.get('alpha', 0.6),
-        'fill': state.kde_style.get('fill', True),
-        'levels': state.kde_style.get('levels', 10),
-    })
-    state.overlay.line_styles.setdefault('marginal_kde_curve', {}).update({
-        'linewidth': state.marginal_kde_style.get('linewidth', 1.0),
-        'alpha': state.marginal_kde_style.get('alpha', 0.25),
-        'fill': state.marginal_kde_style.get('fill', True),
-        'bw_adjust': state.marginal_kde_style.get('bw_adjust', 1.0),
-        'bandwidth': state.marginal_kde_style.get('bandwidth', 0.0),
-        'kernel': state.marginal_kde_style.get('kernel', 'gaussian'),
-        'auto_bandwidth_method': state.marginal_kde_style.get('auto_bandwidth_method', 'scott'),
-        'gridsize': state.marginal_kde_style.get('gridsize', 256),
-        'cut': state.marginal_kde_style.get('cut', 1.0),
-        'log_transform': state.marginal_kde_style.get('log_transform', False),
     })
     state.overlay._init_equation_styles()
 

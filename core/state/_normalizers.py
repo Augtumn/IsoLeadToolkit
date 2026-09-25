@@ -494,8 +494,6 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.mixing_endmembers = dict(snapshot["mixing_endmembers"])
     state.mixing_mixtures = dict(snapshot["mixing_mixtures"])
     state.ternary_ranges = dict(snapshot["ternary_ranges"])
-    state.kde_style = dict(snapshot["kde_style"])
-    state.marginal_kde_style = dict(snapshot["marginal_kde_style"])
     state.ml_last_result = snapshot["ml_last_result"]
     state.ml_last_model_meta = snapshot["ml_last_model_meta"]
     state.preserve_import_render_mode = bool(snapshot["preserve_import_render_mode"])

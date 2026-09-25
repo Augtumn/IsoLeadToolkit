@@ -704,7 +704,7 @@ def draw_marginal_kde(ax, df_plot, group_col, palette, unique_cats, x_col, y_col
 **可配置项:**
 1. `marginal_kde_max_points` — 采样上限 (默认 5000)
 2. `marginal_kde_top_size` / `marginal_kde_right_size` — 边际 KDE 轴尺寸 (百分比)
-3. `marginal_kde_style` — `{alpha, linewidth, fill}` 样式字典
+3. `line_styles['marginal_kde_curve']` — 曲线样式（alpha / linewidth / fill），计算选项见独立字段 `marginal_kde_bw_adjust`、`marginal_kde_gridsize` 等
 4. `marginal_axes` — 缓存边际坐标轴，用于清理与重绘
 
 ---

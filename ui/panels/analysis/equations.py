@@ -342,29 +342,6 @@ class AnalysisPanelEquationMixin:
                     state_gateway.set_marginal_kde_compute_options(
                         log_transform=bool(log_transform_check.isChecked())
                     )
-            legacy_payload = {
-                'alpha': style_ref.get('alpha', 0.6 if target == 'kde' else 0.25),
-                'linewidth': style_ref.get('linewidth', 1.0),
-                'fill': style_ref.get('fill', True),
-            }
-            if target == 'kde':
-                legacy_payload['levels'] = style_ref.get('levels', 10)
-            else:
-                legacy_payload['bw_adjust'] = style_ref.get('bw_adjust', 1.0)
-                legacy_payload['bandwidth'] = style_ref.get('bandwidth', 0.0)
-                legacy_payload['kernel'] = style_ref.get('kernel', 'gaussian')
-                legacy_payload['auto_bandwidth_method'] = style_ref.get(
-                    'auto_bandwidth_method',
-                    'scott',
-                )
-                legacy_payload['gridsize'] = style_ref.get('gridsize', 256)
-                legacy_payload['cut'] = style_ref.get('cut', 1.0)
-                legacy_payload['log_transform'] = style_ref.get('log_transform', False)
-            if target == 'kde':
-                state_gateway.set_kde_style(legacy_payload)
-            else:
-                state_gateway.set_marginal_kde_style(legacy_payload)
-
             current_styles[style_key] = style_ref
             state_gateway.set_line_styles(current_styles)
 
