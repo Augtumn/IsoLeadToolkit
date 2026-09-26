@@ -42,3 +42,7 @@ _viewcheck/
 locales/reports/
 test_isochron_fix.py
 ISOCHRON_FIX.md
+
+# --- 导出产物（Origin 工程 / 根目录出图，勿入库） ---
+*.opju
+/*.png
