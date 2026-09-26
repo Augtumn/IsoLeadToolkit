@@ -13,12 +13,25 @@ logger = logging.getLogger(__name__)
 
 class AnalysisPanelSelectionMixin:
     """Selection and tooltip actions for analysis panel."""
+    _sync_selection_buttons = None
+    ellipse_selection_button = None
+    export_append_button = None
+    export_csv_button = None
+    export_excel_button = None
+    export_selected_button = None
+    lasso_selection_button = None
+    selection_button = None
+    selection_status_label = None
+    status_export_button = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _sync_selection_buttons(self):
         """Sync selection button states with active tool."""
         tool = app_state.selection_tool
 
-        selection_button = getattr(self, 'selection_button', None)
+        selection_button = self.selection_button
         if selection_button is not None:
             selection_button.blockSignals(True)
             selection_button.setChecked(tool == 'export')
@@ -27,7 +40,7 @@ class AnalysisPanelSelectionMixin:
             )
             selection_button.blockSignals(False)
 
-        ellipse_button = getattr(self, 'ellipse_selection_button', None)
+        ellipse_button = self.ellipse_selection_button
         if ellipse_button is not None:
             ellipse_active = app_state.draw_selection_ellipse
             ellipse_button.blockSignals(True)
@@ -37,7 +50,7 @@ class AnalysisPanelSelectionMixin:
             )
             ellipse_button.blockSignals(False)
 
-        lasso_button = getattr(self, 'lasso_selection_button', None)
+        lasso_button = self.lasso_selection_button
         if lasso_button is not None:
             lasso_button.blockSignals(True)
             lasso_button.setChecked(tool == 'lasso')
@@ -49,25 +62,25 @@ class AnalysisPanelSelectionMixin:
     def update_selection_controls(self):
         """Refresh selection UI state from app_state."""
         count = len(app_state.selected_indices)
-        if getattr(self, 'selection_status_label', None) is not None:
+        if self.selection_status_label is not None:
             self.selection_status_label.setText(
                 translate("Selected Samples: {count}").format(count=count)
             )
 
         enable_exports = count > 0
         for button in (
-            getattr(self, 'export_csv_button', None),
-            getattr(self, 'export_excel_button', None),
-            getattr(self, 'export_append_button', None),
-            getattr(self, 'export_selected_button', None),
+            self.export_csv_button,
+            self.export_excel_button,
+            self.export_append_button,
+            self.export_selected_button,
         ):
             if button is not None:
                 button.setEnabled(enable_exports)
-        status_export_button = getattr(self, 'status_export_button', None)
+        status_export_button = self.status_export_button
         if status_export_button is not None:
             status_export_button.setEnabled(enable_exports)
 
-        if hasattr(self, '_sync_selection_buttons'):
+        if self._sync_selection_buttons is not None:
             self._sync_selection_buttons()
         self._update_status_panel()
 

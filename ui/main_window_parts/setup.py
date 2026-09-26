@@ -42,6 +42,11 @@ class LegendListWidget(QListWidget):
     Qt's default InternalMove drop is bypassed so rows can never stack
     ("OnItem" ambiguity).
     """
+    _legend_drop_handler = None
+    _legend_reorder_handler = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def startDrag(self, actions):
         # Remember which rows started the drag: during an internal move the
@@ -52,13 +57,13 @@ class LegendListWidget(QListWidget):
     def dropEvent(self, event):
         if QT_DEBUG_MODE:
             logger.debug("Legend dropEvent begin: count=%d", self.count())
-        handler = getattr(self, "_legend_drop_handler", None)
+        handler = self._legend_drop_handler
         if handler is not None and handler(self, event):
             if QT_DEBUG_MODE:
                 logger.debug("Legend dropEvent handled by parent-group handler")
             event.acceptProposedAction()
             return
-        reorder = getattr(self, "_legend_reorder_handler", None)
+        reorder = self._legend_reorder_handler
         if reorder is not None and reorder(self, event):
             if QT_DEBUG_MODE:
                 logger.debug("Legend dropEvent handled by reorder handler")
@@ -71,6 +76,19 @@ class LegendListWidget(QListWidget):
 
 class MainWindowSetupMixin:
     """Setup methods for main window widgets and menus."""
+    _embedding_progress_bar = None
+    _legend_layout_state = None
+    _legend_list = None
+    _legend_title_label = None
+    _menu_actions = None
+    file_menu = None
+    lang_menu = None
+    legend_settings_btn = None
+    legend_splitter = None
+    panels_menu = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _setup_ui(self):
         """设置 UI 基本属性"""
@@ -282,7 +300,7 @@ class MainWindowSetupMixin:
         self._refresh_status_info()
 
         def _on_embedding_progress(percent: int, stage: str) -> None:
-            bar = getattr(self, "_embedding_progress_bar", None)
+            bar = self._embedding_progress_bar
             if bar is None:
                 return
             if percent >= 100 or stage == "done":
@@ -332,11 +350,11 @@ class MainWindowSetupMixin:
             if not wants_docked_legend(location_key):
                 location_key = None
             is_outside = bool(location_key)
-            if not hasattr(self, "legend_splitter"):
+            if not self.legend_splitter is not None:
                 return
 
             layout_state = (location_key, is_outside)
-            if getattr(self, "_legend_layout_state", None) == layout_state:
+            if self._legend_layout_state == layout_state:
                 return
             # Record the state here, not at the end: the "inside" branch below
             # returns early, and leaving the cache untouched made switching back
@@ -345,7 +363,7 @@ class MainWindowSetupMixin:
 
             self.legend_panel.setVisible(is_outside)
             if not is_outside:
-                if hasattr(self, "_legend_list") and self._legend_list is not None:
+                if self._legend_list is not None and self._legend_list is not None:
                     self._legend_list.clear()
                 self.legend_splitter.setSizes([0, 1])
                 return
@@ -374,7 +392,7 @@ class MainWindowSetupMixin:
 
     def _refresh_language(self):
         """刷新菜单与状态栏语言"""
-        if hasattr(self, "file_menu"):
+        if self.file_menu is not None:
             self.file_menu.setTitle(translate("File"))
         actions = getattr(self, "_menu_actions", {})
         if "reload" in actions:
@@ -387,7 +405,7 @@ class MainWindowSetupMixin:
             actions["export_session"].setText(translate("Export Session..."))
         if "import_session" in actions:
             actions["import_session"].setText(translate("Import Session..."))
-        if hasattr(self, "legend_settings_btn") and self.legend_settings_btn is not None:
+        if self.legend_settings_btn is not None and self.legend_settings_btn is not None:
             self.legend_settings_btn.setText(translate("Legend Settings..."))
         if "data" in actions:
             actions["data"].setText(translate("Data"))
@@ -401,16 +419,16 @@ class MainWindowSetupMixin:
             actions["legend"].setText(translate("Legend"))
         if "geochemistry" in actions:
             actions["geochemistry"].setText(translate("Geochemistry"))
-        if hasattr(self, "lang_menu"):
+        if self.lang_menu is not None:
             self.lang_menu.setTitle(translate("Language"))
-        if hasattr(self, "panels_menu"):
+        if self.panels_menu is not None:
             self.panels_menu.setTitle(translate("Panels"))
         if self.statusBar() is not None:
             self.statusBar().showMessage(translate("Ready"))
 
         self._refresh_status_info()
 
-        if hasattr(self, "_legend_title_label") and self._legend_title_label is not None:
+        if self._legend_title_label is not None and self._legend_title_label is not None:
             last_title = app_state.legend_last_title
             if last_title:
                 self._legend_title_label.setText(str(last_title))
