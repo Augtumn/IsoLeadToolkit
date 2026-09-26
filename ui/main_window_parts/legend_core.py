@@ -19,6 +19,32 @@ QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
 }
 
 
+#: zorder given to the hover tooltip so it is never covered by data layers.
+_TOOLTIP_ZORDER_OFFSET = 1
+
+
+def raise_tooltip_above_data(ax, annotation) -> None:
+    """Put the hover tooltip (and its arrow) above every other artist.
+
+    Group z-orders are assigned from the legend order and can grow past the
+    tooltip's initial zorder, which used to hide the tooltip behind the points.
+    """
+    if ax is None or annotation is None:
+        return
+    highest = 0.0
+    arrow = getattr(annotation, "arrow_patch", None)
+    for artist in ax.get_children():
+        if artist is annotation or (arrow is not None and artist is arrow):
+            continue
+        try:
+            highest = max(highest, float(artist.get_zorder()))
+        except Exception:
+            continue
+    annotation.set_zorder(highest + _TOOLTIP_ZORDER_OFFSET)
+    if arrow is not None:
+        arrow.set_zorder(highest)
+
+
 class MainWindowLegendCoreMixin:
     """Legend model helpers shared by legend UI actions."""
 
@@ -136,6 +162,11 @@ class MainWindowLegendCoreMixin:
         return unique
 
     def _apply_legend_z_order(self):
+        """Re-stack the plot from the legend order, then the tooltip on top."""
+        self._apply_legend_z_order_inner()
+        raise_tooltip_above_data(app_state.ax, app_state.annotation)
+
+    def _apply_legend_z_order_inner(self):
         if not hasattr(self, "_legend_list") or self._legend_list is None:
             return
         ax = app_state.ax
@@ -157,8 +188,12 @@ class MainWindowLegendCoreMixin:
             return
 
         max_z = 2
+        tooltip = app_state.annotation
+        tooltip_arrow = getattr(tooltip, "arrow_patch", None) if tooltip is not None else None
         try:
             for artist in ax.get_children():
+                if artist is tooltip or (tooltip_arrow is not None and artist is tooltip_arrow):
+                    continue
                 try:
                     max_z = max(max_z, artist.get_zorder())
                 except Exception:
