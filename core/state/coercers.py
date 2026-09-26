@@ -308,3 +308,54 @@ _BW_ADJUST_MAX: float = 5.0
 _KDE_BW_MIN: float = 0.0
 
 _KDE_BW_MAX: float = 10.0
+
+
+def _normalize_ternary_boundary_percent(percent: Any) -> float:
+    return max(0.0, min(float(percent if percent is not None else 5.0), 30.0))
+
+
+def _normalize_ternary_manual_limits(limits: Any) -> dict[str, float]:
+    defaults = {
+        "tmin": 0.0,
+        "tmax": 1.0,
+        "lmin": 0.0,
+        "lmax": 1.0,
+        "rmin": 0.0,
+        "rmax": 1.0,
+    }
+    merged = dict(defaults)
+    if isinstance(limits, dict):
+        for key, value in limits.items():
+            if key in merged and value is not None:
+                merged[key] = max(0.0, min(float(value), 1.0))
+    return merged
+
+
+def _normalize_ternary_render_margin(margin: Any) -> float:
+    return max(0.0, min(float(margin if margin is not None else 0.002), 0.05))
+
+
+# ── small shape helpers used by the registry declarations ───────────────
+
+def _as_bool(value: Any) -> bool:
+    return bool(value)
+
+
+def _as_float(value: Any) -> float:
+    return float(value)
+
+
+def _as_str(value: Any) -> str:
+    return str(value)
+
+
+def _as_list(value: Any) -> list:
+    return list(value) if value else []
+
+
+def _as_stretch_mode(value: Any) -> str:
+    return str(value or "power")
+
+
+def _as_factors(value: Any) -> list:
+    return list(value or [1.0, 1.0, 1.0])

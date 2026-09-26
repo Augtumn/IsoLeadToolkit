@@ -139,191 +139,6 @@ class StateStore:
         self._snapshot: dict[str, Any] = {
             "render_mode": str(getattr(state, "render_mode", "UMAP")),
             "algorithm": str(getattr(state, "algorithm", "UMAP")),
-            "umap_params": _normalize_algorithm_params(
-                getattr(state, "umap_params", None)
-            ),
-            "tsne_params": _normalize_algorithm_params(
-                getattr(state, "tsne_params", None)
-            ),
-            "pca_params": _normalize_algorithm_params(
-                getattr(state, "pca_params", None)
-            ),
-            "robust_pca_params": _normalize_algorithm_params(
-                getattr(state, "robust_pca_params", None)
-            ),
-            "ml_params": _normalize_algorithm_params(
-                getattr(state, "ml_params", None)
-            ),
-            "v1v2_params": _normalize_algorithm_params(
-                getattr(state, "v1v2_params", None)
-            ),
-            "plot_style_grid": bool(getattr(state, "plot_style_grid", False)),
-            "plot_marker_size": _normalize_plot_marker_size(
-                getattr(state, "plot_marker_size", 60)
-            ),
-            "plot_marker_alpha": _normalize_plot_marker_alpha(
-                getattr(state, "plot_marker_alpha", 0.8)
-            ),
-            "show_plot_title": bool(getattr(state, "show_plot_title", False)),
-            "plot_dpi": _normalize_plot_dpi(getattr(state, "plot_dpi", 130)),
-            "custom_primary_font": _normalize_font_name(
-                getattr(state, "custom_primary_font", "")
-            ),
-            "custom_cjk_font": _normalize_font_name(
-                getattr(state, "custom_cjk_font", "")
-            ),
-            "plot_font_sizes": _normalize_plot_font_sizes(
-                getattr(state, "plot_font_sizes", None)
-            ),
-            "plot_facecolor": _normalize_color(
-                getattr(state, "plot_facecolor", "#ffffff"),
-                "#ffffff",
-            ),
-            "axes_facecolor": _normalize_color(
-                getattr(state, "axes_facecolor", "#ffffff"),
-                "#ffffff",
-            ),
-            "grid_color": _normalize_color(
-                getattr(state, "grid_color", "#e2e8f0"),
-                "#e2e8f0",
-            ),
-            "grid_linewidth": _normalize_style_linewidth(
-                getattr(state, "grid_linewidth", 0.6),
-                default=0.6,
-            ),
-            "grid_alpha": _normalize_unit_interval(
-                getattr(state, "grid_alpha", 0.7),
-                default=0.7,
-            ),
-            "grid_linestyle": _normalize_grid_linestyle(
-                getattr(state, "grid_linestyle", "--")
-            ),
-            "tick_direction": _normalize_tick_direction(
-                getattr(state, "tick_direction", "out")
-            ),
-            "tick_color": _normalize_color(
-                getattr(state, "tick_color", "#1f2937"),
-                "#1f2937",
-            ),
-            "tick_length": _normalize_tick_length(
-                getattr(state, "tick_length", 4.0),
-                default=4.0,
-            ),
-            "tick_width": _normalize_style_linewidth(
-                getattr(state, "tick_width", 0.8),
-                default=0.8,
-            ),
-            "axis_linewidth": _normalize_style_linewidth(
-                getattr(state, "axis_linewidth", 1.0),
-                default=1.0,
-            ),
-            "axis_line_color": _normalize_color(
-                getattr(state, "axis_line_color", "#1f2937"),
-                "#1f2937",
-            ),
-            "minor_ticks": bool(getattr(state, "minor_ticks", False)),
-            "minor_tick_length": _normalize_tick_length(
-                getattr(state, "minor_tick_length", 2.5),
-                default=2.5,
-            ),
-            "minor_tick_width": _normalize_style_linewidth(
-                getattr(state, "minor_tick_width", 0.6),
-                default=0.6,
-            ),
-            "show_top_spine": bool(getattr(state, "show_top_spine", True)),
-            "show_right_spine": bool(getattr(state, "show_right_spine", True)),
-            "minor_grid": bool(getattr(state, "minor_grid", False)),
-            "minor_grid_color": _normalize_color(
-                getattr(state, "minor_grid_color", "#e2e8f0"),
-                "#e2e8f0",
-            ),
-            "minor_grid_linewidth": _normalize_style_linewidth(
-                getattr(state, "minor_grid_linewidth", 0.4),
-                default=0.4,
-            ),
-            "minor_grid_alpha": _normalize_unit_interval(
-                getattr(state, "minor_grid_alpha", 0.4),
-                default=0.4,
-            ),
-            "minor_grid_linestyle": _normalize_grid_linestyle(
-                getattr(state, "minor_grid_linestyle", ":")
-            ),
-            "scatter_show_edge": bool(getattr(state, "scatter_show_edge", True)),
-            "scatter_edgecolor": _normalize_color(
-                getattr(state, "scatter_edgecolor", "#1e293b"),
-                "#1e293b",
-            ),
-            "scatter_edgewidth": _normalize_style_linewidth(
-                getattr(state, "scatter_edgewidth", 0.4),
-                default=0.4,
-            ),
-            "label_color": _normalize_color(
-                getattr(state, "label_color", "#1f2937"),
-                "#1f2937",
-            ),
-            "label_weight": _normalize_text_weight(
-                getattr(state, "label_weight", "normal"),
-                default="normal",
-            ),
-            "label_pad": _normalize_text_pad(
-                getattr(state, "label_pad", 6.0),
-                default=6.0,
-                max_value=60.0,
-            ),
-            "title_color": _normalize_color(
-                getattr(state, "title_color", "#111827"),
-                "#111827",
-            ),
-            "title_weight": _normalize_text_weight(
-                getattr(state, "title_weight", "bold"),
-                default="bold",
-            ),
-            "title_pad": _normalize_text_pad(
-                getattr(state, "title_pad", 20.0),
-                default=20.0,
-                max_value=80.0,
-            ),
-            "legend_frame_on": bool(getattr(state, "legend_frame_on", True)),
-            "legend_frame_alpha": _normalize_unit_interval(
-                getattr(state, "legend_frame_alpha", self.DEFAULT_LEGEND_FRAME_ALPHA),
-                default=self.DEFAULT_LEGEND_FRAME_ALPHA,
-            ),
-            "legend_frame_facecolor": _normalize_color(
-                getattr(state, "legend_frame_facecolor", "#ffffff"),
-                "#ffffff",
-            ),
-            "legend_frame_edgecolor": _normalize_color(
-                getattr(state, "legend_frame_edgecolor", "#cbd5f5"),
-                "#cbd5f5",
-            ),
-            "adjust_text_force_text": _normalize_adjust_text_pair(
-                getattr(state, "adjust_text_force_text", (0.8, 1.0)),
-                default=(0.8, 1.0),
-                min_value=0.0,
-                max_value=3.0,
-            ),
-            "adjust_text_force_static": _normalize_adjust_text_pair(
-                getattr(state, "adjust_text_force_static", (0.4, 0.6)),
-                default=(0.4, 0.6),
-                min_value=0.0,
-                max_value=3.0,
-            ),
-            "adjust_text_expand": _normalize_adjust_text_pair(
-                getattr(state, "adjust_text_expand", (1.08, 1.20)),
-                default=(1.08, 1.20),
-                min_value=1.0,
-                max_value=2.5,
-            ),
-            "adjust_text_iter_lim": _normalize_adjust_text_iter_lim(
-                getattr(state, "adjust_text_iter_lim", 120)
-            ),
-            "adjust_text_time_lim": _normalize_adjust_text_time_lim(
-                getattr(state, "adjust_text_time_lim", 0.25)
-            ),
-            "show_kde": bool(getattr(state, "show_kde", False)),
-            "show_marginal_kde": bool(getattr(state, "show_marginal_kde", True)),
-            "show_equation_overlays": bool(getattr(state, "show_equation_overlays", False)),
-            "geo_model_name": str(getattr(state, "geo_model_name", "Stacey & Kramers (2nd Stage)")),
             "paleo_label_refreshing": bool(getattr(state, "paleo_label_refreshing", False)),
             "overlay_label_refreshing": bool(getattr(state, "overlay_label_refreshing", False)),
             "overlay_curve_label_data": list(getattr(state, "overlay_curve_label_data", []) or []),
@@ -345,9 +160,6 @@ class StateStore:
             "last_pca_components": getattr(state, "last_pca_components", None),
             "current_feature_names": getattr(state, "current_feature_names", []),
             "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
-            "confidence_level": float(
-                getattr(state, "confidence_level", self.DEFAULT_CONFIDENCE_LEVEL)
-            ),
             "current_palette": dict(getattr(state, "current_palette", {}) or {}),
             "group_marker_map": dict(getattr(state, "group_marker_map", {}) or {}),
             "current_plot_title": str(getattr(state, "current_plot_title", "")),
@@ -356,14 +168,6 @@ class StateStore:
                 if getattr(state, "last_2d_cols", None) is not None
                 else None
             ),
-            "show_model_curves": bool(getattr(state, "show_model_curves", True)),
-            "show_plumbotectonics_curves": bool(
-                getattr(state, "show_plumbotectonics_curves", True)
-            ),
-            "show_paleoisochrons": bool(getattr(state, "show_paleoisochrons", True)),
-            "show_model_age_lines": bool(getattr(state, "show_model_age_lines", True)),
-            "show_growth_curves": bool(getattr(state, "show_growth_curves", True)),
-            "show_isochrons": bool(getattr(state, "show_isochrons", False)),
             "isochron_error_mode": (
                 "columns"
                 if str(getattr(state, "isochron_error_mode", "fixed") or "fixed").strip().lower()
@@ -373,41 +177,12 @@ class StateStore:
             "isochron_sx_col": str(getattr(state, "isochron_sx_col", "") or ""),
             "isochron_sy_col": str(getattr(state, "isochron_sy_col", "") or ""),
             "isochron_rxy_col": str(getattr(state, "isochron_rxy_col", "") or ""),
-            "isochron_sx_value": float(getattr(state, "isochron_sx_value", 0.001)),
-            "isochron_sy_value": float(getattr(state, "isochron_sy_value", 0.001)),
-            "isochron_rxy_value": float(getattr(state, "isochron_rxy_value", 0.0)),
             "isochron_results": dict(getattr(state, "isochron_results", {}) or {}),
             "plumbotectonics_group_visibility": dict(
                 getattr(state, "plumbotectonics_group_visibility", {}) or {}
             ),
-            "use_real_age_for_mu_kappa": bool(getattr(state, "use_real_age_for_mu_kappa", False)),
             "mu_kappa_age_col": getattr(state, "mu_kappa_age_col", None),
-            "plumbotectonics_variant": str(getattr(state, "plumbotectonics_variant", "0")),
-            "paleoisochron_min_age": int(getattr(state, "paleoisochron_min_age", 0)),
-            "paleoisochron_max_age": int(getattr(state, "paleoisochron_max_age", 3000)),
-            "paleoisochron_step": int(getattr(state, "paleoisochron_step", 1000)),
             "paleoisochron_ages": list(getattr(state, "paleoisochron_ages", []) or []),
-            "draw_selection_ellipse": bool(getattr(state, "draw_selection_ellipse", False)),
-            "marginal_kde_top_size": float(getattr(state, "marginal_kde_top_size", 15.0)),
-            "marginal_kde_right_size": float(getattr(state, "marginal_kde_right_size", 15.0)),
-            "marginal_kde_max_points": int(getattr(state, "marginal_kde_max_points", 5000)),
-            "marginal_kde_bw_adjust": float(getattr(state, "marginal_kde_bw_adjust", 1.0)),
-            "marginal_kde_bandwidth": _normalize_kde_bandwidth(
-                getattr(state, "marginal_kde_bandwidth", 0.0)
-            ),
-            "marginal_kde_kernel": _normalize_kde_kernel(
-                getattr(state, "marginal_kde_kernel", self.MARGINAL_KDE_DEFAULT_KERNEL)
-            ),
-            "marginal_kde_auto_bandwidth_method": _normalize_kde_auto_bandwidth_method(
-                getattr(
-                    state,
-                    "marginal_kde_auto_bandwidth_method",
-                    self.MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD,
-                )
-            ),
-            "marginal_kde_gridsize": int(getattr(state, "marginal_kde_gridsize", 256)),
-            "marginal_kde_cut": float(getattr(state, "marginal_kde_cut", 1.0)),
-            "marginal_kde_log_transform": bool(getattr(state, "marginal_kde_log_transform", False)),
             "kde_bw_adjust": float(getattr(state, "kde_bw_adjust", 1.0)),
             "kde_bw_method": str(getattr(state, "kde_bw_method", "scott")),
             "kde_gridsize": int(getattr(state, "kde_gridsize", 200)),
@@ -454,17 +229,9 @@ class StateStore:
             "last_group_col": getattr(state, "last_group_col", None),
             "selection_mode": bool(getattr(state, "selection_mode", False)),
             "selection_tool": getattr(state, "selection_tool", None),
-            "point_size": int(getattr(state, "point_size", 60)),
-            "show_tooltip": bool(getattr(state, "show_tooltip", False)),
             "tooltip_columns": list(getattr(state, "tooltip_columns", []) or []),
-            "ui_theme": str(getattr(state, "ui_theme", "Modern Light")),
-            "language": str(getattr(state, "language", "zh")),
-            "color_scheme": str(getattr(state, "color_scheme", "vibrant")),
             "legend_position": getattr(state, "legend_position", None),
             "legend_location": getattr(state, "legend_location", "outside_left"),
-            "legend_display_mode": str(getattr(state, "legend_display_mode", "inline")),
-            "legend_columns": int(getattr(state, "legend_columns", 0)),
-            "legend_nudge_step": float(getattr(state, "legend_nudge_step", 0.02)),
             "legend_offset": tuple(getattr(state, "legend_offset", (0.0, 0.0)) or (0.0, 0.0)),
             "hidden_groups": set(getattr(state, "hidden_groups", set()) or set()),
             "legend_last_title": getattr(state, "legend_last_title", None),
@@ -492,25 +259,14 @@ class StateStore:
             "ml_last_model_meta": getattr(state, "ml_last_model_meta", None),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
             "available_groups": list(getattr(state, "available_groups", []) or []),
-            "visible_groups": _normalize_visible_groups(getattr(state, "visible_groups", None)),
             "selected_2d_cols": list(getattr(state, "selected_2d_cols", []) or []),
             "selected_3d_cols": list(getattr(state, "selected_3d_cols", []) or []),
             "selected_ternary_cols": list(getattr(state, "selected_ternary_cols", []) or []),
             "selected_2d_confirmed": bool(getattr(state, "selected_2d_confirmed", False)),
             "selected_3d_confirmed": bool(getattr(state, "selected_3d_confirmed", False)),
             "selected_ternary_confirmed": bool(getattr(state, "selected_ternary_confirmed", False)),
-            "standardize_data": bool(getattr(state, "standardize_data", True)),
             "initial_render_done": bool(getattr(state, "initial_render_done", False)),
-            "pca_component_indices": _normalize_pca_component_indices(
-                getattr(state, "pca_component_indices", None)
-            ),
             **snapshot_from_state(state),
-            "model_curve_width": float(getattr(state, "model_curve_width", 1.2)),
-            "plumbotectonics_curve_width": float(getattr(state, "plumbotectonics_curve_width", 1.2)),
-            "paleoisochron_width": float(getattr(state, "paleoisochron_width", 0.9)),
-            "model_age_line_width": float(getattr(state, "model_age_line_width", 0.7)),
-            "isochron_line_width": float(getattr(state, "isochron_line_width", 1.5)),
-            "selected_isochron_line_width": float(getattr(state, "selected_isochron_line_width", 2.0)),
             "isochron_label_options": dict(getattr(state, "isochron_label_options", {}) or {}),
             "model_curve_models": (
                 list(getattr(state, "model_curve_models", []) or [])
@@ -518,9 +274,6 @@ class StateStore:
                 else None
             ),
             "equation_overlays": list(getattr(state, "equation_overlays", []) or []),
-            "export_image_options": _normalize_export_options(
-                getattr(state, "export_image_options", None)
-            ),
         }
         self._sync_state()
 
