@@ -118,6 +118,14 @@ DPI 低于 72 会被钳制；`pad_inches` 仅在 `tight bbox` 开启时传入。
 | Origin 数据工作簿 | `export_origin_ready_data()` | 无（仅需 openpyxl） | `.xlsx`：每个系列一张工作表（列头取当前轴标签）+ `Info` 说明表，Origin 可直接 File → Import → Excel |
 
 - 覆盖模式：UMAP/tSNE/PCA/RobustPCA/V1V2/2D、3D、TERNARY、PB_EVOL_76/86（模型曲线 + 古等时线 + 等时线 + 方程叠加）、PLUMBOTECTONICS_76/86、PB_MU_AGE/PB_KAPPA_AGE。
+- **三元图兼容**（mpltern → Origin）：Origin 三元模板按 **0–100** 刻度工作，因此三个分量在写出时
+  由分数（0–1）换算为百分比，列头形如 `Top (%)`；绘图映射同时给出 X/Y/Z 三列（`colz=2`），
+  工作表列指定为 XYZ，三根轴标题取自用户选定的三元列并把范围设为 0–100。若 Origin 未安装三元模板，
+  自动回退为 XYZ 散点图并在结果提示中说明（数据不丢）。
+- **更充分使用 originpro**：工作表列写长名（X/Y/Z 或三元分量名）、2D/3D 列分别指定为 `xy`/`xyz`、
+  符号大小取自界面点大小（3–20 钳制）、坐标轴范围按当前 matplotlib 视图经 LabTalk（`layer.x.from/to`）
+  设置；每一项能力都会记录为"已应用 / 未应用"，导出成功时在提示框逐条列出。
+- 覆盖模式：UMAP/tSNE/PCA/RobustPCA/V1V2/2D、3D、TERNARY、PB_EVOL_76/86（模型曲线 + 古等时线 + 等时线 + 方程叠加）、PLUMBOTECTONICS_76/86、PB_MU_AGE/PB_KAPPA_AGE。
 - 工作表命名经 `_origin_sheet_name()` 清洗（Origin 禁用 `[]*?\`）并自动去重，前缀区分 `OV_`（叠加）、`ISO_`（等时线）、`TER_`（三元）。
 - 自动化路径失败会返回**原因**（未安装 `originpro`、无可导出坐标轴、当前视图无散点、Origin 未运行/COM 报错），UI 直接显示该原因，而不是只报"失败"。
 - 预览工具栏的「Configure subplots」已隐藏：导出图使用 `constrained_layout`，该工具调用 `subplots_adjust` 只会告警且不生效；间距请用对话框的 Tight bbox / Padding。

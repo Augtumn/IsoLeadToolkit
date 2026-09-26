@@ -66,6 +66,70 @@ def is_origin_available() -> bool:
     return _lazy_import_originpro() is not None
 
 
+#: Origin ternary axes and worksheet columns are conventionally 0-100.
+_TERNARY_PERCENT_SCALE = 100.0
+
+#: Symbol size bounds accepted by the Origin plot object.
+_SYMBOL_SIZE_MIN = 3
+_SYMBOL_SIZE_MAX = 20
+
+
+def _ternary_percent(values: Any) -> list[float]:
+    """Convert fractional ternary components (0-1) to Origin's 0-100 scale."""
+    return [float(value) * _TERNARY_PERCENT_SCALE for value in (values or [])]
+
+
+def _ternary_column_names(ternary_cols: Any) -> list[str]:
+    """Column headers for the three ternary components."""
+    names = [str(name) for name in (ternary_cols or ["Top", "Left", "Right"])]
+    while len(names) < 3:
+        names.append(["Top", "Left", "Right"][len(names)])
+    return [f"{name} (%)" for name in names[:3]]
+
+
+def _export_symbol_size() -> int:
+    """Origin symbol size derived from the plot point size."""
+    try:
+        size = int(round(float(getattr(app_state, "point_size", 8) or 8) / 5.0))
+    except Exception:
+        size = 8
+    return max(_SYMBOL_SIZE_MIN, min(size, _SYMBOL_SIZE_MAX))
+
+
+def _safe_sheet_call(notes: list[str], label: str, func, *args) -> bool:
+    """Call a worksheet/plot API that may be missing in older originpro builds."""
+    try:
+        func(*args)
+        return True
+    except Exception as err:
+        logger.debug("Origin capability %s unavailable: %s", label, err)
+        notes.append(f"{label} not applied")
+        return False
+
+
+def _set_column_long_name(notes: list[str], wks: Any, column: int, name: str) -> None:
+    """Give a worksheet column a long name (what Origin displays as its header)."""
+    if not name:
+        return
+    _safe_sheet_call(notes, f"column long name {name}", wks.set_label, column, 'L', name)
+
+
+def _apply_axis_range(
+    notes: list[str], op: Any, layer: Any, axis_name: str, start: float, end: float
+) -> bool:
+    """Set an axis range through LabTalk, which every Origin build understands."""
+    if end <= start:
+        return False
+    command = f"layer.{axis_name}.from = {start:g}; layer.{axis_name}.to = {end:g};"
+    try:
+        op.lt_exec(command)
+    except Exception as err:
+        logger.debug("Origin axis range for %s not applied: %s", axis_name, err)
+        notes.append(f"axis range {axis_name} not applied")
+        return False
+    return True
+
+
 # ── colour & marker helpers ──────────────────────────────────────────
 
 def _hex_color(color: Any) -> str:
@@ -553,14 +617,13 @@ def _origin_group_frame(
     import pandas as pd
 
     if is_ternary:
-        columns = list(axis_labels.get("ternary_cols") or ["Top", "Left", "Right"])
-        while len(columns) < 3:
-            columns.append(["Top", "Left", "Right"][len(columns)])
+        # Same 0-100 scale and headers as the Origin project path.
+        columns = _ternary_column_names(axis_labels.get("ternary_cols") or group.get("ternary_cols"))
         return pd.DataFrame(
             {
-                columns[0]: group.get("t", []),
-                columns[1]: group.get("l", []),
-                columns[2]: group.get("r", []),
+                columns[0]: _ternary_percent(group.get("t", [])),
+                columns[1]: _ternary_percent(group.get("l", [])),
+                columns[2]: _ternary_percent(group.get("r", [])),
             }
         )
 
@@ -703,6 +766,7 @@ def _build_origin_project(
     equation_lines: list[dict[str, Any]] | None = None,
     is_ternary: bool = False,
     title: str | None = None,
+    notes: list[str] | None = None,
 ) -> bool:
     """Create an Origin project with worksheets and a multi-layer graph,
     then export the graph as a PNG image alongside the project.
@@ -716,6 +780,9 @@ def _build_origin_project(
     op = _lazy_import_originpro()
     if op is None:
         return False
+
+    if notes is None:
+        notes = []
 
     try:
         wb = op.new_book("w", "IsotopesAnalyse_Data")
@@ -732,21 +799,34 @@ def _build_origin_project(
             try:
                 wks = wb.add_sheet(name)
                 if is_ternary:
-                    wks.from_list(0, group.get("t", []), group.get("ternary_cols", ["Top"])[0] if group.get("ternary_cols") else "Top")
-                    wks.from_list(1, group.get("l", []), group.get("ternary_cols", ["Top", "Left"])[1] if group.get("ternary_cols") and len(group["ternary_cols"]) > 1 else "Left")
-                    wks.from_list(2, group.get("r", []), group.get("ternary_cols", ["Top", "Left", "Right"])[2] if group.get("ternary_cols") and len(group["ternary_cols"]) > 2 else "Right")
+                    # Origin's ternary template works on a 0-100 scale; the
+                    # extractor produces fractions, so scale them here.
+                    components = [
+                        _ternary_percent(group.get("t", [])),
+                        _ternary_percent(group.get("l", [])),
+                        _ternary_percent(group.get("r", [])),
+                    ]
+                    column_names = _ternary_column_names(group.get("ternary_cols"))
+                    for index, (values, column_name) in enumerate(zip(components, column_names)):
+                        wks.from_list(index, values, column_name)
                     # Designate columns as XYZ for ternary mapping
-                    try:
-                        wks.cols_axis('xyz')
-                    except Exception:
-                        pass
+                    _safe_sheet_call(notes, "ternary column designation", wks.cols_axis, 'xyz')
+                    for index, column_name in enumerate(column_names):
+                        _set_column_long_name(notes, wks, index, column_name)
                 elif group.get("z"):
                     wks.from_list(0, group["x"], "X")
                     wks.from_list(1, group["y"], "Y")
                     wks.from_list(2, group["z"], "Z")
+                    _safe_sheet_call(notes, "3D column designation", wks.cols_axis, 'xyz')
+                    for index, column_name in enumerate(("X", "Y", "Z")):
+                        _set_column_long_name(notes, wks, index, column_name)
                 else:
-                    wks.from_list(0, group["x"], "X")
-                    wks.from_list(1, group["y"], "Y")
+                    x_name, y_name, _z_name = _origin_frame_columns(axis_labels)
+                    wks.from_list(0, group["x"], x_name)
+                    wks.from_list(1, group["y"], y_name)
+                    _safe_sheet_call(notes, "XY column designation", wks.cols_axis, 'xy')
+                    _set_column_long_name(notes, wks, 0, x_name)
+                    _set_column_long_name(notes, wks, 1, y_name)
                 wks_map[group["label"]] = (wks, name)
             except Exception as err:
                 logger.warning("Failed to create sheet for %s: %s", name, err)
@@ -757,7 +837,15 @@ def _build_origin_project(
 
         # ── graph ─────────────────────────────────────────────────
         if is_ternary:
-            gp = op.new_graph(template="ternary")
+            try:
+                gp = op.new_graph(template="ternary")
+                notes.append("ternary graph template")
+            except Exception as err:
+                # Origin builds without the ternary app still get the data as an
+                # XYZ scatter instead of failing outright.
+                logger.warning("Ternary template unavailable (%s); using scatter.", err)
+                notes.append("ternary template unavailable - exported as XYZ scatter")
+                gp = op.new_graph(template="scatter")
         else:
             gp = op.new_graph(template="scatter")
         gl = gp[0]
@@ -772,7 +860,9 @@ def _build_origin_project(
             wks, sheet_name = entry
             try:
                 if is_ternary:
-                    plot = gl.add_plot(wks, coly=1, colx=0, type="s")
+                    # Ternary plots need all three components: X (top),
+                    # Y (left), Z (right).
+                    plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 elif group.get("z"):
                     plot = gl.add_plot(wks, coly=1, colx=0, colz=2, type="s")
                 else:
@@ -782,7 +872,7 @@ def _build_origin_project(
                 plot_idx += 1
                 plot.color = group.get("color", "#333333")
                 plot.symbol_kind = group.get("marker", 1)
-                plot.symbol_size = 8
+                plot.symbol_size = _export_symbol_size()
                 legend_entries.append(
                     f"\\l({plot_idx}) %({plot_idx},@WS)"
                 )
@@ -899,7 +989,7 @@ def _build_origin_project(
             except Exception as err:
                 logger.debug("Failed to set custom legend: %s", err)
 
-        # ── axis labels and title ─────────────────────────────────
+        # ── axis labels, ranges and title ─────────────────────────
         if is_ternary:
             ternary_cols = axis_labels.get("ternary_cols", ["Top", "Left", "Right"])
             # Origin ternary uses axis names "x", "y", "z" for top/left/right
@@ -908,11 +998,19 @@ def _build_origin_project(
                     gl.axis(axis_name).title = label
                 except Exception:
                     pass
+            # Percent data needs the template's 0-100 scale on all three axes.
+            _apply_axis_range(notes, op, gl, "x", 0.0, 100.0)
+            _apply_axis_range(notes, op, gl, "y", 0.0, 100.0)
+            _apply_axis_range(notes, op, gl, "z", 0.0, 100.0)
         else:
             if axis_labels.get("x"):
                 gl.axis("x").title = axis_labels["x"]
             if axis_labels.get("y"):
                 gl.axis("y").title = axis_labels["y"]
+            if axis_labels.get("x_range"):
+                _apply_axis_range(notes, op, gl, "x", *axis_labels["x_range"])
+            if axis_labels.get("y_range"):
+                _apply_axis_range(notes, op, gl, "y", *axis_labels["y_range"])
         if title:
             try:
                 gl.set_str("title", title)
@@ -948,32 +1046,37 @@ def export_to_origin(file_path: str) -> bool:
     Returns True on success. Use :func:`export_to_origin_detailed` when the
     caller wants to show *why* an export failed.
     """
-    ok, _reason = export_to_origin_detailed(file_path)
+    ok, _reason, _notes = export_to_origin_detailed(file_path)
     return ok
 
 
-def export_to_origin_detailed(file_path: str) -> tuple[bool, str]:
-    """Export to Origin and return ``(ok, reason)``; *reason* is empty on success."""
+def export_to_origin_detailed(file_path: str) -> tuple[bool, str, list[str]]:
+    """Export to Origin and return ``(ok, reason, notes)``.
+
+    *reason* is empty on success; *notes* lists the Origin capabilities that were
+    applied or skipped (ternary template, column metadata, axis ranges...).
+    """
     op = _lazy_import_originpro()
     if op is None:
         logger.warning("Origin export requested but originpro is not installed.")
-        return False, "originpro is not installed"
+        return False, "originpro is not installed", []
 
     ax = app_state.ax
     if ax is None:
         logger.warning("No axes available for Origin export.")
-        return False, "no axes to export"
+        return False, "no axes to export", []
 
     try:
         data = collect_origin_export_data(ax)
     except Exception as err:
         logger.warning("Origin export failed during extraction: %s", err)
-        return False, f"data extraction failed: {err}"
+        return False, f"data extraction failed: {err}", []
 
     if not data["scatter_groups"]:
         logger.warning("No scatter data extracted from axes for Origin export.")
-        return False, "no scatter data in the current view"
+        return False, "no scatter data in the current view", []
 
+    notes: list[str] = []
     try:
         ok = _build_origin_project(
             file_path,
@@ -984,14 +1087,16 @@ def export_to_origin_detailed(file_path: str) -> tuple[bool, str]:
             equation_lines=data["equation_lines"],
             is_ternary=data["is_ternary"],
             title=data["title"],
+            notes=notes,
         )
     except Exception as err:
         logger.warning("Origin export failed while building the project: %s", err)
-        return False, f"Origin automation failed: {err}"
+        return False, f"Origin automation failed: {err}", notes
 
     if not ok:
-        return False, "Origin refused to build the project (is Origin running?)"
-    return True, ""
+        return False, "Origin refused to build the project (is Origin running?)", notes
+    logger.info("Origin export capabilities: %s", notes)
+    return True, "", notes
 
 
 def collect_origin_export_data(ax: Any, mode: str | None = None) -> dict[str, Any]:
@@ -1029,6 +1134,13 @@ def collect_origin_export_data(ax: Any, mode: str | None = None) -> dict[str, An
         "x": str(ax.get_xlabel() or ""),
         "y": str(ax.get_ylabel() or ""),
     }
+    try:
+        x_limits = ax.get_xlim()
+        y_limits = ax.get_ylim()
+        axis_labels["x_range"] = (float(x_limits[0]), float(x_limits[1]))
+        axis_labels["y_range"] = (float(y_limits[0]), float(y_limits[1]))
+    except Exception:
+        pass
     if is_ternary:
         # Merge, do not overwrite: the ternary branch above set the user's
         # ternary column names and they must reach the project builder.

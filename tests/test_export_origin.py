@@ -123,6 +123,9 @@ class _StubSheet:
         self.axis_designation = designation
         self.calls.append(("cols_axis", self.name, designation))
 
+    def set_label(self, column: int, label_type: str, value: str) -> None:
+        self.calls.append(("set_label", self.name, column, label_type, value))
+
 
 class _StubBook:
     def __init__(self, calls: list[tuple], fail: bool = False) -> None:
@@ -214,11 +217,13 @@ class _StubGraphProvider:
 
 
 class _StubOrigin:
-    def __init__(self, fail_book: bool = False) -> None:
+    def __init__(self, fail_book: bool = False, fail_ternary_template: bool = False) -> None:
         self.calls: list[tuple] = []
         self.book = _StubBook(self.calls, fail=fail_book)
         self.graph = _StubGraphProvider(self.calls)
         self.saved: list[str] = []
+        self.lt_commands: list[str] = []
+        self.fail_ternary_template = fail_ternary_template
 
     def new_book(self, kind: str, title: str) -> _StubBook:
         self.calls.append(("new_book", kind, title))
@@ -226,7 +231,13 @@ class _StubOrigin:
 
     def new_graph(self, template: str = "scatter") -> _StubGraphProvider:
         self.calls.append(("new_graph", template))
+        if template == "ternary" and self.fail_ternary_template:
+            raise RuntimeError("ternary template not installed")
         return self.graph
+
+    def lt_exec(self, command: str) -> None:
+        self.lt_commands.append(command)
+        self.calls.append(("lt_exec", command))
 
     def save(self, path: str) -> bool:
         self.saved.append(path)
@@ -245,7 +256,7 @@ def test_origin_project_exports_sheets_plots_legend_and_axis_titles(
     _patch_origin(monkeypatch, stub)
     target = tmp_path / "project.opju"
 
-    ok, reason = export_origin.export_to_origin_detailed(str(target))
+    ok, reason, notes = export_origin.export_to_origin_detailed(str(target))
 
     assert ok is True, reason
     assert reason == ""
@@ -253,8 +264,9 @@ def test_origin_project_exports_sheets_plots_legend_and_axis_titles(
     sheet_names = [call[1] for call in stub.calls if call[0] == "add_sheet"]
     assert sheet_names == ["GroupA", "GroupB"]
 
-    assert stub.book.sheets[0].columns[0][1] == "X"
-    assert stub.book.sheets[0].columns[1][1] == "Y"
+    # column headers/long names come from the current view
+    assert stub.book.sheets[0].columns[0][1] == "206Pb/204Pb"
+    assert stub.book.sheets[0].columns[1][1] == "207Pb/204Pb"
     assert [call[0] for call in stub.calls].count("add_plot") == 2
     assert stub.graph.layer.plots[0].color == "#ff0000"
     assert stub.graph.layer.plots[1].symbol_kind == 0  # GroupB marker "s"
@@ -275,7 +287,7 @@ def test_origin_project_returns_reason_when_building_fails(
     stub = _StubOrigin(fail_book=True)
     _patch_origin(monkeypatch, stub)
 
-    ok, reason = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
 
     assert ok is False
     assert "Origin" in reason
@@ -283,7 +295,7 @@ def test_origin_project_returns_reason_when_building_fails(
 
 def test_origin_export_reports_missing_package(monkeypatch, patched_axes, tmp_path: Path) -> None:
     _patch_origin(monkeypatch, None)
-    ok, reason = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
     assert ok is False and "originpro" in reason
 
     # the bool API stays compatible
@@ -293,7 +305,7 @@ def test_origin_export_reports_missing_package(monkeypatch, patched_axes, tmp_pa
 def test_origin_export_reports_missing_axes(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(app_state, "ax", None, raising=False)
     _patch_origin(monkeypatch, _StubOrigin())
-    ok, reason = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
     assert ok is False and "axes" in reason
 
 
@@ -305,7 +317,7 @@ def test_origin_export_reports_missing_scatter_data(monkeypatch, tmp_path: Path)
     monkeypatch.setattr(app_state, "render_mode", "2D", raising=False)
     _patch_origin(monkeypatch, _StubOrigin())
 
-    ok, reason = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
     assert ok is False and "scatter" in reason
 
 
@@ -356,3 +368,106 @@ def test_origin_ready_data_without_axes_or_data_is_reported(tmp_path: Path, monk
     axis.plot([0.0, 1.0], [0.0, 1.0])
     monkeypatch.setattr(app_state, "ax", axis, raising=False)
     assert export_origin.export_origin_ready_data(str(tmp_path / "empty.xlsx")) is False
+
+
+# ── ternary compatibility ────────────────────────────────────────────────
+
+def _ternary_group(label: str = "TGroup") -> dict:
+    return {
+        "label": label,
+        "t": [0.2, 0.5],
+        "l": [0.3, 0.25],
+        "r": [0.5, 0.25],
+        "color": "#00ff00",
+        "marker": 1,
+        "ternary_cols": ["Top", "Left", "Right"],
+    }
+
+
+def _patch_ternary(monkeypatch, group: dict) -> None:
+    monkeypatch.setattr(
+        export_origin, "_extract_ternary_data", lambda ax: [group], raising=False
+    )
+    monkeypatch.setattr(app_state, "selected_ternary_cols", ["Top", "Left", "Right"], raising=False)
+
+
+def test_ternary_export_writes_percent_and_maps_three_components(
+    monkeypatch, patched_axes, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(app_state, "render_mode", "TERNARY", raising=False)
+    _patch_ternary(monkeypatch, _ternary_group())
+    stub = _StubOrigin()
+    _patch_origin(monkeypatch, stub)
+
+    ok, reason, notes = export_origin.export_to_origin_detailed(str(tmp_path / "ternary.opju"))
+
+    assert ok is True, reason
+    assert "ternary graph template" in notes
+
+    sheet = stub.book.sheets[0]
+    # Origin ternary diagrams are on a 0-100 scale: fractions must be scaled
+    assert sheet.columns[0][0] == [20.0, 50.0]
+    assert sheet.columns[1][0] == [30.0, 25.0]
+    assert sheet.columns[2][0] == [50.0, 25.0]
+    assert sheet.columns[0][1] == "Top (%)"
+    assert sheet.axis_designation == "xyz"
+    assert ("cols_axis", sheet.name, "xyz") in stub.calls
+
+    # all three components must be mapped, not just X/Y
+    add_plot = next(call for call in stub.calls if call[0] == "add_plot")
+    assert add_plot[5] == 2, add_plot
+
+    for axis_name, title in (("x", "Top"), ("y", "Left"), ("z", "Right")):
+        assert stub.graph.layer.axes[axis_name].title == title
+    for axis_name in ("x", "y", "z"):
+        assert any(f"layer.{axis_name}.to = 100" in command for command in stub.lt_commands)
+
+    assert ("set_label", sheet.name, 0, "L", "Top (%)") in stub.calls
+
+
+def test_ternary_template_fallback_is_reported(
+    monkeypatch, patched_axes, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(app_state, "render_mode", "TERNARY", raising=False)
+    _patch_ternary(monkeypatch, _ternary_group())
+    stub = _StubOrigin(fail_ternary_template=True)
+    _patch_origin(monkeypatch, stub)
+
+    ok, reason, notes = export_origin.export_to_origin_detailed(str(tmp_path / "ternary2.opju"))
+
+    assert ok is True, reason
+    assert any("ternary template unavailable" in note for note in notes), notes
+    templates = [call[1] for call in stub.calls if call[0] == "new_graph"]
+    assert templates == ["ternary", "scatter"]
+    # the data still gets exported, in percent
+    assert stub.book.sheets[0].columns[0][0] == [20.0, 50.0]
+
+
+def test_column_metadata_symbol_size_and_axis_ranges_are_applied(
+    monkeypatch, patched_axes, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(app_state, "point_size", 30, raising=False)
+    _patch_origin(monkeypatch, _StubOrigin())
+
+    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "meta.opju"))
+    assert ok is True, reason
+
+    stub = export_origin._lazy_import_originpro()
+    sheet = stub.book.sheets[0]
+    assert ("set_label", sheet.name, 0, "L", "206Pb/204Pb") in stub.calls
+    assert ("cols_axis", sheet.name, "xy") in stub.calls
+
+    plot = stub.graph.layer.plots[0]
+    assert export_origin._SYMBOL_SIZE_MIN <= plot.symbol_size <= export_origin._SYMBOL_SIZE_MAX
+
+    calls = [call for call in stub.calls if call[0] == "lt_exec"]
+    assert calls, "axis ranges should be applied through LabTalk"
+
+
+def test_ternary_excel_frame_uses_percent_headers() -> None:
+    frame = export_origin._origin_group_frame(
+        _ternary_group(), True, {"ternary_cols": ["Top", "Left", "Right"]}
+    )
+    assert list(frame.columns) == ["Top (%)", "Left (%)", "Right (%)"]
+    assert frame["Top (%)"].tolist() == [20.0, 50.0]
+    assert frame["Right (%)"].tolist() == [50.0, 25.0]

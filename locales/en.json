@@ -890,5 +890,6 @@
   "Origin data exported successfully to {file}": "Origin data exported successfully to {file}",
   "Reason: {reason}": "Reason: {reason}",
   "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.": "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.",
-  "Write an Origin-importable Excel workbook (no Origin automation needed).": "Write an Origin-importable Excel workbook (no Origin automation needed)."
+  "Write an Origin-importable Excel workbook (no Origin automation needed).": "Write an Origin-importable Excel workbook (no Origin automation needed).",
+  "Applied: {notes}": "Applied: {notes}"
 }

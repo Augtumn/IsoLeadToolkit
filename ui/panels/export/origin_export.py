@@ -67,13 +67,14 @@ class ExportPanelOriginExportMixin:
             file_path = str(target.with_suffix(".opju"))
 
         reason = ""
+        notes: list[str] = []
         try:
             from application.use_cases.export_origin import export_to_origin_detailed
 
             # Origin COM automation can take seconds; show a wait cursor.
             QApplication.setOverrideCursor(Qt.WaitCursor)
             try:
-                ok, reason = export_to_origin_detailed(file_path)
+                ok, reason, notes = export_to_origin_detailed(file_path)
             finally:
                 QApplication.restoreOverrideCursor()
         except Exception as export_err:
@@ -88,13 +89,15 @@ class ExportPanelOriginExportMixin:
             return
 
         if ok:
-            QMessageBox.information(
-                self,
-                translate("Success"),
-                translate("Origin project exported successfully to {file}").format(
-                    file=file_path
-                ),
+            message = translate("Origin project exported successfully to {file}").format(
+                file=file_path
             )
+            if notes:
+                # Show which Origin capabilities were applied (or skipped).
+                message += "\n\n" + translate("Applied: {notes}").format(
+                    notes=", ".join(str(note) for note in notes)
+                )
+            QMessageBox.information(self, translate("Success"), message)
         else:
             # Show why it failed instead of a bare "failed" dialog.
             detail = translate("Failed to export Origin project.") 
