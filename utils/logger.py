@@ -11,6 +11,7 @@ Provides:
 """
 
 from __future__ import annotations
+import re
 
 import logging
 import os
@@ -69,6 +70,21 @@ def _stderr_is_tty() -> bool:
         return False
 
 
+#: Python prints warnings to stderr as "<path>:<line>: <Category>: <message>".
+_WARNING_LINE = re.compile(r"^.*?:\d+: \w*Warning: ")
+
+
+def level_for_stderr_line(line: str, default: int) -> int:
+    """Log level for a line captured from stderr.
+
+    Warnings are written to stderr by the warnings module, so logging every stderr
+    line as ERROR turned them into false alarms in isotopes_analyse.error.log.
+    """
+    if _WARNING_LINE.match(line.strip()):
+        return logging.WARNING
+    return default
+
+
 class LoggerWriter:
     """
     Custom writer that writes to both a logger (file) and the original stream (console).
@@ -96,7 +112,7 @@ class LoggerWriter:
             for line in lines[:-1]:
                 line = line.rstrip()
                 if line:
-                    self.logger.log(self.level, line)
+                    self.logger.log(level_for_stderr_line(line, self.level), line)
             # Keep the last partial line
             self.linebuf = lines[-1]
 
@@ -142,6 +158,17 @@ def _archive_previous_log(log_path: Path, keep: int = DEFAULT_ARCHIVE_KEEP) -> N
             old.unlink(missing_ok=True)
     except OSError as exc:
         logging.getLogger(__name__).warning("Failed to prune old archives: %s", exc)
+
+
+def enable_warning_capture() -> None:
+    """Route the warnings module into logging instead of stderr.
+
+    Warnings then arrive on the ``py.warnings`` logger at WARNING level, so the
+    error log keeps holding only actual errors.
+    """
+    logging.captureWarnings(True)
+    logging.getLogger("py.warnings").setLevel(logging.WARNING)
+
 
 
 def setup_logging(
@@ -229,7 +256,9 @@ def setup_logging(
         # AppLogger writes to the same file+console handlers without recursion.
         logger.handlers = [file_handler, error_handler, console_handler]
 
-        # Redirect stdout and stderr.
+        # Redirect stdout and stderr. Warnings must not be logged as errors, so
+        # they are routed into logging before the streams are taken over.
+        enable_warning_capture()
         sys.stdout = LoggerWriter(logger, logging.INFO, sys.__stdout__)
         sys.stderr = LoggerWriter(logger, logging.ERROR, sys.__stderr__)
 
