@@ -28,6 +28,19 @@ _IMAGE_FILE_FILTERS = (
 )
 
 
+def _hide_inert_subplot_action(toolbar) -> None:
+    """Remove the toolbar's subplot tool: constrained_layout ignores it."""
+    try:
+        actions = list(toolbar.actions())
+    except Exception:
+        return
+    for action in actions:
+        label = str(action.text() or "").replace("&", "").strip().lower()
+        if label == "configure subplots":
+            action.setVisible(False)
+            action.setEnabled(False)
+
+
 class ExportPreviewDialogMixin:
     """Preview dialog for image export (controls, refresh, save)."""
 
@@ -121,6 +134,7 @@ class ExportPreviewDialogMixin:
             canvas = FigureCanvasQTAgg(preview_fig)
             canvas.setFixedSize(preview_width_px, preview_height_px)
             toolbar = NavigationToolbar2QT(canvas, dialog)
+            _hide_inert_subplot_action(toolbar)
             main_layout.addWidget(toolbar)
 
             scroll_area = QScrollArea(dialog)
@@ -248,6 +262,7 @@ class ExportPreviewDialogMixin:
                         except Exception:
                             pass
                     state['toolbar'] = NavigationToolbar2QT(state['canvas'], dialog)
+                    _hide_inert_subplot_action(state['toolbar'])
                     main_layout.insertWidget(1, state['toolbar'])  # after control_widget
                 except Exception as err:
                     logger.warning("Preview re-render failed: %s", err)

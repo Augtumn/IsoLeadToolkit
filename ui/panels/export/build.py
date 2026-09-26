@@ -32,6 +32,7 @@ class ExportPanelBuildMixin:
         self.export_image_button = None
         self.preview_image_button = None
         self.export_origin_button = None
+        self.export_origin_data_button = None
         self._scienceplots_available = None
 
     def build(self) -> QWidget:
@@ -143,6 +144,15 @@ class ExportPanelBuildMixin:
         self.export_origin_button.setToolTip(translate("Send the current plot to an Origin project"))
         self.export_origin_button.clicked.connect(self._on_export_origin_clicked)
         origin_row.addWidget(self.export_origin_button, 0, Qt.AlignHCenter)
+
+        self.export_origin_data_button = QPushButton(translate("Export Origin Data"))
+        self.export_origin_data_button.setProperty('translate_key', 'Export Origin Data')
+        self.export_origin_data_button.setFixedWidth(160)
+        self.export_origin_data_button.setToolTip(
+            translate("Write an Origin-importable Excel workbook (no Origin automation needed).")
+        )
+        self.export_origin_data_button.clicked.connect(self._on_export_origin_data_clicked)
+        origin_row.addWidget(self.export_origin_data_button, 0, Qt.AlignHCenter)
         image_layout.addLayout(origin_row)
 
         image_group.setLayout(image_layout)

@@ -108,6 +108,20 @@ DPI 低于 72 会被钳制；`pad_inches` 仅在 `tight bbox` 开启时传入。
 - 首选：SciencePlots 样式链（如可用）。
 - 回退：内置 `rcParams` 预设（SciencePlots 不可用时自动切换）。
 
+## Origin 导出
+
+两条路径共享同一套数据提取（`collect_origin_export_data()`，纯 matplotlib/app_state，不依赖 Origin）：
+
+| 路径 | 入口 | 前提 | 产物 |
+|---|---|---|---|
+| Origin 工程自动化 | `export_to_origin()` / `export_to_origin_detailed()` | 安装 `originpro` 且 Origin 可被 COM 调用 | `.opju` 工程（每个分组一张工作表 + 多图层图形 + 图例 + 轴标题）与同名 PNG |
+| Origin 数据工作簿 | `export_origin_ready_data()` | 无（仅需 openpyxl） | `.xlsx`：每个系列一张工作表（列头取当前轴标签）+ `Info` 说明表，Origin 可直接 File → Import → Excel |
+
+- 覆盖模式：UMAP/tSNE/PCA/RobustPCA/V1V2/2D、3D、TERNARY、PB_EVOL_76/86（模型曲线 + 古等时线 + 等时线 + 方程叠加）、PLUMBOTECTONICS_76/86、PB_MU_AGE/PB_KAPPA_AGE。
+- 工作表命名经 `_origin_sheet_name()` 清洗（Origin 禁用 `[]*?\`）并自动去重，前缀区分 `OV_`（叠加）、`ISO_`（等时线）、`TER_`（三元）。
+- 自动化路径失败会返回**原因**（未安装 `originpro`、无可导出坐标轴、当前视图无散点、Origin 未运行/COM 报错），UI 直接显示该原因，而不是只报"失败"。
+- 预览工具栏的「Configure subplots」已隐藏：导出图使用 `constrained_layout`，该工具调用 `subplots_adjust` 只会告警且不生效；间距请用对话框的 Tight bbox / Padding。
+
 ## 依赖包
 
 - PyQt5：导出 UI、文件对话框、预览对话框。

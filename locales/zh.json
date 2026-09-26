@@ -883,5 +883,12 @@
   "Science Double Column": "Science 双栏",
   "Nature Single Column": "Nature 单栏",
   "Elsevier Double Column": "Elsevier 双栏",
-  "GSA Double Column": "GSA 双栏"
+  "GSA Double Column": "GSA 双栏",
+  "Export Origin Data": "导出 Origin 数据",
+  "Failed to export Origin data.": "导出 Origin 数据失败。",
+  "Failed to export Origin data: {error}": "导出 Origin 数据失败：{error}",
+  "Origin data exported successfully to {file}": "Origin 数据已成功导出到 {file}",
+  "Reason: {reason}": "原因：{reason}",
+  "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.": "可改用「导出 Origin 数据」，写出可直接导入 Origin 的 Excel 工作簿。",
+  "Write an Origin-importable Excel workbook (no Origin automation needed).": "写出可直接导入 Origin 的 Excel 工作簿（无需 Origin 自动化）。"
 }

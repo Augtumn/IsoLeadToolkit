@@ -883,5 +883,12 @@
   "Science Double Column": "Science Double Column",
   "Nature Single Column": "Nature Single Column",
   "Elsevier Double Column": "Elsevier Double Column",
-  "GSA Double Column": "GSA Double Column"
+  "GSA Double Column": "GSA Double Column",
+  "Export Origin Data": "Export Origin Data",
+  "Failed to export Origin data.": "Failed to export Origin data.",
+  "Failed to export Origin data: {error}": "Failed to export Origin data: {error}",
+  "Origin data exported successfully to {file}": "Origin data exported successfully to {file}",
+  "Reason: {reason}": "Reason: {reason}",
+  "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.": "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.",
+  "Write an Origin-importable Excel workbook (no Origin automation needed).": "Write an Origin-importable Excel workbook (no Origin automation needed)."
 }
