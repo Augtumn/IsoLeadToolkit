@@ -400,3 +400,24 @@ def test_overlay_label_state_ignores_unknown_keys() -> None:
             setattr(app_state, fallback_attr, original_value)
         elif hasattr(app_state, fallback_attr):
             delattr(app_state, fallback_attr)
+
+
+def test_ternary_render_margin_setter_syncs_state_and_snapshot() -> None:
+    """Regression: the sync write-back list omitted ternary_render_margin.
+
+    The gateway updated the snapshot but the live state kept the old value,
+    so every subsequent dispatch logged "modified outside the gateway" and
+    the user's margin never reached the renderer.
+    """
+    original_value = float(getattr(app_state, "ternary_render_margin", 0.002))
+
+    try:
+        state_gateway.set_ternary_render_margin(0.011)
+
+        assert app_state.ternary_render_margin == pytest.approx(0.011)
+        snapshot = app_state.state_store.snapshot()
+        assert snapshot["ternary_render_margin"] == pytest.approx(0.011)
+    finally:
+        state_gateway.set_ternary_render_margin(original_value)
+
+    assert app_state.ternary_render_margin == pytest.approx(original_value)

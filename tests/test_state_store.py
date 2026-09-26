@@ -214,6 +214,7 @@ def _snapshot_state() -> dict[str, Any]:
         "ternary_boundary_percent": float(getattr(app_state, "ternary_boundary_percent", 5.0)),
         "ternary_manual_limits_enabled": bool(getattr(app_state, "ternary_manual_limits_enabled", False)),
         "ternary_manual_limits": dict(getattr(app_state, "ternary_manual_limits", {}) or {}),
+        "ternary_render_margin": float(getattr(app_state, "ternary_render_margin", 0.002)),
         "ternary_stretch_mode": str(getattr(app_state, "ternary_stretch_mode", "power")),
         "ternary_stretch": bool(getattr(app_state, "ternary_stretch", False)),
         "ternary_factors": list(getattr(app_state, "ternary_factors", [1.0, 1.0, 1.0]) or [1.0, 1.0, 1.0]),
@@ -428,6 +429,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_ternary_boundary_percent(snapshot["ternary_boundary_percent"])
     state_gateway.set_ternary_manual_limits_enabled(snapshot["ternary_manual_limits_enabled"])
     state_gateway.set_ternary_manual_limits(snapshot["ternary_manual_limits"])
+    state_gateway.set_ternary_render_margin(snapshot["ternary_render_margin"])
     state_gateway.set_ternary_stretch_mode(snapshot["ternary_stretch_mode"])
     state_gateway.set_ternary_stretch(snapshot["ternary_stretch"])
     state_gateway.set_ternary_factors(snapshot["ternary_factors"])
