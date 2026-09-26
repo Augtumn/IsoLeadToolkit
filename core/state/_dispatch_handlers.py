@@ -20,6 +20,8 @@ from ._normalizers import (
     _normalize_algorithm_params,
     _normalize_bw_adjust,
     _normalize_color,
+    _normalize_clip_bound,
+    _normalize_kde_thresh,
     _normalize_cut,
     _normalize_export_options,
     _normalize_font_name,
@@ -516,6 +518,37 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         if right_size is not None:
             store._snapshot["marginal_kde_right_size"] = _normalize_marginal_size(right_size)
 
+    elif action_type == "SET_KDE_COMPUTE_OPTIONS":
+        bw_adjust = action.get("bw_adjust")
+        bw_method = action.get("bw_method")
+        gridsize = action.get("gridsize")
+        thresh = action.get("thresh")
+        clip_min = action.get("clip_min")
+        clip_max = action.get("clip_max")
+        common_norm = action.get("common_norm")
+        warn_singular = action.get("warn_singular")
+
+        if bw_adjust is not None:
+            store._snapshot["kde_bw_adjust"] = _normalize_bw_adjust(bw_adjust)
+        if bw_method is not None:
+            store._snapshot["kde_bw_method"] = _normalize_kde_auto_bandwidth_method(bw_method)
+        if gridsize is not None:
+            store._snapshot["kde_gridsize"] = _normalize_gridsize(gridsize)
+        if thresh is not None:
+            store._snapshot["kde_thresh"] = _normalize_kde_thresh(thresh)
+        if action.get("clear_clip"):
+            store._snapshot["kde_clip_min"] = None
+            store._snapshot["kde_clip_max"] = None
+        elif clip_min is not None or clip_max is not None:
+            if clip_min is not None:
+                store._snapshot["kde_clip_min"] = _normalize_clip_bound(clip_min)
+            if clip_max is not None:
+                store._snapshot["kde_clip_max"] = _normalize_clip_bound(clip_max)
+        if common_norm is not None:
+            store._snapshot["kde_common_norm"] = bool(common_norm)
+        if warn_singular is not None:
+            store._snapshot["kde_warn_singular"] = bool(warn_singular)
+
     elif action_type == "SET_MARGINAL_KDE_COMPUTE_OPTIONS":
         max_points = action.get("max_points")
         bw_adjust = action.get("bw_adjust")
@@ -525,6 +558,9 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         gridsize = action.get("gridsize")
         cut = action.get("cut")
         log_transform = action.get("log_transform")
+        clip_min = action.get("clip_min")
+        clip_max = action.get("clip_max")
+        cumulative = action.get("cumulative")
 
         if max_points is not None:
             store._snapshot["marginal_kde_max_points"] = _normalize_max_points(max_points)
@@ -542,6 +578,16 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             store._snapshot["marginal_kde_gridsize"] = _normalize_gridsize(gridsize)
         if cut is not None:
             store._snapshot["marginal_kde_cut"] = _normalize_cut(cut)
+        if action.get("clear_clip"):
+            store._snapshot["marginal_kde_clip_min"] = None
+            store._snapshot["marginal_kde_clip_max"] = None
+        elif clip_min is not None or clip_max is not None:
+            if clip_min is not None:
+                store._snapshot["marginal_kde_clip_min"] = _normalize_clip_bound(clip_min)
+            if clip_max is not None:
+                store._snapshot["marginal_kde_clip_max"] = _normalize_clip_bound(clip_max)
+        if cumulative is not None:
+            store._snapshot["marginal_kde_cumulative"] = bool(cumulative)
         if log_transform is not None:
             store._snapshot["marginal_kde_log_transform"] = bool(log_transform)
 

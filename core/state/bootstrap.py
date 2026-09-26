@@ -53,6 +53,20 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.marginal_kde_gridsize = 256
     state.marginal_kde_cut = 1.0
     state.marginal_kde_log_transform = False
+
+    # 2D KDE (contour) computation options
+    state.kde_bw_adjust = 1.0
+    state.kde_bw_method = 'scott'
+    state.kde_gridsize = 200
+    state.kde_thresh = 0.05
+    state.kde_clip_min = None
+    state.kde_clip_max = None
+    state.kde_common_norm = False
+    state.kde_warn_singular = False
+    # Marginal KDE additions
+    state.marginal_kde_clip_min = None
+    state.marginal_kde_clip_max = None
+    state.marginal_kde_cumulative = False
     state.ellipse_confidence = config.get('ellipse_confidence', DEFAULT_ELLIPSE_CONFIDENCE)
     state.point_size = config['point_size']
     state.last_group_col = None

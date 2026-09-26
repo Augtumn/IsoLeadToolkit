@@ -119,6 +119,32 @@ def _to_float_array(values) -> np.ndarray:
     return arr[np.isfinite(arr)]
 
 
+def _resolve_bw_method(value: Any) -> str:
+    """seaborn accepts 'scott' / 'silverman' (or a scalar factor)."""
+    name = str(value or "scott").strip().lower()
+    return name if name in ("scott", "silverman") else "scott"
+
+
+def kde_compute_kwargs() -> dict[str, Any]:
+    """2D KDE computation options, read from app state."""
+    kwargs: dict[str, Any] = {
+        "bw_adjust": max(0.05, min(float(app_state.kde_bw_adjust), 5.0)),
+        "bw_method": _resolve_bw_method(app_state.kde_bw_method),
+        "gridsize": max(32, min(int(app_state.kde_gridsize), 1024)),
+        "thresh": max(0.001, min(float(app_state.kde_thresh), 1.0)),
+        "common_norm": bool(app_state.kde_common_norm),
+        "warn_singular": bool(app_state.kde_warn_singular),
+    }
+    clip_min = app_state.kde_clip_min
+    clip_max = app_state.kde_clip_max
+    if clip_min is not None or clip_max is not None:
+        low = float(clip_min) if clip_min is not None else -np.inf
+        high = float(clip_max) if clip_max is not None else np.inf
+        if high > low:
+            kwargs["clip"] = (low, high)
+    return kwargs
+
+
 def _estimate_density_curve(
     values,
     *,
@@ -129,11 +155,25 @@ def _estimate_density_curve(
     gridsize: int,
     cut: float,
     log_transform: bool,
+    clip_min: float | None = None,
+    clip_max: float | None = None,
+    cumulative: bool = False,
 ) -> tuple[np.ndarray, np.ndarray] | None:
-    """Estimate 1D density curve with optional log transform on density."""
+    """Estimate a 1D density (or cumulative) curve within optional clip bounds."""
     data = _to_float_array(values)
     if data.size < 2:
         return None
+    if clip_min is not None or clip_max is not None:
+        if clip_min is not None and clip_max is not None and float(clip_max) <= float(clip_min):
+            return None
+        keep = np.ones(data.shape, dtype=bool)
+        if clip_min is not None:
+            keep &= data >= float(clip_min)
+        if clip_max is not None:
+            keep &= data <= float(clip_max)
+        data = data[keep]
+        if data.size < 2:
+            return None
     if np.nanstd(data) <= _KDE_MIN_STD:
         return None
 
@@ -145,6 +185,10 @@ def _estimate_density_curve(
         std = float(np.nanstd(data))
         left = float(np.nanmin(data) - max(0.0, float(cut)) * std)
         right = float(np.nanmax(data) + max(0.0, float(cut)) * std)
+        if clip_min is not None:
+            left = max(left, float(clip_min))
+        if clip_max is not None:
+            right = min(right, float(clip_max))
         if not np.isfinite(left) or not np.isfinite(right) or right <= left:
             return None
 
@@ -174,7 +218,13 @@ def _estimate_density_curve(
             density = np.exp(kde.score_samples(grid.reshape(-1, 1)))
 
         density = np.clip(density, 0.0, None)
-        if log_transform:
+        if cumulative:
+            # Integrate the curve to a CDF normalised to 1 so the marginal
+            # panel can read cumulative probability instead of density.
+            dx = float(grid[1] - grid[0]) if grid.size > 1 else 0.0
+            total = float(np.nansum(density)) * dx
+            density = np.cumsum(density) * dx / total if total > 0.0 else density
+        elif log_transform:
             # Log + per-curve normalization prevents narrow spikes from dominating.
             density = np.log1p(density)
             peak = float(np.nanmax(density))
@@ -336,6 +386,9 @@ def draw_marginal_kde(
             'gridsize': int(app_state.marginal_kde_gridsize),
             'cut': float(app_state.marginal_kde_cut),
             'log_transform': bool(app_state.marginal_kde_log_transform),
+            'clip_min': app_state.marginal_kde_clip_min,
+            'clip_max': app_state.marginal_kde_clip_max,
+            'cumulative': bool(app_state.marginal_kde_cumulative),
         }
     )
     kde_alpha = float(style.get('alpha', 0.25))
@@ -348,6 +401,9 @@ def draw_marginal_kde(
     auto_bandwidth_method = _resolve_auto_bandwidth_method(
         style.get('auto_bandwidth_method', _KDE_AUTO_BW_METHOD_DEFAULT)
     )
+    clip_min = style.get('clip_min')
+    clip_max = style.get('clip_max')
+    cumulative = bool(style.get('cumulative', False))
     cut = max(0.0, min(float(style.get('cut', _KDE_CUT_DEFAULT)), 5.0))
     log_transform = bool(style.get('log_transform', False))
     max_points = max(200, min(max_points, 50000))
@@ -379,6 +435,9 @@ def draw_marginal_kde(
                 gridsize=gridsize,
                 cut=cut,
                 log_transform=log_transform,
+                clip_min=clip_min,
+                clip_max=clip_max,
+                cumulative=cumulative,
             )
             if curve_x is not None:
                 grid_x, density_x = curve_x
@@ -415,6 +474,9 @@ def draw_marginal_kde(
                 gridsize=gridsize,
                 cut=cut,
                 log_transform=log_transform,
+                clip_min=clip_min,
+                clip_max=clip_max,
+                cumulative=cumulative,
             )
             if curve_y is not None:
                 grid_y, density_y = curve_y

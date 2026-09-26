@@ -9,9 +9,11 @@ import numpy as np
 from core import app_state
 from visualization.line_styles import ensure_line_style
 from .. import kde as kde_utils
+from ..kde import kde_compute_kwargs
 from ..ternary import prepare_ternary_components
 
 logger = logging.getLogger(__name__)
+
 
 
 def _resolve_kde_style(target: str = 'kde') -> dict[str, Any]:
@@ -64,13 +66,14 @@ def _render_kde_overlay(
                     'levels': int(kde_style.get('levels', 10)),
                     'fill': kde_fill,
                     'alpha': float(kde_style.get('alpha', 0.6)),
-                    'warn_singular': False,
                     'legend': False,
                     'zorder': 1,
-                    # Normalize each group's density independently: with the
-                    # default common_norm=True a tight-spike group (extreme
-                    # data) scales down every other group's contours.
-                    'common_norm': False,
+                    # Bandwidth, grid, threshold, clip range and the
+                    # normalisation/singular-warning switches come from the KDE
+                    # computation options (per-group normalisation is the
+                    # default: with common_norm a tight-spike group scales down
+                    # every other group's contours).
+                    **kde_compute_kwargs(),
                 }
                 if not kde_fill:
                     # seaborn warns when 'linewidth' is passed to filled
@@ -91,12 +94,10 @@ def _render_kde_overlay(
                 'levels': int(kde_style.get('levels', 10)),
                 'fill': kde_fill,
                 'alpha': float(kde_style.get('alpha', 0.6)),
-                'warn_singular': False,
                 'legend': False,
                 'zorder': 1,
-                # Per-group normalization so extreme groups cannot flatten
-                # the contours of the others.
-                'common_norm': False,
+                # Per-group normalisation by default; see _kde_compute_kwargs.
+                **kde_compute_kwargs(),
             }
             if not kde_fill:
                 kde_kwargs['linewidths'] = float(kde_style.get('linewidth', 1.0))

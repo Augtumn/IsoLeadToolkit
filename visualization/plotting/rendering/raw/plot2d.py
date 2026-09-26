@@ -15,7 +15,7 @@ from ...grouping import resolve_group_marker
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
 from ..common.legend import _merge_parent_groups_for_inline, _place_inline_legend
 from ..common.state_access import _active_subset_indices, _df_global
-from ..kde import _resolve_kde_style
+from ..kde import _resolve_kde_style, kde_compute_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -148,12 +148,13 @@ def _render_2d_kde(
             'levels': int(kde_style.get('levels', 10)),
             'fill': kde_fill,
             'alpha': float(kde_style.get('alpha', 0.6)),
-            'warn_singular': False,
             'legend': False,
             'zorder': 1,
-            # Per-group normalization: seaborn's default common_norm=True
-            # lets one tight-spike group flatten every other group's KDE.
-            'common_norm': False,
+            # Bandwidth, grid, contour threshold, clip range and the
+            # normalisation / singular-warning switches come from the KDE
+            # computation options; per-group normalisation is the default so a
+            # tight-spike group cannot flatten every other group's KDE.
+            **kde_compute_kwargs(),
         }
         if not kde_fill:
             # seaborn warns when 'linewidth' is passed to filled contours;

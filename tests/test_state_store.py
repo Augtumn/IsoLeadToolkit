@@ -86,6 +86,17 @@ def _snapshot_state() -> dict[str, Any]:
         "marginal_kde_gridsize": int(getattr(app_state, "marginal_kde_gridsize", 256)),
         "marginal_kde_cut": float(getattr(app_state, "marginal_kde_cut", 1.0)),
         "marginal_kde_log_transform": bool(getattr(app_state, "marginal_kde_log_transform", False)),
+        "kde_bw_adjust": float(getattr(app_state, "kde_bw_adjust", 1.0)),
+        "kde_bw_method": str(getattr(app_state, "kde_bw_method", "scott")),
+        "kde_gridsize": int(getattr(app_state, "kde_gridsize", 200)),
+        "kde_thresh": float(getattr(app_state, "kde_thresh", 0.05)),
+        "kde_clip_min": getattr(app_state, "kde_clip_min", None),
+        "kde_clip_max": getattr(app_state, "kde_clip_max", None),
+        "kde_common_norm": bool(getattr(app_state, "kde_common_norm", False)),
+        "kde_warn_singular": bool(getattr(app_state, "kde_warn_singular", False)),
+        "marginal_kde_clip_min": getattr(app_state, "marginal_kde_clip_min", None),
+        "marginal_kde_clip_max": getattr(app_state, "marginal_kde_clip_max", None),
+        "marginal_kde_cumulative": bool(getattr(app_state, "marginal_kde_cumulative", False)),
         "selected_indices": set(getattr(app_state, "selected_indices", set()) or set()),
         "active_subset_indices": (
             set(getattr(app_state, "active_subset_indices", set()) or set())

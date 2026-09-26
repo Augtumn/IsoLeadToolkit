@@ -232,6 +232,37 @@ class AppStateGateway:
     def set_geo_model_name(self, model_name: str) -> None:
         self._dispatch("SET_GEO_MODEL_NAME", model_name=model_name)
 
+    def set_kde_compute_options(
+        self,
+        *,
+        bw_adjust: float | None = None,
+        bw_method: str | None = None,
+        gridsize: int | None = None,
+        thresh: float | None = None,
+        clip_min: float | None = None,
+        clip_max: float | None = None,
+        clear_clip: bool = False,
+        common_norm: bool | None = None,
+        warn_singular: bool | None = None,
+    ) -> None:
+        """Update the 2D KDE computation options.
+
+        ``clear_clip=True`` removes both clip bounds: the individual bounds use
+        ``None`` to mean "leave unchanged", so "unset" needs its own flag.
+        """
+        self._dispatch(
+            "SET_KDE_COMPUTE_OPTIONS",
+            bw_adjust=bw_adjust,
+            bw_method=bw_method,
+            gridsize=gridsize,
+            thresh=thresh,
+            clip_min=clip_min,
+            clip_max=clip_max,
+            clear_clip=bool(clear_clip),
+            common_norm=common_norm,
+            warn_singular=warn_singular,
+        )
+
     def set_marginal_kde_layout(
         self,
         *,
@@ -255,6 +286,10 @@ class AppStateGateway:
         gridsize: int | None = None,
         cut: float | None = None,
         log_transform: bool | None = None,
+        clip_min: float | None = None,
+        clip_max: float | None = None,
+        clear_clip: bool = False,
+        cumulative: bool | None = None,
     ) -> None:
         self._dispatch(
             "SET_MARGINAL_KDE_COMPUTE_OPTIONS",
@@ -266,6 +301,10 @@ class AppStateGateway:
             gridsize=gridsize,
             cut=cut,
             log_transform=log_transform,
+            clip_min=clip_min,
+            clip_max=clip_max,
+            clear_clip=bool(clear_clip),
+            cumulative=cumulative,
         )
 
     def set_point_size(self, point_size: int) -> None:

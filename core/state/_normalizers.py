@@ -38,6 +38,10 @@ MARGINAL_KDE_ALLOWED_KERNELS = (
     "linear",
     "cosine",
 )
+_KDE_THRESH_DEFAULT = 0.05
+_KDE_THRESH_MIN = 0.001
+_KDE_THRESH_MAX = 1.0
+
 MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD = "scott"
 MARGINAL_KDE_ALLOWED_AUTO_BANDWIDTH_METHODS = ("scott", "silverman")
 
@@ -248,6 +252,26 @@ def _normalize_gridsize(value: Any) -> int:
     return max(32, min(int(value), 1024))
 
 
+def _normalize_kde_thresh(value: Any) -> float:
+    """Iso-proportion threshold: seaborn rejects values outside (0, 1]."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return _KDE_THRESH_DEFAULT
+    return max(_KDE_THRESH_MIN, min(number, _KDE_THRESH_MAX))
+
+
+def _normalize_clip_bound(value: Any) -> float | None:
+    """Clip bound for KDE data/grids; ``None`` means unbounded."""
+    if value is None or value == "":
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number and abs(number) != float("inf") else None
+
+
 def _normalize_cut(value: Any) -> float:
     return max(0.0, min(float(value), 5.0))
 
@@ -446,6 +470,17 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.marginal_kde_gridsize = int(snapshot["marginal_kde_gridsize"])
     state.marginal_kde_cut = float(snapshot["marginal_kde_cut"])
     state.marginal_kde_log_transform = bool(snapshot["marginal_kde_log_transform"])
+    state.kde_bw_adjust = snapshot["kde_bw_adjust"]
+    state.kde_bw_method = snapshot["kde_bw_method"]
+    state.kde_gridsize = snapshot["kde_gridsize"]
+    state.kde_thresh = snapshot["kde_thresh"]
+    state.kde_clip_min = snapshot["kde_clip_min"]
+    state.kde_clip_max = snapshot["kde_clip_max"]
+    state.kde_common_norm = snapshot["kde_common_norm"]
+    state.kde_warn_singular = snapshot["kde_warn_singular"]
+    state.marginal_kde_clip_min = snapshot["marginal_kde_clip_min"]
+    state.marginal_kde_clip_max = snapshot["marginal_kde_clip_max"]
+    state.marginal_kde_cumulative = snapshot["marginal_kde_cumulative"]
 
     state.selected_indices = set(snapshot["selected_indices"])
     state.active_subset_indices = _normalize_active_subset_indices(
