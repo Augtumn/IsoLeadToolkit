@@ -13,12 +13,6 @@
 - [ ] **显式 train/valid/test 划分**与固定随机种子的可复现报告（现状只有 StratifiedKFold 交叉验证，无独立测试集）。
 - [ ] **per-label 判定阈值**搜索与结果导出。
 
-### 三元图局部放大（待真机验证）
-
-- [ ] **交互式局部放大**：几何纯函数（`similar_subtriangle_limits()` 等）与 Qt 事件过滤器已就位，离屏测试全部通过。2026-09-26 复查真机日志推翻了"零条 release"的旧结论——release 实际可达，症结是**事件双重投递**：应用级过滤器先收到 QWindow 原生副本、后收到画布副本，旧实现把首次不可映射的 release 当作手势取消并清掉 `_press`，导致画布副本变成空操作；另有一个面板 QCheckBox 被全局坐标回退误判为手势起点。两者已在 `ui/main_window_parts/canvas.py` 修复（QWindow 副本走 `globalPos()` 映射、无关 widget 直接拒绝、仅坐标可用时结束手势），并补回归测试（`tests/test_ternary_zoom_qt.py`）。**剩余：真实 GUI 下手工验证拖拽放大与向外拖还原。**
-
-  （原"每 ~0.8 秒整幅重绘"条目已于 2026-09-26 复查注销：最近四次运行日志中无失控循环，密集重绘均为滑块拖动经 350ms 防抖触发；当时伴随的 `ternary_render_margin` 网关外写入告警风暴系 sync 回写清单漏掉该字段所致，已修复。）
-
 ### 类型注解收口
 
 - [ ] 按 `docs/dev_conventions.md` §10「新增/重构函数必须标注」逐步补齐 `ui/` 与 `plugins/`。
