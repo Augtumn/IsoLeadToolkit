@@ -27,6 +27,19 @@ from ui.icons import apply_color_swatch
 from visualization.line_styles import ensure_line_style
 
 
+def _default_clip_bounds() -> tuple[float, float]:
+    """Clip-range defaults taken from the current axes limits."""
+    try:
+        ax = app_state.ax
+        x_low, x_high = ax.get_xlim()
+        y_low, y_high = ax.get_ylim()
+    except Exception:
+        return (0.0, 1.0)
+    low = min(float(x_low), float(y_low))
+    high = max(float(x_high), float(y_high))
+    return (low, high) if high > low else (0.0, 1.0)
+
+
 class DisplayPanelKdeStyleMixin:
     """KDE curve style handlers and dialog for the display panel."""
 
@@ -109,6 +122,15 @@ class DisplayPanelKdeStyleMixin:
         layout.addLayout(fill_row)
 
         levels_spin = None
+        kde_bw_method_combo = None
+        kde_bw_adjust_spin = None
+        kde_gridsize_spin = None
+        kde_thresh_spin = None
+        kde_clip_check = None
+        kde_clip_min_spin = None
+        kde_clip_max_spin = None
+        kde_common_norm_check = None
+        kde_warn_singular_check = None
         if target == 'kde':
             levels_row = QHBoxLayout()
             levels_row.addWidget(QLabel(translate("KDE Levels")))
@@ -119,6 +141,101 @@ class DisplayPanelKdeStyleMixin:
             levels_row.addStretch()
             layout.addLayout(levels_row)
 
+            computation_label = QLabel(translate("Density Computation"))
+            computation_label.setStyleSheet('font-weight: bold;')
+            layout.addWidget(computation_label)
+
+            bw_method_row = QHBoxLayout()
+            bw_method_row.addWidget(QLabel(translate("Bandwidth Method")))
+            kde_bw_method_combo = QComboBox()
+            kde_bw_method_combo.setObjectName('kde_bw_method_combo')
+            for method_name in ('scott', 'silverman'):
+                kde_bw_method_combo.addItem(method_name, method_name)
+            kde_bw_method_combo.setCurrentIndex(
+                max(0, kde_bw_method_combo.findData(str(app_state.kde_bw_method)))
+            )
+            bw_method_row.addWidget(kde_bw_method_combo)
+            bw_method_row.addStretch()
+            layout.addLayout(bw_method_row)
+
+            kde_bw_row = QHBoxLayout()
+            kde_bw_row.addWidget(QLabel(translate("Bandwidth Adjust")))
+            kde_bw_adjust_spin = QDoubleSpinBox()
+            kde_bw_adjust_spin.setObjectName('kde_bw_adjust_spin')
+            kde_bw_adjust_spin.setRange(0.05, 5.0)
+            kde_bw_adjust_spin.setSingleStep(0.05)
+            kde_bw_adjust_spin.setValue(float(app_state.kde_bw_adjust))
+            kde_bw_row.addWidget(kde_bw_adjust_spin)
+            kde_bw_row.addStretch()
+            layout.addLayout(kde_bw_row)
+
+            grid_row = QHBoxLayout()
+            grid_row.addWidget(QLabel(translate("Grid Size")))
+            kde_gridsize_spin = QSpinBox()
+            kde_gridsize_spin.setObjectName('kde_gridsize_spin')
+            kde_gridsize_spin.setRange(32, 1024)
+            kde_gridsize_spin.setSingleStep(32)
+            kde_gridsize_spin.setValue(int(app_state.kde_gridsize))
+            grid_row.addWidget(kde_gridsize_spin)
+            grid_row.addStretch()
+            layout.addLayout(grid_row)
+
+            thresh_row = QHBoxLayout()
+            thresh_row.addWidget(QLabel(translate("Contour Threshold")))
+            kde_thresh_spin = QDoubleSpinBox()
+            kde_thresh_spin.setObjectName('kde_thresh_spin')
+            kde_thresh_spin.setRange(0.001, 1.0)
+            kde_thresh_spin.setSingleStep(0.01)
+            kde_thresh_spin.setDecimals(3)
+            kde_thresh_spin.setValue(float(app_state.kde_thresh))
+            thresh_row.addWidget(kde_thresh_spin)
+            thresh_row.addStretch()
+            layout.addLayout(thresh_row)
+
+            kde_clip_check = QCheckBox(translate("Clip To Range"))
+            kde_clip_check.setObjectName('kde_clip_check')
+            kde_clip_min, kde_clip_max = _default_clip_bounds()
+            kde_clip_check.setChecked(
+                app_state.kde_clip_min is not None or app_state.kde_clip_max is not None
+            )
+            layout.addWidget(kde_clip_check)
+
+            kde_clip_row = QHBoxLayout()
+            kde_clip_row.addWidget(QLabel(translate("Clip Min")))
+            kde_clip_min_spin = QDoubleSpinBox()
+            kde_clip_min_spin.setObjectName('kde_clip_min_spin')
+            kde_clip_min_spin.setRange(-1.0e6, 1.0e6)
+            kde_clip_min_spin.setDecimals(3)
+            kde_clip_min_spin.setValue(
+                float(app_state.kde_clip_min)
+                if app_state.kde_clip_min is not None
+                else kde_clip_min
+            )
+            kde_clip_row.addWidget(kde_clip_min_spin)
+            kde_clip_row.addWidget(QLabel(translate("Clip Max")))
+            kde_clip_max_spin = QDoubleSpinBox()
+            kde_clip_max_spin.setObjectName('kde_clip_max_spin')
+            kde_clip_max_spin.setRange(-1.0e6, 1.0e6)
+            kde_clip_max_spin.setDecimals(3)
+            kde_clip_max_spin.setValue(
+                float(app_state.kde_clip_max)
+                if app_state.kde_clip_max is not None
+                else kde_clip_max
+            )
+            kde_clip_row.addWidget(kde_clip_max_spin)
+            kde_clip_row.addStretch()
+            layout.addLayout(kde_clip_row)
+
+            kde_common_norm_check = QCheckBox(translate("Common Normalization"))
+            kde_common_norm_check.setObjectName('kde_common_norm_check')
+            kde_common_norm_check.setChecked(bool(app_state.kde_common_norm))
+            layout.addWidget(kde_common_norm_check)
+
+            kde_warn_singular_check = QCheckBox(translate("Warn When Singular"))
+            kde_warn_singular_check.setObjectName('kde_warn_singular_check')
+            kde_warn_singular_check.setChecked(bool(app_state.kde_warn_singular))
+            layout.addWidget(kde_warn_singular_check)
+
         top_size_spin = None
         right_size_spin = None
         max_points_spin = None
@@ -128,6 +245,10 @@ class DisplayPanelKdeStyleMixin:
         auto_bw_method_combo = None
         cut_spin = None
         log_transform_check = None
+        marginal_clip_check = None
+        marginal_clip_min_spin = None
+        marginal_clip_max_spin = None
+        marginal_cumulative_check = None
         if target == 'marginal_kde':
             top_row = QHBoxLayout()
             top_row.addWidget(QLabel(translate("Top KDE Height (%)")))
@@ -260,6 +381,49 @@ class DisplayPanelKdeStyleMixin:
             log_row.addStretch()
             layout.addLayout(log_row)
 
+            marginal_clip_check = QCheckBox(translate("Clip To Range"))
+            marginal_clip_check.setObjectName('marginal_clip_check')
+            marginal_clip_min, marginal_clip_max = _default_clip_bounds()
+            marginal_clip_check.setChecked(
+                app_state.marginal_kde_clip_min is not None
+                or app_state.marginal_kde_clip_max is not None
+            )
+            layout.addWidget(marginal_clip_check)
+
+            marginal_clip_row = QHBoxLayout()
+            marginal_clip_row.addWidget(QLabel(translate("Clip Min")))
+            marginal_clip_min_spin = QDoubleSpinBox()
+            marginal_clip_min_spin.setObjectName('marginal_clip_min_spin')
+            marginal_clip_min_spin.setRange(-1.0e6, 1.0e6)
+            marginal_clip_min_spin.setDecimals(3)
+            marginal_clip_min_spin.setValue(
+                float(app_state.marginal_kde_clip_min)
+                if app_state.marginal_kde_clip_min is not None
+                else marginal_clip_min
+            )
+            marginal_clip_row.addWidget(marginal_clip_min_spin)
+            marginal_clip_row.addWidget(QLabel(translate("Clip Max")))
+            marginal_clip_max_spin = QDoubleSpinBox()
+            marginal_clip_max_spin.setObjectName('marginal_clip_max_spin')
+            marginal_clip_max_spin.setRange(-1.0e6, 1.0e6)
+            marginal_clip_max_spin.setDecimals(3)
+            marginal_clip_max_spin.setValue(
+                float(app_state.marginal_kde_clip_max)
+                if app_state.marginal_kde_clip_max is not None
+                else marginal_clip_max
+            )
+            marginal_clip_row.addWidget(marginal_clip_max_spin)
+            marginal_clip_row.addStretch()
+            layout.addLayout(marginal_clip_row)
+
+            cumulative_row = QHBoxLayout()
+            marginal_cumulative_check = QCheckBox(translate("Cumulative Distribution"))
+            marginal_cumulative_check.setObjectName('marginal_cumulative_check')
+            marginal_cumulative_check.setChecked(bool(app_state.marginal_kde_cumulative))
+            cumulative_row.addWidget(marginal_cumulative_check)
+            cumulative_row.addStretch()
+            layout.addLayout(cumulative_row)
+
         buttons_row = QHBoxLayout()
         buttons_row.addStretch()
         cancel_button = QPushButton(translate("Cancel"))
@@ -268,6 +432,22 @@ class DisplayPanelKdeStyleMixin:
         save_button = QPushButton(translate("Save"))
 
         def _apply():
+            if kde_clip_check is not None and kde_clip_check.isChecked():
+                if float(kde_clip_max_spin.value()) <= float(kde_clip_min_spin.value()):
+                    QMessageBox.warning(
+                        dialog,
+                        translate("Warning"),
+                        translate("Clip maximum must exceed the clip minimum."),
+                    )
+                    return
+            if marginal_clip_check is not None and marginal_clip_check.isChecked():
+                if float(marginal_clip_max_spin.value()) <= float(marginal_clip_min_spin.value()):
+                    QMessageBox.warning(
+                        dialog,
+                        translate("Warning"),
+                        translate("Clip maximum must exceed the clip minimum."),
+                    )
+                    return
             current_styles = dict(app_state.line_styles or {})
             style_ref = dict(current_styles.get(style_key, {}) or {})
             style_ref['alpha'] = float(alpha_spin.value())
@@ -275,6 +455,22 @@ class DisplayPanelKdeStyleMixin:
             style_ref['fill'] = bool(fill_checkbox.isChecked())
             if target == 'kde' and levels_spin is not None:
                 style_ref['levels'] = int(levels_spin.value())
+            if target == 'kde':
+                state_gateway.set_kde_compute_options(
+                    bw_adjust=float(kde_bw_adjust_spin.value()),
+                    bw_method=str(kde_bw_method_combo.currentData() or 'scott'),
+                    gridsize=int(kde_gridsize_spin.value()),
+                    thresh=float(kde_thresh_spin.value()),
+                    common_norm=bool(kde_common_norm_check.isChecked()),
+                    warn_singular=bool(kde_warn_singular_check.isChecked()),
+                )
+                if kde_clip_check.isChecked():
+                    state_gateway.set_kde_compute_options(
+                        clip_min=float(kde_clip_min_spin.value()),
+                        clip_max=float(kde_clip_max_spin.value()),
+                    )
+                else:
+                    state_gateway.set_kde_compute_options(clear_clip=True)
             if target == 'marginal_kde':
                 if top_size_spin is not None:
                     state_gateway.set_marginal_kde_layout(top_size=float(top_size_spin.value()))
@@ -309,6 +505,23 @@ class DisplayPanelKdeStyleMixin:
                     style_ref['log_transform'] = bool(log_transform_check.isChecked())
                     state_gateway.set_marginal_kde_compute_options(
                         log_transform=bool(log_transform_check.isChecked())
+                    )
+                if marginal_clip_check is not None:
+                    if marginal_clip_check.isChecked():
+                        style_ref['clip_min'] = float(marginal_clip_min_spin.value())
+                        style_ref['clip_max'] = float(marginal_clip_max_spin.value())
+                        state_gateway.set_marginal_kde_compute_options(
+                            clip_min=float(marginal_clip_min_spin.value()),
+                            clip_max=float(marginal_clip_max_spin.value()),
+                        )
+                    else:
+                        style_ref['clip_min'] = None
+                        style_ref['clip_max'] = None
+                        state_gateway.set_marginal_kde_compute_options(clear_clip=True)
+                if marginal_cumulative_check is not None:
+                    style_ref['cumulative'] = bool(marginal_cumulative_check.isChecked())
+                    state_gateway.set_marginal_kde_compute_options(
+                        cumulative=bool(marginal_cumulative_check.isChecked())
                     )
             current_styles[style_key] = style_ref
             state_gateway.set_line_styles(current_styles)

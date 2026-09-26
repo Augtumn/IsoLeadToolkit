@@ -863,5 +863,16 @@
   "Parent group '{name}' already exists.": "父组“{name}”已存在。",
   "V1V2": "地化-V1V2判别图",
   "tSNE": "t-SNE",
-  "Unknown error": "未知错误"
+  "Unknown error": "未知错误",
+  "Bandwidth Method": "带宽方法",
+  "Clip Max": "裁剪上限",
+  "Clip Min": "裁剪下限",
+  "Clip To Range": "按范围裁剪",
+  "Clip maximum must exceed the clip minimum.": "裁剪上限必须大于裁剪下限。",
+  "Common Normalization": "统一归一化",
+  "Contour Threshold": "等高线阈值",
+  "Cumulative Distribution": "累积分布",
+  "Density Computation": "密度计算",
+  "Grid Size": "网格点数",
+  "Warn When Singular": "奇异数据告警"
 }

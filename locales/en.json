@@ -863,5 +863,16 @@
   "Parent group '{name}' already exists.": "Parent group '{name}' already exists.",
   "V1V2": "V1-V2 Diagram",
   "tSNE": "t-SNE",
-  "Unknown error": "Unknown error"
+  "Unknown error": "Unknown error",
+  "Bandwidth Method": "Bandwidth Method",
+  "Clip Max": "Clip Max",
+  "Clip Min": "Clip Min",
+  "Clip To Range": "Clip To Range",
+  "Clip maximum must exceed the clip minimum.": "Clip maximum must exceed the clip minimum.",
+  "Common Normalization": "Common Normalization",
+  "Contour Threshold": "Contour Threshold",
+  "Cumulative Distribution": "Cumulative Distribution",
+  "Density Computation": "Density Computation",
+  "Grid Size": "Grid Size",
+  "Warn When Singular": "Warn When Singular"
 }

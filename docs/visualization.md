@@ -395,6 +395,25 @@ def get_embedding(algorithm, ...) -> np.ndarray | None
 2. 地球化学绘图依赖 Pb 同位素列与可选年龄列。
 3. 三元图要求三列且支持拉伸模式。
 
+**KDE 参数（Display 段「Kernel Density」色板 → 样式对话框）:**
+
+2D KDE（`kde_compute_kwargs()`，渲染前从状态读取）：
+
+| 参数 | 状态字段 | 作用 |
+|---|---|---|
+| `bw_adjust` (0.05–5) | `kde_bw_adjust` | 带宽缩放：越大越平滑 |
+| `bw_method` (scott/silverman) | `kde_bw_method` | 自动带宽估计方法 |
+| `gridsize` (32–1024) | `kde_gridsize` | 等高线网格分辨率 |
+| `thresh` (0.001–1) | `kde_thresh` | 最低等密度比例阈值 |
+| `clip` (min, max) | `kde_clip_min` / `kde_clip_max` | 裁剪范围（两端均设置且上限更大时才生效） |
+| `common_norm` | `kde_common_norm` | 统一归一化（默认关闭：按组独立归一化） |
+| `warn_singular` | `kde_warn_singular` | 数据不足以估计密度时告警 |
+
+边际 KDE（1D 曲线，`_estimate_density_curve`）除上表相关的带宽/网格/裁剪外还有：`kernel`
+（gaussian/tophat/epanechnikov/exponential/linear/cosine）、`bandwidth`（0 = 自动）、
+`auto_bandwidth_method`、`cut`（网格外扩标准差的倍数）、`log_transform`（对数压缩尖峰）、
+`cumulative`（累积分布）、`max_points`（抽样上限）与上/右面板宽度百分比。
+
 **常用开关字段:**
 1. `show_kde` / `show_marginal_kde` 控制 KDE 叠加。
 2. `show_model_curves` / `show_isochrons` / `show_paleoisochrons` 控制地球化学叠加。
