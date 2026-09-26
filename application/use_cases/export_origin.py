@@ -528,6 +528,150 @@ def _extract_equation_overlays(
 #  Sheet name helpers
 # ═══════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════
+#  Origin-ready data export (works without originpro/COM automation)
+# ═══════════════════════════════════════════════════════════════════════
+
+#: Guard against pathological views producing hundreds of worksheets.
+_MAX_ORIGIN_SHEETS = 60
+
+
+def _origin_frame_columns(axis_labels: dict[str, str]) -> tuple[str, str, str]:
+    """Column headers for scatter sheets, avoiding duplicates."""
+    x_name = str(axis_labels.get("x") or "X").strip() or "X"
+    y_name = str(axis_labels.get("y") or "Y").strip() or "Y"
+    z_name = str(axis_labels.get("z") or "Z").strip() or "Z"
+    if x_name == y_name:
+        x_name, y_name = "X", "Y"
+    return x_name, y_name, z_name
+
+
+def _origin_group_frame(
+    group: dict[str, Any], is_ternary: bool, axis_labels: dict[str, str]
+) -> "Any":
+    """Build one worksheet frame for a scatter group."""
+    import pandas as pd
+
+    if is_ternary:
+        columns = list(axis_labels.get("ternary_cols") or ["Top", "Left", "Right"])
+        while len(columns) < 3:
+            columns.append(["Top", "Left", "Right"][len(columns)])
+        return pd.DataFrame(
+            {
+                columns[0]: group.get("t", []),
+                columns[1]: group.get("l", []),
+                columns[2]: group.get("r", []),
+            }
+        )
+
+    x_name, y_name, z_name = _origin_frame_columns(axis_labels)
+    frame = pd.DataFrame({x_name: group.get("x", []), y_name: group.get("y", [])})
+    if group.get("z") is not None and len(group.get("z") or []) == len(frame):
+        frame[z_name] = group["z"]
+    return frame
+
+
+def _origin_info_frame(data: dict[str, Any]) -> "Any":
+    """Worksheet describing the exported view and how to import it."""
+    import pandas as pd
+    from datetime import datetime
+
+    rows = [
+        ("Export", "IsotopesAnalyse - Origin-ready data"),
+        ("Exported at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        ("Render mode", data["mode"]),
+        ("Plot title", data["title"]),
+        ("X label", data["axis_labels"].get("x", "")),
+        ("Y label", data["axis_labels"].get("y", "")),
+        ("Scatter series", len(data["scatter_groups"])),
+        ("Overlay series", sum(len(v) for v in data["overlay_data"].values())),
+        ("Isochron series", len(data["isochron_lines"])),
+        ("Equation overlays", len(data["equation_lines"])),
+        (
+            "How to import",
+            "Origin: File > Import > Excel, then select the X/Y columns and plot. "
+            "Each sheet is one series; the Info sheet is for reference only.",
+        ),
+    ]
+    return pd.DataFrame(rows, columns=["Item", "Value"])
+
+
+def export_origin_ready_data(file_path: str) -> bool:
+    """Write the current view as an Origin-importable Excel workbook.
+
+    Used when ``originpro`` (COM automation) is unavailable: one worksheet per
+    series with the current axis labels as column headers, plus an Info sheet.
+    """
+    import pandas as pd
+
+    ax = app_state.ax
+    if ax is None:
+        logger.warning("Origin-ready data export requested without axes.")
+        return False
+
+    try:
+        data = collect_origin_export_data(ax)
+    except Exception as err:
+        logger.warning("Origin-ready data export failed during extraction: %s", err)
+        return False
+
+    if not data["scatter_groups"]:
+        logger.warning("No scatter data available for Origin-ready data export.")
+        return False
+
+    used: set[str] = set()
+    is_ternary = bool(data["is_ternary"])
+    try:
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            _origin_info_frame(data).to_excel(writer, sheet_name="Info", index=False)
+            used.add("Info")
+
+            for group in data["scatter_groups"]:
+                name = _origin_sheet_name(str(group.get("label") or "group"), "", used)
+                _origin_group_frame(group, is_ternary, data["axis_labels"]).to_excel(
+                    writer, sheet_name=name, index=False
+                )
+
+            overlay_sheets = 0
+            for curves in data["overlay_data"].values():
+                for x_arr, y_arr, curve_label, _style in curves:
+                    if len(used) >= _MAX_ORIGIN_SHEETS:
+                        logger.warning("Origin-ready export: sheet limit reached.")
+                        break
+                    name = _origin_sheet_name(str(curve_label), "OV_", used)
+                    pd.DataFrame({"X": x_arr, "Y": y_arr}).to_excel(
+                        writer, sheet_name=name, index=False
+                    )
+                    overlay_sheets += 1
+
+            for iso in data["isochron_lines"]:
+                if len(used) >= _MAX_ORIGIN_SHEETS:
+                    break
+                name = _origin_sheet_name(str(iso.get("label") or "isochron"), "ISO_", used)
+                pd.DataFrame({"X": iso["x"], "Y": iso["y"]}).to_excel(
+                    writer, sheet_name=name, index=False
+                )
+
+            for eq in data["equation_lines"]:
+                if len(used) >= _MAX_ORIGIN_SHEETS:
+                    break
+                name = _origin_sheet_name(str(eq.get("label") or "equation"), "EQ_", used)
+                pd.DataFrame({"X": eq["x"], "Y": eq["y"]}).to_excel(
+                    writer, sheet_name=name, index=False
+                )
+    except Exception as err:
+        logger.warning("Origin-ready data export failed while writing: %s", err)
+        return False
+
+    logger.info(
+        "Origin-ready data exported to %s (%d sheets, %d overlay series)",
+        file_path,
+        len(used),
+        overlay_sheets,
+    )
+    return True
+
+
 def _origin_sheet_name(label: str, prefix: str, used: set[str], max_len: int = 28) -> str:
     """Generate a unique, Origin-safe sheet name from *label* with prefix."""
     # Origin forbids [] * ? \ in sheet names; strip them along with
@@ -801,42 +945,71 @@ def _build_origin_project(
 def export_to_origin(file_path: str) -> bool:
     """Export the current plot to an Origin project (.opju) and companion PNG.
 
-    Dispatches extraction logic based on ``app_state.render_mode``
-    so that every supported plot mode produces appropriate data sheets
-    and overlay layers.
-
-    Returns True on success, False on failure.
+    Returns True on success. Use :func:`export_to_origin_detailed` when the
+    caller wants to show *why* an export failed.
     """
+    ok, _reason = export_to_origin_detailed(file_path)
+    return ok
+
+
+def export_to_origin_detailed(file_path: str) -> tuple[bool, str]:
+    """Export to Origin and return ``(ok, reason)``; *reason* is empty on success."""
     op = _lazy_import_originpro()
     if op is None:
         logger.warning("Origin export requested but originpro is not installed.")
-        return False
+        return False, "originpro is not installed"
 
     ax = app_state.ax
     if ax is None:
         logger.warning("No axes available for Origin export.")
-        return False
+        return False, "no axes to export"
 
     try:
-        return _extract_and_build_origin_project(file_path, ax)
+        data = collect_origin_export_data(ax)
     except Exception as err:
-        # Extraction must never crash the app: log and report failure.
         logger.warning("Origin export failed during extraction: %s", err)
-        return False
+        return False, f"data extraction failed: {err}"
+
+    if not data["scatter_groups"]:
+        logger.warning("No scatter data extracted from axes for Origin export.")
+        return False, "no scatter data in the current view"
+
+    try:
+        ok = _build_origin_project(
+            file_path,
+            data["scatter_groups"],
+            data["axis_labels"],
+            data["overlay_data"],
+            isochron_lines=data["isochron_lines"],
+            equation_lines=data["equation_lines"],
+            is_ternary=data["is_ternary"],
+            title=data["title"],
+        )
+    except Exception as err:
+        logger.warning("Origin export failed while building the project: %s", err)
+        return False, f"Origin automation failed: {err}"
+
+    if not ok:
+        return False, "Origin refused to build the project (is Origin running?)"
+    return True, ""
 
 
-def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
-    """Extract plot data for the current render mode and build the project."""
-    mode = str(app_state.render_mode).upper()
-    logger.info("Origin export: render_mode=%s", mode)
+def collect_origin_export_data(ax: Any, mode: str | None = None) -> dict[str, Any]:
+    """Collect every series of the current view for Origin export.
+
+    Pure matplotlib/app_state extraction - no ``originpro`` required - so the same
+    data feeds both the ``.opju`` project builder and the Excel fallback.
+    """
+    render_mode = str(mode if mode is not None else app_state.render_mode).upper()
+    logger.info("Origin export: render_mode=%s", render_mode)
 
     # ── scatter data ──────────────────────────────────────────────
     scatter_groups: list[dict[str, Any]] = []
     is_ternary = False
 
-    if mode == "3D":
+    if render_mode == "3D":
         scatter_groups = _extract_scatter_groups_3d(ax)
-    elif mode == "TERNARY":
+    elif render_mode == "TERNARY":
         scatter_groups = _extract_ternary_data(ax)
         is_ternary = True
     else:
@@ -851,10 +1024,6 @@ def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
         len(getattr(ax, "collections", [])),
     )
 
-    if not scatter_groups:
-        logger.warning("No scatter data extracted from axes for Origin export.")
-        return False
-
     # ── axis labels ───────────────────────────────────────────────
     axis_labels = {
         "x": str(ax.get_xlabel() or ""),
@@ -862,7 +1031,7 @@ def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
     }
     if is_ternary:
         # Merge, do not overwrite: the ternary branch above set the user's
-        # ternary column names and they must reach _build_origin_project.
+        # ternary column names and they must reach the project builder.
         axis_labels["ternary_cols"] = getattr(
             app_state, "selected_ternary_cols", ["Top", "Left", "Right"]
         )
@@ -878,60 +1047,62 @@ def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
     # Modes that include plumbotectonics curves
     _plumbo_modes = {"PLUMBOTECTONICS_76", "PLUMBOTECTONICS_86"}
 
-    if mode in _pb_geo_modes:
+    def _x_limits() -> tuple[float, float]:
         try:
             xlim = ax.get_xlim()
-            x_min, x_max = float(xlim[0]), float(xlim[1])
+            return float(xlim[0]), float(xlim[1])
         except Exception:
-            x_min, x_max = 0.0, 45.0
-        overlay_data.update(_extract_pb_evolution_overlay_data(mode, (x_min, x_max)))
+            return 0.0, 45.0
+
+    if render_mode in _pb_geo_modes:
+        overlay_data.update(_extract_pb_evolution_overlay_data(render_mode, _x_limits()))
         logger.info(
-            "Origin export: Pb-evolution overlays — categories=%s, entries=%d",
+            "Origin export: Pb-evolution overlays - categories=%s, entries=%d",
             list(overlay_data.keys()),
             sum(len(v) for v in overlay_data.values()),
         )
-
-        # Isochron regression lines
         if app_state.show_isochrons:
             isochron_lines = _extract_isochron_lines(ax)
             logger.info("Origin export: %d isochron lines extracted", len(isochron_lines))
-
-        # Equation overlays
         if app_state.show_equation_overlays:
-            try:
-                xlim = ax.get_xlim()
-                x_min, x_max = float(xlim[0]), float(xlim[1])
-            except Exception:
-                x_min, x_max = 0.0, 45.0
-            equation_lines = _extract_equation_overlays(ax, x_min, x_max)
+            equation_lines = _extract_equation_overlays(ax, *_x_limits())
 
-    if mode in _plumbo_modes:
-        overlay_data.update(_extract_plumbotectonics_curves(mode))
+    if render_mode in _plumbo_modes:
+        overlay_data.update(_extract_plumbotectonics_curves(render_mode))
         logger.info(
-            "Origin export: plumbotectonics overlays — categories=%s, entries=%d",
+            "Origin export: plumbotectonics overlays - categories=%s, entries=%d",
             list(overlay_data.keys()),
             sum(len(v) for v in overlay_data.values()),
         )
+        if app_state.show_equation_overlays:
+            equation_lines = _extract_equation_overlays(ax, *_x_limits())
 
-    # PLUMBOTECTONICS modes may also include equation overlays
-    if mode in _plumbo_modes and app_state.show_equation_overlays:
-        try:
-            xlim = ax.get_xlim()
-            x_min, x_max = float(xlim[0]), float(xlim[1])
-        except Exception:
-            x_min, x_max = 0.0, 45.0
-        equation_lines = _extract_equation_overlays(ax, x_min, x_max)
+    return {
+        "mode": render_mode,
+        "is_ternary": is_ternary,
+        "scatter_groups": scatter_groups,
+        "axis_labels": axis_labels,
+        "overlay_data": overlay_data,
+        "isochron_lines": isochron_lines,
+        "equation_lines": equation_lines,
+        "title": str(getattr(app_state, "current_plot_title", "") or ""),
+    }
 
-    # ── title ─────────────────────────────────────────────────────
-    title = str(getattr(app_state, "current_plot_title", "") or "")
+
+def _extract_and_build_origin_project(file_path: str, ax: Any) -> bool:
+    """Extract plot data for the current render mode and build the project."""
+    data = collect_origin_export_data(ax)
+    if not data["scatter_groups"]:
+        logger.warning("No scatter data extracted from axes for Origin export.")
+        return False
 
     return _build_origin_project(
         file_path,
-        scatter_groups,
-        axis_labels,
-        overlay_data,
-        isochron_lines=isochron_lines,
-        equation_lines=equation_lines,
-        is_ternary=is_ternary,
-        title=title,
+        data["scatter_groups"],
+        data["axis_labels"],
+        data["overlay_data"],
+        isochron_lines=data["isochron_lines"],
+        equation_lines=data["equation_lines"],
+        is_ternary=data["is_ternary"],
+        title=data["title"],
     )
