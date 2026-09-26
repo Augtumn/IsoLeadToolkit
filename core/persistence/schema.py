@@ -81,7 +81,7 @@ UI_STATE_FIELDS: frozenset[str] = frozenset({
     "ternary_auto_zoom", "ternary_limit_mode", "ternary_limit_anchor",
     "ternary_boundary_percent", "ternary_manual_limits",
     "ternary_manual_limits_enabled", "ternary_stretch", "ternary_stretch_mode",
-    "ternary_factors", "ternary_ranges",
+    "ternary_factors", "ternary_ranges", "ternary_render_margin",
     # KDE
     "marginal_kde_bandwidth", "marginal_kde_bw_adjust", "marginal_kde_kernel",
     "marginal_kde_auto_bandwidth_method", "marginal_kde_gridsize",

@@ -302,29 +302,14 @@ def _normalize_ternary_limit_anchor(anchor: Any) -> str:
     return text if text in ("min", "max") else "min"
 
 
-def _normalize_ternary_boundary_percent(percent: Any) -> float:
-    return max(0.0, min(float(percent if percent is not None else 5.0), 30.0))
-
-
-def _normalize_ternary_manual_limits(limits: Any) -> dict[str, float]:
-    defaults = {
-        "tmin": 0.0,
-        "tmax": 1.0,
-        "lmin": 0.0,
-        "lmax": 1.0,
-        "rmin": 0.0,
-        "rmax": 1.0,
-    }
-    merged = dict(defaults)
-    if isinstance(limits, dict):
-        for key, value in limits.items():
-            if key in merged and value is not None:
-                merged[key] = max(0.0, min(float(value), 1.0))
-    return merged
-
-
-def _normalize_ternary_render_margin(margin: Any) -> float:
-    return max(0.0, min(float(margin if margin is not None else 0.002), 0.05))
+# The ternary coercers live with their declarations in core/state/fields.py;
+# they stay importable from here for the dispatch handlers.
+from core.state.fields import (  # noqa: E402  (re-export)
+    sync_fields,
+    _normalize_ternary_boundary_percent,
+    _normalize_ternary_manual_limits,
+    _normalize_ternary_render_margin,
+)
 
 
 # ── Sync logic ─────────────────────────────────────────────────────────
@@ -547,16 +532,7 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.standardize_data = bool(snapshot["standardize_data"])
     state.initial_render_done = bool(snapshot["initial_render_done"])
     state.pca_component_indices = list(snapshot["pca_component_indices"])
-    state.ternary_auto_zoom = bool(snapshot["ternary_auto_zoom"])
-    state.ternary_limit_mode = str(snapshot["ternary_limit_mode"])
-    state.ternary_limit_anchor = str(snapshot["ternary_limit_anchor"])
-    state.ternary_boundary_percent = float(snapshot["ternary_boundary_percent"])
-    state.ternary_manual_limits_enabled = bool(snapshot["ternary_manual_limits_enabled"])
-    state.ternary_manual_limits = dict(snapshot["ternary_manual_limits"])
-    state.ternary_render_margin = float(snapshot["ternary_render_margin"])
-    state.ternary_stretch_mode = str(snapshot["ternary_stretch_mode"])
-    state.ternary_stretch = bool(snapshot["ternary_stretch"])
-    state.ternary_factors = list(snapshot["ternary_factors"] or [])
+    sync_fields(state, snapshot)
     state.overlay.model_curve_width = float(snapshot["model_curve_width"])
     state.overlay.plumbotectonics_curve_width = float(
         snapshot["plumbotectonics_curve_width"]

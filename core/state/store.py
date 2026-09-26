@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from ._dispatch_handlers import dispatch_action
+from .fields import snapshot_from_state, snapshot_from_store
 from ._normalizers import (
     _normalize_active_subset_indices,
     _normalize_adjust_text_iter_lim,
@@ -25,11 +26,8 @@ from ._normalizers import (
     _normalize_plot_marker_alpha,
     _normalize_plot_marker_size,
     _normalize_style_linewidth,
-    _normalize_ternary_boundary_percent,
     _normalize_ternary_limit_anchor,
     _normalize_ternary_limit_mode,
-    _normalize_ternary_manual_limits,
-    _normalize_ternary_render_margin,
     _normalize_text_pad,
     _normalize_text_weight,
     _normalize_tick_direction,
@@ -506,28 +504,7 @@ class StateStore:
             "pca_component_indices": _normalize_pca_component_indices(
                 getattr(state, "pca_component_indices", None)
             ),
-            "ternary_auto_zoom": bool(getattr(state, "ternary_auto_zoom", True)),
-            "ternary_limit_mode": _normalize_ternary_limit_mode(
-                getattr(state, "ternary_limit_mode", "min")
-            ),
-            "ternary_limit_anchor": _normalize_ternary_limit_anchor(
-                getattr(state, "ternary_limit_anchor", "min")
-            ),
-            "ternary_boundary_percent": _normalize_ternary_boundary_percent(
-                getattr(state, "ternary_boundary_percent", 5.0)
-            ),
-            "ternary_manual_limits_enabled": bool(
-                getattr(state, "ternary_manual_limits_enabled", False)
-            ),
-            "ternary_manual_limits": _normalize_ternary_manual_limits(
-                getattr(state, "ternary_manual_limits", None)
-            ),
-            "ternary_render_margin": _normalize_ternary_render_margin(
-                getattr(state, "ternary_render_margin", 0.002)
-            ),
-            "ternary_stretch_mode": str(getattr(state, "ternary_stretch_mode", "power") or "power"),
-            "ternary_stretch": bool(getattr(state, "ternary_stretch", False)),
-            "ternary_factors": list(getattr(state, "ternary_factors", [1.0, 1.0, 1.0]) or [1.0, 1.0, 1.0]),
+            **snapshot_from_state(state),
             "model_curve_width": float(getattr(state, "model_curve_width", 1.2)),
             "plumbotectonics_curve_width": float(getattr(state, "plumbotectonics_curve_width", 1.2)),
             "paleoisochron_width": float(getattr(state, "paleoisochron_width", 0.9)),
@@ -859,16 +836,7 @@ class StateStore:
             "standardize_data": bool(self._snapshot["standardize_data"]),
             "initial_render_done": bool(self._snapshot["initial_render_done"]),
             "pca_component_indices": list(self._snapshot["pca_component_indices"]),
-            "ternary_auto_zoom": bool(self._snapshot["ternary_auto_zoom"]),
-            "ternary_limit_mode": str(self._snapshot["ternary_limit_mode"]),
-            "ternary_limit_anchor": str(self._snapshot["ternary_limit_anchor"]),
-            "ternary_boundary_percent": float(self._snapshot["ternary_boundary_percent"]),
-            "ternary_manual_limits_enabled": bool(self._snapshot["ternary_manual_limits_enabled"]),
-            "ternary_manual_limits": dict(self._snapshot["ternary_manual_limits"]),
-            "ternary_render_margin": float(self._snapshot["ternary_render_margin"]),
-            "ternary_stretch_mode": str(self._snapshot["ternary_stretch_mode"]),
-            "ternary_stretch": bool(self._snapshot["ternary_stretch"]),
-            "ternary_factors": list(self._snapshot["ternary_factors"]),
+            **snapshot_from_store(self._snapshot),
             "model_curve_width": float(self._snapshot["model_curve_width"]),
             "plumbotectonics_curve_width": float(self._snapshot["plumbotectonics_curve_width"]),
             "paleoisochron_width": float(self._snapshot["paleoisochron_width"]),

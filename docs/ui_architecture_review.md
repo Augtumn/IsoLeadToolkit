@@ -53,7 +53,7 @@
 
 | 项 | 内容 | 状态 |
 |---|---|---|
-| **A** | 声明式状态字段注册表（消灭漏登记类 bug） | 守卫已落地（`check_state_sync_coverage.py`，探测 174 字段）；注册表本身待做 |
+| **A** | 声明式状态字段注册表（消灭漏登记类 bug） | **已完成（基线组）**：`core/state/fields.py` 声明 10 个 ternary/limit 字段，初始快照、投影、回写、持久化白名单四处由声明派生；守卫 `check_state_sync_coverage.py` 探测 174 字段；`tests/test_state_fields.py` 16 例。迁移中顺带发现并修复 `ternary_render_margin` **未纳入持久化白名单**（跨会话丢失） |
 | **B** | 组合根 + 显式依赖 + `tests/conftest.py` 主窗口夹具 | 待做 |
 | **C** | 图例单一真源（面板列表为模型，图内图例/zorder 为投影） | 待做 |
 | **D** | 统一输入管线并写入 `docs/dev_conventions.md` | 待做 |
