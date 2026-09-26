@@ -1119,8 +1119,9 @@ tests/
 3. 关键重构需提供性能与行为一致性说明。
 6. **守卫脚本**（`scripts/`，均支持 `--fail-on-hits`，输出 `TOTAL=n`，由 `tests/test_guards.py` 执行）：
    - `check_state_mutations.py` / `check_state_dict_mutations.py` / `check_gateway_*`：状态直写与网关通用写入；
-   - `check_panel_self_resolution.py`：面板/mixin 中每个 `self.<名字>()` 必须能在其所属面板的 MRO 中解析。
-     专防「mixin 迁移到别的段后仍调用原段助手」这类只有用户点击时才暴露的崩溃（离屏构建测试覆盖不到）。
+   - `check_panel_self_resolution.py`：面板/mixin 中每个 `self.<名字>()` 必须能在其所属面板的 MRO 中解析，
+     且**实参数量必须与签名匹配**（静态方法不额外计入实例参数）。专防「mixin 迁移到别的段后仍调用原段助手」
+     与「抽方法时丢了 `self`」这类只有用户点击时才暴露的崩溃（离屏构建测试覆盖不到）。
 4. 重组/精简测试时，用 `pytest --collect-only` 的用例集合（或 AST 提取的测试函数名集合）
    做前后比对，确保**用例零丢失**后再提交。
 5. **离屏测试的边界**：面板构建类测试（`panel.build()`）在 `QT_QPA_PLATFORM=offscreen` 下可靠；
@@ -1128,6 +1129,9 @@ tests/
    触发原生崩溃（access violation `0xC0000005`，即使桩掉 canvas 与 toolbar 也一样），因此该路径
    没有自动化覆盖，只能手工验证。改动它时须在真实 GUI 下逐项核对：预设切换、格式切换、
    DPI 滑条↔微调框联动、Tight bbox / Transparent、Save 落盘。
+   例外：控件构建 `_build_preview_controls()` 可以**直接调用**测试（传真实
+   `_image_export_profile()` / `_profile_default_params()`），见 `tests/test_export_preview_controls.py`；
+   抽方法时务必保持签名与调用点一致，否则只会以「Failed to generate export preview」的形式进入日志。
 
 ---
 

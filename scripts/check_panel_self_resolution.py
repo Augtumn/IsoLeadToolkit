@@ -1,5 +1,5 @@
 """Guard: every `self.<name>()` call in a panel/window mixin must resolve in the MRO
-of the class that composes it.
+of the class that composes it, with a matching number of positional arguments.
 
 Regression this prevents: a mixin moved to another panel keeps calling a helper that
 only existed in the panel it came from. That failure surfaces only when a user clicks
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib
+import inspect
 from pathlib import Path
 
 from source_scan_guard import print_scan_result, repo_root
@@ -72,6 +73,45 @@ def _dynamic_attributes(root: Path) -> set[str]:
     return found
 
 
+def _arity_problem(target, name: str, call: ast.Call) -> str | None:
+    """Return a message when *call* cannot satisfy the resolved method signature."""
+    try:
+        signature = inspect.signature(getattr(target, name))
+    except (TypeError, ValueError):
+        return None
+
+    parameters = list(signature.parameters.values())
+    if any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in parameters):
+        return None
+    if any(keyword.arg is None for keyword in call.keywords):
+        return None  # **kwargs splat: cannot verify statically
+
+    positional_parameters = [
+        p for p in parameters
+        if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    # a call through `self` implicitly supplies the instance, so a method that lost
+    # its `self` parameter shows up here as one argument too many; static methods
+    # receive nothing
+    try:
+        raw_attribute = inspect.getattr_static(target, name)
+    except AttributeError:
+        raw_attribute = None
+    implicit_instance = 0 if isinstance(raw_attribute, staticmethod) else 1
+    supplied_positionally = len(call.args) + implicit_instance
+    supplied_keywords = {kw.arg for kw in call.keywords if kw.arg}
+
+    if supplied_positionally > len(positional_parameters):
+        return (
+            f"passes {supplied_positionally} positional arguments but "
+            f"{len(positional_parameters)} fit the signature"
+        )
+    for parameter in positional_parameters[supplied_positionally:]:
+        if parameter.default is inspect.Parameter.empty and parameter.name not in supplied_keywords:
+            return f"leaves required parameter {parameter.name!r} unspecified"
+    return None
+
+
 def scan() -> dict[str, int]:
     root = repo_root()
     dynamic = _dynamic_attributes(root)
@@ -109,6 +149,12 @@ def scan() -> dict[str, int]:
                     continue
                 if not hasattr(target, name):
                     counts[f"{rel}:{node.lineno} self.{name}() missing on {target.__name__}"] = 1
+                    continue
+                problem = _arity_problem(target, name, node)
+                if problem is not None:
+                    counts[
+                        f"{rel}:{node.lineno} self.{name}() {problem}"
+                    ] = 1
     return counts
 
 

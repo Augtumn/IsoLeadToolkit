@@ -25,7 +25,7 @@ from core import app_state, state_gateway, translate
 class ExportPreviewControlsMixin:
     """Widget construction for the export preview dialog."""
 
-    def _build_preview_controls(dialog, main_layout, image_ext, label_size_for_export, legend_size_for_export, params, point_size_for_export, preset_key, tick_size_for_export, title_size_for_export):
+    def _build_preview_controls(self, dialog, main_layout, image_ext, label_size_for_export, legend_size_for_export, params, point_size_for_export, preset_key, tick_size_for_export, title_size_for_export):
         """Build the preview dialog controls (rows 1-4) and return them."""
         control_widget = QWidget()
         control_layout = QVBoxLayout(control_widget)
