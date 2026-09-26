@@ -56,9 +56,9 @@
 | **A** | 声明式状态字段注册表（消灭漏登记类 bug） | **已完成（基线组）**：`core/state/fields.py` 声明 10 个 ternary/limit 字段，初始快照、投影、回写、持久化白名单四处由声明派生；守卫 `check_state_sync_coverage.py` 探测 174 字段；`tests/test_state_fields.py` 16 例。迁移中顺带发现并修复 `ternary_render_margin` **未纳入持久化白名单**（跨会话丢失） |
 | **B** | 组合根 + 显式依赖 | **已完成**：组合根 `build_main_window()`（`ui/app.py` 亦使用）、`tests/conftest.py` 的 `qapp`/`main_window` 夹具、4 个真实窗口测试；**95 处 `hasattr/getattr(self, …)` 探测全部迁移为显式类属性声明（现为 0）**，迁移工具 `scripts/migrate_self_probes.py`，棘轮守卫 `check_self_attribute_probes.py` 保持为 0 |
 | **C** | 图例单一真源 | **已完成**：显示策略收敛到 `core/legend_state.py`（原先 8 处重复、三种写法）；模型为面板列表顺序（`app_state.legend_item_order`，拖拽时持久化），图内图例条目顺序经 `legend_order_permutation()` 由模型派生（保留 30 项上限与父分组折叠，并行数组同步重排以免图例点击错配图层），zorder 由列表顺序派生；`tests/test_legend_policy.py`、`tests/test_legend_projection.py` 覆盖 |
-| **D** | 统一输入管线并写入 `docs/dev_conventions.md` | 待做 |
+| **D** | 统一输入管线并写入 `docs/dev_conventions.md` | **已完成**：`docs/dev_conventions.md` §19 规定画布手势一律走 Qt 事件过滤器（`mpl_connect` 实测收不到事件）、多副本经 `globalPos()` 映射、不得在不可映射副本上销毁手势、交互按工具/模式分流、必须用真实 Qt 事件测试 |
 | **E** | 日志语义分离 | **已完成** |
-| **F** | 布局策略定案（三元图不用 constrained_layout） | 待做 |
+| **F** | 布局策略定案（三元图不用 constrained_layout） | **已完成**：`use_ternary_layout()` 在 `configure_ternary_axis()` 中关闭布局引擎，`_render_2d_title_and_axes()` 在 2D 渲染时恢复；`tests/test_ternary_layout.py` 4 例含「绘制不再出现 collapsed to zero」 |
 
 ## 判断
 
