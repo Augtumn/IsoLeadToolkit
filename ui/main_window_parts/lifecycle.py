@@ -8,6 +8,13 @@ from PyQt5.QtWidgets import QDockWidget, QFileDialog, QMessageBox
 
 from core import app_state, state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_MainWindowLifecycleMixin = (
+    "_apply_legend_panel_layout",
+    "_refresh_status_info",
+)
+
 logger = logging.getLogger(__name__)
 
 

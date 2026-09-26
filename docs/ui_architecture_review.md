@@ -69,4 +69,4 @@
 |---|---|---|
 | **G** | 视图层静默异常全部改为可见 WARNING（148 处 / 47 文件），棘轮守卫 `check_silent_exceptions.py` 固定为 0 | **已完成** |
 | **H** | `core/state/fields.py` 声明的形状校验：名称唯一、`default` 可被自身强转接受、三个方向类型稳定、`holder` 存在、可变默认值不被共享 | **已完成**（`tests/test_state_field_declarations.py`；上线即抓出 9 个字段的 `or {}` 回退语义在迁移中丢失，已修正为规范默认值） |
-| **I** | 消除 mixin 间隐式依赖（跨 mixin 方法调用改为显式接口或在组合根注入） | 待做 |
+| **I** | 消除 mixin 间隐式依赖 | **已完成（第一阶段）**：**167 处跨类依赖 / 39 个类**全部在模块内声明为 `REQUIRES_<Class>`（显式接口）；守卫 `check_cross_mixin_calls.py` 强制「发现即声明、声明必存在」，并**检测同名类**；`tests/test_mixin_contracts.py` 校验组合类（Qt5MainWindow 与各 Panel/Dialog）提供全部所声明方法。过程中发现并删除一个**空壳同名类**（`projection_groups_build.py` 里 0 方法的 `DataPanelProjectionBuildMixin`）及其误置声明 |

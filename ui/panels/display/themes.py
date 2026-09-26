@@ -9,6 +9,16 @@ from core import CONFIG, app_state, atomic_write_json, load_themes, state_gatewa
 from visualization.plotting.style import configure_constrained_layout
 from core.legend_state import wants_docked_legend
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayThemeMixin = (
+    "_get_color_control_value",
+    "_on_change",
+    "_on_style_change",
+    "_set_color_control_value",
+    "_set_legend_position_button",
+)
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_LEGEND_FRAME_ALPHA = 0.95

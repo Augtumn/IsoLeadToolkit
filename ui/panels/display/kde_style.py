@@ -26,6 +26,13 @@ from core import app_state, state_gateway, translate
 from ui.icons import apply_color_swatch
 from visualization.line_styles import ensure_line_style
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayPanelKdeStyleMixin = (
+    "_on_change",
+    "_sync_toggle_widgets",
+)
+
 
 def _default_clip_bounds() -> tuple[float, float]:
     """Clip-range defaults taken from the current axes limits."""

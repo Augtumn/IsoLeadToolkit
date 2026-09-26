@@ -15,6 +15,16 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelRenderBuildMixin = (
+    "_connect_spinbox_deferred",
+    "_normalize_algorithm",
+    "_normalize_render_mode",
+    "_refresh_2d_axis_combos",
+    "_set_combo_value",
+)
+
 logger = logging.getLogger(__name__)
 
 

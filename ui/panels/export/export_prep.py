@@ -18,6 +18,15 @@ from application import (
 )
 from core import CONFIG, app_state, state_gateway
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_ExportPanelPrepMixin = (
+    "_attach_preview_label_state",
+    "_fallback_export_rc",
+    "_is_scienceplots_available",
+    "_normalize_export_legends",
+)
+
 logger = logging.getLogger(__name__)
 _LEGEND_BBOX_POINT_EPSILON = 1e-9
 

@@ -25,6 +25,17 @@ from ui.icons import apply_color_swatch
 from visualization.line_styles import resolve_line_style
 from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_MainWindowLegendOverlayMixin = (
+    "_is_plumbotectonics_group_style",
+    "_move_legend_item_to_top",
+    "_overlay_artists_for_style",
+    "_overlay_checked_state",
+    "_refresh_plot",
+    "_set_legend_item_meta",
+)
+
 logger = logging.getLogger(__name__)
 
 

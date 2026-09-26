@@ -20,6 +20,19 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from core import app_state, state_gateway, translate
+
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_ExportPreviewDialogMixin = (
+    "_build_preview_controls",
+    "_create_export_figure",
+    "_image_export_profile",
+    "_normalize_export_target",
+    "_profile_default_params",
+    "_refresh_preview_overlay_labels",
+    "_resolve_export_save_options",
+    "_save_export_figure",
+)
 logger = logging.getLogger(__name__)
 _PREVIEW_DEBOUNCE_MS = 400
 _IMAGE_FILE_FILTERS = (

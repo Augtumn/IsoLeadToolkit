@@ -8,6 +8,13 @@ from PyQt5.QtWidgets import QMessageBox
 
 from core import app_state, state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_AnalysisPanelSelectionMixin = (
+    "_on_change",
+    "_update_status_panel",
+)
+
 logger = logging.getLogger(__name__)
 
 

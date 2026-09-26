@@ -16,6 +16,12 @@ from PyQt5.QtWidgets import (
 )
 from core import app_state, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayBuildAxesMixin = (
+    "_create_color_picker",
+)
+
 
 class DisplayBuildAxesMixin:
     """Axes, grid and canvas page builder for the display panel."""

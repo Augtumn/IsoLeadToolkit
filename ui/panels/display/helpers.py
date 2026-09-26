@@ -7,6 +7,12 @@ from PyQt5.QtWidgets import QColorDialog, QHBoxLayout, QLineEdit, QPushButton, Q
 from core import app_state, translate
 from ui.icons import apply_color_swatch, normalize_color_hex
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayControlHelperMixin = (
+    "_on_style_change",
+)
+
 
 class DisplayControlHelperMixin:
     """Color and legend-position helper methods for display panel."""

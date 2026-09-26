@@ -22,6 +22,15 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, available_languages, set_language, state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataImportBuildMixin = (
+    "_clear_selection",
+    "_on_selection_changed",
+    "_refresh_from_defaults",
+    "_select_all",
+)
+
 
 class DataImportBuildMixin:
     """Construct and translate data import dialog UI."""

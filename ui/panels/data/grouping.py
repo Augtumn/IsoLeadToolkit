@@ -18,6 +18,12 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelGroupingMixin = (
+    "_on_change",
+)
+
 logger = logging.getLogger(__name__)
 
 

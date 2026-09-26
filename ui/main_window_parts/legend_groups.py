@@ -25,6 +25,15 @@ from ui.icons import apply_color_swatch
 from visualization.line_styles import resolve_line_style
 from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_MainWindowLegendGroupMixin = (
+    "_reload_legend_panel",
+    "_set_legend_item_meta",
+    "_show_parent_shape_menu",
+    "_update_parent_swatch",
+)
+
 logger = logging.getLogger(__name__)
 
 

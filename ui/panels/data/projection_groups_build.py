@@ -21,11 +21,25 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, state_gateway, translate
 
+
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelProjectionGroupsBuildMixin = (
+    "_connect_spinbox_deferred",
+    "_on_pca_param_change",
+    "_on_robust_pca_param_change",
+    "_on_ternary_limit_param_change",
+    "_on_tsne_param_change",
+    "_on_tsne_slider_changed",
+    "_on_umap_param_change",
+    "_on_umap_slider_changed",
+    "_refresh_ternary_limit_controls_enabled",
+    "_set_combo_value",
+)
+
 logger = logging.getLogger(__name__)
 
 
-class DataPanelProjectionBuildMixin:
-    """Build UMAP/t-SNE/PCA/RobustPCA/Ternary parameter UI controls for data panel."""
 
 
 class DataPanelProjectionGroupsBuildMixin:

@@ -18,6 +18,13 @@ from PyQt5.QtWidgets import (
 from application.use_cases.export_image import available_image_presets
 from core import state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_ExportPanelBuildMixin = (
+    "_on_image_preset_changed",
+    "_restore_toolbox_state",
+)
+
 
 class ExportPanelBuildMixin:
     """Build/reset behavior for ExportPanel."""

@@ -4,6 +4,17 @@ from __future__ import annotations
 import logging
 from core import app_state, state_gateway
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_LegendActionsMixin = (
+    "_ensure_marker_shape_map",
+    "_on_change",
+    "_prompt_custom_palette",
+    "_prompt_custom_shape_set",
+    "_set_legend_inside_position_button",
+    "_set_legend_outside_position_button",
+)
+
 logger = logging.getLogger(__name__)
 
 

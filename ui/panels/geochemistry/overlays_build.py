@@ -18,6 +18,16 @@ from PyQt5.QtWidgets import (
 from core import app_state, translate
 from ui.icons import apply_color_swatch
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_GeoPanelOverlaysBuildMixin = (
+    "_connect_spinbox_deferred",
+    "_open_line_style_dialog",
+    "_refresh_mu_kappa_age_controls",
+    "_refresh_mu_kappa_age_label",
+    "_refresh_plumbotectonics_models",
+)
+
 logger = logging.getLogger(__name__)
 
 

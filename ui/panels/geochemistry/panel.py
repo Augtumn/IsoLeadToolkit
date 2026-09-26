@@ -13,6 +13,15 @@ from ..base_panel import BasePanel
 from .overlays import GeoPanelOverlaysMixin
 from .overlays_build import GeoPanelOverlaysBuildMixin
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_GeoPanel = (
+    "_build_geochem_controls",
+    "_on_change",
+    "_restore_toolbox_state",
+    "_update_overlay_visibility",
+)
+
 logger = logging.getLogger(__name__)
 _GEO_DECAY_LAMBDA_238_DEFAULT = 1.55125e-10
 _GEO_DECAY_LAMBDA_235_DEFAULT = 9.8485e-10

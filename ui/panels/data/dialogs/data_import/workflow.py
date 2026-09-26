@@ -10,6 +10,12 @@ from PyQt5.QtWidgets import QFileDialog, QListWidgetItem, QMessageBox, QTableWid
 from core import app_state, state_gateway, translate
 from data.loader import read_data_frame
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataImportWorkflowMixin = (
+    "_update_file_display",
+)
+
 
 class DataImportWorkflowMixin:
     """Load files/sheets, preview data, and maintain column selections."""

@@ -24,6 +24,19 @@ from core import app_state, translate
 from .build_pages import DisplayBuildPagesMixin
 from .build_pages_axes import DisplayBuildAxesMixin
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayBuildMixin = (
+    "_build_axes_page",
+    "_build_font_page",
+    "_build_kde_page",
+    "_build_marker_page",
+    "_build_saved_settings_page",
+    "_build_theme_page",
+    "_restore_toolbox_state",
+    "_sync_color_controls_from_state",
+)
+
 
 class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
     """Build and widget helpers for display panel."""

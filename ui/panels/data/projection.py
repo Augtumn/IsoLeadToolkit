@@ -8,6 +8,18 @@ from PyQt5.QtWidgets import QMessageBox
 
 from core import app_state, state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelProjectionMixin = (
+    "_combo_value",
+    "_normalize_algorithm",
+    "_normalize_render_mode",
+    "_on_change",
+    "_schedule_slider_callback",
+    "_set_combo_value",
+    "_sync_geochem_model_for_mode",
+)
+
 logger = logging.getLogger(__name__)
 
 

@@ -23,6 +23,13 @@ from ui.icons import apply_color_swatch
 from ui.panels.base_panel import BasePanel
 from ui.widgets import labeled_checkbox
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_AnalysisPanelBuildMixin = (
+    "_on_confidence_change",
+    "_restore_toolbox_state",
+)
+
 
 class AnalysisPanelBuildMixin:
     """Build UI widgets for the analysis tab."""

@@ -5,6 +5,15 @@ from pathlib import Path
 
 from core import CONFIG, state_gateway
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_ProvenanceMLDialogBaseMixin = (
+    "_load_training_data",
+    "_populate_training_sheets",
+    "_refresh_prediction_columns",
+    "_setup_ui",
+)
+
 
 class ProvenanceMLDialogBaseMixin:
     """Base initialization helpers for provenance ML dialog."""

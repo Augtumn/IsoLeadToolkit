@@ -26,6 +26,12 @@ from core import app_state, state_gateway, translate
 from ui.icons import apply_color_swatch
 from visualization.line_styles import ensure_line_style
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_AnalysisPanelEquationMixin = (
+    "_on_change",
+)
+
 
 class AnalysisPanelEquationMixin:
     """Equation/KDE related actions for analysis panel."""

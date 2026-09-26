@@ -16,6 +16,18 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from core import app_state, state_gateway, translate
+
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_ExportPanelImageExportMixin = (
+    "_create_export_figure",
+    "_image_export_profile",
+    "_load_scienceplots",
+    "_normalize_export_target",
+    "_profile_default_params",
+    "_resolve_export_save_options",
+    "_save_export_figure",
+)
 logger = logging.getLogger(__name__)
 _IMAGE_FILE_FILTERS = (
     "PNG Files (*.png);;TIFF Files (*.tiff);;PDF Files (*.pdf);;"

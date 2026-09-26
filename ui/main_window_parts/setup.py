@@ -24,6 +24,12 @@ from PyQt5.QtWidgets import (
 from core import app_state, available_languages, set_language, state_gateway, translate
 from core.legend_state import wants_docked_legend
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_MainWindowSetupMixin = (
+    "_show_section_dialog",
+)
+
 logger = logging.getLogger(__name__)
 QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
     "1",

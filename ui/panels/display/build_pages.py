@@ -16,6 +16,13 @@ from PyQt5.QtWidgets import (
 )
 from core import app_state, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayBuildPagesMixin = (
+    "_create_color_picker",
+    "_refresh_theme_list",
+)
+
 
 class DisplayBuildPagesMixin:
     """Presets, theme, font and marker page builders for the display panel."""

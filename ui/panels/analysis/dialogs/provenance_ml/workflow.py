@@ -10,6 +10,13 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 from core import app_state, state_gateway, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_ProvenanceMLWorkflowMixin = (
+    "_auto_detect_pb_columns",
+    "_auto_detect_region_column",
+)
+
 logger = logging.getLogger(__name__)
 
 

@@ -25,6 +25,18 @@ logger = logging.getLogger(__name__)
 
 from .projection_groups_build import DataPanelProjectionGroupsBuildMixin
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelProjectionBuildMixin = (
+    "_build_pca_group",
+    "_build_robust_pca_group",
+    "_build_ternary_group",
+    "_build_tsne_group",
+    "_build_umap_group",
+    "_on_change",
+    "_set_combo_value",
+)
+
 
 class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
     """Build UMAP/t-SNE/PCA/RobustPCA/Ternary parameter UI controls for data panel."""

@@ -14,6 +14,19 @@ from .projection_build import DataPanelProjectionBuildMixin
 from .render_build import DataPanelRenderBuildMixin
 from core import translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelBuildMixin = (
+    "_build_axis_selection",
+    "_build_coloring_grouping",
+    "_build_projection_params",
+    "_build_render_controls",
+    "_build_v1v2_params",
+    "_restore_toolbox_state",
+    "_set_combo_value",
+    "_update_algorithm_visibility",
+)
+
 logger = logging.getLogger(__name__)
 
 

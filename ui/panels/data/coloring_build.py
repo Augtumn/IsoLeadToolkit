@@ -15,6 +15,12 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, translate
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DataPanelColoringBuildMixin = (
+    "_refresh_group_column_radios",
+)
+
 logger = logging.getLogger(__name__)
 
 

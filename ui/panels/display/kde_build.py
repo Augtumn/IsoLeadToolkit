@@ -23,6 +23,12 @@ from ui.icons import apply_color_swatch
 from ui.panels.base_panel import BasePanel
 from ui.widgets import labeled_checkbox
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_DisplayKdeBuildMixin = (
+    "_open_kde_style_dialog",
+)
+
 
 class DisplayKdeBuildMixin:
     """Build the Kernel Density toolbox page for the display panel."""

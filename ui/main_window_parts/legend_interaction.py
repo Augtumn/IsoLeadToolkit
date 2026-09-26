@@ -29,6 +29,23 @@ from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 logger = logging.getLogger(__name__)
 from .legend_entries import reorder_legend_keys
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_MainWindowLegendInteractionMixin = (
+    "_add_group_to_parent",
+    "_apply_legend_z_order",
+    "_bring_overlay_to_front",
+    "_create_child_parent_group",
+    "_create_parent_group",
+    "_delete_parent_group",
+    "_legend_order_key",
+    "_move_legend_item_to_top",
+    "_refresh_plot",
+    "_reload_legend_panel",
+    "_remove_group_from_parent",
+    "_update_legend_panel",
+)
+
 
 class MainWindowLegendInteractionMixin:
     """Legend list interaction: drag/drop, reorder, context menu, checkboxes."""

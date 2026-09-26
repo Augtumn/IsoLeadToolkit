@@ -36,6 +36,24 @@ from .legend_styles import MainWindowLegendStyleMixin
 from visualization.plotting.grouping import all_parents, parent_children
 from core.legend_state import wants_docked_legend
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_MainWindowLegendActionsMixin = (
+    "_add_overlay_legend_item",
+    "_add_parent_legend_item",
+    "_apply_legend_panel_layout",
+    "_apply_legend_z_order",
+    "_ensure_marker_shape_map",
+    "_legend_order_key",
+    "_on_group_checkbox_change",
+    "_overlay_entries_for_legend",
+    "_refresh_plot",
+    "_set_legend_item_meta",
+    "_show_color_shape_menu",
+    "_show_section_dialog",
+    "_update_marker_swatch",
+)
+
 
 def filter_legend_groups(
     groups: list,

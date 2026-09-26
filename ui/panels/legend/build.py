@@ -22,6 +22,20 @@ from ui.panels.base_panel import BasePanel
 from core.legend_state import wants_docked_legend
 from core.legend_state import wants_inline_legend
 
+#: Methods this class expects from the classes it is composed with
+#: (explicit interface, UI review item I).
+REQUIRES_LegendBuildMixin = (
+    "_debounce",
+    "_ensure_marker_shape_map",
+    "_nudge_legend",
+    "_on_legend_columns_change",
+    "_on_legend_inside_position_change",
+    "_on_legend_outside_position_change",
+    "_populate_base_shape_combo",
+    "_populate_palette_combo",
+    "_restore_toolbox_state",
+)
+
 
 class LegendBuildMixin:
     """Build and helper methods for legend panel."""
