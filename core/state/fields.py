@@ -216,7 +216,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "export_image_options",
-        None,
+        {'preset_key': 'science_single', 'image_ext': 'png', 'dpi': 400, 'bbox_tight': True, 'pad_inches': 0.02, 'transparent': False, 'point_size': None, 'legend_size': None, 'embed_fonts': True, 'white_background': True},
         normalize=coercers._normalize_export_options,
         copy=dict,
         holder=None,
@@ -454,7 +454,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "ml_params",
-        None,
+        {},
         normalize=coercers._normalize_algorithm_params,
         copy=dict,
         holder=None,
@@ -608,14 +608,14 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "pca_component_indices",
-        None,
+        [0, 1],
         normalize=coercers._normalize_pca_component_indices,
         copy=list,
         holder=None,
     ),
     StateField(
         "pca_params",
-        None,
+        {},
         normalize=coercers._normalize_algorithm_params,
         copy=dict,
         holder=None,
@@ -636,7 +636,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "plot_font_sizes",
-        None,
+        {'title': 14, 'label': 12, 'tick': 10, 'legend': 10},
         normalize=coercers._normalize_plot_font_sizes,
         copy=dict,
         holder=None,
@@ -671,7 +671,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "robust_pca_params",
-        None,
+        {},
         normalize=coercers._normalize_algorithm_params,
         copy=dict,
         holder=None,
@@ -804,7 +804,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "tsne_params",
-        None,
+        {},
         normalize=coercers._normalize_algorithm_params,
         copy=dict,
         holder=None,
@@ -818,14 +818,14 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "umap_params",
-        None,
+        {},
         normalize=coercers._normalize_algorithm_params,
         copy=dict,
         holder=None,
     ),
     StateField(
         "v1v2_params",
-        None,
+        {},
         normalize=coercers._normalize_algorithm_params,
         copy=dict,
         holder=None,
