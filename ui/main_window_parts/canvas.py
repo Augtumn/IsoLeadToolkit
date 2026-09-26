@@ -81,7 +81,7 @@ class MainWindowCanvasMixin:
 
         # Ternary zoom: a Qt-level drag over the canvas becomes a zoom into a
         # similar sub-triangle (the matplotlib event path never reaches us here).
-        install_ternary_zoom_filter(canvas)
+        install_ternary_zoom_filter(canvas, toolbar)
 
         # NOTE: matplotlib event handlers (hover/click/legend-click) are
         # connected once in ui/app_parts/plotting.py::_connect_event_handlers
@@ -127,11 +127,20 @@ class MainWindowCanvasMixin:
 class TernaryZoomEventFilter(QObject):
     """Turns a left-button drag over the canvas into ternary limits."""
 
-    def __init__(self, canvas: QWidget) -> None:
+    def __init__(self, canvas: QWidget, toolbar=None) -> None:
         super().__init__(canvas)
         self._canvas = canvas
+        self._toolbar = toolbar
         self._press: tuple[float, float] | None = None
         self._axes = None
+
+    def _zoom_tool_active(self) -> bool:
+        """True while the toolbar's magnifier is selected.
+
+        Until then a drag stays a selection gesture, which is how the toolbar is
+        meant to behave.
+        """
+        return str(getattr(self._toolbar, "mode", "") or "") == "zoom rect"
 
     # ── helpers ──────────────────────────────────────────────────────────
     def _ternary_axes(self):
@@ -204,6 +213,8 @@ class TernaryZoomEventFilter(QObject):
         try:
             kind = event.type()
             if kind == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                if not self._zoom_tool_active():
+                    return False
                 if not self._targets_canvas(obj):
                     return False
                 self._axes = self._axes_now()
@@ -288,7 +299,7 @@ class TernaryZoomEventFilter(QObject):
         except Exception as err:
             logger.warning("Failed to refresh the plot after ternary zoom: %s", err)
 
-def install_ternary_zoom_filter(canvas: QWidget):
+def install_ternary_zoom_filter(canvas: QWidget, toolbar=None):
     """Install the filter on the application (once per canvas).
 
     An application-level filter sees both the native QWindow copy and the
@@ -299,7 +310,7 @@ def install_ternary_zoom_filter(canvas: QWidget):
     existing = getattr(canvas, "_ternary_zoom_filter", None)
     if existing is not None:
         return existing
-    filt = TernaryZoomEventFilter(canvas)
+    filt = TernaryZoomEventFilter(canvas, toolbar)
     application = QApplication.instance()
     if application is not None:
         application.installEventFilter(filt)

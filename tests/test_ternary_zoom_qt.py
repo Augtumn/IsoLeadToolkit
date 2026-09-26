@@ -7,7 +7,7 @@ import pytest
 matplotlib.use("Qt5Agg")
 
 import mpltern  # noqa: F401
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 from PyQt5.QtCore import QEvent, QPoint, QPointF, Qt
 from PyQt5.QtGui import QMouseEvent
@@ -50,7 +50,9 @@ def qt_ternary():
     state_gateway.set_ternary_manual_limits({})
     state_gateway.set_ternary_manual_limits_enabled(False)
     state_gateway.set_ternary_auto_zoom(True)
-    install_ternary_zoom_filter(canvas)
+    toolbar = NavigationToolbar2QT(canvas, None)
+    toolbar.zoom()  # magnifier selected
+    install_ternary_zoom_filter(canvas, toolbar)
     return canvas, axes
 
 
@@ -145,3 +147,19 @@ def test_release_seen_twice_still_applies_the_zoom(qt_ternary) -> None:
     assert limits.get("tmin") == pytest.approx(1 / 6, abs=0.02), limits
     assert limits.get("tmax") == pytest.approx(2 / 3, abs=0.02), limits
     assert app_state.ternary_manual_limits_enabled is True
+
+
+def test_drag_without_the_zoom_tool_does_nothing(qt_ternary) -> None:
+    """Without the magnifier selected a drag must stay a selection gesture."""
+    canvas, axes = qt_ternary
+    toolbar = canvas._ternary_zoom_filter._toolbar
+    toolbar.zoom()  # toggles the zoom tool off
+    assert toolbar.mode != "zoom rect"
+
+    start = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
+    end = _pixel(canvas, axes, 0.0, 2.0 / 3.0)
+    _send(canvas, "press", start, Qt.LeftButton, Qt.LeftButton)
+    _send(canvas, "release", end, Qt.NoButton, Qt.LeftButton)
+
+    assert app_state.ternary_manual_limits_enabled is False
+    assert tuple(float(v) for v in axes.get_tlim()) == pytest.approx((0.0, 1.0))
