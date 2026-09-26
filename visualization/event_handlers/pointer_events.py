@@ -124,6 +124,25 @@ def on_hover(event: Any) -> None:
         pass
 
 
+def _resolve_group_at(event: Any) -> str | None:
+    """Group of the sample under the pointer.
+
+    Reuses the selection resolver (which falls back to the nearest sample when
+    ``contains()`` finds nothing) and maps the sample index through the group
+    column, so the label matches the legend keys used by _bring_to_front().
+    """
+    sample_idx = _resolve_sample_index(event)
+    if sample_idx is None:
+        return None
+    group_col = app_state.last_group_col
+    df = df_global()
+    if df is None or not group_col or group_col not in df.columns:
+        return None
+    if sample_idx not in df.index:
+        return None
+    return str(df.loc[sample_idx, group_col])
+
+
 def on_click(event: Any) -> None:
     """Handle mouse click events for interactive selection."""
     try:
@@ -137,6 +156,17 @@ def on_click(event: Any) -> None:
             return
 
         if not hasattr(event, 'button') or event.button != 1:
+            return
+
+        if not app_state.selection_mode:
+            if getattr(event, 'dblclick', False):
+                # Selecting a sample requires the selection mode; without it a
+                # double click raises the clicked point's layer instead.
+                group = _resolve_group_at(event)
+                callback = getattr(app_state, 'group_front_callback', None)
+                if group and callback is not None:
+                    callback(group)
+                    logger.info('Brought group %s to front.', group)
             return
 
         if app_state.selection_mode:

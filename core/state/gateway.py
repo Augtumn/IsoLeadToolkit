@@ -423,6 +423,10 @@ class AppStateGateway:
     def set_legend_update_callback(self, callback: Any) -> None:
         self._state.legend_update_callback = callback
 
+    def set_group_front_callback(self, callback: Any) -> None:
+        """Register the handler that raises a group's layer on double click."""
+        self._state.group_front_callback = callback
+
     def set_overlay_label_state(self, label_state: dict[str, Any]) -> None:
         handlers: dict[str, Callable[[Any], None]] = {
             "paleoisochron_label_data": self.set_paleoisochron_label_data,
