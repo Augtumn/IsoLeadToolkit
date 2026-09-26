@@ -110,6 +110,20 @@ class MainWindowLegendActionsMixin(
             self._apply_legend_z_order()
         self._refresh_plot()
 
+    def _on_legend_search_return(self):
+        """Enter in the legend search box jumps to the next matching entry."""
+        legend_list = self._legend_list
+        if legend_list is None or legend_list.count() == 0:
+            return
+        current = legend_list.currentRow()
+        for offset in range(1, legend_list.count() + 1):
+            index = (current + offset) % legend_list.count()
+            item = legend_list.item(index)
+            if item is not None:
+                legend_list.setCurrentItem(item)
+                legend_list.scrollToItem(item)
+                return
+
     def _on_legend_search_changed(self, _query=""):
         """Re-filter the legend list for the current search text."""
         payload = self._legend_panel_payload

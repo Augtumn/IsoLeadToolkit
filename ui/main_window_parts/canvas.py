@@ -143,6 +143,25 @@ class MainWindowCanvasMixin:
         except Exception as exc:
             logger.warning("Failed to toggle selection tool: %s", exc)
         self._sync_selection_tool_actions()
+        self._show_selection_tool_hint()
+
+    def _show_selection_tool_hint(self):
+        """Tell the user which tool is armed and how to leave it."""
+        from core import app_state
+
+        status_bar = self.statusBar()
+        if status_bar is None:
+            return
+        active = app_state.selection_tool
+        if active:
+            status_bar.showMessage(
+                translate("Selection tool armed ({tool}) - press Escape to cancel.").format(
+                    tool=active
+                ),
+                4000,
+            )
+        else:
+            status_bar.clearMessage()
 
     def _sync_selection_tool_actions(self):
         actions = self._selection_tool_actions

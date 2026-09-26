@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt5.QtGui import QFont
 
 from core import app_state, translate
+from ui.dialogs.geometry import remember_geometry
 
 
 def get_tooltip_configuration(parent: object | None = None) -> list[str] | None:
@@ -38,6 +39,7 @@ class TooltipConfigDialog(QDialog):
 
         self._setup_ui()
         self._load_current_selection()
+        remember_geometry(self, 'TooltipConfigDialog')
 
     def _setup_ui(self):
         """设置 UI"""

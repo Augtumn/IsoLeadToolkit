@@ -10,6 +10,7 @@ from PyQt5.QtGui import QFont
 import numpy as np
 
 from core import app_state, translate
+from ui.dialogs.geometry import remember_geometry
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class MixingCalculatorDialog(QDialog):
 
         self._setup_ui()
         self._calculate_mixing()
+        remember_geometry(self, 'MixingCalculatorDialog')
 
     def _setup_ui(self):
         """设置 UI"""

@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 import numpy as np
 
 from core import app_state, state_gateway, translate
+from ui.dialogs.geometry import remember_geometry
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class ClusteringDialog(QDialog):
         self.setWindowTitle(translate("HDBSCAN Clustering"))
         self.setMinimumWidth(420)
         self._setup_ui()
+        remember_geometry(self, 'ClusteringDialog')
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)

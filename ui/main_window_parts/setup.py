@@ -152,6 +152,7 @@ class MainWindowSetupMixin:
         self.legend_search_edit.setPlaceholderText(translate("Search legend..."))
         self.legend_search_edit.setClearButtonEnabled(True)
         self.legend_search_edit.textChanged.connect(self._on_legend_search_changed)
+        self.legend_search_edit.returnPressed.connect(self._on_legend_search_return)
         search_layout.addWidget(self.legend_search_edit, 1)
         legend_layout.addWidget(search_row)
 

@@ -14,6 +14,7 @@ from PyQt5.QtGui import QFont
 import numpy as np
 
 from core import app_state, state_gateway, translate
+from ui.dialogs.geometry import remember_geometry
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class EndmemberAnalysisDialog(QDialog):
         self.setMinimumHeight(600)
         self._result = None
         self._setup_ui()
+        remember_geometry(self, 'EndmemberAnalysisDialog')
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
