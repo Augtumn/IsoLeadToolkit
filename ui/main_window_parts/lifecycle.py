@@ -1,5 +1,7 @@
 """Lifecycle and application actions mixin for main window."""
 from __future__ import annotations
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QLineEdit, QPlainTextEdit, QTextEdit
 
 import logging
 
@@ -13,6 +15,7 @@ from core import app_state, state_gateway, translate
 REQUIRES_MainWindowLifecycleMixin = (
     "_apply_legend_panel_layout",
     "_refresh_status_info",
+    "_sync_selection_tool_actions",
 )
 
 logger = logging.getLogger(__name__)
@@ -20,6 +23,63 @@ logger = logging.getLogger(__name__)
 
 class MainWindowLifecycleMixin:
     """Window lifecycle methods and action callbacks."""
+
+    legend_search_edit = None
+
+    def keyPressEvent(self, event):
+        """Keyboard interaction for the plot window.
+
+        Escape cancels the active selection tool (and then the selection itself), Delete
+        removes the selected samples, Ctrl+F jumps to the legend search box. Keys are never
+        stolen from a text field the user is typing in - there Escape only clears the field.
+        """
+        import logging
+
+        from core import app_state, state_gateway
+
+        key = event.key()
+        modifiers = event.modifiers()
+        focus = self.focusWidget()
+        typing = isinstance(focus, (QLineEdit, QPlainTextEdit, QTextEdit))
+
+        if key == Qt.Key_F and modifiers & Qt.ControlModifier:
+            search = self.legend_search_edit
+            if search is not None:
+                search.setFocus(Qt.ShortcutFocusReason)
+                search.selectAll()
+                event.accept()
+                return
+
+        if typing:
+            if key == Qt.Key_Escape:
+                focus.clear()
+                event.accept()
+                return
+            super().keyPressEvent(event)
+            return
+
+        if key == Qt.Key_Escape:
+            if app_state.selection_tool:
+                state_gateway.set_selection_tool(None)
+                self._sync_selection_tool_actions()
+                logging.getLogger(__name__).info("Selection tool cancelled with Escape.")
+                event.accept()
+                return
+            if app_state.selected_indices:
+                state_gateway.clear_selected_indices()
+                event.accept()
+                return
+
+        if key in (Qt.Key_Delete, Qt.Key_Backspace):
+            indices = list(app_state.selected_indices or [])
+            if indices:
+                state_gateway.remove_selected_indices(indices)
+                logging.getLogger(__name__).info("Removed %d selected sample(s).", len(indices))
+                event.accept()
+                return
+
+        super().keyPressEvent(event)
+
     _section_dialogs = None
 
     # Declared by the class that uses them, so no probe is needed for widgets
