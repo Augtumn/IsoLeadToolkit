@@ -337,6 +337,10 @@ class MainWindowSetupMixin:
             layout_state = (location_key, is_outside)
             if getattr(self, "_legend_layout_state", None) == layout_state:
                 return
+            # Record the state here, not at the end: the "inside" branch below
+            # returns early, and leaving the cache untouched made switching back
+            # to the same outside side a no-op (the panel stayed hidden).
+            self._legend_layout_state = layout_state
 
             self.legend_panel.setVisible(is_outside)
             if not is_outside:
@@ -361,8 +365,6 @@ class MainWindowSetupMixin:
             sizes = self.legend_splitter.sizes()
             if len(sizes) >= 2 and min(sizes) == 0:
                 self.legend_splitter.setSizes([200, 800])
-
-            self._legend_layout_state = layout_state
         except Exception as exc:
             import traceback
 

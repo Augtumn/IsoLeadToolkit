@@ -65,12 +65,8 @@ class LegendActionsMixin:
         else:
             state_gateway.set_legend_position(position)
             self._set_legend_inside_position_button(position)
-        # Inside and outside positions are mutually exclusive: selecting an
-        # inline position must clear the outside location (and vice versa),
-        # otherwise both an inline and a docked legend render at once.
-        if app_state.legend_location is not None:
-            state_gateway.set_legend_location(None)
-            self._set_legend_outside_position_button(None)
+        # The inline position and the docked (outside) location coexist: the plot
+        # shows the inline legend while the panel keeps the full list.
         self._on_change()
 
     def _on_legend_outside_position_change(self, position):
@@ -81,10 +77,7 @@ class LegendActionsMixin:
         else:
             state_gateway.set_legend_location(position)
             self._set_legend_outside_position_button(position)
-        # Mutually exclusive with the inline position group.
-        if app_state.legend_position is not None:
-            state_gateway.set_legend_position(None)
-            self._set_legend_inside_position_button(None)
+        # Coexists with the inline position (see _on_legend_inside_position_change).
         self._on_change()
 
     def _on_legend_columns_change(self, columns):
