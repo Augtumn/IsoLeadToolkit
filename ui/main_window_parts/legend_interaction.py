@@ -243,3 +243,6 @@ class MainWindowLegendInteractionMixin:
             except Exception as exc:
                 logger.warning("Failed to bring %s to front: %s", group, exc)
         self._move_legend_item_to_top("group", group)
+        # Keep the plot and the legend in step: the list order is the source of
+        # truth for stacking, so re-apply it after the row moved to the top.
+        self._apply_legend_z_order()

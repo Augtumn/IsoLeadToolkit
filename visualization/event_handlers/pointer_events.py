@@ -124,7 +124,7 @@ def on_hover(event: Any) -> None:
         pass
 
 
-def _resolve_group_at(event: Any) -> str | None:
+def _resolve_group_at(event: Any):
     """Group of the sample under the pointer.
 
     Reuses the selection resolver (which falls back to the nearest sample when
@@ -140,7 +140,14 @@ def _resolve_group_at(event: Any) -> str | None:
         return None
     if sample_idx not in df.index:
         return None
-    return str(df.loc[sample_idx, group_col])
+    value = df.loc[sample_idx, group_col]
+    # Legend keys are the raw group values; keep the original type so
+    # _bring_to_front() and the legend list find the entry (a numeric group
+    # column would otherwise resolve to "42" and match nothing).
+    for key in (app_state.group_to_scatter or {}):
+        if key == value or str(key) == str(value):
+            return key
+    return value
 
 
 def on_click(event: Any) -> None:

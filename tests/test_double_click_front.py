@@ -27,6 +27,7 @@ def scene(monkeypatch):
     # Mode first: a dispatch syncs the store and would roll back direct attributes.
     state_gateway.set_selection_mode(False)
     monkeypatch.setattr(app_state, "last_group_col", "Province/Lueague", raising=False)
+    monkeypatch.setattr(app_state, "group_to_scatter", {}, raising=False)
     monkeypatch.setattr(
         pointer_events, "df_global",
         lambda: pd.DataFrame({"Province/Lueague": ["GroupA", "GroupB"]}),
@@ -97,3 +98,14 @@ def test_missing_group_column_is_harmless(scene, monkeypatch) -> None:
 def test_the_callback_is_registered_by_the_gateway() -> None:
     state_gateway.set_group_front_callback(None)
     assert getattr(app_state, "group_front_callback", "missing") is None
+
+
+def test_numeric_group_values_keep_the_legend_key(scene, monkeypatch) -> None:
+    """A numeric group column must still resolve to the legend's own key."""
+    figure, axes, calls, _mp = scene
+    monkeypatch.setattr(pointer_events, "df_global", lambda: pd.DataFrame({"Province/Lueague": [42, 7]}))
+    monkeypatch.setattr(app_state, "group_to_scatter", {42: "scatter", 7: "scatter"}, raising=False)
+
+    pointer_events.on_click(_double_click(figure, axes))
+
+    assert calls == [42], calls
