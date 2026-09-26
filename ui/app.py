@@ -168,7 +168,9 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
             self._create_plot_figure()
 
             # 创建主窗口
-            self.main_window = Qt5MainWindow()
+            from ui.factory import build_main_window
+
+            self.main_window = build_main_window()
             if self.app is not None:
                 self.main_window.setWindowIcon(self.app.windowIcon())
             self.main_window.set_matplotlib_figure(app_state.fig)
