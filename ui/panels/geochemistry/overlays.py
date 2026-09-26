@@ -19,8 +19,8 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_show_model_curves(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.show_model_curves,
-            getattr(self, "modeling_show_model_check", None),
-            getattr(self, "show_model_check", None),
+            self.modeling_show_model_check,
+            self.show_model_check,
         )
         self._on_change()
 
@@ -29,7 +29,7 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_show_plumbotectonics_curves(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.show_plumbotectonics_curves,
-            getattr(self, "modeling_show_plumbotectonics_check", None),
+            self.modeling_show_plumbotectonics_check,
         )
         self._on_change()
 
@@ -38,8 +38,8 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_show_paleoisochrons(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.show_paleoisochrons,
-            getattr(self, "modeling_show_paleoisochron_check", None),
-            getattr(self, "show_paleoisochron_check", None),
+            self.modeling_show_paleoisochron_check,
+            self.show_paleoisochron_check,
         )
         self._on_change()
 
@@ -48,8 +48,8 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_show_model_age_lines(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.show_model_age_lines,
-            getattr(self, "modeling_show_model_age_check", None),
-            getattr(self, "show_model_age_check", None),
+            self.modeling_show_model_age_check,
+            self.show_model_age_check,
         )
         self._on_change()
 
@@ -58,7 +58,7 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_show_growth_curves(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.show_growth_curves,
-            getattr(self, "modeling_show_growth_curve_check", None),
+            self.modeling_show_growth_curve_check,
         )
         self._on_change()
 
@@ -67,7 +67,7 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_use_real_age_for_mu_kappa(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.use_real_age_for_mu_kappa,
-            getattr(self, "modeling_use_real_age_check", None),
+            self.modeling_use_real_age_check,
         )
         self._refresh_mu_kappa_age_label()
         if app_state.render_mode in ("PB_MU_AGE", "PB_KAPPA_AGE"):
@@ -129,7 +129,7 @@ class GeoPanelOverlaysMixin:
 
         self._sync_geochem_toggle_widgets(
             app_state.use_real_age_for_mu_kappa,
-            getattr(self, "modeling_use_real_age_check", None),
+            self.modeling_use_real_age_check,
         )
         self._refresh_mu_kappa_age_label()
         self._refresh_mu_kappa_age_controls()
@@ -145,7 +145,7 @@ class GeoPanelOverlaysMixin:
 
     def _refresh_plumbotectonics_models(self):
         """Refresh plumbotectonics model combo options."""
-        combo = getattr(self, "plumbotectonics_model_combo", None)
+        combo = self.plumbotectonics_model_combo
         if combo is None:
             return
         try:
@@ -216,8 +216,8 @@ class GeoPanelOverlaysMixin:
         state_gateway.set_show_isochrons(state == Qt.Checked)
         self._sync_geochem_toggle_widgets(
             app_state.show_isochrons,
-            getattr(self, "modeling_show_isochron_check", None),
-            getattr(self, "show_isochron_check", None),
+            self.modeling_show_isochron_check,
+            self.show_isochron_check,
         )
         self._on_change()
 
@@ -279,7 +279,7 @@ class GeoPanelOverlaysMixin:
 
     def _update_isochron_btn_text(self):
         """Update isochron button text by visibility state."""
-        btn = getattr(self, "calc_isochron_btn", None)
+        btn = self.calc_isochron_btn
         if btn is None:
             return
         if app_state.show_isochrons or app_state.selected_isochron_data:
