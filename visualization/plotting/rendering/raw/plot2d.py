@@ -16,6 +16,7 @@ from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot
 from ..common.legend import _merge_parent_groups_for_inline, _place_inline_legend
 from ..common.state_access import _active_subset_indices, _df_global
 from ..kde import _resolve_kde_style, kde_compute_kwargs
+from visualization.plotting.tooltip import raise_tooltip_above_data
 
 logger = logging.getLogger(__name__)
 
@@ -337,15 +338,10 @@ def _attach_annotation() -> None:
             textcoords='offset points',
             bbox=dict(boxstyle='round,pad=0.5', fc='white', ec='#cbd5e1', alpha=0.95),
             arrowprops=dict(arrowstyle='->', color='#475569'),
-            zorder=15,
         )
     )
     app_state.annotation.set_visible(False)
-    try:
-        if app_state.annotation.arrow_patch is not None:
-            app_state.annotation.arrow_patch.set_zorder(14)
-    except Exception:
-        pass
+    raise_tooltip_above_data(app_state.ax, app_state.annotation)
 
 
 def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_kde: bool = False) -> bool:

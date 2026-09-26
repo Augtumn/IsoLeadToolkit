@@ -9,6 +9,7 @@ from PyQt5.QtCore import QSize, Qt, QTimer
 from core import app_state, state_gateway, translate
 from ui.icons import build_marker_icon
 from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP, normalize_render_mode, overlay_legend_items
+from visualization.plotting.tooltip import raise_tooltip_above_data
 
 logger = logging.getLogger(__name__)
 QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
@@ -17,32 +18,6 @@ QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
     "yes",
     "on",
 }
-
-
-#: zorder given to the hover tooltip so it is never covered by data layers.
-_TOOLTIP_ZORDER_OFFSET = 1
-
-
-def raise_tooltip_above_data(ax, annotation) -> None:
-    """Put the hover tooltip (and its arrow) above every other artist.
-
-    Group z-orders are assigned from the legend order and can grow past the
-    tooltip's initial zorder, which used to hide the tooltip behind the points.
-    """
-    if ax is None or annotation is None:
-        return
-    highest = 0.0
-    arrow = getattr(annotation, "arrow_patch", None)
-    for artist in ax.get_children():
-        if artist is annotation or (arrow is not None and artist is arrow):
-            continue
-        try:
-            highest = max(highest, float(artist.get_zorder()))
-        except Exception:
-            continue
-    annotation.set_zorder(highest + _TOOLTIP_ZORDER_OFFSET)
-    if arrow is not None:
-        arrow.set_zorder(highest)
 
 
 class MainWindowLegendCoreMixin:

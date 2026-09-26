@@ -10,8 +10,9 @@ from matplotlib.figure import Figure  # noqa: E402
 from PyQt5.QtWidgets import QApplication, QListWidget  # noqa: E402
 
 from core import state_gateway  # noqa: E402
-from ui.main_window_parts.legend_core import (  # noqa: E402
-    MainWindowLegendCoreMixin,
+from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin  # noqa: E402
+from visualization.plotting.tooltip import (  # noqa: E402
+    TOOLTIP_MIN_ZORDER,
     raise_tooltip_above_data,
 )
 
@@ -38,7 +39,8 @@ def test_the_tooltip_is_raised_above_every_data_layer() -> None:
     raise_tooltip_above_data(axes, annotation)
 
     assert annotation.get_zorder() > 40
-    assert annotation.arrow_patch.get_zorder() == 40, "the arrow stays just below the box"
+    assert annotation.get_zorder() >= TOOLTIP_MIN_ZORDER, "overlays sit at 100/101"
+    assert annotation.arrow_patch.get_zorder() < annotation.get_zorder()
 
 
 def test_raising_twice_does_not_inflate_the_zorder() -> None:
@@ -102,3 +104,12 @@ def test_the_tooltip_wins_at_any_data_zorder(data_zorder: float) -> None:
     raise_tooltip_above_data(axes, annotation)
 
     assert annotation.get_zorder() > data_zorder
+
+
+def test_the_tooltip_clears_the_isochron_overlay() -> None:
+    """The selected-isochron overlay is drawn at zorder 100/101."""
+    _figure, axes, annotation = _scene(data_zorder=101)
+
+    raise_tooltip_above_data(axes, annotation)
+
+    assert annotation.get_zorder() > 101

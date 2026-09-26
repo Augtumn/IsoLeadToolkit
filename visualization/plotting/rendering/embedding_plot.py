@@ -26,6 +26,7 @@ from .common.scatter import _render_scatter_groups
 from .common.title import _render_title_labels
 from .geo_layers import _render_geo_overlays
 from .kde import _render_kde_overlay
+from visualization.plotting.tooltip import raise_tooltip_above_data
 
 logger = logging.getLogger(__name__)
 
@@ -192,15 +193,10 @@ def plot_embedding(
             textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cbd5e1", alpha=0.95),
             arrowprops=dict(arrowstyle="->", color="#475569"),
-            zorder=15,
             ),
         )
         app_state.annotation.set_visible(False)
-        try:
-            if app_state.annotation.arrow_patch is not None:
-                app_state.annotation.arrow_patch.set_zorder(14)
-        except Exception:
-            pass
+        raise_tooltip_above_data(app_state.ax, app_state.annotation)
 
         try:
             refresh_selection_overlay_safe()
