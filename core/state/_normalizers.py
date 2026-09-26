@@ -19,6 +19,8 @@ DEFAULT_EXPORT_IMAGE_OPTIONS = {
     "transparent": False,
     "point_size": None,
     "legend_size": None,
+    "embed_fonts": True,
+    "white_background": True,
 }
 DEFAULT_PLOT_FONT_SIZES = {
     "title": 14,
@@ -73,6 +75,8 @@ def _normalize_export_options(options: Any) -> dict[str, Any]:
     merged["bbox_tight"] = bool(merged.get("bbox_tight", True))
     merged["pad_inches"] = max(0.0, float(merged.get("pad_inches", 0.02)))
     merged["transparent"] = bool(merged.get("transparent", False))
+    merged["embed_fonts"] = bool(merged.get("embed_fonts", True))
+    merged["white_background"] = bool(merged.get("white_background", True))
 
     point_size = merged.get("point_size")
     legend_size = merged.get("legend_size")

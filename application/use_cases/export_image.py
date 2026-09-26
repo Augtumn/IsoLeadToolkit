@@ -10,82 +10,183 @@ DEFAULT_EXPORT_HEIGHT_RATIO = 0.72
 MIN_EXPORT_DPI = 72
 
 
+_IMAGE_EXPORT_PROFILES: dict[str, dict] = {
+    "science_single": {
+        "label": "Science Single Column",
+        "styles": ["science", "no-latex"],
+        "width_mm": 85.0,
+        "height_ratio": DEFAULT_EXPORT_HEIGHT_RATIO,
+        "dpi": 300,
+        "point_size": 48,
+        "legend": {
+            "fontsize": 7.0,
+            "title_fontsize": 7.5,
+            "markerscale": 0.82,
+            "handlelength": 1.05,
+            "handletextpad": 0.30,
+            "labelspacing": 0.10,
+            "borderpad": 0.15,
+            "columnspacing": 0.45,
+        },
+    },
+    "science_double": {
+        "label": "Science Double Column",
+        "styles": ["science", "no-latex"],
+        "width_mm": 183.0,
+        "height_ratio": 0.50,
+        "dpi": 300,
+        "point_size": 52,
+        "legend": {
+            "fontsize": 7.5,
+            "title_fontsize": 8.0,
+            "markerscale": 0.85,
+            "handlelength": 1.10,
+            "handletextpad": 0.32,
+            "labelspacing": 0.10,
+            "borderpad": 0.16,
+            "columnspacing": 0.48,
+        },
+    },
+    "nature_single": {
+        "label": "Nature Single Column",
+        "styles": ["science", "nature", "no-latex"],
+        "width_mm": 89.0,
+        "height_ratio": 0.75,
+        "dpi": 300,
+        "point_size": 48,
+        "legend": {
+            "fontsize": 7.0,
+            "title_fontsize": 7.5,
+            "markerscale": 0.85,
+            "handlelength": 1.05,
+            "handletextpad": 0.30,
+            "labelspacing": 0.10,
+            "borderpad": 0.15,
+            "columnspacing": 0.45,
+        },
+    },
+    "nature_double": {
+        "label": "Nature Double Column",
+        "styles": ["science", "nature", "no-latex"],
+        "width_mm": 180.0,
+        "height_ratio": 0.55,
+        "dpi": 300,
+        "point_size": 50,
+        "legend": {
+            "fontsize": 8.0,
+            "title_fontsize": 8.5,
+            "markerscale": 0.90,
+            "handlelength": 1.10,
+            "handletextpad": 0.34,
+            "labelspacing": 0.12,
+            "borderpad": 0.18,
+            "columnspacing": 0.50,
+        },
+    },
+    "ieee_single": {
+        "label": "IEEE Single Column",
+        "styles": ["science", "ieee", "no-latex"],
+        "width_mm": 88.0,
+        "height_ratio": DEFAULT_EXPORT_HEIGHT_RATIO,
+        "dpi": 300,
+        "point_size": 46,
+        "legend": {
+            "fontsize": 7.0,
+            "title_fontsize": 7.5,
+            "markerscale": 0.80,
+            "handlelength": 1.00,
+            "handletextpad": 0.28,
+            "labelspacing": 0.10,
+            "borderpad": 0.14,
+            "columnspacing": 0.40,
+        },
+    },
+    "elsevier_double": {
+        "label": "Elsevier Double Column",
+        "styles": ["science", "no-latex"],
+        "width_mm": 190.0,
+        "height_ratio": 0.50,
+        "dpi": 300,
+        "point_size": 52,
+        "legend": {
+            "fontsize": 8.0,
+            "title_fontsize": 8.5,
+            "markerscale": 0.88,
+            "handlelength": 1.10,
+            "handletextpad": 0.34,
+            "labelspacing": 0.12,
+            "borderpad": 0.18,
+            "columnspacing": 0.50,
+        },
+    },
+    "gsa_double": {
+        "label": "GSA Double Column",
+        "styles": ["science", "no-latex"],
+        "width_mm": 190.0,
+        "height_ratio": 0.62,
+        "dpi": 300,
+        "point_size": 52,
+        "legend": {
+            "fontsize": 8.0,
+            "title_fontsize": 8.5,
+            "markerscale": 0.90,
+            "handlelength": 1.15,
+            "handletextpad": 0.34,
+            "labelspacing": 0.12,
+            "borderpad": 0.18,
+            "columnspacing": 0.50,
+        },
+    },
+    "presentation": {
+        "label": "Presentation",
+        "styles": ["science", "no-latex"],
+        "width_mm": 240.0,
+        "height_ratio": 0.55,
+        "dpi": 220,
+        "point_size": 60,
+        "legend": {
+            "fontsize": 10.0,
+            "title_fontsize": 11.0,
+            "markerscale": 1.00,
+            "handlelength": 1.15,
+            "handletextpad": 0.38,
+            "labelspacing": 0.14,
+            "borderpad": 0.20,
+            "columnspacing": 0.55,
+        },
+    },
+}
+
+#: Order shown in the export preset combos.
+IMAGE_PRESET_ORDER: tuple[str, ...] = (
+    "science_single",
+    "science_double",
+    "nature_single",
+    "nature_double",
+    "ieee_single",
+    "elsevier_double",
+    "gsa_double",
+    "presentation",
+)
+
+
+def available_image_presets() -> list[tuple[str, str]]:
+    """Return ``(key, translatable label)`` pairs for the export preset combos."""
+    return [
+        (key, str(_IMAGE_EXPORT_PROFILES[key]["label"]))
+        for key in IMAGE_PRESET_ORDER
+    ]
+
+
 def build_image_export_profile(preset_key: str) -> dict:
     """Return export profile for a journal preset."""
-    profiles = {
-        "science_single": {
-            "styles": ["science", "no-latex"],
-            "width_mm": 85.0,
-            "height_ratio": DEFAULT_EXPORT_HEIGHT_RATIO,
-            "dpi": 300,
-            "point_size": 48,
-            "legend": {
-                "fontsize": 7.0,
-                "title_fontsize": 7.5,
-                "markerscale": 0.82,
-                "handlelength": 1.05,
-                "handletextpad": 0.30,
-                "labelspacing": 0.10,
-                "borderpad": 0.15,
-                "columnspacing": 0.45,
-            },
-        },
-        "ieee_single": {
-            "styles": ["science", "ieee", "no-latex"],
-            "width_mm": 88.0,
-            "height_ratio": DEFAULT_EXPORT_HEIGHT_RATIO,
-            "dpi": 300,
-            "point_size": 46,
-            "legend": {
-                "fontsize": 7.0,
-                "title_fontsize": 7.5,
-                "markerscale": 0.80,
-                "handlelength": 1.00,
-                "handletextpad": 0.28,
-                "labelspacing": 0.10,
-                "borderpad": 0.14,
-                "columnspacing": 0.40,
-            },
-        },
-        "nature_double": {
-            "styles": ["science", "nature", "no-latex"],
-            "width_mm": 180.0,
-            "height_ratio": 0.55,
-            "dpi": 300,
-            "point_size": 50,
-            "legend": {
-                "fontsize": 8.0,
-                "title_fontsize": 8.5,
-                "markerscale": 0.90,
-                "handlelength": 1.10,
-                "handletextpad": 0.34,
-                "labelspacing": 0.12,
-                "borderpad": 0.18,
-                "columnspacing": 0.50,
-            },
-        },
-        "presentation": {
-            "styles": ["science", "no-latex"],
-            "width_mm": 240.0,
-            "height_ratio": 0.55,
-            "dpi": 220,
-            "point_size": 60,
-            "legend": {
-                "fontsize": 10.0,
-                "title_fontsize": 11.0,
-                "markerscale": 1.00,
-                "handlelength": 1.15,
-                "handletextpad": 0.38,
-                "labelspacing": 0.14,
-                "borderpad": 0.20,
-                "columnspacing": 0.55,
-            },
-        },
-    }
-
-    profile = dict(profiles.get(preset_key, profiles["science_single"]))
+    source = _IMAGE_EXPORT_PROFILES.get(preset_key, _IMAGE_EXPORT_PROFILES["science_single"])
+    profile = dict(source)
+    profile["legend"] = dict(source.get("legend", {}) or {})
     width_in = mm_to_inch(float(profile["width_mm"]))
-    height_in = max(2.0, width_in * float(profile.get("height_ratio", DEFAULT_EXPORT_HEIGHT_RATIO)))
+    height_in = max(
+        2.0, width_in * float(profile.get("height_ratio", DEFAULT_EXPORT_HEIGHT_RATIO))
+    )
     profile["figsize"] = (width_in, height_in)
     return profile
 
@@ -121,6 +222,8 @@ def resolve_image_save_options(
     transparent: bool,
     pad_inches: float,
     default_dpi: int,
+    embed_fonts: bool = True,
+    white_background: bool = True,
 ) -> dict[str, object]:
     """Resolve save options from profile defaults and UI overrides."""
     profile_dpi = int(profile.get("dpi", default_dpi))
@@ -130,6 +233,8 @@ def resolve_image_save_options(
         "bbox_tight": bool(bbox_tight),
         "pad_inches": max(0.0, float(pad_inches)),
         "transparent": bool(transparent),
+        "embed_fonts": bool(embed_fonts),
+        "white_background": bool(white_background),
     }
 
 
@@ -165,6 +270,65 @@ def fallback_export_rc(
     }
 
 
+#: Vector formats that carry fonts into the PDF/EPS/SVG.
+VECTOR_IMAGE_FORMATS = {"pdf", "svg", "eps"}
+#: Type 42 == TrueType: what Nature, Science, Elsevier and AGU require in PDFs.
+FONT_EMBEDDING_RC = {"pdf.fonttype": 42, "ps.fonttype": 42, "svg.fonttype": "none"}
+#: Text converted to outlines - safe everywhere, no longer editable.
+OUTLINED_TEXT_RC = {"svg.fonttype": "path"}
+
+
+def resolve_image_save_kwargs(
+    image_ext: str,
+    *,
+    export_dpi: int,
+    bbox_tight: bool,
+    pad_inches: float,
+    transparent: bool,
+    metadata: Mapping[str, object] | None = None,
+    embed_fonts: bool = True,
+    white_background: bool = True,
+) -> tuple[dict[str, object], dict[str, object]]:
+    """Return ``(savefig kwargs, rcParams overrides)`` for one export.
+
+    Vector exports embed TrueType fonts by default: matplotlib's Type 3 default is
+    rejected by most journals. Non-transparent exports are drawn on white so a dark
+    application theme cannot leak into a submitted figure.
+    """
+    extension = str(image_ext or "png").lower().strip(".")
+    save_kwargs: dict[str, object] = {
+        "format": extension,
+        "dpi": max(MIN_EXPORT_DPI, int(export_dpi)),
+        "bbox_inches": "tight" if bbox_tight else None,
+        "transparent": bool(transparent),
+    }
+    if bbox_tight:
+        save_kwargs["pad_inches"] = max(0.0, float(pad_inches))
+
+    rc_overrides: dict[str, object] = {}
+    if extension in VECTOR_IMAGE_FORMATS:
+        rc_overrides = dict(FONT_EMBEDDING_RC if embed_fonts else OUTLINED_TEXT_RC)
+
+    # The EPS backend does not preserve alpha channels reliably.
+    if extension == "eps" and save_kwargs["transparent"]:
+        save_kwargs["transparent"] = False
+
+    if not save_kwargs["transparent"] and white_background:
+        save_kwargs["facecolor"] = "white"
+        save_kwargs["edgecolor"] = "none"
+
+    if extension == "pdf" and metadata:
+        save_kwargs["metadata"] = {
+            str(key): str(value) for key, value in metadata.items() if value
+        }
+    if extension == "png":
+        save_kwargs["pil_kwargs"] = {"optimize": True}
+    elif extension == "tiff":
+        save_kwargs["pil_kwargs"] = {"compression": "tiff_lzw"}
+
+    return save_kwargs, rc_overrides
+
+
 def save_export_figure(
     export_fig: Any,
     file_path: str,
@@ -174,19 +338,22 @@ def save_export_figure(
     bbox_tight: bool,
     pad_inches: float,
     transparent: bool,
+    metadata: Mapping[str, object] | None = None,
+    embed_fonts: bool = True,
+    white_background: bool = True,
 ) -> None:
-    """Save figure using normalized options."""
-    save_kwargs = {
-        "format": image_ext,
-        "dpi": int(export_dpi),
-        "bbox_inches": "tight" if bbox_tight else None,
-        "transparent": bool(transparent),
-    }
-    if bbox_tight:
-        save_kwargs["pad_inches"] = float(max(0.0, pad_inches))
+    """Save figure using normalized, format-aware options."""
+    import matplotlib
 
-    # EPS backend does not preserve alpha channels reliably.
-    if image_ext == "eps" and save_kwargs["transparent"]:
-        save_kwargs["transparent"] = False
-
-    export_fig.savefig(file_path, **save_kwargs)
+    save_kwargs, rc_overrides = resolve_image_save_kwargs(
+        image_ext,
+        export_dpi=export_dpi,
+        bbox_tight=bbox_tight,
+        pad_inches=pad_inches,
+        transparent=transparent,
+        metadata=metadata,
+        embed_fonts=embed_fonts,
+        white_background=white_background,
+    )
+    with matplotlib.rc_context(rc_overrides):
+        export_fig.savefig(file_path, **save_kwargs)

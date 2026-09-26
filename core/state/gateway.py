@@ -342,6 +342,8 @@ class AppStateGateway:
         label_size: int | None = None,
         title_size: int | None = None,
         tick_size: int | None = None,
+        embed_fonts: bool | None = None,
+        white_background: bool | None = None,
     ) -> None:
         self._dispatch(
             "SET_EXPORT_IMAGE_OPTIONS",
@@ -357,6 +359,8 @@ class AppStateGateway:
                 "label_size": label_size,
                 "title_size": title_size,
                 "tick_size": tick_size,
+                "embed_fonts": embed_fonts,
+                "white_background": white_background,
             },
         )
 

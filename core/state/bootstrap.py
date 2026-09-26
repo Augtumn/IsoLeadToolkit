@@ -177,6 +177,8 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
         'transparent': False,
         'point_size': None,
         'legend_size': None,
+        'embed_fonts': True,
+        'white_background': True,
     }
     state.plot_facecolor = '#ffffff'
     state.axes_facecolor = '#ffffff'
