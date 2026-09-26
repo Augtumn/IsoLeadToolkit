@@ -17,6 +17,41 @@ from core.legend_state import wants_inline_legend
 logger = logging.getLogger(__name__)
 
 
+def legend_order_permutation(labels: list[Any], order_keys: list[Any]) -> list[int]:
+    """Indices that reorder *labels* to follow the legend panel's order.
+
+    *order_keys* are the panel's entries (``app_state.legend_item_order``, i.e.
+    ``"type:key"`` strings). A label matches ``group:<label>`` or ``parent:<label>``;
+    anything without a known key keeps its relative order after the known ones, which
+    is where overlays and derived entries end up. The returned permutation applies to
+    every parallel list (handles, scatters).
+    """
+    indices = list(range(len(labels)))
+    if not order_keys:
+        return indices
+
+    position: dict[str, int] = {}
+    for index, key in enumerate(order_keys):
+        position.setdefault(str(key), index)
+
+    def rank(item: tuple[int, Any]) -> tuple[int, int]:
+        index, label = item
+        for prefix in ("group", "parent"):
+            found = position.get(f"{prefix}:{label}")
+            if found is not None:
+                return found, index
+        return len(position), index
+
+    return [index for index, _ in sorted(enumerate(labels), key=rank)]
+
+
+def apply_permutation(values: list[Any], permutation: list[int]) -> list[Any]:
+    """Reorder *values* by *permutation* (a no-op for an empty or identity input)."""
+    if not values or len(values) != len(permutation):
+        return list(values)
+    return [values[index] for index in permutation]
+
+
 def _notify_legend_panel(title: str, handles: list[Any], labels: list[str]) -> None:
     callback = app_state.legend_update_callback
     if callable(callback):
@@ -256,6 +291,21 @@ def _render_legend(
             merged = _merge_parent_groups_for_inline(legend_handles, legend_labels)
             if merged is not None:
                 inline_handles, inline_labels = merged
+
+        # The legend panel list is the model for ordering; the inline legend is a
+        # projection of it (UI review item C). Ordering is applied to the parallel
+        # lists together so legend patch -> scatter stays aligned.
+        order_keys = list(getattr(app_state, "legend_item_order", None) or [])
+        if order_keys:
+            permutation = legend_order_permutation(legend_labels, order_keys)
+            legend_handles = apply_permutation(legend_handles, permutation)
+            legend_labels = apply_permutation(legend_labels, permutation)
+            if scatters:
+                scatters = apply_permutation(list(scatters), permutation)
+            if inline_handles is not None:
+                inline_permutation = legend_order_permutation(inline_labels or [], order_keys)
+                inline_handles = apply_permutation(inline_handles, inline_permutation)
+                inline_labels = apply_permutation(inline_labels or [], inline_permutation)
 
         _place_inline_legend(
             app_state.ax,
