@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Any, Sequence
 
 from core import app_state
+from core.legend_state import wants_inline_legend
+from core.legend_state import wants_docked_legend
 
 
 _LEGEND_OFFSET_EPSILON = 1e-12
@@ -24,7 +26,7 @@ def _legend_layout_config(
     loc = location_key if location_key else app_state.legend_position
     if not loc:
         return 'best', None, None, None
-    if isinstance(loc, str) and loc.startswith('outside_'):
+    if isinstance(loc, str) and not wants_inline_legend(loc):
         return 'best', None, None, None
     offsets = app_state.legend_offset or (0.0, 0.0)
     try:
@@ -60,7 +62,7 @@ def _legend_columns_for_layout(
     """Compute legend columns for auto layouts."""
     if not labels:
         return 1
-    if location_key in {'outside_left', 'outside_right'}:
+    if wants_docked_legend(location_key):
         return 1
     return None
 

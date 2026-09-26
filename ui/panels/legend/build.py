@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, state_gateway, translate
 from ui.panels.base_panel import BasePanel
+from core.legend_state import wants_docked_legend
+from core.legend_state import wants_inline_legend
 
 
 class LegendBuildMixin:
@@ -104,7 +106,7 @@ class LegendBuildMixin:
         inside_location = app_state.legend_position
         outside_location = app_state.legend_location
 
-        if outside_location and outside_location not in {'outside_left', 'outside_right'}:
+        if outside_location and not wants_docked_legend(outside_location):
             outside_location = None
 
         if inside_location not in self.legend_inside_buttons:
@@ -295,7 +297,7 @@ class LegendBuildMixin:
             btn.blockSignals(False)
 
     def _set_legend_position_button(self, location):
-        if location and str(location).startswith('outside_'):
+        if location and not wants_inline_legend(location):
             self._set_legend_outside_position_button(location)
         else:
             self._set_legend_inside_position_button(location)

@@ -34,6 +34,7 @@ from .legend_interaction import MainWindowLegendInteractionMixin
 from .legend_overlay import MainWindowLegendOverlayMixin
 from .legend_styles import MainWindowLegendStyleMixin
 from visualization.plotting.grouping import all_parents, parent_children
+from core.legend_state import wants_docked_legend
 
 
 def filter_legend_groups(
@@ -108,7 +109,7 @@ class MainWindowLegendActionsMixin(
             self._legend_panel_payload = (title, handles, labels)
             self._apply_legend_panel_layout()
             location_key = app_state.legend_location
-            if location_key not in {"outside_left", "outside_right"}:
+            if not wants_docked_legend(location_key):
                 return
 
             if self._legend_title_label is not None:

@@ -7,6 +7,39 @@ from typing import Any, Callable
 DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 
+#: The docked legend sides. Only these two render the legend panel outside the plot.
+OUTSIDE_LEGEND_LOCATIONS = frozenset({"outside_left", "outside_right"})
+
+
+def is_outside_legend_location(location: Any) -> bool:
+    """True for a docked legend side (``outside_left`` / ``outside_right``)."""
+    return str(location or "") in OUTSIDE_LEGEND_LOCATIONS
+
+
+def wants_docked_legend(location: Any) -> bool:
+    """Whether the legend panel is shown docked beside the plot."""
+    return is_outside_legend_location(location)
+
+
+def inline_legend_location(position: Any) -> str | None:
+    """The in-plot legend location, or None when no inline legend is wanted.
+
+    ``legend_position`` may hold an ``outside_*`` value (themes do that to express
+    "no inline legend"), so those are rejected here rather than at every call site.
+    """
+    if not position:
+        return None
+    text = str(position)
+    if text.startswith("outside_"):
+        return None
+    return text
+
+
+def wants_inline_legend(position: Any) -> bool:
+    """Whether a legend is drawn inside the axes."""
+    return inline_legend_location(position) is not None
+
+
 class LegendState:
     """Groups all legend position, style, and panel state fields."""
 

@@ -12,6 +12,7 @@ from visualization.line_styles import resolve_line_style
 
 from ...legend_model import group_legend_items, overlay_legend_items
 from ...style import _legend_columns_for_layout, _legend_layout_config, _style_legend
+from core.legend_state import wants_inline_legend
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +174,7 @@ def _place_inline_legend(
         return
 
     inside_location = app_state.legend_position
-    if not inside_location or str(inside_location).startswith('outside_'):
+    if not wants_inline_legend(inside_location):
         return
 
     location_key = inside_location

@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import app_state, available_languages, set_language, state_gateway, translate
+from core.legend_state import wants_docked_legend
 
 logger = logging.getLogger(__name__)
 QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
@@ -328,7 +329,7 @@ class MainWindowSetupMixin:
     def _apply_legend_panel_layout(self):
         try:
             location_key = app_state.legend_location
-            if location_key not in {"outside_left", "outside_right"}:
+            if not wants_docked_legend(location_key):
                 location_key = None
             is_outside = bool(location_key)
             if not hasattr(self, "legend_splitter"):

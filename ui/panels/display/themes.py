@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMessageBox, QWidget
 
 from core import CONFIG, app_state, atomic_write_json, load_themes, state_gateway, translate
 from visualization.plotting.style import configure_constrained_layout
+from core.legend_state import wants_docked_legend
 
 logger = logging.getLogger(__name__)
 
@@ -318,7 +319,7 @@ class DisplayThemeMixin:
             legend_outside = data.get('legend_location', None)
             legend_inside = data.get('legend_position', None)
 
-            if legend_outside not in {'outside_left', 'outside_right'}:
+            if not wants_docked_legend(legend_outside):
                 legend_outside = None
 
             state_gateway.set_legend_location(legend_outside)
