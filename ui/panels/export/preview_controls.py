@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from types import SimpleNamespace
+from application.use_cases.export_image import available_image_presets
 from core import app_state, state_gateway, translate
 
 
@@ -36,10 +37,8 @@ class ExportPreviewControlsMixin:
         row1 = QHBoxLayout()
         row1.addWidget(QLabel(translate("Journal Preset")))
         preset_combo = QComboBox()
-        preset_combo.addItem(translate("Science Single Column"), 'science_single')
-        preset_combo.addItem(translate("IEEE Single Column"), 'ieee_single')
-        preset_combo.addItem(translate("Nature Double Column"), 'nature_double')
-        preset_combo.addItem(translate("Presentation"), 'presentation')
+        for _preset_key, _preset_label in available_image_presets():
+            preset_combo.addItem(translate(_preset_label), _preset_key)
         idx = preset_combo.findData(str(preset_key))
         if idx >= 0:
             preset_combo.setCurrentIndex(idx)

@@ -874,5 +874,14 @@
   "Cumulative Distribution": "累积分布",
   "Density Computation": "密度计算",
   "Grid Size": "网格点数",
-  "Warn When Singular": "奇异数据告警"
+  "Warn When Singular": "奇异数据告警",
+  "Embed Fonts": "Embed Fonts",
+  "Embed TrueType fonts in PDF/EPS and keep SVG text editable.": "Embed TrueType fonts in PDF/EPS and keep SVG text editable.",
+  "Export on a white background regardless of the current theme.": "Export on a white background regardless of the current theme.",
+  "Output Quality": "Output Quality",
+  "White Background": "White Background",
+  "Science Double Column": "Science 双栏",
+  "Nature Single Column": "Nature 单栏",
+  "Elsevier Double Column": "Elsevier 双栏",
+  "GSA Double Column": "GSA 双栏"
 }

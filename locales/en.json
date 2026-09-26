@@ -874,5 +874,14 @@
   "Cumulative Distribution": "Cumulative Distribution",
   "Density Computation": "Density Computation",
   "Grid Size": "Grid Size",
-  "Warn When Singular": "Warn When Singular"
+  "Warn When Singular": "Warn When Singular",
+  "Embed Fonts": "Embed Fonts",
+  "Embed TrueType fonts in PDF/EPS and keep SVG text editable.": "Embed TrueType fonts in PDF/EPS and keep SVG text editable.",
+  "Export on a white background regardless of the current theme.": "Export on a white background regardless of the current theme.",
+  "Output Quality": "Output Quality",
+  "White Background": "White Background",
+  "Science Double Column": "Science Double Column",
+  "Nature Single Column": "Nature Single Column",
+  "Elsevier Double Column": "Elsevier Double Column",
+  "GSA Double Column": "GSA Double Column"
 }

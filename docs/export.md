@@ -53,13 +53,39 @@ application/use_cases/
 
 ### 参数控制
 
-- 预设模板（Single Column / Double Column / Presentation）。
-- 输出格式。
-- DPI。
-- 点大小、图例大小。
-- `tight bbox` 开关。
-- `padding`（inch）。
+- 预设模板（下拉项由 `available_image_presets()` 单一来源生成）：
+
+  | 预设 | 栏宽 | 适用 |
+  |---|---|---|
+  | Science Single / Double Column | 85 / 183 mm | Science 单栏 / 双栏 |
+  | Nature Single / Double Column | 89 / 180 mm | Nature 单栏 / 双栏 |
+  | IEEE Single Column | 88 mm | IEEE |
+  | Elsevier Double Column | 190 mm | Elsevier 系（含 Geochimica 等） |
+  | GSA Double Column | 190 mm | GSA Bulletin / Geology |
+  | Presentation | 240 mm | 幻灯片 |
+- 输出格式（PNG / TIFF / PDF / SVG / EPS）。
+- DPI（`72–1200`，预设默认 300）。
+- 点大小，以及图例 / 标签 / 标题 / 刻度字号。
+- `tight bbox` 开关与 `padding`（inch）。
 - 透明背景开关。
+- **嵌入字体**（默认开）：PDF/EPS 嵌入 TrueType（`pdf.fonttype=42`、`ps.fonttype=42`），
+  SVG 保持文本可编辑（`svg.fonttype='none'`）。关闭后 SVG 文本转为路径（`'path'`）。
+  多数期刊拒收 Type 3 字体，故默认开启。
+- **白色背景**（默认开）：非透明导出统一铺白底，避免深色主题渗入投稿图；
+  与"透明背景"互斥（透明时不铺底色；EPS 无 alpha 通道，会退回白底）。
+
+### 格式细化
+
+| 格式 | 处理 |
+|---|---|
+| PDF | TrueType 字体嵌入 + 文档元数据（Title/Subject 取自当前图标题，Creator=IsotopesAnalyse） |
+| SVG | 文本保持可编辑（或按需转路径） |
+| EPS | 丢弃 alpha 通道，改用白底 |
+| PNG | `pil_kwargs={'optimize': True}` 无损压缩 |
+| TIFF | `pil_kwargs={'compression': 'tiff_lzw'}` |
+
+DPI 低于 72 会被钳制；`pad_inches` 仅在 `tight bbox` 开启时传入。
+
 
 ### 用例下沉（2026-04-01）
 

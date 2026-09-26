@@ -97,6 +97,26 @@ class ExportPreviewDialogMixin:
             tit_spin = _controls.tit_spin
             transparent_check = _controls.transparent_check
 
+            # ── Output quality ─────────────────────────────────────
+            quality_row = QHBoxLayout()
+            quality_row.addWidget(QLabel(translate("Output Quality")))
+            embed_fonts_check = QCheckBox(translate("Embed Fonts"))
+            embed_fonts_check.setObjectName('preview_embed_fonts_check')
+            embed_fonts_check.setChecked(bool(params.get('embed_fonts', True)))
+            embed_fonts_check.setToolTip(
+                translate("Embed TrueType fonts in PDF/EPS and keep SVG text editable.")
+            )
+            quality_row.addWidget(embed_fonts_check)
+            white_background_check = QCheckBox(translate("White Background"))
+            white_background_check.setObjectName('preview_white_background_check')
+            white_background_check.setChecked(bool(params.get('white_background', True)))
+            white_background_check.setToolTip(
+                translate("Export on a white background regardless of the current theme.")
+            )
+            quality_row.addWidget(white_background_check)
+            quality_row.addStretch()
+            main_layout.addLayout(quality_row)
+
             # ── Canvas and toolbar ─────────────────────────────────
             canvas = FigureCanvasQTAgg(preview_fig)
             canvas.setFixedSize(preview_width_px, preview_height_px)
@@ -391,6 +411,8 @@ class ExportPreviewDialogMixin:
                 if not file_path:
                     return
                 file_path, export_ext = self._normalize_export_target(file_path, str(state['params'].get('image_ext', 'png')))
+                state['params']['embed_fonts'] = bool(embed_fonts_check.isChecked())
+                state['params']['white_background'] = bool(white_background_check.isChecked())
                 save_options = self._resolve_export_save_options(state['profile'], overrides=state['params'])
                 try:
                     self._save_export_figure(
@@ -401,6 +423,8 @@ class ExportPreviewDialogMixin:
                         bbox_tight=bool(save_options['bbox_tight']),
                         pad_inches=float(save_options['pad_inches']),
                         transparent=bool(save_options['transparent']),
+                        embed_fonts=bool(embed_fonts_check.isChecked()),
+                        white_background=bool(white_background_check.isChecked()),
                     )
                     QMessageBox.information(
                         dialog,

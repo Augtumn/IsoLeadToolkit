@@ -1,6 +1,8 @@
 """Build/reset logic for export panel."""
 from __future__ import annotations
 
+import json
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QComboBox,
@@ -13,6 +15,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from application.use_cases.export_image import available_image_presets
 from core import state_gateway, translate
 
 
@@ -95,13 +98,10 @@ class ExportPanelBuildMixin:
         # Language refresh: keys align with addItem order below.
         self.image_preset_combo.setProperty(
             'combo_item_keys',
-            '["Science Single Column", "IEEE Single Column", '
-            '"Nature Double Column", "Presentation"]',
+            json.dumps([label for _key, label in available_image_presets()]),
         )
-        self.image_preset_combo.addItem(translate("Science Single Column"), 'science_single')
-        self.image_preset_combo.addItem(translate("IEEE Single Column"), 'ieee_single')
-        self.image_preset_combo.addItem(translate("Nature Double Column"), 'nature_double')
-        self.image_preset_combo.addItem(translate("Presentation"), 'presentation')
+        for _preset_key, _preset_label in available_image_presets():
+            self.image_preset_combo.addItem(translate(_preset_label), _preset_key)
         preset_key = str(export_options.get('preset_key') or 'science_single')
         preset_index = self.image_preset_combo.findData(preset_key)
         if preset_index >= 0:

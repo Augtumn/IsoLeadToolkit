@@ -63,6 +63,8 @@ class ExportPanelCommonMixin:
             'transparent': False,
             'pad_inches': 0.02,
             'image_ext': 'png',
+            'embed_fonts': True,
+            'white_background': True,
         }
 
     def _resolve_export_save_options(self, profile: dict, *, overrides: dict | None = None) -> dict:
@@ -77,6 +79,8 @@ class ExportPanelCommonMixin:
         pad_inches = float(overrides.get('pad_inches', 0.02))
         preset_key = str(overrides.get('preset_key', 'science_single'))
         image_ext = str(overrides.get('image_ext', 'png'))
+        embed_fonts = bool(overrides.get('embed_fonts', True))
+        white_background = bool(overrides.get('white_background', True))
         point_size = int(overrides.get('point_size', profile.get('point_size', 60)))
         legend_size = int(overrides.get('legend_size', 8))
         label_size = int(overrides.get('label_size', 10))
@@ -95,6 +99,8 @@ class ExportPanelCommonMixin:
             label_size=label_size,
             title_size=title_size,
             tick_size=tick_size,
+            embed_fonts=embed_fonts,
+            white_background=white_background,
         )
 
         return resolve_image_save_options(
@@ -104,6 +110,8 @@ class ExportPanelCommonMixin:
             transparent=transparent,
             pad_inches=pad_inches,
             default_dpi=int(CONFIG.get('savefig_dpi', 400)),
+            embed_fonts=embed_fonts,
+            white_background=white_background,
         )
 
     @staticmethod
@@ -136,6 +144,8 @@ class ExportPanelCommonMixin:
         bbox_tight: bool,
         pad_inches: float,
         transparent: bool,
+        embed_fonts: bool = True,
+        white_background: bool = True,
     ) -> None:
         """Save figure using unified export options."""
         save_export_figure(
@@ -146,5 +156,18 @@ class ExportPanelCommonMixin:
             bbox_tight=bool(bbox_tight),
             pad_inches=float(pad_inches),
             transparent=bool(transparent),
+            metadata=self._export_figure_metadata(),
+            embed_fonts=bool(embed_fonts),
+            white_background=bool(white_background),
         )
+
+    @staticmethod
+    def _export_figure_metadata() -> dict[str, str]:
+        """PDF document metadata: the plot title plus this application."""
+        title = str(getattr(app_state, 'current_plot_title', '') or '').strip()
+        metadata = {'Creator': 'IsotopesAnalyse', 'Producer': 'IsotopesAnalyse'}
+        if title:
+            metadata['Title'] = title
+            metadata['Subject'] = title
+        return metadata
 

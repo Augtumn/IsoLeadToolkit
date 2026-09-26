@@ -101,6 +101,8 @@ class ExportPanelImageExportMixin:
                 bbox_tight=bool(save_options['bbox_tight']),
                 pad_inches=float(save_options['pad_inches']),
                 transparent=bool(save_options['transparent']),
+                embed_fonts=bool(save_options.get('embed_fonts', True)),
+                white_background=bool(save_options.get('white_background', True)),
             )
             QMessageBox.information(
                 self,
