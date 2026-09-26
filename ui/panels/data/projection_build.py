@@ -28,6 +28,15 @@ from .projection_groups_build import DataPanelProjectionGroupsBuildMixin
 
 class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
     """Build UMAP/t-SNE/PCA/RobustPCA/Ternary parameter UI controls for data panel."""
+    algo_combo = None
+    metric_combo = None
+    preset_combo = None
+    robust_support_spin = None
+    spinboxes = None
+    standardize_check = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _build_projection_params(self, layout):
         """Build projection algorithm parameter groups.
@@ -37,7 +46,7 @@ class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
         Args:
             layout: The parent layout to add widgets into.
         """
-        if not hasattr(self, "spinboxes"):
+        if not self.spinboxes is not None:
             self.spinboxes = {}
         self._build_preset_bar(layout)
         self._build_umap_group(layout)
@@ -52,7 +61,7 @@ class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
 
     def _preset_combo_refresh(self):
         """Refresh the preset combo box from saved presets."""
-        if not hasattr(self, "preset_combo") or self.preset_combo is None:
+        if not self.preset_combo is not None or self.preset_combo is None:
             return
         self.preset_combo.blockSignals(True)
         current = self.preset_combo.currentText()
@@ -118,7 +127,7 @@ class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
                 self.sliders["umap_n_neighbors"].setValue(umap["n_neighbors"])
             if "min_dist" in umap and "umap_min_dist" in self.sliders:
                 self.sliders["umap_min_dist"].setValue(int(umap["min_dist"] * 100))
-            if "metric" in umap and hasattr(self, "metric_combo") and self.metric_combo:
+            if "metric" in umap and self.metric_combo is not None and self.metric_combo:
                 self.metric_combo.setCurrentText(umap["metric"])
 
         # --- t-SNE ---
@@ -144,18 +153,18 @@ class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
         if rpca:
             if "n_components" in rpca and "robust_pca_n_components" in self.spinboxes:
                 self.spinboxes["robust_pca_n_components"].setValue(rpca["n_components"])
-            if "support_fraction" in rpca and hasattr(self, "robust_support_spin"):
+            if "support_fraction" in rpca and self.robust_support_spin is not None:
                 self.robust_support_spin.setValue(rpca["support_fraction"])
             if "random_state" in rpca and "robust_pca_random_state" in self.spinboxes:
                 self.spinboxes["robust_pca_random_state"].setValue(rpca["random_state"])
 
         # --- Standardize checkbox ---
-        if "standardize_data" in params and hasattr(self, "standardize_check"):
+        if "standardize_data" in params and self.standardize_check is not None:
             self.standardize_check.setChecked(params["standardize_data"])
 
     def _load_preset(self):
         """Load the selected preset into projection controls."""
-        if not hasattr(self, "preset_combo") or self.preset_combo is None:
+        if not self.preset_combo is not None or self.preset_combo is None:
             return
         name = self.preset_combo.currentText()
         if not name or name == translate("Custom"):
@@ -172,7 +181,7 @@ class DataPanelProjectionBuildMixin(DataPanelProjectionGroupsBuildMixin):
         if algo:
             state_gateway.set_algorithm(algo)
             # Also update the algorithm combo
-            if hasattr(self, "algo_combo") and self.algo_combo is not None:
+            if self.algo_combo is not None and self.algo_combo is not None:
                 self._set_combo_value(self.algo_combo, algo)
 
         param_setters = {

@@ -394,7 +394,7 @@ class MainWindowSetupMixin:
         """刷新菜单与状态栏语言"""
         if self.file_menu is not None:
             self.file_menu.setTitle(translate("File"))
-        actions = getattr(self, "_menu_actions", {})
+        actions = (self._menu_actions or {})
         if "reload" in actions:
             actions["reload"].setText(translate("Reload Data"))
         if "exit" in actions:

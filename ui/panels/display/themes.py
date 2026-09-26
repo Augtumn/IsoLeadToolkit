@@ -16,6 +16,10 @@ _DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 class DisplayThemeMixin:
     """Theme management methods for display panel."""
+    findChildren = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _refresh_theme_list(self):
         """从磁盘加载主题并刷新下拉列表"""
@@ -158,7 +162,7 @@ class DisplayThemeMixin:
         # Applying a theme touches ~50 widgets; block their signals so the
         # single _on_style_change() at the end performs one refresh instead
         # of dozens of chained dispatches.
-        find_children = getattr(self, 'findChildren', None)
+        find_children = self.findChildren
         blocked_widgets = []
         if callable(find_children):
             blocked_widgets = [

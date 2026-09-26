@@ -69,6 +69,10 @@ def copy_toolbar_actions(source, target, translations=None) -> None:
 
 class MainWindowCanvasMixin:
     """Canvas and toolbar behavior for main window."""
+    _selection_tool_actions = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def set_matplotlib_figure(self, fig):
         """设置 matplotlib 图形"""
@@ -141,7 +145,7 @@ class MainWindowCanvasMixin:
         self._sync_selection_tool_actions()
 
     def _sync_selection_tool_actions(self):
-        actions = getattr(self, "_selection_tool_actions", None)
+        actions = self._selection_tool_actions
         if not actions:
             return
         current_tool = app_state.selection_tool

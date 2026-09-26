@@ -71,6 +71,12 @@ class MainWindowLegendActionsMixin(
     MainWindowLegendInteractionMixin,
 ):
     """Legend user interaction handlers and UI updates."""
+    _legend_list = None
+    _legend_panel_payload = None
+    legend_search_edit = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     # ------------------------------------------------------------------
     # Parent group management (merge subgroups under one shape)
@@ -88,7 +94,7 @@ class MainWindowLegendActionsMixin(
 
     def _on_legend_search_changed(self, _query=""):
         """Re-filter the legend list for the current search text."""
-        payload = getattr(self, "_legend_panel_payload", None)
+        payload = self._legend_panel_payload
         if payload is None:
             return
         self._update_legend_panel(*payload)
@@ -102,7 +108,7 @@ class MainWindowLegendActionsMixin(
 
     def _update_legend_panel(self, title, handles, labels):
         try:
-            if not hasattr(self, "_legend_list") or self._legend_list is None:
+            if not self._legend_list is not None or self._legend_list is None:
                 return
             # Keep the last payload so the search box can re-filter without a
             # full re-render.
@@ -132,7 +138,7 @@ class MainWindowLegendActionsMixin(
                 groups = list(app_state.df_global[app_state.last_group_col].unique())
             overlay_entries = self._overlay_entries_for_legend()
 
-            search_edit = getattr(self, "legend_search_edit", None)
+            search_edit = self.legend_search_edit
             query = str(search_edit.text() or "") if search_edit is not None else ""
             parent_map = {
                 parent: set(parent_children(app_state, parent))

@@ -42,15 +42,23 @@ def _default_clip_bounds() -> tuple[float, float]:
 
 class DisplayPanelKdeStyleMixin:
     """KDE curve style handlers and dialog for the display panel."""
+    group_kde_check = None
+    kde_check = None
+    marginal_kde_check = None
+    tools_kde_check = None
+    tools_marginal_kde_check = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _on_kde_change(self, state):
         """Handle KDE visibility change."""
         state_gateway.set_show_kde(state == Qt.Checked)
         self._sync_toggle_widgets(
             app_state.show_kde,
-            getattr(self, 'kde_check', None),
-            getattr(self, 'group_kde_check', None),
-            getattr(self, 'tools_kde_check', None),
+            self.kde_check,
+            self.group_kde_check,
+            self.tools_kde_check,
         )
         self._on_change()
 
@@ -59,8 +67,8 @@ class DisplayPanelKdeStyleMixin:
         state_gateway.set_show_marginal_kde(state == Qt.Checked)
         self._sync_toggle_widgets(
             app_state.show_marginal_kde,
-            getattr(self, 'marginal_kde_check', None),
-            getattr(self, 'tools_marginal_kde_check', None),
+            self.marginal_kde_check,
+            self.tools_marginal_kde_check,
         )
         self._on_change()
 

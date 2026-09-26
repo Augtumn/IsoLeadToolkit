@@ -25,6 +25,13 @@ from core import app_state, available_languages, set_language, state_gateway, tr
 
 class DataImportBuildMixin:
     """Construct and translate data import dialog UI."""
+    columns_layout = None
+    render_group = None
+    render_label = None
+    render_mode_combo = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     PREVIEW_ROWS = 10
 
@@ -261,7 +268,7 @@ class DataImportBuildMixin:
         return group
 
     def _populate_render_modes(self):
-        if not hasattr(self, 'render_mode_combo') or self.render_mode_combo is None:
+        if not self.render_mode_combo is not None or self.render_mode_combo is None:
             return
 
         current_value = self.render_mode_combo.currentData()
@@ -320,9 +327,9 @@ class DataImportBuildMixin:
             self.sheet_group.setTitle(translate("Sheet"))
         if self.preview_group is not None:
             self.preview_group.setTitle(translate("Data Preview"))
-        if getattr(self, 'render_group', None) is not None:
+        if self.render_group is not None:
             self.render_group.setTitle(translate("Initial Render Mode"))
-        if getattr(self, 'render_label', None) is not None:
+        if self.render_label is not None:
             self.render_label.setText(
                 translate("Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.")
             )
@@ -430,7 +437,7 @@ class DataImportBuildMixin:
         return card
 
     def _update_columns_layout(self):
-        if not hasattr(self, 'columns_layout'):
+        if not self.columns_layout is not None:
             return
         direction = QBoxLayout.LeftToRight if self.width() >= 900 else QBoxLayout.TopToBottom
         if self.columns_layout.direction() == direction:

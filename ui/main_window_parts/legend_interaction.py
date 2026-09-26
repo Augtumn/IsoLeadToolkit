@@ -32,6 +32,10 @@ from .legend_entries import reorder_legend_keys
 
 class MainWindowLegendInteractionMixin:
     """Legend list interaction: drag/drop, reorder, context menu, checkboxes."""
+    _legend_list = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _on_legend_item_double_clicked(self, item):
         meta = item.data(Qt.UserRole) if item is not None else None
@@ -236,7 +240,7 @@ class MainWindowLegendInteractionMixin:
         Long lists (hundreds of groups) make a row impossible to find by hand, so a
         double click on a data point brings its legend entry into view.
         """
-        legend_list = getattr(self, "_legend_list", None)
+        legend_list = self._legend_list
         if legend_list is None:
             return
         for index in range(legend_list.count()):

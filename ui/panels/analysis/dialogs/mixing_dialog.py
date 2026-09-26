@@ -27,6 +27,10 @@ def show_mixing_calculator(parent: object | None = None) -> None:
 
 class MixingCalculatorDialog(QDialog):
     """混合计算器对话框"""
+    _mixing_worker = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -127,7 +131,7 @@ class MixingCalculatorDialog(QDialog):
             )
             return
 
-        if getattr(self, "_mixing_worker", None) is not None and self._mixing_worker.isRunning():
+        if self._mixing_worker is not None and self._mixing_worker.isRunning():
             QMessageBox.information(
                 self,
                 translate("Info"),
@@ -185,7 +189,7 @@ class MixingCalculatorDialog(QDialog):
     def closeEvent(self, event):
         from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
 
-        stop_analysis_worker(getattr(self, "_mixing_worker", None))
+        stop_analysis_worker(self._mixing_worker)
         super().closeEvent(event)
 
     def _export_results(self):

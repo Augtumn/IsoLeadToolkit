@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 class ProvenanceMLWorkflowMixin:
     """Workflow and result actions for provenance ML dialog."""
+    _ml_pred_df = None
+    _ml_worker = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _browse_training_file(self):
         file_types = ";;".join(
@@ -172,7 +177,7 @@ class ProvenanceMLWorkflowMixin:
         xgb_params = params.get('xgb_params', {})
         smote_sampling_strategy = params.get('smote_sampling_strategy', 1.0)
 
-        if getattr(self, "_ml_worker", None) is not None and self._ml_worker.isRunning():
+        if self._ml_worker is not None and self._ml_worker.isRunning():
             QMessageBox.information(
                 self,
                 translate("Info"),
@@ -263,7 +268,7 @@ class ProvenanceMLWorkflowMixin:
         """Build the combined result on the main thread after training."""
         from plugins.api import PluginError as ProvenanceMLError
 
-        df_pred = getattr(self, "_ml_pred_df", None)
+        df_pred = self._ml_pred_df
         if df_pred is None:
             raise RuntimeError("Prediction data is not available")
 
@@ -329,7 +334,7 @@ class ProvenanceMLWorkflowMixin:
     def closeEvent(self, event):
         from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
 
-        stop_analysis_worker(getattr(self, "_ml_worker", None))
+        stop_analysis_worker(self._ml_worker)
         super().closeEvent(event)
 
     def _display_results(self):

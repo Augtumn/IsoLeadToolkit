@@ -54,7 +54,7 @@
 | 项 | 内容 | 状态 |
 |---|---|---|
 | **A** | 声明式状态字段注册表（消灭漏登记类 bug） | **已完成（基线组）**：`core/state/fields.py` 声明 10 个 ternary/limit 字段，初始快照、投影、回写、持久化白名单四处由声明派生；守卫 `check_state_sync_coverage.py` 探测 174 字段；`tests/test_state_fields.py` 16 例。迁移中顺带发现并修复 `ternary_render_margin` **未纳入持久化白名单**（跨会话丢失） |
-| **B** | 组合根 + 显式依赖 | **进行中**：组合根/夹具/4 个真实窗口测试已完成；棘轮守卫 check_self_attribute_probes.py 禁止新增自省探测；已迁移 GeoPanelOverlaysMixin、MainWindowSetupMixin、LegendListWidget、AnalysisPanelSelectionMixin，探测由 95 处 / 25 文件降至 60 处 / 23 文件，剩余文件逐个迁移 |
+| **B** | 组合根 + 显式依赖 | **已完成**：组合根 `build_main_window()`（`ui/app.py` 亦使用）、`tests/conftest.py` 的 `qapp`/`main_window` 夹具、4 个真实窗口测试；**95 处 `hasattr/getattr(self, …)` 探测全部迁移为显式类属性声明（现为 0）**，迁移工具 `scripts/migrate_self_probes.py`，棘轮守卫 `check_self_attribute_probes.py` 保持为 0 |
 | **C** | 图例单一真源 | **进行中**：显示策略已从 8 处重复判定（三种写法，对 outside_* 新值语义不一致）收敛到 core/legend_state.py 的 wants_inline_legend() / wants_docked_legend()，tests/test_legend_policy.py 覆盖；投影化（图内图例与 zorder 由面板列表派生）仍待定语义 |
 | **D** | 统一输入管线并写入 `docs/dev_conventions.md` | 待做 |
 | **E** | 日志语义分离 | **已完成** |

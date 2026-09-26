@@ -23,9 +23,13 @@ logger = logging.getLogger(__name__)
 
 class DataPanelGroupingMixin:
     """Grouping and tooltip handlers for data panel."""
+    legend_panel = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _update_group_list(self):
-        panel = getattr(self, "legend_panel", None)
+        panel = self.legend_panel
         if panel is not None and hasattr(panel, "_update_group_list"):
             panel._update_group_list()
 

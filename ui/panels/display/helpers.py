@@ -10,9 +10,13 @@ from ui.icons import apply_color_swatch, normalize_color_hex
 
 class DisplayControlHelperMixin:
     """Color and legend-position helper methods for display panel."""
+    legend_panel = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _set_legend_position_button(self, inside_location, outside_location=None):
-        panel = getattr(self, 'legend_panel', None)
+        panel = self.legend_panel
         if panel is None:
             return
         if hasattr(panel, '_set_legend_inside_position_button'):

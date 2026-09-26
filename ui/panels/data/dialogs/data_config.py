@@ -19,6 +19,10 @@ from core import translate
 
 class Qt5DataConfigDialog(QDialog):
     """Qt5 数据配置对话框"""
+    columns_layout = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def __init__(self, df, default_group_cols=None, default_data_cols=None, parent=None):
         super().__init__(parent)
@@ -158,7 +162,7 @@ class Qt5DataConfigDialog(QDialog):
         return card
 
     def _update_columns_layout(self):
-        if not hasattr(self, 'columns_layout'):
+        if not self.columns_layout is not None:
             return
         direction = QBoxLayout.LeftToRight if self.width() >= 900 else QBoxLayout.TopToBottom
         if self.columns_layout.direction() == direction:

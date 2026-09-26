@@ -48,6 +48,16 @@ def _safe_color(widget, default):
 
 class PanelStyleMixin:
     """Style updates collected from panel widgets, plus undo snapshots."""
+    _is_initialized = None
+    cjk_font_combo = None
+    color_combo = None
+    font_size_spins = None
+    legend_frame_edge_edit = None
+    legend_frame_face_edit = None
+    primary_font_combo = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _collect_style_updates(self) -> dict[str, object]:
         """遍历 ``_STYLE_WIDGET_MAP``，从已注册的 widget 提取样式更新。
@@ -76,7 +86,7 @@ class PanelStyleMixin:
 
     def _on_style_change(self, *_args):
         """处理样式变化"""
-        if not getattr(self, "_is_initialized", False):
+        if not self._is_initialized:
             return
 
         previous_scheme = app_state.color_scheme
@@ -100,25 +110,25 @@ class PanelStyleMixin:
         # ---- 特殊处理: 需额外逻辑的控件 ----
 
         # 配色方案 (用于后续 replot 检测)
-        color_combo = getattr(self, 'color_combo', None)
+        color_combo = self.color_combo
         new_scheme = color_combo.currentText() if color_combo is not None else app_state.color_scheme
         style_updates['color_scheme'] = new_scheme
 
         # 字体选择器 (<Default> 哨兵值处理)
-        primary_combo = getattr(self, 'primary_font_combo', None)
+        primary_combo = self.primary_font_combo
         primary_font = primary_combo.currentText() if primary_combo is not None else ''
         if primary_font == '<Default>':
             primary_font = ''
         style_updates['custom_primary_font'] = primary_font
 
-        cjk_combo = getattr(self, 'cjk_font_combo', None)
+        cjk_combo = self.cjk_font_combo
         cjk_font = cjk_combo.currentText() if cjk_combo is not None else ''
         if cjk_font == '<Default>':
             cjk_font = ''
         style_updates['custom_cjk_font'] = cjk_font
 
         # 字号字典
-        font_size_spins = getattr(self, 'font_size_spins', {})
+        font_size_spins = (self.font_size_spins or {})
         if font_size_spins:
             style_updates['plot_font_sizes'] = {k: v.value() for k, v in font_size_spins.items()}
 
@@ -132,10 +142,10 @@ class PanelStyleMixin:
                 style_updates[key] = (float(x.value()), float(y.value()))
 
         # 图例框架背景 / 边框 (纯文本，不使用 _safe_color)
-        legend_frame_face_edit = getattr(self, 'legend_frame_face_edit', None)
+        legend_frame_face_edit = self.legend_frame_face_edit
         if legend_frame_face_edit is not None:
             style_updates['legend_frame_facecolor'] = legend_frame_face_edit.text() or '#ffffff'
-        legend_frame_edge_edit = getattr(self, 'legend_frame_edge_edit', None)
+        legend_frame_edge_edit = self.legend_frame_edge_edit
         if legend_frame_edge_edit is not None:
             style_updates['legend_frame_edgecolor'] = legend_frame_edge_edit.text() or '#cbd5f5'
 

@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 class LegendEditorsMixin:
     """Palette and shape editor helpers used by legend panel."""
+    _marker_shape_map = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _populate_base_shape_combo(self):
         self.auto_base_shape_combo.blockSignals(True)
@@ -321,7 +325,7 @@ class LegendEditorsMixin:
         return name, shapes
 
     def _ensure_marker_shape_map(self):
-        if not hasattr(self, '_marker_shape_map'):
+        if not self._marker_shape_map is not None:
             self._marker_shape_map = {
                 translate("Point (.)"): '.',
                 translate("Pixel (,)"): ',',

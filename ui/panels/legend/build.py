@@ -25,6 +25,11 @@ from core.legend_state import wants_inline_legend
 
 class LegendBuildMixin:
     """Build and helper methods for legend panel."""
+    legend_inside_buttons = None
+    legend_outside_buttons = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def reset_state(self):
         super().reset_state()
@@ -277,7 +282,7 @@ class LegendBuildMixin:
     # ------ 位置 ------
 
     def _set_legend_inside_position_button(self, location):
-        buttons = getattr(self, 'legend_inside_buttons', {})
+        buttons = (self.legend_inside_buttons or {})
         if not buttons:
             return
         target = buttons.get(location)
@@ -287,7 +292,7 @@ class LegendBuildMixin:
             btn.blockSignals(False)
 
     def _set_legend_outside_position_button(self, location):
-        buttons = getattr(self, 'legend_outside_buttons', {})
+        buttons = (self.legend_outside_buttons or {})
         if not buttons:
             return
         target = buttons.get(location)

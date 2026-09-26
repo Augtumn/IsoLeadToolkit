@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 
 class DataPanelProjectionMixin:
     """Projection and algorithm handlers for data panel."""
+    rpca_x_spin = None
+    rpca_y_spin = None
+    ternary_limit_mode_combo = None
+    ternary_limit_spins = None
+    ternary_manual_limits_check = None
+    xaxis_combo = None
+    yaxis_combo = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _on_render_mode_change(self, mode):
         """Handle render mode changes."""
@@ -131,7 +141,7 @@ class DataPanelProjectionMixin:
         """
         try:
             sender = self.sender()
-            if sender is getattr(self, "rpca_x_spin", None):
+            if sender is self.rpca_x_spin:
                 x_idx = self.rpca_x_spin.value() - 1
                 y_idx = self.rpca_y_spin.value() - 1
                 self.pca_x_spin.blockSignals(True)
@@ -144,12 +154,12 @@ class DataPanelProjectionMixin:
                 x_idx = self.pca_x_spin.value() - 1
                 y_idx = self.pca_y_spin.value() - 1
 
-                if hasattr(self, "rpca_x_spin"):
+                if self.rpca_x_spin is not None:
                     self.rpca_x_spin.blockSignals(True)
                     self.rpca_x_spin.setValue(x_idx + 1)
                     self.rpca_x_spin.blockSignals(False)
 
-                if hasattr(self, "rpca_y_spin"):
+                if self.rpca_y_spin is not None:
                     self.rpca_y_spin.blockSignals(True)
                     self.rpca_y_spin.setValue(y_idx + 1)
                     self.rpca_y_spin.blockSignals(False)
@@ -229,15 +239,15 @@ class DataPanelProjectionMixin:
         """Enable/disable ternary limit controls based on auto-zoom/manual toggles."""
         auto_zoom_enabled = bool(app_state.ternary_auto_zoom)
         base_widgets = [
-            getattr(self, "ternary_limit_mode_combo", None),
-            getattr(self, "ternary_manual_limits_check", None),
+            self.ternary_limit_mode_combo,
+            self.ternary_manual_limits_check,
         ]
         for widget in base_widgets:
             if widget is not None:
                 widget.setEnabled(auto_zoom_enabled)
 
         manual_enabled = auto_zoom_enabled and bool(app_state.ternary_manual_limits_enabled)
-        for spin in (getattr(self, "ternary_limit_spins", None) or {}).values():
+        for spin in (self.ternary_limit_spins or {}).values():
             spin.setEnabled(manual_enabled)
 
     def _on_ternary_limit_mode_change(self, index):
@@ -273,7 +283,7 @@ class DataPanelProjectionMixin:
 
     def _refresh_2d_axis_combos(self):
         """Refresh 2D axis selection combo boxes."""
-        if not hasattr(self, "xaxis_combo") or not hasattr(self, "yaxis_combo"):
+        if not self.xaxis_combo is not None or not self.yaxis_combo is not None:
             return
         if app_state.df_global is None:
             return

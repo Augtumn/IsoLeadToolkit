@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 class ClusteringDialog(QDialog):
     """Dialog to configure and run HDBSCAN clustering on embedding results."""
+    _cluster_worker = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -146,7 +150,7 @@ class ClusteringDialog(QDialog):
             )
             return
 
-        if getattr(self, "_cluster_worker", None) is not None and self._cluster_worker.isRunning():
+        if self._cluster_worker is not None and self._cluster_worker.isRunning():
             QMessageBox.information(
                 self,
                 translate("Info"),
@@ -216,7 +220,7 @@ class ClusteringDialog(QDialog):
     def closeEvent(self, event):
         from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
 
-        stop_analysis_worker(getattr(self, "_cluster_worker", None))
+        stop_analysis_worker(self._cluster_worker)
         super().closeEvent(event)
 
     def _on_apply(self):

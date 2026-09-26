@@ -25,6 +25,11 @@ def show_endmember_analysis(parent: Any = None) -> None:
 
 class EndmemberAnalysisDialog(QDialog):
     """端元识别对话框"""
+    _endmember_worker = None
+    _selected_original_indices = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -270,7 +275,7 @@ class EndmemberAnalysisDialog(QDialog):
         if clamp_b >= 99999.0:
             clamp_b = np.inf
 
-        if getattr(self, "_endmember_worker", None) is not None and self._endmember_worker.isRunning():
+        if self._endmember_worker is not None and self._endmember_worker.isRunning():
             QMessageBox.information(
                 self,
                 translate("Info"),
@@ -331,7 +336,7 @@ class EndmemberAnalysisDialog(QDialog):
     def closeEvent(self, event):
         from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
 
-        stop_analysis_worker(getattr(self, "_endmember_worker", None))
+        stop_analysis_worker(self._endmember_worker)
         super().closeEvent(event)
 
     def _display_results(self):
@@ -403,7 +408,7 @@ class EndmemberAnalysisDialog(QDialog):
         full_labels = np.full(len(app_state.df_global), 'Unknown', dtype=object)
 
         result_labels = self._result['group_labels']
-        orig_indices = getattr(self, '_selected_original_indices', None)
+        orig_indices = self._selected_original_indices
 
         if orig_indices is not None:
             # 子集模式：映射回原始索引

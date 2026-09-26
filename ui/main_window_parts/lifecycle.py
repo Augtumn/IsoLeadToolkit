@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 class MainWindowLifecycleMixin:
     """Window lifecycle methods and action callbacks."""
+    _section_dialogs = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _session_archive_filter(self) -> str:
         return translate("Isotope Session Archive (*.zip)")
@@ -210,7 +214,7 @@ class MainWindowLifecycleMixin:
 
     def _show_section_dialog(self, section_key):
         """打开指定分区对话框"""
-        if not hasattr(self, "_section_dialogs"):
+        if not self._section_dialogs is not None:
             self._section_dialogs = {}
 
         dialog = self._section_dialogs.get(section_key)

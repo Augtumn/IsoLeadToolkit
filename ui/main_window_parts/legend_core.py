@@ -22,12 +22,17 @@ QT_DEBUG_MODE = os.environ.get("ISOTOPES_QT_DEBUG", "").strip().lower() in {
 
 class MainWindowLegendCoreMixin:
     """Legend model helpers shared by legend UI actions."""
+    _legend_list = None
+    _marker_shape_map = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _build_marker_icon(self, color, marker, size=14):
         return build_marker_icon(color, marker, size)
 
     def _ensure_marker_shape_map(self):
-        if not hasattr(self, "_marker_shape_map"):
+        if not self._marker_shape_map is not None:
             self._marker_shape_map = {
                 translate("Point (.)"): ".",
                 translate("Pixel (,)"): ",",
@@ -142,7 +147,7 @@ class MainWindowLegendCoreMixin:
         raise_tooltip_above_data(app_state.ax, app_state.annotation)
 
     def _apply_legend_z_order_inner(self):
-        if not hasattr(self, "_legend_list") or self._legend_list is None:
+        if not self._legend_list is not None or self._legend_list is None:
             return
         ax = app_state.ax
         if ax is None:
@@ -245,7 +250,7 @@ class MainWindowLegendCoreMixin:
         self._update_legend_panel(title, handles, labels)
 
     def _move_legend_item_to_top(self, entry_type, entry_key):
-        if not hasattr(self, "_legend_list") or self._legend_list is None:
+        if not self._legend_list is not None or self._legend_list is None:
             return
         if QT_DEBUG_MODE:
             logger.debug("Move legend item to top: type=%s key=%s", entry_type, entry_key)

@@ -23,6 +23,10 @@ class DataPanelBuildMixin(
     DataPanelRenderBuildMixin,
 ):
     """Construct and initialize the data panel UI."""
+    ternary_limit_mode_combo = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def __init__(self, callback=None, parent=None):
         super().__init__(callback, parent)
@@ -65,7 +69,7 @@ class DataPanelBuildMixin(
         """Refresh translated widget text and ternary mode combo options."""
         super()._update_translations(root)
 
-        combo = getattr(self, "ternary_limit_mode_combo", None)
+        combo = self.ternary_limit_mode_combo
         if combo is not None:
             current_mode = str(combo.currentData()).strip().lower() if combo.currentData() is not None else "min"
             if current_mode not in ("min", "max", "both"):

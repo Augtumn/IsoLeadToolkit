@@ -25,6 +25,10 @@ _IMAGE_FILE_FILTERS = (
 
 class ExportPanelImageExportMixin:
     """Image export methods for ExportPanel."""
+    _scienceplots_available = None
+
+    # Declared by the class that uses them, so no probe is needed for widgets
+    # that build() creates later (UI review item B).
 
     def _on_image_preset_changed(self):
         """Update style source label when preset changes."""
@@ -32,7 +36,7 @@ class ExportPanelImageExportMixin:
 
     def _is_scienceplots_available(self) -> bool:
         """Cache SciencePlots availability for responsive UI interactions."""
-        cached = getattr(self, '_scienceplots_available', None)
+        cached = self._scienceplots_available
         if cached is None:
             cached = self._load_scienceplots()
             self._scienceplots_available = bool(cached)
