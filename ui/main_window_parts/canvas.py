@@ -18,6 +18,54 @@ logger = logging.getLogger(__name__)
 _LIMIT_KEYS = ("tmin", "tmax", "lmin", "lmax", "rmin", "rmax")
 
 
+#: matplotlib toolbar labels -> translation keys used for their tooltips.
+_MPL_TOOLTIP_TRANSLATIONS = {
+    "Home": "Reset original view",
+    "Back": "Back to previous view",
+    "Forward": "Forward to next view",
+    "Pan": "Pan axes with left mouse, zoom with right",
+    "Zoom": "Zoom to rectangle",
+    "Subplots": "Configure subplots",
+    "Save": "Save the figure",
+}
+
+
+def is_blank_action(action) -> bool:
+    """True for an action that would show up as an empty toolbar button.
+
+    matplotlib's toolbar carries a placeholder action with no icon, no text and no
+    tooltip; copying it verbatim produced a nameless button next to Save.
+    """
+    if action is None or action.isSeparator():
+        return False
+    if not action.icon().isNull():
+        return False
+    return not (action.text() or "").strip() and not (action.toolTip() or "").strip()
+
+
+def copy_toolbar_actions(source, target, translations=None) -> None:
+    """Copy *source*'s actions onto *target*, translating matplotlib tooltips.
+
+    Separators are recreated on the target (a copied separator action renders as a
+    plain button) and blank placeholder actions are skipped.
+    """
+    translations = translations or _MPL_TOOLTIP_TRANSLATIONS
+    for action in source.actions():
+        if action is None:
+            continue
+        if action.isSeparator():
+            target.addSeparator()
+            continue
+        if is_blank_action(action):
+            continue
+        target.addAction(action)
+        text = (action.text() or "").strip()
+        for en_key, tr_key in translations.items():
+            if en_key.lower() in text.lower():
+                action.setToolTip(translate(tr_key))
+                break
+
+
 class MainWindowCanvasMixin:
     """Canvas and toolbar behavior for main window."""
 
@@ -55,24 +103,7 @@ class MainWindowCanvasMixin:
         self._sync_selection_tool_actions()
 
         # Copy NavigationToolbar actions to main toolbar, translating tooltips
-        _MPL_TOOLTIP_TRANSLATIONS = {
-            "Home": "Reset original view",
-            "Back": "Back to previous view",
-            "Forward": "Forward to next view",
-            "Pan": "Pan axes with left mouse, zoom with right",
-            "Zoom": "Zoom to rectangle",
-            "Subplots": "Configure subplots",
-            "Save": "Save the figure",
-        }
-        for action in toolbar.actions():
-            if action is None:
-                continue
-            self.toolbar.addAction(action)
-            text = (action.text() or "").strip()
-            for en_key, tr_key in _MPL_TOOLTIP_TRANSLATIONS.items():
-                if en_key.lower() in text.lower():
-                    action.setToolTip(translate(tr_key))
-                    break
+        copy_toolbar_actions(toolbar, self.toolbar, _MPL_TOOLTIP_TRANSLATIONS)
 
         self.canvas_layout.addWidget(canvas)
 
