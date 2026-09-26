@@ -330,8 +330,8 @@ class NeighborhoodSearchDialog(QDialog):
         try:
             from visualization.events import on_slider_change
             on_slider_change()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_apply_as_group failed: %s", err)
 
         QMessageBox.information(
             self, translate("Done"),

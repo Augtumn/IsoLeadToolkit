@@ -141,8 +141,8 @@ def _draw_plumbotectonics_curves(ax: Any, actual_algorithm: str) -> None:
             if not is_visible:
                 try:
                     artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_draw_plumbotectonics_curves failed: %s", err)
         point_kwargs = {
             'linestyle': 'None',
             'marker': marker,
@@ -159,8 +159,8 @@ def _draw_plumbotectonics_curves(ax: Any, actual_algorithm: str) -> None:
             if not is_visible:
                 try:
                     artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_draw_plumbotectonics_curves failed: %s", err)
 
         label_text = _format_label_text(label_opts.get('label_text'), name=name)
         if label_text:
@@ -185,8 +185,8 @@ def _draw_plumbotectonics_curves(ax: Any, actual_algorithm: str) -> None:
             if not is_visible:
                 try:
                     text_artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_draw_plumbotectonics_curves failed: %s", err)
             position_curve_label(
                 ax,
                 text_artist,

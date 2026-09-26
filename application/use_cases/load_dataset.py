@@ -241,8 +241,8 @@ def load_dataset(
         try:
             if progress:
                 progress.close()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("load_dataset failed: %s", err)
 
         logger.error("Data loading failed: %s", exc)
         traceback.print_exc()

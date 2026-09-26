@@ -1,5 +1,6 @@
 """Hover and click handlers for point interaction."""
 from __future__ import annotations
+import logging
 
 from typing import Any
 
@@ -15,6 +16,8 @@ from .shared import (
     state_gateway,
     translate,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_sample_index(event: object) -> int | None:
@@ -59,8 +62,8 @@ def on_hover(event: Any) -> None:
         if not app_state.show_tooltip:
             try:
                 app_state.annotation.set_visible(False)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("on_hover failed: %s", err)
             return
 
         visible = False
@@ -117,11 +120,11 @@ def on_hover(event: Any) -> None:
         if not visible:
             try:
                 app_state.annotation.set_visible(False)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("on_hover failed: %s", err)
 
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("on_hover failed: %s", err)
 
 
 def _resolve_group_at(event: Any):

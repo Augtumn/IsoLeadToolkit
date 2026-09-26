@@ -385,8 +385,8 @@ class DisplayThemeMixin:
             configure_constrained_layout(app_state.fig)
             if app_state.fig.canvas:
                 app_state.fig.canvas.draw_idle()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_apply_auto_layout failed: %s", err)
 
     def _on_ui_theme_change(self, *_args):
         """UI 主题切换"""

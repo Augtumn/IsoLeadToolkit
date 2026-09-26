@@ -107,8 +107,8 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             logger.error('No points were plotted in 3D')
             try:
                 app_state.fig.canvas.draw_idle()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("plot_3d_data failed: %s", err)
             return False
 
         try:
@@ -145,6 +145,6 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
         try:
             if app_state.fig is not None and app_state.fig.canvas is not None:
                 app_state.fig.canvas.draw_idle()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("plot_3d_data failed: %s", err)
         return False

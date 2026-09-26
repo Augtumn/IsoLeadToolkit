@@ -312,8 +312,8 @@ def _render_2d_title_and_axes(
             if prev_2d_cols and list(prev_2d_cols) == list(data_columns):
                 app_state.ax.set_xlim(prev_xlim)
                 app_state.ax.set_ylim(prev_ylim)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_render_2d_title_and_axes failed: %s", err)
 
     state_gateway.set_current_plot_title(title)
     if app_state.show_plot_title:
@@ -326,8 +326,8 @@ def _render_2d_title_and_axes(
     _apply_axis_text_style(app_state.ax)
     try:
         app_state.ax.autoscale(enable=True, axis='both')
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_render_2d_title_and_axes failed: %s", err)
 
     _draw_equation_overlays(app_state.ax)
 
@@ -374,8 +374,8 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
         try:
             app_state.ax.set_aspect('auto')
             app_state.ax.set_autoscale_on(True)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("plot_2d_data failed: %s", err)
         _enforce_plot_style(app_state.ax)
         app_state.clear_plot_state()
 
@@ -394,8 +394,8 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
             logger.error('No points were plotted in 2D')
             try:
                 app_state.fig.canvas.draw_idle()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("plot_2d_data failed: %s", err)
             return False
 
         kde_utils.clear_marginal_axes()
@@ -424,6 +424,6 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
         try:
             if app_state.fig is not None and app_state.fig.canvas is not None:
                 app_state.fig.canvas.draw_idle()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("plot_2d_data failed: %s", err)
         return False

@@ -55,8 +55,8 @@ def refresh_paleoisochron_labels() -> None:
             if not _is_overlay_label_style_visible(style_key):
                 try:
                     text_artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("refresh_paleoisochron_labels failed: %s", err)
                 continue
             position_curve_label(
                 ax,
@@ -71,8 +71,8 @@ def refresh_paleoisochron_labels() -> None:
             try:
                 if text_artist.get_visible():
                     adjusted_labels.append(text_artist)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_paleoisochron_labels failed: %s", err)
 
         curve_labels = app_state.plumbotectonics_label_data
         for entry in curve_labels:
@@ -83,8 +83,8 @@ def refresh_paleoisochron_labels() -> None:
             if not _is_overlay_label_style_visible(style_key):
                 try:
                     text_artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("refresh_paleoisochron_labels failed: %s", err)
                 continue
             position_curve_label(
                 ax,
@@ -97,8 +97,8 @@ def refresh_paleoisochron_labels() -> None:
             try:
                 if text_artist.get_visible():
                     adjusted_labels.append(text_artist)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_paleoisochron_labels failed: %s", err)
 
         isoage_labels = app_state.plumbotectonics_isoage_label_data
         for entry in isoage_labels:
@@ -109,8 +109,8 @@ def refresh_paleoisochron_labels() -> None:
             if not _is_overlay_label_style_visible(style_key):
                 try:
                     text_artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("refresh_paleoisochron_labels failed: %s", err)
                 continue
             position_curve_label(
                 ax,
@@ -125,8 +125,8 @@ def refresh_paleoisochron_labels() -> None:
             try:
                 if text_artist.get_visible():
                     adjusted_labels.append(text_artist)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_paleoisochron_labels failed: %s", err)
 
         curve_labels = app_state.overlay_curve_label_data
         for entry in curve_labels:
@@ -137,8 +137,8 @@ def refresh_paleoisochron_labels() -> None:
             if not _is_overlay_label_style_visible(style_key):
                 try:
                     text_artist.set_visible(False)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("refresh_paleoisochron_labels failed: %s", err)
                 continue
             position_curve_label(
                 ax,
@@ -152,8 +152,8 @@ def refresh_paleoisochron_labels() -> None:
             try:
                 if text_artist.get_visible():
                     adjusted_labels.append(text_artist)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_paleoisochron_labels failed: %s", err)
 
         apply_adjust_text_to_labels(ax, adjusted_labels)
     finally:

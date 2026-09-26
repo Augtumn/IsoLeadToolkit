@@ -27,8 +27,8 @@ class ExportPanelCommonMixin:
         try:
             import scienceplots  # noqa: F401
             return True
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_load_scienceplots failed: %s", err)
 
         workspace_root = Path(__file__).resolve().parents[3]
         local_src = workspace_root / 'reference' / 'SciencePlots-master' / 'src'

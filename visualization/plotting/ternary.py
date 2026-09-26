@@ -242,8 +242,8 @@ def configure_ternary_axis(
             ax.set_tlabel(str(labels[0]))
             ax.set_llabel(str(labels[1]))
             ax.set_rlabel(str(labels[2]))
-        except Exception:
-            logger.debug("Failed to set ternary axis labels", exc_info=True)
+        except Exception as err:
+            logger.warning("configure_ternary_axis failed: %s", err)
 
     mode = resolve_ternary_limit_mode(app_state.ternary_limit_mode)
     state_gateway.set_ternary_limit_mode(mode)
@@ -286,8 +286,8 @@ def configure_ternary_axis(
 
     try:
         ax.set_aspect('equal', adjustable='box')
-    except Exception:
-        logger.debug("Failed to set equal aspect on ternary axis", exc_info=True)
+    except Exception as err:
+        logger.warning("configure_ternary_axis failed: %s", err)
 
     return tmin, tmax, lmin, lmax, rmin, rmax
 

@@ -180,14 +180,14 @@ class ExportPreviewDialogMixin:
                         try:
                             if old_ax is not None:
                                 old_ax.callbacks.disconnect(cid)
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_do_refresh failed: %s", err)
                     state['axis_callbacks'] = []
                     for cid in state['canvas_callbacks']:
                         try:
                             state['canvas'].mpl_disconnect(cid)
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_do_refresh failed: %s", err)
                     state['canvas_callbacks'] = []
 
                     # Apply current DPI to the profile for figure creation.
@@ -219,8 +219,8 @@ class ExportPreviewDialogMixin:
                     if old_fig is not None and old_fig is not new_fig:
                         try:
                             old_fig.clear()
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_do_refresh failed: %s", err)
 
                     # Update canvas size to match new figure (use the capped
                     # preview DPI so huge requested values do not allocate a
@@ -232,8 +232,8 @@ class ExportPreviewDialogMixin:
                     # through the figure (draw paths) does not hit None.
                     try:
                         new_fig.canvas = state['canvas']
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_do_refresh failed: %s", err)
                     state['canvas'].setFixedSize(new_w, new_h)
 
                     # Re-register overlay label callbacks
@@ -242,13 +242,13 @@ class ExportPreviewDialogMixin:
                             cid1 = new_ax.callbacks.connect('xlim_changed', lambda _ax: _refresh_labels_preview())
                             cid2 = new_ax.callbacks.connect('ylim_changed', lambda _ax: _refresh_labels_preview())
                             state['axis_callbacks'] = [cid1, cid2]
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_do_refresh failed: %s", err)
                     try:
                         cid3 = state['canvas'].mpl_connect('button_release_event', lambda _evt: _refresh_labels_preview())
                         state['canvas_callbacks'] = [cid3]
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_do_refresh failed: %s", err)
 
                     _refresh_labels_preview()
                     state['canvas'].draw_idle()
@@ -259,8 +259,8 @@ class ExportPreviewDialogMixin:
                             main_layout.removeWidget(state['toolbar'])
                             state['toolbar'].setParent(None)
                             state['toolbar'].deleteLater()
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_do_refresh failed: %s", err)
                     state['toolbar'] = NavigationToolbar2QT(state['canvas'], dialog)
                     _hide_inert_subplot_action(state['toolbar'])
                     main_layout.insertWidget(1, state['toolbar'])  # after control_widget
@@ -279,8 +279,8 @@ class ExportPreviewDialogMixin:
             def _refresh_labels_preview():
                 try:
                     self._refresh_preview_overlay_labels(state['preview_fig'], state['main_ax'])
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_refresh_labels_preview failed: %s", err)
 
             # Initial label refresh
             _refresh_labels_preview()
@@ -290,13 +290,13 @@ class ExportPreviewDialogMixin:
                     cid1 = main_preview_ax.callbacks.connect('xlim_changed', lambda _ax: _refresh_labels_preview())
                     cid2 = main_preview_ax.callbacks.connect('ylim_changed', lambda _ax: _refresh_labels_preview())
                     state['axis_callbacks'] = [cid1, cid2]
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_on_preview_image_clicked failed: %s", err)
             try:
                 cid3 = canvas.mpl_connect('button_release_event', lambda _evt: _refresh_labels_preview())
                 state['canvas_callbacks'] = [cid3]
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_on_preview_image_clicked failed: %s", err)
 
             # ── Wire slider ↔ spin bi-directional sync ─────────────
             def _wire_pair(slider, spin, state_key):
@@ -475,18 +475,18 @@ class ExportPreviewDialogMixin:
                         for cid in state['axis_callbacks']:
                             try:
                                 state['main_ax'].callbacks.disconnect(cid)
-                            except Exception:
-                                pass
+                            except Exception as err:
+                                logger.warning("_cleanup_preview failed: %s", err)
                     for cid in state['canvas_callbacks']:
                         try:
                             state['canvas'].mpl_disconnect(cid)
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_cleanup_preview failed: %s", err)
                 finally:
                     try:
                         state['preview_fig'].clear()
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_cleanup_preview failed: %s", err)
 
             dialog.finished.connect(_cleanup_preview)
             dialog.exec_()

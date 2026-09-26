@@ -48,8 +48,8 @@ class ExportPanelDataExportMixin:
                     axis_labels['y'] = str(yl)
                 if zl:
                     axis_labels['z'] = str(zl)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_current_export_context failed: %s", err)
         return {
             'df_global': app_state.df_global,
             'embedding': embedding,

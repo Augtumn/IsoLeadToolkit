@@ -84,16 +84,16 @@ class StyleManager:
                     data = json.load(f)
                 if isinstance(data, dict):
                     return data
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_load_font_cache failed: %s", err)
         return {}
 
     def _save_font_cache(self):
         try:
             with open(self._font_cache_path, 'w', encoding='utf-8') as f:
                 json.dump(self._font_cache, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_save_font_cache failed: %s", err)
 
     def get_available_fonts(self):
         """Lazy load available system fonts"""

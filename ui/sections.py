@@ -128,8 +128,8 @@ def create_section_dialog(
             try:
                 panel._update_translations(content_widget)
                 return
-            except AttributeError:
-                logger.debug("Lightweight translation update failed, falling back to rebuild")
+            except AttributeError as err:
+                logger.warning("_try_lightweight_update failed: %s", err)
             except Exception as e:
                 logger.warning("Lightweight translation update failed: %s", e)
                 return

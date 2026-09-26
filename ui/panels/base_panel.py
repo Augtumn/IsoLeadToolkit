@@ -105,8 +105,8 @@ class BasePanel(PanelStyleMixin, QWidget):
             """Apply spinbox changes only when editing is finished."""
             try:
                 spinbox.setKeyboardTracking(False)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_connect_spinbox_deferred failed: %s", err)
 
             if pass_value:
                 spinbox.editingFinished.connect(lambda s=spinbox: callback(s.value()))
@@ -213,8 +213,8 @@ class BasePanel(PanelStyleMixin, QWidget):
                         for idx, tab_key in enumerate(keys):
                             if idx < child.count():
                                 child.setItemText(idx, translate(tab_key))
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_update_translations failed: %s", err)
             elif isinstance(child, QComboBox):
                 item_keys = child.property('combo_item_keys')
                 if isinstance(item_keys, str) and item_keys:
@@ -223,16 +223,16 @@ class BasePanel(PanelStyleMixin, QWidget):
                         for idx, item_key in enumerate(keys):
                             if idx < child.count():
                                 child.setItemText(idx, translate(item_key))
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_update_translations failed: %s", err)
 
     def _on_change(self):
         """参数变化回调"""
         for key, timer in list(self._slider_timers.items()):
             try:
                 timer.stop()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_on_change failed: %s", err)
         self._slider_timers.clear()
 
         if self.callback:

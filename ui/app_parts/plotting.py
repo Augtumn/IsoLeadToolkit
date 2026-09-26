@@ -28,8 +28,8 @@ class Qt5AppPlottingMixin:
                     return
                 configure_constrained_layout(app_state.fig)
                 app_state.fig.canvas.draw_idle()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_on_resize failed: %s", err)
 
         try:
             app_state.fig.canvas.mpl_connect("resize_event", _on_resize)
@@ -65,13 +65,13 @@ class Qt5AppPlottingMixin:
                     refresh_paleoisochron_labels()
                     if app_state.fig is not None and app_state.fig.canvas is not None:
                         app_state.fig.canvas.draw_idle()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_on_view_change failed: %s", err)
 
             app_state.fig.canvas.mpl_connect("button_release_event", _on_view_change)
             app_state.fig.canvas.mpl_connect("scroll_event", _on_view_change)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_create_plot_figure failed: %s", err)
 
         logger.info("Plot figure created.")
         plt.ion()

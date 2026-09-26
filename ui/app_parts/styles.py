@@ -1,5 +1,6 @@
 """Style and runtime diagnostics helpers for Qt application startup."""
 from __future__ import annotations
+import logging
 
 import os
 import sys
@@ -9,6 +10,8 @@ from typing import Any
 from PyQt5.QtCore import QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QStyleFactory, QWidget
 from PyQt5.QtGui import QFont
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -99,8 +102,8 @@ class Qt5AppStyleMixin:
                 else:
                     sys.stderr.write(f"[QT][{type_name}] {message}\n")
                 sys.stderr.flush()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_qt_handler failed: %s", err)
 
         self._qt_message_handler = _qt_handler
         qInstallMessageHandler(self._qt_message_handler)
@@ -110,8 +113,8 @@ class Qt5AppStyleMixin:
                 sys.stderr.write("[PY] Unhandled exception\n")
                 traceback.print_exception(exc_type, exc, tb, file=sys.stderr)
                 sys.stderr.flush()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_excepthook failed: %s", err)
             sys.__excepthook__(exc_type, exc, tb)
 
         sys.excepthook = _excepthook

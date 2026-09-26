@@ -1,5 +1,6 @@
 """Plot title and axis label helpers for embedding rendering."""
 from __future__ import annotations
+import logging
 
 from typing import Any
 
@@ -9,6 +10,8 @@ from core import CONFIG, app_state, state_gateway
 
 from ...style import _apply_axis_text_style
 from .state_access import _active_subset_indices
+
+logger = logging.getLogger(__name__)
 
 
 def _render_title_labels(
@@ -70,8 +73,8 @@ def _render_title_labels(
                     if font_name in available:
                         title_font_dict['fontname'] = font_name
                         break
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_render_title_labels failed: %s", err)
 
     state_gateway.set_current_plot_title(title)
     if app_state.show_plot_title:

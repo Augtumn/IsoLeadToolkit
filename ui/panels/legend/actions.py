@@ -136,7 +136,7 @@ class LegendActionsMixin:
                 if palette_name and palette_name in style_manager_instance.palettes:
                     color_pool = list(style_manager_instance.palettes[palette_name])
             except Exception as e:
-                logger.debug('Failed to get palette: %s', e)
+                logger.warning("_auto_assign_styles failed: %s", err)
 
             if not color_pool:
                 existing = app_state.current_palette or {}
@@ -154,7 +154,7 @@ class LegendActionsMixin:
                         if color not in color_pool:
                             color_pool.append(color)
                 except Exception as e:
-                    logger.debug('Failed to get matplotlib colors: %s', e)
+                    logger.warning("_auto_assign_styles failed: %s", err)
 
             if not color_pool:
                 color_pool = ['#333333']

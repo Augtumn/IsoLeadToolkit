@@ -129,16 +129,16 @@ class MainWindowLegendOverlayMixin:
                     max_z = max(max_z, artist.get_zorder())
                 except Exception:
                     continue
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_bring_overlay_to_front failed: %s", err)
 
         target_z = max_z + 1
         for artist in artists:
             try:
                 z_value = target_z + 0.25 if hasattr(artist, "get_text") else target_z
                 artist.set_zorder(z_value)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_bring_overlay_to_front failed: %s", err)
 
         if app_state.fig is not None and app_state.fig.canvas is not None:
             app_state.fig.canvas.draw_idle()

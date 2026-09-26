@@ -877,7 +877,7 @@ def _build_origin_project(
                     f"\\l({plot_idx}) %({plot_idx},@WS)"
                 )
             except Exception as err:
-                logger.debug("Skipping scatter %s: %s", group.get("label"), err)
+                logger.warning("_build_origin_project failed: %s", err)
 
         gl.group()
         gl.rescale()  # Let Origin handle axis ranges (ternary geometry is coupled)
@@ -905,8 +905,8 @@ def _build_origin_project(
                     try:
                         owks.cols = 3
                         owks.set_cell(0, 2, eq_text)
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_add_overlay_worksheets failed: %s", err)
 
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
                     plot_idx += 1  # count the layer immediately (legend index)
@@ -915,7 +915,7 @@ def _build_origin_project(
                         line.width = style["width"]
                     legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                 except Exception as err:
-                    logger.debug("Skipping overlay %s: %s", curve_label, err)
+                    logger.warning("_add_overlay_worksheets failed: %s", err)
 
         for curves_list in overlay_data.values():
             _add_overlay_worksheets(curves_list, prefix="OV_")
@@ -944,8 +944,8 @@ def _build_origin_project(
                     try:
                         owks.cols = 3
                         owks.set_cell(0, 2, eq_text)
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_build_origin_project failed: %s", err)
 
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
                     plot_idx += 1  # count the layer immediately (legend index)
@@ -953,7 +953,7 @@ def _build_origin_project(
                     line.width = iso.get("width", 1.5)
                     legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                 except Exception as err:
-                    logger.debug("Skipping isochron %s: %s", iso.get("label"), err)
+                    logger.warning("_build_origin_project failed: %s", err)
 
         # ── equation overlay sheets ──────────────────────────────
         if equation_lines:
@@ -968,8 +968,8 @@ def _build_origin_project(
                     try:
                         owks.cols = 3
                         owks.set_cell(0, 2, eq_text)
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_build_origin_project failed: %s", err)
 
                     line = gl.add_plot(owks, coly=1, colx=0, type="l")
                     plot_idx += 1  # count the layer immediately (legend index)
@@ -977,7 +977,7 @@ def _build_origin_project(
                     line.width = eq.get("width", 1.0)
                     legend_entries.append(f"\\l({plot_idx}) %({plot_idx},@WS)")
                 except Exception as err:
-                    logger.debug("Skipping equation %s: %s", eq.get("label"), err)
+                    logger.warning("_build_origin_project failed: %s", err)
 
         # ── legend ────────────────────────────────────────────────
         if legend_entries:
@@ -987,7 +987,7 @@ def _build_origin_project(
                 lgnd.set_int("showframe", 0)
                 lgnd.text = "\n".join(legend_entries)
             except Exception as err:
-                logger.debug("Failed to set custom legend: %s", err)
+                logger.warning("_build_origin_project failed: %s", err)
 
         # ── axis labels, ranges and title ─────────────────────────
         if is_ternary:
@@ -996,8 +996,8 @@ def _build_origin_project(
             for axis_name, label in zip(["x", "y", "z"], ternary_cols):
                 try:
                     gl.axis(axis_name).title = label
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_build_origin_project failed: %s", err)
             # Percent data needs the template's 0-100 scale on all three axes.
             _apply_axis_range(notes, op, gl, "x", 0.0, 100.0)
             _apply_axis_range(notes, op, gl, "y", 0.0, 100.0)
@@ -1014,8 +1014,8 @@ def _build_origin_project(
         if title:
             try:
                 gl.set_str("title", title)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_build_origin_project failed: %s", err)
 
         # ── save project (.opju) ──────────────────────────────────
         op.save(file_path)
@@ -1139,8 +1139,8 @@ def collect_origin_export_data(ax: Any, mode: str | None = None) -> dict[str, An
         y_limits = ax.get_ylim()
         axis_labels["x_range"] = (float(x_limits[0]), float(x_limits[1]))
         axis_labels["y_range"] = (float(y_limits[0]), float(y_limits[1]))
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("collect_origin_export_data failed: %s", err)
     if is_ternary:
         # Merge, do not overwrite: the ternary branch above set the user's
         # ternary column names and they must reach the project builder.

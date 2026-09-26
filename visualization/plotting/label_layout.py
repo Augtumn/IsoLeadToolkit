@@ -363,6 +363,6 @@ def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None
             adjust_kwargs['iter_lim'] = iter_lim
         adjust_text(texts, **adjust_kwargs)
     except Exception as err:
-        logger.debug("adjustText layout skipped: %s", err)
+        logger.warning("apply_adjust_text_to_labels failed: %s", err)
     finally:
         state_gateway.set_adjust_text_in_progress(False)

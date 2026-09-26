@@ -117,8 +117,8 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
                     app_icon = QIcon(str(icon_path))
                     if not app_icon.isNull():
                         self.app.setWindowIcon(app_icon)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("run failed: %s", err)
 
             # 加载会话
             session_data = self._load_session()

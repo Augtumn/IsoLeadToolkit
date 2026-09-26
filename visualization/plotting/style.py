@@ -1,5 +1,6 @@
 """Style helpers for plotting (facade)."""
 from __future__ import annotations
+import logging
 
 from typing import Any
 
@@ -8,6 +9,8 @@ from .event_bridge import refresh_selection_overlay_safe
 from .styling.core import _apply_current_style, _apply_axis_text_style, _enforce_plot_style
 from .styling.legend import _legend_columns_for_layout, _legend_layout_config, _style_legend
 from .styling.overlays import refresh_overlay_styles, refresh_overlay_visibility
+
+logger = logging.getLogger(__name__)
 
 _last_style_params: dict[str, Any] = {}
 
@@ -40,8 +43,8 @@ def configure_constrained_layout(
                             hspace=hspace,
                         )
             return
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("configure_constrained_layout failed: %s", err)
 
     try:
         fig.set_constrained_layout(True)
@@ -51,8 +54,8 @@ def configure_constrained_layout(
             wspace=wspace,
             hspace=hspace,
         )
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("configure_constrained_layout failed: %s", err)
 
 
 def refresh_plot_style() -> None:
@@ -82,8 +85,8 @@ def refresh_plot_style() -> None:
                     target_ax.set_title(current_title, pad=title_pad)
                 else:
                     target_ax.set_title("")
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_plot_style failed: %s", err)
 
     try:
         base_size = app_state.plot_marker_size
@@ -112,23 +115,23 @@ def refresh_plot_style() -> None:
                     sc.set_alpha(base_alpha)
                     sc.set_edgecolor(resolved_edgecolor)
                     sc.set_linewidths(resolved_edgewidth)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("refresh_plot_style failed: %s", err)
             _last_style_params.update(current_params)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("refresh_plot_style failed: %s", err)
 
     try:
         if app_state.selected_indices:
             refresh_selection_overlay_safe()
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("refresh_plot_style failed: %s", err)
 
     if fig is not None and fig.canvas:
         try:
             fig.canvas.draw_idle()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("refresh_plot_style failed: %s", err)
 
 
 # refresh_overlay_styles and refresh_overlay_visibility are re-exported from styling.overlays.

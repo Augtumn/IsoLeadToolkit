@@ -84,13 +84,13 @@ def _enforce_plot_style(ax: Any) -> None:
     if minor_ticks or minor_grid:
         try:
             ax.minorticks_on()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_enforce_plot_style failed: %s", err)
     else:
         try:
             ax.minorticks_off()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_enforce_plot_style failed: %s", err)
 
     if minor_grid:
         ax.grid(
@@ -105,8 +105,8 @@ def _enforce_plot_style(ax: Any) -> None:
         ax.grid(False, which='minor')
     try:
         ax.set_axisbelow(True)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_enforce_plot_style failed: %s", err)
 
     if app_state.fig is not None:
         app_state.fig.patch.set_facecolor(plt.rcParams.get('figure.facecolor', 'white'))
@@ -155,25 +155,25 @@ def _apply_axis_text_style(ax: Any) -> None:
         ax.xaxis.label.set_color(label_color)
         ax.xaxis.label.set_fontweight(label_weight)
         ax.xaxis.labelpad = label_pad
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_apply_axis_text_style failed: %s", err)
     try:
         ax.yaxis.label.set_color(label_color)
         ax.yaxis.label.set_fontweight(label_weight)
         ax.yaxis.labelpad = label_pad
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_apply_axis_text_style failed: %s", err)
     if hasattr(ax, 'zaxis'):
         try:
             ax.zaxis.label.set_color(label_color)
             ax.zaxis.label.set_fontweight(label_weight)
             ax.zaxis.labelpad = label_pad
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_apply_axis_text_style failed: %s", err)
     try:
         title = ax.title
         title.set_color(title_color)
         title.set_fontweight(title_weight)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_apply_axis_text_style failed: %s", err)
 

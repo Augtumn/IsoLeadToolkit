@@ -92,8 +92,8 @@ class AnalysisPanelSelectionMixin:
             from visualization.events import refresh_selection_overlay
 
             refresh_selection_overlay()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_clear_selection_only failed: %s", err)
         self.update_selection_controls()
 
     def _require_selection_available(self) -> bool:

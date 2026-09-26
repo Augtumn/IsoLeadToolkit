@@ -178,8 +178,8 @@ class MainWindowLegendCoreMixin:
                     max_z = max(max_z, artist.get_zorder())
                 except Exception:
                     continue
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_apply_legend_z_order_inner failed: %s", err)
 
         target_z = max_z + len(order)
         overlay_map = app_state.overlay_artists or {}
@@ -209,8 +209,8 @@ class MainWindowLegendCoreMixin:
                     if artist is not None:
                         try:
                             artist.set_zorder(target_z)
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            logger.warning("_apply_legend_z_order_inner failed: %s", err)
             elif entry_type == "group":
                 if entry_key in handled_children:
                     # Z-order of children is decided by their parent row.
@@ -219,15 +219,15 @@ class MainWindowLegendCoreMixin:
                 if artist is not None:
                     try:
                         artist.set_zorder(target_z)
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_apply_legend_z_order_inner failed: %s", err)
             elif entry_type == "overlay":
                 for artist in self._overlay_artists_for_style(entry_key, overlay_map=overlay_map):
                     try:
                         z_value = target_z + 0.25 if hasattr(artist, "get_text") else target_z
                         artist.set_zorder(z_value)
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        logger.warning("_apply_legend_z_order_inner failed: %s", err)
             target_z -= 1
 
         state_gateway.set_legend_item_order(

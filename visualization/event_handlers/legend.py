@@ -1,9 +1,12 @@
 """Legend click interaction handlers."""
 from __future__ import annotations
+import logging
 
 from typing import Any
 
 from .shared import SELECTION_USE_CASE, app_state, logger, state_gateway
+
+logger = logging.getLogger(__name__)
 
 
 def on_legend_click(event: Any) -> None:
@@ -64,11 +67,11 @@ def on_legend_click(event: Any) -> None:
                 logger.info('Toggled visibility for: %s to %s', label, new_visible)
                 try:
                     app_state.fig.canvas.draw_idle()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("on_legend_click failed: %s", err)
                 return
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("on_legend_click failed: %s", err)
 
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("on_legend_click failed: %s", err)

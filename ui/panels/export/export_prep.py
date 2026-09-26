@@ -157,8 +157,8 @@ class ExportPanelPrepMixin:
                         elev=elev if elev is not None else getattr(ax, 'elev', None),
                         azim=azim if azim is not None else getattr(ax, 'azim', None),
                     )
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_apply_axis_view failed: %s", err)
 
     @staticmethod
     def _palette_from_axis_collections(ax, fallback_palette: dict) -> dict:
@@ -253,14 +253,14 @@ class ExportPanelPrepMixin:
                 try:
                     refresh_paleoisochron_labels()
                 except Exception as label_err:
-                    logger.debug("Overlay label refresh skipped: %s", label_err)
+                    logger.warning("_create_export_figure failed: %s", err)
 
                 # Keep exported geometry consistent with what user sees currently.
                 self._apply_axis_view(export_ax, original_view)
                 try:
                     refresh_paleoisochron_labels()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_create_export_figure failed: %s", err)
                 self._normalize_export_legends(
                     export_fig,
                     profile,

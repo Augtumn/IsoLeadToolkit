@@ -1,5 +1,6 @@
 """Rectangle/lasso tool lifecycle and mode switching handlers."""
 from __future__ import annotations
+import logging
 
 from typing import Any
 
@@ -15,6 +16,8 @@ from .shared import (
     state_gateway,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _disable_rectangle_selector() -> None:
     selector = app_state.rectangle_selector
@@ -22,8 +25,8 @@ def _disable_rectangle_selector() -> None:
         return
     try:
         selector.set_active(False)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_disable_rectangle_selector failed: %s", err)
 
 
 def _disable_lasso_selector() -> None:
@@ -32,8 +35,8 @@ def _disable_lasso_selector() -> None:
         return
     try:
         selector.set_active(False)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_disable_lasso_selector failed: %s", err)
 
 
 def _ensure_rectangle_selector() -> None:
@@ -56,8 +59,8 @@ def _ensure_rectangle_selector() -> None:
             if getattr(selector, 'ax', None) is not app_state.ax:
                 try:
                     selector.disconnect_events()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_ensure_rectangle_selector failed: %s", err)
                 state_gateway.set_rectangle_selector(None)
                 selector = None
             else:
@@ -101,8 +104,8 @@ def _ensure_lasso_selector() -> None:
             if getattr(selector, 'ax', None) is not app_state.ax:
                 try:
                     selector.disconnect_events()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_ensure_lasso_selector failed: %s", err)
                 state_gateway.set_lasso_selector(None)
                 selector = None
             else:
@@ -228,8 +231,8 @@ def toggle_selection_mode(tool_type: str = 'export') -> None:
                     app_state.fig.canvas.toolbar.zoom()
                 elif app_state.fig.canvas.toolbar.mode == 'pan/zoom':
                     app_state.fig.canvas.toolbar.pan()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("toggle_selection_mode failed: %s", err)
         else:
             logger.info('Selection tool disabled.')
             _disable_rectangle_selector()

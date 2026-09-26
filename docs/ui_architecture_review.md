@@ -46,8 +46,7 @@
 
 `setup_logging()` 把 stderr 整体接到 ERROR，而 `warnings` 模块正是写到 stderr 的 → `isotopes_analyse.error.log` 被 `UserWarning` 淹没；同时视图层大量 `except Exception: pass/debug` 把真实错误吞成静默。
 
-- 状态：已修（`level_for_stderr_line()` 降级 + `enable_warning_capture()` 从源头改道）。
-- 待办：视图层异常至少记 WARNING。
+- 状态：**已完成**。`level_for_stderr_line()` 降级 + `enable_warning_capture()` 从源头改道；视图层 **148 处静默异常处理器（47 个文件）全部改为可见的 WARNING**（保留原操作名），并由棘轮守卫 `check_silent_exceptions.py` 固定在 0（基线为空，新增即失败）。
 
 ## 收敛顺序与状态
 

@@ -74,8 +74,8 @@ def shutdown_embedding_worker() -> None:
                     "Embedding worker still running after shutdown wait; "
                     "keeping it alive to avoid destroying a running thread"
                 )
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("shutdown_embedding_worker failed: %s", err)
     _retired_workers[:] = still_running
 
 
@@ -108,8 +108,8 @@ def _on_embedding_task_progress(task_token: int, percent: int, stage: str) -> No
     if callable(callback):
         try:
             callback(percent, stage)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_on_embedding_task_progress failed: %s", err)
 
 
 _CACHE_ALGORITHM_NAMES = {
@@ -181,8 +181,8 @@ def _render_embedding_result(group_col: str, algorithm: str, payload: dict) -> b
         try:
             app_state.fig.canvas.draw_idle()
             app_state.fig.canvas.flush_events()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_render_embedding_result failed: %s", err)
         state_gateway.set_initial_render_done(True)
         logger.debug('Embedding render completed for %s', algorithm)
     else:

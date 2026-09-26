@@ -89,7 +89,7 @@ class ExportPanelLegendMixin:
             for key in keys:
                 label_state[key] = list(getattr(app_state, key, []) or [])
         except Exception as err:
-            logger.debug("Preview overlay label refresh skipped: %s", err)
+            logger.warning("_refresh_preview_overlay_labels failed: %s", err)
         finally:
             state_gateway.set_figure_axes(backup['fig'], backup['ax'])
             state_gateway.set_overlay_label_flags(
@@ -142,8 +142,8 @@ class ExportPanelLegendMixin:
             frame_on = True
             try:
                 frame_on = bool(legend.get_frame_on())
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_normalize_export_legends failed: %s", err)
 
             loc = getattr(legend, '_loc', 'best')
             ncol = int(getattr(legend, '_ncols', 1) or 1)
@@ -165,8 +165,8 @@ class ExportPanelLegendMixin:
 
             try:
                 legend.remove()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_normalize_export_legends failed: %s", err)
 
             new_legend_kwargs = {
                 'handles': handles,
@@ -204,8 +204,8 @@ class ExportPanelLegendMixin:
                         rebuilt_legend.set_title("")
                         rebuilt_legend.get_title().set_visible(False)
                         self._apply_legend_marker_size_from_point(rebuilt_legend, legend_marker_size)
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_normalize_export_legends failed: %s", err)
 
     @staticmethod
     def _apply_legend_marker_size_from_point(legend, point_size: float) -> None:
@@ -219,8 +219,8 @@ class ExportPanelLegendMixin:
         scatter_area = point_area
         try:
             legend.set_markerscale(1.0)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_apply_legend_marker_size_from_point failed: %s", err)
 
         handles = getattr(legend, 'legend_handles', None)
         if handles is None:

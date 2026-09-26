@@ -107,8 +107,8 @@ class MainWindowLifecycleMixin:
             from core import save_all
 
             save_all(state_gateway)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_import_session failed: %s", err)
         # restore_snapshot bypasses dispatch, so refresh the mode label here.
         self._refresh_status_info()
 
@@ -134,8 +134,8 @@ class MainWindowLifecycleMixin:
             from visualization.events import on_slider_change
 
             on_slider_change()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_refresh_plot failed: %s", err)
 
     def _restore_state(self):
         """恢复窗口状态"""

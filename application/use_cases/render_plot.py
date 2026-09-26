@@ -256,7 +256,7 @@ class RenderPlotUseCase:
             try:
                 self._state.fig.canvas.draw_idle()
                 self._state.fig.canvas.flush_events()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_handle_render_fallback failed: %s", err)
         else:
             logger.warning("Fallback UMAP plot also failed")

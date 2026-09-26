@@ -115,8 +115,8 @@ def plot_embedding(
                 # Reset any prior aspect/scale settings (e.g., ternary plots) for 2D
                 app_state.ax.set_aspect('auto')
                 app_state.ax.set_autoscale_on(True)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("plot_embedding failed: %s", err)
         app_state.ax.clear()
         _enforce_plot_style(app_state.ax)
         app_state.clear_plot_state()
@@ -167,8 +167,8 @@ def plot_embedding(
             logger.warning("No scatter groups rendered for %s", algorithm)
             try:
                 app_state.fig.canvas.draw_idle()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("plot_embedding failed: %s", err)
             return False
 
         kde_utils.clear_marginal_axes()
@@ -211,6 +211,6 @@ def plot_embedding(
         try:
             if app_state.fig is not None and app_state.fig.canvas is not None:
                 app_state.fig.canvas.draw_idle()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("plot_embedding failed: %s", err)
         return False

@@ -184,8 +184,8 @@ class TernaryZoomEventFilter(QObject):
             for axes in self._canvas.figure.axes:
                 if hasattr(axes, "set_ternary_lim"):
                     return axes
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_ternary_axes failed: %s", err)
         return None
 
     def _axes_now(self):
@@ -292,7 +292,7 @@ class TernaryZoomEventFilter(QObject):
                 self._axes = None
                 self._apply(axes, start, coords)
         except Exception as err:
-            logger.debug("Ternary zoom Qt filter error: %s", err)
+            logger.warning("eventFilter failed: %s", err)
         return False  # never swallow the event
 
     def _apply(self, axes, start, end) -> None:

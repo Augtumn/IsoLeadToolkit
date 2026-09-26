@@ -54,23 +54,23 @@ def _ensure_axes(dimensions: int | str = 2) -> Any | None:
         if app_state.ax is None or current_name != '3d':
             try:
                 app_state.fig.clf()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_ensure_axes failed: %s", err)
             state_gateway.set_axis(app_state.fig.add_subplot(111, projection='3d'))
     elif dimensions == 'ternary':
         _lazy_import_mpltern()
         if app_state.ax is None or current_name != 'ternary':
             try:
                 app_state.fig.clf()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_ensure_axes failed: %s", err)
             state_gateway.set_axis(app_state.fig.add_subplot(111, projection='ternary'))
     else:
         if app_state.ax is None or current_name in ('3d', 'ternary'):
             try:
                 app_state.fig.clf()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_ensure_axes failed: %s", err)
             state_gateway.set_axis(app_state.fig.add_subplot(111))
     state_gateway.set_legend_ax(None)
 

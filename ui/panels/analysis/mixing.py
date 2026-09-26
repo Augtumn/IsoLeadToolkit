@@ -89,8 +89,8 @@ class AnalysisPanelMixingMixin:
             from visualization.events import refresh_selection_overlay
 
             refresh_selection_overlay()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_clear_selection_after_mixing failed: %s", err)
         self.update_selection_controls()
 
     def _on_clear_mixing_groups(self):

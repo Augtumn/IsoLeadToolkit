@@ -276,5 +276,5 @@ class ClusteringDialog(QDialog):
         try:
             from visualization.events import on_slider_change
             on_slider_change()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_on_apply failed: %s", err)

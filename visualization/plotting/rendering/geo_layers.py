@@ -1,5 +1,6 @@
 """Geo overlay rendering helpers for embedding plots."""
 from __future__ import annotations
+import logging
 
 from typing import Any
 
@@ -19,6 +20,8 @@ from ..geochem.overlay_helpers import (
 )
 from ..geochem.paleoisochron_overlays import _draw_paleoisochrons
 from ..geochem.selected_isochron_overlay import _draw_selected_isochron
+
+logger = logging.getLogger(__name__)
 
 
 def _render_geo_overlays(
@@ -76,8 +79,8 @@ def _render_geo_overlays(
                 if prev_embedding_type and str(prev_embedding_type).upper() == str(actual_algorithm).upper():
                     app_state.ax.set_xlim(prev_xlim)
                     app_state.ax.set_ylim(prev_ylim)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_render_geo_overlays failed: %s", err)
 
     if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
         _draw_equation_overlays(app_state.ax)

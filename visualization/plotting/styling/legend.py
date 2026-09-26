@@ -1,11 +1,14 @@
 """Legend layout and styling helpers for plotting."""
 from __future__ import annotations
+import logging
 
 from typing import Any, Sequence
 
 from core import app_state
 from core.legend_state import wants_inline_legend
 from core.legend_state import wants_docked_legend
+
+logger = logging.getLogger(__name__)
 
 
 _LEGEND_OFFSET_EPSILON = 1e-12
@@ -83,13 +86,13 @@ def _style_legend(
         )
         try:
             legend.set_loc(loc)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_style_legend failed: %s", err)
         if bbox:
             try:
                 legend.set_bbox_to_anchor(bbox, transform=legend.axes.transAxes)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_style_legend failed: %s", err)
 
     frame_on = bool(app_state.legend_frame_on)
     legend.set_frame_on(frame_on)
@@ -101,8 +104,8 @@ def _style_legend(
             frame.set_alpha(
                 float(app_state.legend_frame_alpha)
             )
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_style_legend failed: %s", err)
 
     legend_size = app_state.plot_font_sizes.get('legend', 10)
     text_color = app_state.label_color
@@ -110,12 +113,12 @@ def _style_legend(
         try:
             text.set_fontsize(legend_size)
             text.set_color(text_color)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_style_legend failed: %s", err)
     try:
         title = legend.get_title()
         title.set_fontsize(app_state.plot_font_sizes.get('label', 12))
         title.set_color(text_color)
         title.set_fontweight(app_state.label_weight)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_style_legend failed: %s", err)

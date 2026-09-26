@@ -97,23 +97,23 @@ def refresh_selection_overlay_state(
             if state.selection_overlay is not None:
                 try:
                     state.selection_overlay.remove()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("refresh_selection_overlay_state failed: %s", err)
                 state_write.set_selection_overlay(None)
             return
 
         if state.selection_overlay is not None:
             try:
                 state.selection_overlay.remove()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_selection_overlay_state failed: %s", err)
             state_write.set_selection_overlay(None)
 
         if state.selection_ellipse is not None:
             try:
                 state.selection_ellipse.remove()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("refresh_selection_overlay_state failed: %s", err)
             state_write.set_selection_ellipse(None)
 
         valid_indices = [idx for idx in state.selected_indices if idx in state.sample_coordinates]

@@ -35,15 +35,15 @@ def _safe_color(widget, default):
         color_value = widget.property('color_value')
         if isinstance(color_value, str) and color_value.strip():
             return color_value.strip()
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_safe_color failed: %s", err)
     if hasattr(widget, 'text') and callable(widget.text):
         try:
             text_value = widget.text()
             if isinstance(text_value, str) and text_value.strip():
                 return text_value.strip()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_safe_color failed: %s", err)
     return default
 
 class PanelStyleMixin:
@@ -182,21 +182,21 @@ class PanelStyleMixin:
                     if hasattr(widget, 'statusBar'):
                         widget.statusBar().showMessage(translate("Settings applied"), 1500)
                         break
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_on_style_change failed: %s", err)
 
         # ---- fig / ax 直接样式更新 ----
         if app_state.fig is not None:
             try:
                 app_state.fig.set_dpi(app_state.plot_dpi)
                 app_state.fig.patch.set_facecolor(app_state.plot_facecolor)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_on_style_change failed: %s", err)
         if app_state.ax is not None:
             try:
                 app_state.ax.set_facecolor(app_state.axes_facecolor)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("_on_style_change failed: %s", err)
 
         # ---- 判定是否需要完整重绘 ----
         requires_replot = False

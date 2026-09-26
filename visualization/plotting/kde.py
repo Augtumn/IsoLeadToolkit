@@ -286,8 +286,8 @@ def clear_marginal_axes() -> None:
                 fig = getattr(ax, 'figure', None)
             try:
                 ax.remove()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("clear_marginal_axes failed: %s", err)
     state_gateway.set_marginal_axes(None)
     # Re-enable constrained layout now that the divider axes are gone
     # (constrained_layout cannot coexist with axes_grid1 divider axes).
@@ -296,8 +296,8 @@ def clear_marginal_axes() -> None:
         if fig is not None:
             try:
                 configure_constrained_layout(fig)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("clear_marginal_axes failed: %s", err)
 
 
 def _figure_uses_constrained_layout(fig: Any) -> bool:
@@ -308,8 +308,8 @@ def _figure_uses_constrained_layout(fig: Any) -> bool:
         engine = fig.get_layout_engine()
         if engine is not None:
             return True
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_figure_uses_constrained_layout failed: %s", err)
     try:
         return bool(fig.get_constrained_layout())
     except Exception:
@@ -322,12 +322,12 @@ def _set_figure_constrained_layout(fig: Any, enabled: bool) -> None:
         if hasattr(fig, 'set_layout_engine'):
             fig.set_layout_engine('constrained' if enabled else 'none')
             return
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_set_figure_constrained_layout failed: %s", err)
     try:
         fig.set_constrained_layout(enabled)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("_set_figure_constrained_layout failed: %s", err)
 
 
 def draw_marginal_kde(
@@ -529,8 +529,8 @@ def draw_marginal_kde(
     try:
         ax_top.patch.set_visible(False)
         ax_right.patch.set_visible(False)
-    except Exception:
-        pass
+    except Exception as err:
+        logger.warning("draw_marginal_kde failed: %s", err)
     for spine in ax_top.spines.values():
         spine.set_visible(False)
     for spine in ax_right.spines.values():

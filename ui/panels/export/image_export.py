@@ -126,5 +126,5 @@ class ExportPanelImageExportMixin:
                     # The figure is created directly via Figure(...), so it
                     # is not registered with pyplot; clear() releases artists.
                     export_fig.clear()
-                except Exception:
-                    pass
+                except Exception as err:
+                    logger.warning("_on_export_image_clicked failed: %s", err)

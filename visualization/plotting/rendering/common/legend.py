@@ -57,8 +57,8 @@ def _notify_legend_panel(title: str, handles: list[Any], labels: list[str]) -> N
     if callable(callback):
         try:
             callback(title, handles, labels)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_notify_legend_panel failed: %s", err)
 
 
 def _build_legend_proxies(handles: list[Any], labels: list[str]) -> list[Any]:
@@ -241,8 +241,8 @@ def _place_inline_legend(
     if legend is not None and bbox:
         try:
             legend.set_bbox_to_anchor(bbox, transform=ax.transAxes)
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_place_inline_legend failed: %s", err)
 
     _style_legend(legend, show_marginal_kde=show_marginal_kde, location_key=location_key)
 
@@ -252,8 +252,8 @@ def _place_inline_legend(
         try:
             for leg_patch, sc in zip(legend.get_patches(), scatters):
                 app_state.legend_to_scatter[leg_patch] = sc
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("_place_inline_legend failed: %s", err)
 
 
 def _render_legend(

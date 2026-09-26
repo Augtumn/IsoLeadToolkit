@@ -52,7 +52,7 @@ def refresh_overlay_styles() -> None:
                     if hasattr(artist, 'set_alpha'):
                         artist.set_alpha(alpha)
                 except Exception as e:
-                    logger.debug("Failed to update artist in %s: %s", style_key, e)
+                    logger.warning("refresh_overlay_styles failed: %s", err)
 
         if app_state.fig.canvas is not None:
             app_state.fig.canvas.draw_idle()
@@ -95,7 +95,7 @@ def refresh_overlay_visibility() -> None:
             try:
                 artist.set_visible(_resolve_visible(style_key))
             except Exception as exc:
-                logger.debug("Failed to set visibility for %s: %s", style_key, exc)
+                logger.warning("_set_artist_visible failed: %s", err)
 
         for style_key, payload in overlay_artists.items():
             if isinstance(payload, dict):
