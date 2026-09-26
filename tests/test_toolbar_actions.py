@@ -94,3 +94,16 @@ def test_matplotlib_tooltips_are_translated() -> None:
     from core import translate
 
     assert target.actions()[0].toolTip() == translate("Zoom to rectangle")
+
+
+def test_the_customize_tooltip_is_translated() -> None:
+    """The Customize action's own tooltip is English; the toolbar translates it."""
+    source, _actions = _toolbar(("Customize", "Edit axis, curve and image parameters"))
+    target = QToolBar()
+
+    copy_toolbar_actions(source, target)
+
+    from core import translate
+
+    assert target.actions()[0].toolTip() == translate("Edit axis, curve and image parameters")
+    assert target.actions()[0].toolTip() != "Edit axis, curve and image parameters", "untranslated"

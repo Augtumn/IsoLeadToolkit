@@ -892,5 +892,6 @@
   "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.": "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.",
   "Write an Origin-importable Excel workbook (no Origin automation needed).": "Write an Origin-importable Excel workbook (no Origin automation needed).",
   "Applied: {notes}": "Applied: {notes}",
-  "Search legend...": "Search legend..."
+  "Search legend...": "Search legend...",
+  "Edit axis, curve and image parameters": "Edit axis, curve and image parameters"
 }

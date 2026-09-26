@@ -26,6 +26,7 @@ _MPL_TOOLTIP_TRANSLATIONS = {
     "Pan": "Pan axes with left mouse, zoom with right",
     "Zoom": "Zoom to rectangle",
     "Subplots": "Configure subplots",
+    "Customize": "Edit axis, curve and image parameters",
     "Save": "Save the figure",
 }
 
