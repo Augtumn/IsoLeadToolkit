@@ -865,6 +865,7 @@ class StateStore:
             "ternary_boundary_percent": float(self._snapshot["ternary_boundary_percent"]),
             "ternary_manual_limits_enabled": bool(self._snapshot["ternary_manual_limits_enabled"]),
             "ternary_manual_limits": dict(self._snapshot["ternary_manual_limits"]),
+            "ternary_render_margin": float(self._snapshot["ternary_render_margin"]),
             "ternary_stretch_mode": str(self._snapshot["ternary_stretch_mode"]),
             "ternary_stretch": bool(self._snapshot["ternary_stretch"]),
             "ternary_factors": list(self._snapshot["ternary_factors"]),
