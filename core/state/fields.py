@@ -1,10 +1,11 @@
 """Declarative registry for the state fields.
 
 Each declaration carries the field's default value, the coercion applied on the way into
-the snapshot (``normalize``), the copy applied back onto the state (``copy``) and the
-holder the field lives on: ``None`` for app_state itself, otherwise the sub-object's
-attribute name (``legend``, ``overlay``). The store's initial snapshot and projection and
-the write-back in ``_normalizers.sync_state_store_to_app()`` derive from this list.
+the snapshot (``normalize``), the copy applied back onto the state (``copy``, with
+``project`` / ``restore`` overriding it per direction when the two differ) and the holder
+the field lives on: ``None`` for app_state itself, otherwise the sub-object's attribute
+name (``legend``, ``overlay``). The store's initial snapshot and projection and the
+write-back in ``_normalizers.sync_state_store_to_app()`` derive from this list.
 
 Fields the registry does not cover stay explicit in those two files; every one of them is
 listed in scripts/check_state_field_coverage.py with its reason.
@@ -33,13 +34,20 @@ class StateField:
     normalize: Coercer = _identity
     copy: Coercer = _identity
     holder: str | None = None
+    #: Coercion for the snapshot projection; falls back to ``copy``.
+    project: Coercer | None = None
+    #: Coercion when writing back onto the state; falls back to ``copy``.
+    restore: Coercer | None = None
 
     def from_state(self, state: Any) -> Any:
         source = getattr(state, self.holder) if self.holder else state
         return self.normalize(getattr(source, self.name, self.default))
 
     def from_snapshot(self, snapshot: dict) -> Any:
-        return self.copy(snapshot.get(self.name, self.default))
+        return (self.project or self.copy)(snapshot.get(self.name, self.default))
+
+    def for_state(self, snapshot: dict) -> Any:
+        return (self.restore or self.copy)(snapshot.get(self.name, self.default))
 
 
 #: Every field whose plumbing comes from this registry.
@@ -829,8 +837,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=coercers._normalize_visible_groups,
         holder=None,
     ),
-
-    # ── current ──
     StateField(
         "current_palette",
         {},
@@ -838,8 +844,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── custom ──
     StateField(
         "custom_palettes",
         {},
@@ -854,8 +858,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── data ──
     StateField(
         "data_cols",
         [],
@@ -863,8 +865,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=list,
         holder=None,
     ),
-
-    # ── file ──
     StateField(
         "file_path",
         None,
@@ -872,8 +872,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=_identity,
         holder=None,
     ),
-
-    # ── group ──
     StateField(
         "group_cols",
         [],
@@ -888,8 +886,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── kde ──
     StateField(
         "kde_clip_max",
         None,
@@ -904,8 +900,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=_identity,
         holder=None,
     ),
-
-    # ── last ──
     StateField(
         "last_group_col",
         None,
@@ -913,8 +907,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=_identity,
         holder=None,
     ),
-
-    # ── legend ──
     StateField(
         "legend_item_order",
         [],
@@ -943,8 +935,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=_identity,
         holder='legend',
     ),
-
-    # ── marginal ──
     StateField(
         "marginal_kde_clip_max",
         None,
@@ -959,8 +949,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=_identity,
         holder=None,
     ),
-
-    # ── mixing ──
     StateField(
         "mixing_endmembers",
         {},
@@ -975,8 +963,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── overlay ──
     StateField(
         "equation_overlays",
         [],
@@ -1047,8 +1033,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder='overlay',
     ),
-
-    # ── recent ──
     StateField(
         "recent_files",
         [],
@@ -1056,8 +1040,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=list,
         holder=None,
     ),
-
-    # ── selected ──
     StateField(
         "selected_2d_cols",
         [],
@@ -1072,8 +1054,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=list,
         holder=None,
     ),
-
-    # ── sheet ──
     StateField(
         "sheet_name",
         None,
@@ -1081,8 +1061,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=_identity,
         holder=None,
     ),
-
-    # ── ternary ──
     StateField(
         "ternary_ranges",
         {},
@@ -1090,8 +1068,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── tooltip ──
     StateField(
         "tooltip_columns",
         [],
@@ -1099,7 +1075,107 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=list,
         holder=None,
     ),
+
+    StateField(
+        "algorithm",
+        'UMAP',
+        normalize=str,
+        copy=str,
+        holder=None,
+    ),
+    StateField(
+        "kde_bw_adjust",
+        1.0,
+        normalize=float,
+        copy=float,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "kde_bw_method",
+        'scott',
+        normalize=str,
+        copy=str,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "kde_common_norm",
+        False,
+        normalize=bool,
+        copy=bool,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "kde_gridsize",
+        200,
+        normalize=int,
+        copy=int,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "kde_thresh",
+        0.05,
+        normalize=float,
+        copy=float,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "kde_warn_singular",
+        False,
+        normalize=bool,
+        copy=bool,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "marginal_kde_cumulative",
+        False,
+        normalize=bool,
+        copy=bool,
+        holder=None,
+        restore=_identity,
+    ),
+    StateField(
+        "render_mode",
+        'UMAP',
+        normalize=str,
+        copy=str,
+        holder=None,
+    ),
+    StateField(
+        "hidden_groups",
+        set(),
+        normalize=coercers._as_set,
+        copy=coercers._as_set,
+        holder='legend',
+    ),
+    StateField(
+        "parent_groups",
+        {},
+        normalize=coercers._normalize_str_list_map,
+        copy=coercers._normalize_str_list_map,
+        holder=None,
+    ),
+    StateField(
+        "parent_shape_map",
+        {},
+        normalize=coercers._normalize_str_str_map,
+        copy=coercers._normalize_str_str_map,
+        holder=None,
+    ),
+    StateField(
+        "param_presets",
+        {},
+        normalize=coercers._normalize_str_dict_map,
+        copy=coercers._normalize_str_dict_map,
+        holder=None,
+    ),
 )
+
 
 REGISTERED = {field.name for field in SIMPLE_FIELDS}
 
@@ -1118,4 +1194,4 @@ def sync_fields(state: Any, snapshot: dict) -> None:
     """Write the registered fields from *snapshot* back onto *state*."""
     for field in SIMPLE_FIELDS:
         target = getattr(state, field.holder) if field.holder else state
-        setattr(target, field.name, field.from_snapshot(snapshot))
+        setattr(target, field.name, field.for_state(snapshot))

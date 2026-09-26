@@ -25,7 +25,8 @@ PERSISTED = set(SESSION_FIELDS) | set(UI_STATE_FIELDS)
 #: derived = rebuilt from data or the render pipeline; pending = persisted and regular
 #: enough to migrate, but not present in all three call sites yet.
 EXPLICIT_FIELDS: dict[str, set[str]] = {
-    # Runtime bookkeeping: never persisted, so it stays out of the registry.
+    # Runtime bookkeeping: deliberately not persisted, so it stays out of the
+    # registry. Every persisted field is registry-driven.
     "transient": {
         "active_subset_indices",
         "adjust_text_in_progress",
@@ -67,24 +68,6 @@ EXPLICIT_FIELDS: dict[str, set[str]] = {
         "selected_ternary_confirmed",
         "selection_mode",
         "selection_tool",
-    },
-    # Persisted fields without an entry in the store's initial snapshot: they are
-    # set at runtime, so registering them needs the registry to skip the initial
-    # snapshot for them (otherwise the key would appear earlier than before).
-    "pending": {
-        "algorithm",
-        "hidden_groups",
-        "kde_bw_adjust",
-        "kde_bw_method",
-        "kde_common_norm",
-        "kde_gridsize",
-        "kde_thresh",
-        "kde_warn_singular",
-        "marginal_kde_cumulative",
-        "param_presets",
-        "parent_groups",
-        "parent_shape_map",
-        "render_mode",
     },
 }
 

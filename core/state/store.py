@@ -137,8 +137,6 @@ class StateStore:
         self._state = state
         self._dispatch_hook = None
         self._snapshot: dict[str, Any] = {
-            "render_mode": str(getattr(state, "render_mode", "UMAP")),
-            "algorithm": str(getattr(state, "algorithm", "UMAP")),
             "paleo_label_refreshing": bool(getattr(state, "paleo_label_refreshing", False)),
             "overlay_label_refreshing": bool(getattr(state, "overlay_label_refreshing", False)),
             "overlay_curve_label_data": list(getattr(state, "overlay_curve_label_data", []) or []),
@@ -167,27 +165,6 @@ class StateStore:
                 else None
             ),
             "isochron_results": dict(getattr(state, "isochron_results", {}) or {}),
-            "kde_bw_adjust": float(getattr(state, "kde_bw_adjust", 1.0)),
-            "kde_bw_method": str(getattr(state, "kde_bw_method", "scott")),
-            "kde_gridsize": int(getattr(state, "kde_gridsize", 200)),
-            "kde_thresh": float(getattr(state, "kde_thresh", 0.05)),
-            "kde_common_norm": bool(getattr(state, "kde_common_norm", False)),
-            "kde_warn_singular": bool(getattr(state, "kde_warn_singular", False)),
-            "marginal_kde_cumulative": bool(getattr(state, "marginal_kde_cumulative", False)),
-            "kde_bw_adjust": float(getattr(state, "kde_bw_adjust", 1.0)),
-            "kde_bw_method": str(getattr(state, "kde_bw_method", "scott")),
-            "kde_gridsize": int(getattr(state, "kde_gridsize", 200)),
-            "kde_thresh": float(getattr(state, "kde_thresh", 0.05)),
-            "kde_common_norm": bool(getattr(state, "kde_common_norm", False)),
-            "kde_warn_singular": bool(getattr(state, "kde_warn_singular", False)),
-            "marginal_kde_cumulative": bool(getattr(state, "marginal_kde_cumulative", False)),
-            "kde_bw_adjust": float(getattr(state, "kde_bw_adjust", 1.0)),
-            "kde_bw_method": str(getattr(state, "kde_bw_method", "scott")),
-            "kde_gridsize": int(getattr(state, "kde_gridsize", 200)),
-            "kde_thresh": float(getattr(state, "kde_thresh", 0.05)),
-            "kde_common_norm": bool(getattr(state, "kde_common_norm", False)),
-            "kde_warn_singular": bool(getattr(state, "kde_warn_singular", False)),
-            "marginal_kde_cumulative": bool(getattr(state, "marginal_kde_cumulative", False)),
             "selected_indices": set(getattr(state, "selected_indices", set()) or set()),
             "active_subset_indices": _normalize_active_subset_indices(
                 getattr(state, "active_subset_indices", None)
@@ -196,20 +173,10 @@ class StateStore:
             "data_version": int(getattr(state, "data_version", 0)),
             "selection_mode": bool(getattr(state, "selection_mode", False)),
             "selection_tool": getattr(state, "selection_tool", None),
-            "hidden_groups": set(getattr(state, "hidden_groups", set()) or set()),
             "legend_last_title": getattr(state, "legend_last_title", None),
             "legend_last_handles": getattr(state, "legend_last_handles", None),
             "legend_last_labels": getattr(state, "legend_last_labels", None),
             "saved_themes": dict(getattr(state, "saved_themes", {}) or {}),
-            "parent_groups": {
-                str(k): list(v or []) for k, v in (getattr(state, "parent_groups", {}) or {}).items()
-            },
-            "parent_shape_map": {
-                str(k): str(v) for k, v in (getattr(state, "parent_shape_map", {}) or {}).items()
-            },
-            "param_presets": {
-                str(k): dict(v or {}) for k, v in (getattr(state, "param_presets", {}) or {}).items()
-            },
             "ml_last_result": getattr(state, "ml_last_result", None),
             "ml_last_model_meta": getattr(state, "ml_last_model_meta", None),
             "preserve_import_render_mode": bool(getattr(state, "preserve_import_render_mode", False)),
@@ -321,8 +288,6 @@ class StateStore:
     def snapshot(self) -> dict[str, Any]:
         """Return shallow-copied tracked domains."""
         return {
-            "render_mode": str(self._snapshot["render_mode"]),
-            "algorithm": str(self._snapshot["algorithm"]),
             "umap_params": dict(self._snapshot["umap_params"]),
             "tsne_params": dict(self._snapshot["tsne_params"]),
             "pca_params": dict(self._snapshot["pca_params"]),
@@ -435,27 +400,6 @@ class StateStore:
             "marginal_kde_gridsize": int(self._snapshot["marginal_kde_gridsize"]),
             "marginal_kde_cut": float(self._snapshot["marginal_kde_cut"]),
             "marginal_kde_log_transform": bool(self._snapshot["marginal_kde_log_transform"]),
-            "kde_bw_adjust": float(self._snapshot["kde_bw_adjust"]),
-            "kde_bw_method": str(self._snapshot["kde_bw_method"]),
-            "kde_gridsize": int(self._snapshot["kde_gridsize"]),
-            "kde_thresh": float(self._snapshot["kde_thresh"]),
-            "kde_common_norm": bool(self._snapshot["kde_common_norm"]),
-            "kde_warn_singular": bool(self._snapshot["kde_warn_singular"]),
-            "marginal_kde_cumulative": bool(self._snapshot["marginal_kde_cumulative"]),
-            "kde_bw_adjust": float(self._snapshot["kde_bw_adjust"]),
-            "kde_bw_method": str(self._snapshot["kde_bw_method"]),
-            "kde_gridsize": int(self._snapshot["kde_gridsize"]),
-            "kde_thresh": float(self._snapshot["kde_thresh"]),
-            "kde_common_norm": bool(self._snapshot["kde_common_norm"]),
-            "kde_warn_singular": bool(self._snapshot["kde_warn_singular"]),
-            "marginal_kde_cumulative": bool(self._snapshot["marginal_kde_cumulative"]),
-            "kde_bw_adjust": float(self._snapshot["kde_bw_adjust"]),
-            "kde_bw_method": str(self._snapshot["kde_bw_method"]),
-            "kde_gridsize": int(self._snapshot["kde_gridsize"]),
-            "kde_thresh": float(self._snapshot["kde_thresh"]),
-            "kde_common_norm": bool(self._snapshot["kde_common_norm"]),
-            "kde_warn_singular": bool(self._snapshot["kde_warn_singular"]),
-            "marginal_kde_cumulative": bool(self._snapshot["marginal_kde_cumulative"]),
             "selected_indices": set(self._snapshot["selected_indices"]),
             "active_subset_indices": _normalize_active_subset_indices(
                 self._snapshot["active_subset_indices"]
@@ -472,20 +416,10 @@ class StateStore:
             "legend_display_mode": str(self._snapshot["legend_display_mode"]),
             "legend_columns": int(self._snapshot["legend_columns"]),
             "legend_nudge_step": float(self._snapshot["legend_nudge_step"]),
-            "hidden_groups": set(self._snapshot["hidden_groups"]),
             "legend_last_title": self._snapshot["legend_last_title"],
             "legend_last_handles": self._snapshot["legend_last_handles"],
             "legend_last_labels": self._snapshot["legend_last_labels"],
             "saved_themes": dict(self._snapshot["saved_themes"]),
-            "parent_groups": {
-                str(k): list(v or []) for k, v in (self._snapshot["parent_groups"] or {}).items()
-            },
-            "parent_shape_map": {
-                str(k): str(v) for k, v in (self._snapshot["parent_shape_map"] or {}).items()
-            },
-            "param_presets": {
-                str(k): dict(v or {}) for k, v in (self._snapshot["param_presets"] or {}).items()
-            },
             "ml_last_result": self._snapshot["ml_last_result"],
             "ml_last_model_meta": self._snapshot["ml_last_model_meta"],
             "preserve_import_render_mode": bool(self._snapshot["preserve_import_render_mode"]),

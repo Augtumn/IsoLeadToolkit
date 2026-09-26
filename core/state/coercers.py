@@ -359,3 +359,28 @@ def _as_stretch_mode(value: Any) -> str:
 
 def _as_factors(value: Any) -> list:
     return list(value or [1.0, 1.0, 1.0])
+
+
+def _as_set(value: Any) -> set:
+    return set(value) if value else set()
+
+
+def _normalize_str_list_map(value: Any) -> dict[str, list]:
+    """{str(key): list(values)} - the shape used for parent groups."""
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): list(items or []) for key, items in value.items()}
+
+
+def _normalize_str_str_map(value: Any) -> dict[str, str]:
+    """{str(key): str(value)} - the shape used for the parent shape map."""
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): str(item) for key, item in value.items()}
+
+
+def _normalize_str_dict_map(value: Any) -> dict[str, dict]:
+    """{str(key): dict(value)} - the shape used for the parameter presets."""
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): dict(item or {}) for key, item in value.items()}

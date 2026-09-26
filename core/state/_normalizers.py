@@ -160,12 +160,10 @@ from .coercers import (  # noqa: F401  (re-export)
 def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     """Write snapshot values back to the live app state object."""
     render_mode = str(snapshot["render_mode"])
-    state.render_mode = render_mode
     algorithm = str(snapshot["algorithm"])
     if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
         algorithm = render_mode
         snapshot["algorithm"] = algorithm
-    state.algorithm = algorithm
 
     # NOTE: parameter dicts are written back below. Bypass detection for
     # in-place mutations happens in StateStore.dispatch (before applying an
@@ -200,13 +198,6 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
         else None
     )
     state.overlay.isochron_results = dict(snapshot["isochron_results"])
-    state.kde_bw_adjust = snapshot["kde_bw_adjust"]
-    state.kde_bw_method = snapshot["kde_bw_method"]
-    state.kde_gridsize = snapshot["kde_gridsize"]
-    state.kde_thresh = snapshot["kde_thresh"]
-    state.kde_common_norm = snapshot["kde_common_norm"]
-    state.kde_warn_singular = snapshot["kde_warn_singular"]
-    state.marginal_kde_cumulative = snapshot["marginal_kde_cumulative"]
 
     state.selected_indices = set(snapshot["selected_indices"])
     state.active_subset_indices = _normalize_active_subset_indices(
@@ -216,20 +207,10 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.data_version = int(snapshot["data_version"])
     state.selection_mode = bool(snapshot["selection_mode"])
     state.selection_tool = snapshot["selection_tool"]
-    state.legend.hidden_groups = set(snapshot["hidden_groups"])
     state.legend.legend_last_title = snapshot["legend_last_title"]
     state.legend.legend_last_handles = snapshot["legend_last_handles"]
     state.legend.legend_last_labels = snapshot["legend_last_labels"]
     state.saved_themes = dict(snapshot["saved_themes"])
-    state.parent_groups = {
-        str(k): list(v or []) for k, v in (snapshot["parent_groups"] or {}).items()
-    }
-    state.parent_shape_map = {
-        str(k): str(v) for k, v in (snapshot["parent_shape_map"] or {}).items()
-    }
-    state.param_presets = {
-        str(k): dict(v or {}) for k, v in (snapshot["param_presets"] or {}).items()
-    }
     state.ml_last_result = snapshot["ml_last_result"]
     state.ml_last_model_meta = snapshot["ml_last_model_meta"]
     state.preserve_import_render_mode = bool(snapshot["preserve_import_render_mode"])
