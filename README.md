@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green)
-![Tests](https://img.shields.io/badge/Tests-372%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-pytest-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Win%20x64-lightgrey)
 
 ---
@@ -222,7 +222,7 @@ class MyPlugin(BasePlugin):
 
 ### 质量守卫
 
-仓库内有 12 个静态守卫脚本（`scripts/check_*.py`，由 `tests/test_guards.py` 逐个执行，全部要求 `TOTAL=0`）：
+仓库内有 11 个静态守卫脚本（`scripts/check_*.py`，由 `tests/test_guards.py` 逐个执行，全部要求 `TOTAL=0`）：
 
 | 守卫 | 约束 |
 |------|------|
