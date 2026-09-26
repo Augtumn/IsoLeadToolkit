@@ -33,6 +33,36 @@ from .legend_groups import MainWindowLegendGroupMixin
 from .legend_interaction import MainWindowLegendInteractionMixin
 from .legend_overlay import MainWindowLegendOverlayMixin
 from .legend_styles import MainWindowLegendStyleMixin
+from visualization.plotting.grouping import all_parents, parent_children
+
+
+def filter_legend_groups(
+    groups: list,
+    query: str,
+    parent_children: dict[str, set] | None = None,
+    max_items: int = 100,
+) -> tuple[list, int]:
+    """Return ``(groups_to_show, hidden_count)`` for the legend search box.
+
+    With a query every group is searched (labels and parent-group names) so groups
+    beyond the display cap stay reachable; without one the list is capped and the
+    caller shows how many entries are hidden instead of dropping them silently.
+    """
+    text_query = str(query or "").strip().lower()
+    if text_query:
+        selected = []
+        for group in groups:
+            if text_query in str(group).lower():
+                selected.append(group)
+                continue
+            for parent, children in (parent_children or {}).items():
+                if text_query in str(parent).lower() and group in children:
+                    selected.append(group)
+                    break
+        return selected, 0
+
+    capped = list(groups)[:max_items]
+    return capped, max(0, len(groups) - len(capped))
 
 
 class MainWindowLegendActionsMixin(
@@ -57,6 +87,13 @@ class MainWindowLegendActionsMixin(
             self._apply_legend_z_order()
         self._refresh_plot()
 
+    def _on_legend_search_changed(self, _query=""):
+        """Re-filter the legend list for the current search text."""
+        payload = getattr(self, "_legend_panel_payload", None)
+        if payload is None:
+            return
+        self._update_legend_panel(*payload)
+
     def _open_legend_settings(self):
         """Open the full legend settings dialog (same as Ctrl+L)."""
         try:
@@ -68,6 +105,9 @@ class MainWindowLegendActionsMixin(
         try:
             if not hasattr(self, "_legend_list") or self._legend_list is None:
                 return
+            # Keep the last payload so the search box can re-filter without a
+            # full re-render.
+            self._legend_panel_payload = (title, handles, labels)
             self._apply_legend_panel_layout()
             location_key = app_state.legend_location
             if location_key not in {"outside_left", "outside_right"}:
@@ -93,12 +133,24 @@ class MainWindowLegendActionsMixin(
                 groups = list(app_state.df_global[app_state.last_group_col].unique())
             overlay_entries = self._overlay_entries_for_legend()
 
+            search_edit = getattr(self, "legend_search_edit", None)
+            query = str(search_edit.text() or "") if search_edit is not None else ""
+            parent_map = {
+                parent: set(parent_children(app_state, parent))
+                for parent in (app_state.parent_groups or {})
+            }
+            groups_to_show, hidden_groups = filter_legend_groups(
+                list(groups), query, parent_map
+            )
+
             entries = []
             if has_groups:
-                max_items = 100
-                groups_to_show = list(groups)[:max_items]
-                if len(groups) > max_items:
-                    logger.warning("Showing first %d groups only.", max_items)
+                if hidden_groups:
+                    logger.info(
+                        "Legend shows %d of %d groups; the search box reaches the rest.",
+                        len(groups_to_show),
+                        len(groups_to_show) + hidden_groups,
+                    )
                 for group in groups_to_show:
                     entries.append({"type": "group", "key": group, "group": group})
             for overlay_entry in overlay_entries:
@@ -125,8 +177,6 @@ class MainWindowLegendActionsMixin(
             # them. Parent blocks follow the parent's legend_item_order
             # position; nested parents expand recursively inside their
             # ancestor's block.
-            from visualization.plotting.grouping import all_parents, parent_children
-
             parents = all_parents(app_state)
             if parents:
                 parent_names = set((app_state.parent_groups or {}).keys())
@@ -139,8 +189,23 @@ class MainWindowLegendActionsMixin(
                     entries, parents, child_parent, parent_names, order_index
                 )
 
+            if hidden_groups:
+                entries.append(
+                    {
+                        "type": "info",
+                        "key": "__legend_search_hint__",
+                        "text": translate(
+                            "Showing first {shown} groups; type in the search box for the rest."
+                        ).format(shown=len(groups_to_show)),
+                    }
+                )
+
             for entry in entries:
-                if entry["type"] == "parent":
+                if entry["type"] == "info":
+                    hint = QListWidgetItem(str(entry["text"]))
+                    hint.setFlags(Qt.NoItemFlags)
+                    self._legend_list.addItem(hint)
+                elif entry["type"] == "parent":
                     self._add_parent_legend_item(entry["parent"], depth=entry.get("depth", 0))
                 elif entry["type"] == "group":
                     group = entry["group"]

@@ -85,6 +85,8 @@ def _arity_problem(target, name: str, call: ast.Call) -> str | None:
         return None
     if any(keyword.arg is None for keyword in call.keywords):
         return None  # **kwargs splat: cannot verify statically
+    if any(isinstance(arg, ast.Starred) for arg in call.args):
+        return None  # *args splat: cannot verify statically
 
     positional_parameters = [
         p for p in parameters

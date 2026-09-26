@@ -7,6 +7,7 @@ import os
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
+    QLineEdit,
     QAbstractItemView,
     QAction,
     QHBoxLayout,
@@ -116,6 +117,18 @@ class MainWindowSetupMixin:
         self.legend_settings_btn.clicked.connect(self._open_legend_settings)
         settings_layout.addWidget(self.legend_settings_btn, 1)
         legend_layout.addWidget(settings_row)
+
+        search_row = QWidget()
+        search_layout = QHBoxLayout(search_row)
+        search_layout.setContentsMargins(0, 0, 0, 0)
+        search_layout.setSpacing(4)
+        self.legend_search_edit = QLineEdit()
+        self.legend_search_edit.setProperty('translate_key', 'Search legend...')
+        self.legend_search_edit.setPlaceholderText(translate("Search legend..."))
+        self.legend_search_edit.setClearButtonEnabled(True)
+        self.legend_search_edit.textChanged.connect(self._on_legend_search_changed)
+        search_layout.addWidget(self.legend_search_edit, 1)
+        legend_layout.addWidget(search_row)
 
         legend_list = LegendListWidget()
         legend_list.setSelectionMode(QAbstractItemView.SingleSelection)
