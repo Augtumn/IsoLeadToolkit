@@ -44,6 +44,23 @@ uv run pyinstaller build.spec     # → dist/IsotopesAnalyse/
 | Plumbotectonics (76/86) | 构造分区参考曲线 |
 | Mu-Age / Kappa-Age | 同位素比值与年龄联动 |
 
+### 交互与快捷键
+
+| 操作 | 行为 |
+|------|------|
+| 左键拖动（工具栏放大镜选中时） | 三元图：拖出相似子三角形放大，向外拖还原 |
+| 滚轮 / 中键拖动 | 见下方待办：缩放与平移（尚未实现） |
+| 双击图例项 | 该分组置顶（图层与 zorder 同步） |
+| 双击数据点（未开启选择工具） | 图例面板滚动到并选中该点所属分组 |
+| 单选框选 / 套索 | 需先用工具栏或面板按钮启用选择工具 |
+| **Esc** | 取消选择工具；再按一次清除已选样品 |
+| **Delete / Backspace** | 删除已选样品 |
+| **Ctrl+F** | 聚焦图例搜索框并全选文本 |
+| 图例搜索框 **Enter** | 跳到下一个匹配条目（循环） |
+| 图例搜索框输入 | 按标签或父分组名过滤，支持全量分组（不再截断） |
+
+细节：在输入框内打字时上述按键不会被抢占（Esc 只清空输入框，Delete 不会删除数据点）；悬停提示框始终绘制在数据图层与地化覆盖层之上；启用选择工具时状态栏会提示"按 Esc 取消"；对话框会记住上次的尺寸与位置。
+
 ### 算法参数
 
 | 算法 | 参数 | 默认值 | 范围 |
@@ -202,3 +219,21 @@ class MyPlugin(BasePlugin):
 ```json
 { "default_language": "zh", "figure_dpi": 150, "embedding_cache_size": 16 }
 ```
+
+### 质量守卫
+
+仓库内有 12 个静态守卫脚本（`scripts/check_*.py`，由 `tests/test_guards.py` 逐个执行，全部要求 `TOTAL=0`）：
+
+| 守卫 | 约束 |
+|------|------|
+| `check_state_mutations.py` / `check_state_dict_mutations.py` | 状态只能经 `state_gateway` 修改 |
+| `check_gateway_*`（3 个） | 网关调用方式与测试写法 |
+| `check_state_sync_coverage.py` | 快照字段必须能回写到状态（运行时扰动核对） |
+| `check_state_field_coverage.py` | 每个快照字段要么在声明式注册表里，要么在允许清单里注明原因 |
+| `check_self_attribute_probes.py` | 禁止 `getattr(self, "控件", None)` 式自省探测 |
+| `check_silent_exceptions.py` | 禁止静默吞掉异常（`except: pass`） |
+| `check_cross_mixin_calls.py` | 跨 mixin 调用必须声明为 `REQUIRES_<Class>`，并检测同名类 |
+| `check_panel_self_resolution.py` | 面板方法解析与调用参数个数 |
+
+状态字段集中在 `core/state/fields.py` 的声明式注册表（默认值 / 强转 / 拷贝 / holder 一处声明），`core/state/coercers.py` 收纳全部强转函数。
+
