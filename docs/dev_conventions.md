@@ -1376,3 +1376,14 @@ dev
 4. 当前阶段门通过情况（G1-G5）。
 
 未达阶段门时，禁止扩大改造范围，优先补齐质量缺口。
+
+## 19. 画布输入事件归属
+
+画布上的鼠标交互**只能有一条实现路径**，否则会出现"回调挂上了却永远收不到事件"这类无法自证的故障。
+
+1. **画布手势一律走 Qt 事件过滤器**（`install_ternary_zoom_filter()` 模式：`QApplication.installEventFilter` + `mapFromGlobal`，见 `ui/main_window_parts/canvas.py`）。
+   实测结论：matplotlib 的 `mpl_connect("button_press_event", ...)` 在本应用的画布上**收不到按下/释放事件**（真实运行日志可证），因此不要为新交互再走这条路。
+2. **Matplotlib 事件只保留在已验证可用的地方**：悬停提示与左键导出（`visualization/event_handlers/pointer_events.py`）目前工作正常，可继续使用；改动它们前先用真实事件复验。
+3. **Qt 事件会投递多份**：应用级过滤器会先收到 `QWindow` 原生副本、再收到画布副本，坐标映射必须用 `globalPos()` 处理原生副本，且**不可在无法映射的副本上销毁手势状态**。
+4. **交互语义要按"工具是否选中 / 模式是否开启"分流**，并写成显式判断（例如三元缩放要求工具栏放大镜为 `zoom rect`，双击在图例中定位要求未开启选中模式）。
+5. 新增交互必须带**真实 Qt 事件**的回归测试（`QApplication.sendEvent` + 真实 `FigureCanvasQTAgg`），不要用伪造事件对象。

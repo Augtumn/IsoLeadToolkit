@@ -213,6 +213,20 @@ def ternary_limits_cover_full_view(
     )
 
 
+def use_ternary_layout(fig: Any) -> None:
+    """Let the ternary axes lay itself out.
+
+    mpltern draws the triangle itself and reports a degenerate box to the layout
+    engine, which is what makes constrained_layout warn that the axes collapsed to
+    zero. Ternary figures therefore run without a layout engine; the 2D render path
+    restores it when it takes over the figure again.
+    """
+    if fig is None:
+        return
+    if fig.get_layout_engine() is not None:
+        fig.set_layout_engine("none")
+
+
 def configure_ternary_axis(
     ax: Any,
     t_vals: Iterable[float],
@@ -235,6 +249,8 @@ def configure_ternary_axis(
     state_gateway.set_ternary_limit_mode(mode)
 
     tmin, tmax, lmin, lmax, rmin, rmax = _FULL_TERNARY_LIMITS
+
+    use_ternary_layout(getattr(ax, "figure", None))
 
     try:
         if auto_zoom:

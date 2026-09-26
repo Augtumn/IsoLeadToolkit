@@ -17,6 +17,7 @@ from ..common.legend import _merge_parent_groups_for_inline, _place_inline_legen
 from ..common.state_access import _active_subset_indices, _df_global
 from ..kde import _resolve_kde_style, kde_compute_kwargs
 from visualization.plotting.tooltip import raise_tooltip_above_data
+from visualization.plotting.style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +299,9 @@ def _render_2d_title_and_axes(
     prev_2d_cols: list[str] | None,
     subset_info: str,
 ) -> None:
+    # The ternary render switches the layout engine off (use_ternary_layout);
+    # a 2D render over the same figure takes it back.
+    configure_constrained_layout(app_state.fig)
     """Build the 2D title, axis labels and restore prior axis limits."""
     title = (
         f'2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n'
