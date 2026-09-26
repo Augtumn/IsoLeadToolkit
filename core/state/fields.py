@@ -4,11 +4,10 @@ Each declaration carries the field's default value, the coercion applied on the 
 the snapshot (``normalize``), the copy applied back onto the state (``copy``) and the
 holder the field lives on: ``None`` for app_state itself, otherwise the sub-object's
 attribute name (``legend``, ``overlay``). The store's initial snapshot and projection and
-the write-back in ``_normalizers.sync_state_store_to_app()`` derive from this list, so a
-field can no longer be registered in one place and forgotten in another.
+the write-back in ``_normalizers.sync_state_store_to_app()`` derive from this list.
 
-Fields whose call sites do not follow the common shape stay explicit there, with a
-comment saying why.
+Fields the registry does not cover stay explicit in those two files; every one of them is
+listed in scripts/check_state_field_coverage.py with its reason.
 """
 from __future__ import annotations
 
@@ -45,7 +44,7 @@ class StateField:
 
 #: Every field whose plumbing comes from this registry.
 SIMPLE_FIELDS: tuple[StateField, ...] = (
-    # ── migrated first (item A) ──
+    # ── migrated earlier ──
     StateField(
         "ternary_auto_zoom",
         True,
@@ -116,8 +115,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=coercers._as_factors,
         holder=None,
     ),
-
-    # ── adjust ──
     StateField(
         "adjust_text_expand",
         (1.08, 1.2),
@@ -153,8 +150,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── axes ──
     StateField(
         "axes_facecolor",
         '#ffffff',
@@ -162,8 +157,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── axis ──
     StateField(
         "axis_line_color",
         '#1f2937',
@@ -178,8 +171,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── color ──
     StateField(
         "color_scheme",
         'vibrant',
@@ -187,8 +178,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── confidence ──
     StateField(
         "confidence_level",
         0.95,
@@ -196,8 +185,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── custom ──
     StateField(
         "custom_cjk_font",
         '',
@@ -212,8 +199,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── draw ──
     StateField(
         "draw_selection_ellipse",
         False,
@@ -221,8 +206,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder=None,
     ),
-
-    # ── export ──
     StateField(
         "export_image_options",
         None,
@@ -230,8 +213,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── grid ──
     StateField(
         "grid_alpha",
         0.7,
@@ -260,8 +241,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── label ──
     StateField(
         "label_color",
         '#1f2937',
@@ -283,8 +262,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── language ──
     StateField(
         "language",
         'zh',
@@ -292,8 +269,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── legend ──
     StateField(
         "legend_columns",
         0,
@@ -343,8 +318,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder='legend',
     ),
-
-    # ── marginal ──
     StateField(
         "marginal_kde_auto_bandwidth_method",
         'scott',
@@ -415,8 +388,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── minor ──
     StateField(
         "minor_grid",
         False,
@@ -473,8 +444,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder=None,
     ),
-
-    # ── ml ──
     StateField(
         "ml_params",
         None,
@@ -482,8 +451,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── overlay ──
     StateField(
         "geo_model_name",
         'Stacey & Kramers (2nd Stage)',
@@ -631,8 +598,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder='overlay',
     ),
-
-    # ── pca ──
     StateField(
         "pca_component_indices",
         None,
@@ -647,8 +612,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── plot ──
     StateField(
         "plot_dpi",
         130,
@@ -691,8 +654,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder=None,
     ),
-
-    # ── point ──
     StateField(
         "point_size",
         60,
@@ -700,8 +661,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=int,
         holder=None,
     ),
-
-    # ── robust ──
     StateField(
         "robust_pca_params",
         None,
@@ -709,8 +668,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── scatter ──
     StateField(
         "scatter_edgecolor",
         '#1e293b',
@@ -732,8 +689,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder=None,
     ),
-
-    # ── selected ──
     StateField(
         "selected_isochron_line_width",
         2.0,
@@ -741,8 +696,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── show ──
     StateField(
         "show_kde",
         False,
@@ -785,8 +738,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder=None,
     ),
-
-    # ── standardize ──
     StateField(
         "standardize_data",
         True,
@@ -794,8 +745,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=bool,
         holder=None,
     ),
-
-    # ── tick ──
     StateField(
         "tick_color",
         '#1f2937',
@@ -824,8 +773,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=float,
         holder=None,
     ),
-
-    # ── title ──
     StateField(
         "title_color",
         '#111827',
@@ -847,8 +794,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── tsne ──
     StateField(
         "tsne_params",
         None,
@@ -856,8 +801,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── ui ──
     StateField(
         "ui_theme",
         'Modern Light',
@@ -865,8 +808,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=str,
         holder=None,
     ),
-
-    # ── umap ──
     StateField(
         "umap_params",
         None,
@@ -874,8 +815,6 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── v1v2 ──
     StateField(
         "v1v2_params",
         None,
@@ -883,13 +822,281 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         copy=dict,
         holder=None,
     ),
-
-    # ── visible ──
     StateField(
         "visible_groups",
         None,
         normalize=coercers._normalize_visible_groups,
         copy=coercers._normalize_visible_groups,
+        holder=None,
+    ),
+
+    # ── current ──
+    StateField(
+        "current_palette",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+
+    # ── custom ──
+    StateField(
+        "custom_palettes",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+    StateField(
+        "custom_shape_sets",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+
+    # ── data ──
+    StateField(
+        "data_cols",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+
+    # ── file ──
+    StateField(
+        "file_path",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+
+    # ── group ──
+    StateField(
+        "group_cols",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+    StateField(
+        "group_marker_map",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+
+    # ── kde ──
+    StateField(
+        "kde_clip_max",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+    StateField(
+        "kde_clip_min",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+
+    # ── last ──
+    StateField(
+        "last_group_col",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+
+    # ── legend ──
+    StateField(
+        "legend_item_order",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+    StateField(
+        "legend_location",
+        'outside_left',
+        normalize=_identity,
+        copy=_identity,
+        holder='legend',
+    ),
+    StateField(
+        "legend_offset",
+        (0.0, 0.0),
+        normalize=tuple,
+        copy=tuple,
+        holder='legend',
+    ),
+    StateField(
+        "legend_position",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder='legend',
+    ),
+
+    # ── marginal ──
+    StateField(
+        "marginal_kde_clip_max",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+    StateField(
+        "marginal_kde_clip_min",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+
+    # ── mixing ──
+    StateField(
+        "mixing_endmembers",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+    StateField(
+        "mixing_mixtures",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+
+    # ── overlay ──
+    StateField(
+        "equation_overlays",
+        [],
+        normalize=list,
+        copy=list,
+        holder='overlay',
+    ),
+    StateField(
+        "isochron_error_mode",
+        'fixed',
+        normalize=_identity,
+        copy=str,
+        holder='overlay',
+    ),
+    StateField(
+        "isochron_label_options",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder='overlay',
+    ),
+    StateField(
+        "isochron_rxy_col",
+        '',
+        normalize=str,
+        copy=str,
+        holder='overlay',
+    ),
+    StateField(
+        "isochron_sx_col",
+        '',
+        normalize=str,
+        copy=str,
+        holder='overlay',
+    ),
+    StateField(
+        "isochron_sy_col",
+        '',
+        normalize=str,
+        copy=str,
+        holder='overlay',
+    ),
+    StateField(
+        "line_styles",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder='overlay',
+    ),
+    StateField(
+        "mu_kappa_age_col",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder='overlay',
+    ),
+    StateField(
+        "paleoisochron_ages",
+        [],
+        normalize=list,
+        copy=list,
+        holder='overlay',
+    ),
+    StateField(
+        "plumbotectonics_group_visibility",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder='overlay',
+    ),
+
+    # ── recent ──
+    StateField(
+        "recent_files",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+
+    # ── selected ──
+    StateField(
+        "selected_2d_cols",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+    StateField(
+        "selected_3d_cols",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+
+    # ── sheet ──
+    StateField(
+        "sheet_name",
+        None,
+        normalize=_identity,
+        copy=_identity,
+        holder=None,
+    ),
+
+    # ── ternary ──
+    StateField(
+        "ternary_ranges",
+        {},
+        normalize=dict,
+        copy=dict,
+        holder=None,
+    ),
+
+    # ── tooltip ──
+    StateField(
+        "tooltip_columns",
+        [],
+        normalize=list,
+        copy=list,
         holder=None,
     ),
 )

@@ -193,34 +193,19 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.last_pca_components = snapshot["last_pca_components"]
     state.current_feature_names = snapshot["current_feature_names"]
     state.adjust_text_in_progress = bool(snapshot["adjust_text_in_progress"])
-    state.current_palette = dict(snapshot["current_palette"])
-    state.group_marker_map = dict(snapshot["group_marker_map"])
     state.current_plot_title = str(snapshot["current_plot_title"])
     state.last_2d_cols = (
         list(snapshot["last_2d_cols"])
         if snapshot["last_2d_cols"] is not None
         else None
     )
-    state.overlay.isochron_error_mode = str(snapshot["isochron_error_mode"])
-    state.overlay.isochron_sx_col = str(snapshot["isochron_sx_col"])
-    state.overlay.isochron_sy_col = str(snapshot["isochron_sy_col"])
-    state.overlay.isochron_rxy_col = str(snapshot["isochron_rxy_col"])
     state.overlay.isochron_results = dict(snapshot["isochron_results"])
-    state.overlay.plumbotectonics_group_visibility = dict(
-        snapshot["plumbotectonics_group_visibility"]
-    )
-    state.overlay.mu_kappa_age_col = snapshot["mu_kappa_age_col"]
-    state.overlay.paleoisochron_ages = list(snapshot["paleoisochron_ages"])
     state.kde_bw_adjust = snapshot["kde_bw_adjust"]
     state.kde_bw_method = snapshot["kde_bw_method"]
     state.kde_gridsize = snapshot["kde_gridsize"]
     state.kde_thresh = snapshot["kde_thresh"]
-    state.kde_clip_min = snapshot["kde_clip_min"]
-    state.kde_clip_max = snapshot["kde_clip_max"]
     state.kde_common_norm = snapshot["kde_common_norm"]
     state.kde_warn_singular = snapshot["kde_warn_singular"]
-    state.marginal_kde_clip_min = snapshot["marginal_kde_clip_min"]
-    state.marginal_kde_clip_max = snapshot["marginal_kde_clip_max"]
     state.marginal_kde_cumulative = snapshot["marginal_kde_cumulative"]
 
     state.selected_indices = set(snapshot["selected_indices"])
@@ -228,28 +213,14 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
         snapshot["active_subset_indices"]
     )
     state.df_global = snapshot["df_global"]
-    state.file_path = snapshot["file_path"]
-    state.sheet_name = snapshot["sheet_name"]
     state.data_version = int(snapshot["data_version"])
-    state.group_cols = list(snapshot["group_cols"])
-    state.data_cols = list(snapshot["data_cols"])
-    state.last_group_col = snapshot["last_group_col"]
     state.selection_mode = bool(snapshot["selection_mode"])
     state.selection_tool = snapshot["selection_tool"]
-    state.tooltip_columns = list(snapshot["tooltip_columns"])
-    state.legend.legend_position = snapshot["legend_position"]
-    state.legend.legend_location = snapshot["legend_location"]
-    state.legend.legend_offset = tuple(snapshot["legend_offset"])
     state.legend.hidden_groups = set(snapshot["hidden_groups"])
     state.legend.legend_last_title = snapshot["legend_last_title"]
     state.legend.legend_last_handles = snapshot["legend_last_handles"]
     state.legend.legend_last_labels = snapshot["legend_last_labels"]
-    state.recent_files = list(snapshot["recent_files"])
-    state.overlay.line_styles = dict(snapshot["line_styles"])
     state.saved_themes = dict(snapshot["saved_themes"])
-    state.custom_palettes = dict(snapshot["custom_palettes"])
-    state.custom_shape_sets = dict(snapshot["custom_shape_sets"])
-    state.legend_item_order = list(snapshot["legend_item_order"])
     state.parent_groups = {
         str(k): list(v or []) for k, v in (snapshot["parent_groups"] or {}).items()
     }
@@ -259,25 +230,18 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     state.param_presets = {
         str(k): dict(v or {}) for k, v in (snapshot["param_presets"] or {}).items()
     }
-    state.mixing_endmembers = dict(snapshot["mixing_endmembers"])
-    state.mixing_mixtures = dict(snapshot["mixing_mixtures"])
-    state.ternary_ranges = dict(snapshot["ternary_ranges"])
     state.ml_last_result = snapshot["ml_last_result"]
     state.ml_last_model_meta = snapshot["ml_last_model_meta"]
     state.preserve_import_render_mode = bool(snapshot["preserve_import_render_mode"])
     state.available_groups = list(snapshot["available_groups"])
-    state.selected_2d_cols = list(snapshot["selected_2d_cols"])
-    state.selected_3d_cols = list(snapshot["selected_3d_cols"])
     state.selected_ternary_cols = list(snapshot["selected_ternary_cols"])
     state.selected_2d_confirmed = bool(snapshot["selected_2d_confirmed"])
     state.selected_3d_confirmed = bool(snapshot["selected_3d_confirmed"])
     state.selected_ternary_confirmed = bool(snapshot["selected_ternary_confirmed"])
     state.initial_render_done = bool(snapshot["initial_render_done"])
     sync_fields(state, snapshot)
-    state.overlay.isochron_label_options = dict(snapshot["isochron_label_options"])
     state.overlay.model_curve_models = (
         list(snapshot["model_curve_models"])
         if snapshot["model_curve_models"] is not None
         else None
     )
-    state.overlay.equation_overlays = list(snapshot["equation_overlays"])
