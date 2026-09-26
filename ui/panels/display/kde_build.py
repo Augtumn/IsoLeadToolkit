@@ -1,4 +1,4 @@
-"""Analysis panel build mixin."""
+"""Kernel Density toolbox page for the display panel."""
 from __future__ import annotations
 
 from PyQt5.QtCore import Qt
@@ -22,53 +22,6 @@ from core import app_state, translate
 from ui.icons import apply_color_swatch
 from ui.panels.base_panel import BasePanel
 from ui.widgets import labeled_checkbox
-
-
-class AnalysisPanelBuildMixin:
-    """Build UI widgets for the analysis tab."""
-
-    def reset_state(self):
-        super().reset_state()
-        self.tools_kde_check = None
-        self.tools_marginal_kde_check = None
-        self.selection_button = None
-        self.ellipse_selection_button = None
-        self.lasso_selection_button = None
-        self.selection_status_label = None
-        self.mixing_group_name_edit = None
-        self.mixing_status_label = None
-        self.confidence_68_radio = None
-        self.confidence_95_radio = None
-        self.confidence_99_radio = None
-
-    def build(self) -> QWidget:
-        widget = self._build_analysis_section()
-        self._is_initialized = True
-        return widget
-
-    def _update_status_panel(self):
-        """Status panel is owned by the main control panel; no-op here."""
-        return
-
-    def _sync_toggle_widgets(self, checked, *widgets):
-        """Sync toggle widgets to the same checked state."""
-        for widget in widgets:
-            if widget is None:
-                continue
-            if widget.isChecked() != checked:
-                widget.blockSignals(True)
-                widget.setChecked(checked)
-                widget.blockSignals(False)
-
-    def _build_analysis_section(self):
-        """Build analysis section widgets."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(10)
-
-        section_toolbox = QToolBox()
-        section_toolbox.setObjectName('analysis_section_toolbox')
 
 
 class DisplayKdeBuildMixin:

@@ -24,6 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
         "check_gateway_generic_mutations_in_tests.py",
         "check_gateway_direct_state_assignments.py",
         "check_state_dict_mutations.py",
+        "check_panel_self_resolution.py",
     ],
 )
 def test_guard_script_reports_zero_hits(script_name: str) -> None:

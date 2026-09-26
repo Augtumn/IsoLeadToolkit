@@ -113,6 +113,23 @@ class BasePanel(PanelStyleMixin, QWidget):
             else:
                 spinbox.editingFinished.connect(callback)
 
+
+    def _sync_toggle_widgets(self, checked, *widgets):
+        """Sync toggle widgets to the same checked state."""
+        for widget in widgets:
+            if widget is None:
+                continue
+            if widget.isChecked() != checked:
+                widget.blockSignals(True)
+                widget.setChecked(checked)
+                widget.blockSignals(False)
+
+    def _open_line_style_dialog(self, style_key, swatch):
+        """Open the line style dialog for *style_key*, refreshing on apply."""
+        from ui.panels.display.dialogs.line_style_dialog import open_line_style_dialog
+
+        open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._on_change)
+
     @staticmethod
     def add_group_page(section_toolbox, group_widget, title_key) -> None:
         """Add a QGroupBox as a labelled toolbox page (shared by all panels)."""

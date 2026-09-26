@@ -48,16 +48,6 @@ class AnalysisPanelBuildMixin:
         """Status panel is owned by the main control panel; no-op here."""
         return
 
-    def _sync_toggle_widgets(self, checked, *widgets):
-        """Sync toggle widgets to the same checked state."""
-        for widget in widgets:
-            if widget is None:
-                continue
-            if widget.isChecked() != checked:
-                widget.blockSignals(True)
-                widget.setChecked(checked)
-                widget.blockSignals(False)
-
     def _build_analysis_section(self):
         """Build analysis section widgets."""
         widget = QWidget()

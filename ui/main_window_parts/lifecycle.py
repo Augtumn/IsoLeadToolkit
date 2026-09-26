@@ -198,15 +198,12 @@ class MainWindowLifecycleMixin:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
             # Ensure legend callback is connected after data reload
             state_gateway.set_legend_update_callback(self._update_legend_panel)
-            if hasattr(self, "on_data_reload"):
-                self.on_data_reload()
-            else:
-                try:
-                    from visualization.events import on_slider_change
+            try:
+                from visualization.events import on_slider_change
 
-                    on_slider_change()
-                except Exception as exc:
-                    logger.warning("Failed to refresh plot after reload: %s", exc)
+                on_slider_change()
+            except Exception as exc:
+                logger.warning("Failed to refresh plot after reload: %s", exc)
         else:
             self.statusBar().showMessage(translate("Failed to reload data"), 3000)
 

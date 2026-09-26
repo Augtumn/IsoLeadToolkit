@@ -1117,6 +1117,10 @@ tests/
 1. 修复 bug 必须提供回归测试或最小复现步骤。
 2. 算法逻辑优先单元测试，UI 逻辑优先集成测试或验收清单。
 3. 关键重构需提供性能与行为一致性说明。
+6. **守卫脚本**（`scripts/`，均支持 `--fail-on-hits`，输出 `TOTAL=n`，由 `tests/test_guards.py` 执行）：
+   - `check_state_mutations.py` / `check_state_dict_mutations.py` / `check_gateway_*`：状态直写与网关通用写入；
+   - `check_panel_self_resolution.py`：面板/mixin 中每个 `self.<名字>()` 必须能在其所属面板的 MRO 中解析。
+     专防「mixin 迁移到别的段后仍调用原段助手」这类只有用户点击时才暴露的崩溃（离屏构建测试覆盖不到）。
 4. 重组/精简测试时，用 `pytest --collect-only` 的用例集合（或 AST 提取的测试函数名集合）
    做前后比对，确保**用例零丢失**后再提交。
 5. **离屏测试的边界**：面板构建类测试（`panel.build()`）在 `QT_QPA_PLATFORM=offscreen` 下可靠；

@@ -57,22 +57,6 @@ class DataPanelGroupingMixin:
         if geochem_usecase.load_preset(target_model):
             state_gateway.set_geo_model_name(target_model)
 
-    def _sync_toggle_widgets(self, checked, *widgets):
-        """Synchronize generic toggle states."""
-        for widget in widgets:
-            if widget is None:
-                continue
-            if widget.isChecked() != checked:
-                widget.blockSignals(True)
-                widget.setChecked(checked)
-                widget.blockSignals(False)
-
-    def _open_line_style_dialog(self, style_key, swatch):
-        """Open line style dialog for selected style key."""
-        from ui.panels.display.dialogs.line_style_dialog import open_line_style_dialog
-
-        open_line_style_dialog(self, style_key, swatch=swatch, on_applied=self._on_change)
-
     def _refresh_group_column_radios(self):
         """Refresh grouping column radio buttons."""
         if self.group_radio_layout is None:
