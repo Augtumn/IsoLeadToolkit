@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QWidget,
+    QAbstractItemView,
 )
 
 from core import app_state, state_gateway, translate
@@ -228,6 +229,24 @@ class MainWindowLegendInteractionMixin:
             state_gateway.set_visible_groups(sorted(current_visible))
 
         self._refresh_plot()
+
+    def _reveal_group_in_legend(self, group):
+        """Scroll the legend panel to *group* and select its row.
+
+        Long lists (hundreds of groups) make a row impossible to find by hand, so a
+        double click on a data point brings its legend entry into view.
+        """
+        legend_list = getattr(self, "_legend_list", None)
+        if legend_list is None:
+            return
+        for index in range(legend_list.count()):
+            item = legend_list.item(index)
+            meta = item.data(Qt.UserRole) or {}
+            if meta.get("type") == "group" and meta.get("key") == group:
+                legend_list.scrollToItem(item, QAbstractItemView.PositionAtCenter)
+                legend_list.setCurrentItem(item)
+                return
+        logger.info("Group %s is not shown in the legend panel.", group)
 
     def _bring_to_front(self, group):
         if group in app_state.group_to_scatter:

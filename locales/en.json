@@ -892,6 +892,5 @@
   "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.": "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.",
   "Write an Origin-importable Excel workbook (no Origin automation needed).": "Write an Origin-importable Excel workbook (no Origin automation needed).",
   "Applied: {notes}": "Applied: {notes}",
-  "Search legend...": "Search legend...",
-  "Showing first {shown} groups; type in the search box for the rest.": "Showing first {shown} groups; type in the search box for the rest."
+  "Search legend...": "Search legend..."
 }

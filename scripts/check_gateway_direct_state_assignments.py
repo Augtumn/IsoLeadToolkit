@@ -17,7 +17,7 @@ ALLOWED_DIRECT_FIELDS = {
     "legend_ax",
     "legend_update_callback",
     "embedding_progress_callback",
-    "group_front_callback",
+    "group_reveal_callback",
     "group_marker_map",
     "annotation",
     "embedding_worker",

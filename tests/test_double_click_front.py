@@ -1,4 +1,4 @@
-"""Double click raises the clicked point's layer (unless selection mode is on)."""
+"""Double click reveals the clicked point's group in the legend panel."""
 from __future__ import annotations
 
 import matplotlib
@@ -35,7 +35,7 @@ def scene(monkeypatch):
     monkeypatch.setattr(pointer_events, "_resolve_sample_index", lambda event: 0)
 
     calls: list[str] = []
-    monkeypatch.setattr(app_state, "group_front_callback", calls.append, raising=False)
+    monkeypatch.setattr(app_state, "group_reveal_callback", calls.append, raising=False)
     yield figure, axes, calls, monkeypatch
     state_gateway.set_selection_mode(original_mode)
 
@@ -47,7 +47,7 @@ def _double_click(figure, axes, dblclick=True):
     )
 
 
-def test_double_click_raises_the_group_of_the_clicked_point(scene) -> None:
+def test_double_click_reveals_the_group_of_the_clicked_point(scene) -> None:
     figure, axes, calls, _mp = scene
 
     pointer_events.on_click(_double_click(figure, axes))
@@ -59,14 +59,14 @@ def test_double_click_in_selection_mode_selects_instead(scene) -> None:
     """With the selection tool open the existing behaviour must stay untouched."""
     figure, axes, calls, monkeypatch = scene
     state_gateway.set_selection_mode(True)
-    monkeypatch.setattr(app_state, "group_front_callback", calls.append, raising=False)
+    monkeypatch.setattr(app_state, "group_reveal_callback", calls.append, raising=False)
 
     pointer_events.on_click(_double_click(figure, axes))
 
-    assert calls == [], "selection mode must not raise layers"
+    assert calls == [], "selection mode must not reveal groups"
 
 
-def test_a_single_click_never_raises_a_layer(scene) -> None:
+def test_a_single_click_never_reveals_a_group(scene) -> None:
     figure, axes, calls, _mp = scene
 
     pointer_events.on_click(_double_click(figure, axes, dblclick=False))
@@ -83,7 +83,7 @@ def test_clicks_outside_the_current_axis_are_ignored(scene) -> None:
         MouseEvent("button_press_event", figure.canvas, x, y, button=1, dblclick=True, key=None)
     )
 
-    assert calls == [], "only the current axes may raise a layer"
+    assert calls == [], "only the current axes may reveal a group"
 
 
 def test_missing_group_column_is_harmless(scene, monkeypatch) -> None:
@@ -96,8 +96,8 @@ def test_missing_group_column_is_harmless(scene, monkeypatch) -> None:
 
 
 def test_the_callback_is_registered_by_the_gateway() -> None:
-    state_gateway.set_group_front_callback(None)
-    assert getattr(app_state, "group_front_callback", "missing") is None
+    state_gateway.set_group_reveal_callback(None)
+    assert getattr(app_state, "group_reveal_callback", "missing") is None
 
 
 def test_numeric_group_values_keep_the_legend_key(scene, monkeypatch) -> None:

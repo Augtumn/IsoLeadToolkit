@@ -892,6 +892,5 @@
   "Use \"Export Origin Data\" instead to write an Origin-importable Excel workbook.": "可改用「导出 Origin 数据」，写出可直接导入 Origin 的 Excel 工作簿。",
   "Write an Origin-importable Excel workbook (no Origin automation needed).": "写出可直接导入 Origin 的 Excel 工作簿（无需 Origin 自动化）。",
   "Applied: {notes}": "已应用：{notes}",
-  "Search legend...": "Search legend...",
-  "Showing first {shown} groups; type in the search box for the rest.": "Showing first {shown} groups; type in the search box for the rest."
+  "Search legend...": "Search legend..."
 }

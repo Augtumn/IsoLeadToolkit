@@ -168,12 +168,12 @@ def on_click(event: Any) -> None:
         if not app_state.selection_mode:
             if getattr(event, 'dblclick', False):
                 # Selecting a sample requires the selection mode; without it a
-                # double click raises the clicked point's layer instead.
+                # double click reveals the clicked point's group in the legend.
                 group = _resolve_group_at(event)
-                callback = getattr(app_state, 'group_front_callback', None)
-                if group and callback is not None:
+                callback = getattr(app_state, 'group_reveal_callback', None)
+                if group is not None and callback is not None:
                     callback(group)
-                    logger.info('Brought group %s to front.', group)
+                    logger.info('Revealed group %s in the legend.', group)
             return
 
         if app_state.selection_mode:

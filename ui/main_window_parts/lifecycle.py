@@ -198,7 +198,7 @@ class MainWindowLifecycleMixin:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
             # Ensure legend callback is connected after data reload
             state_gateway.set_legend_update_callback(self._update_legend_panel)
-            state_gateway.set_group_front_callback(self._bring_to_front)
+            state_gateway.set_group_reveal_callback(self._reveal_group_in_legend)
             try:
                 from visualization.events import on_slider_change
 

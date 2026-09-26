@@ -40,13 +40,12 @@ def filter_legend_groups(
     groups: list,
     query: str,
     parent_children: dict[str, set] | None = None,
-    max_items: int = 100,
-) -> tuple[list, int]:
-    """Return ``(groups_to_show, hidden_count)`` for the legend search box.
+) -> list:
+    """Groups matching the legend search box.
 
-    With a query every group is searched (labels and parent-group names) so groups
-    beyond the display cap stay reachable; without one the list is capped and the
-    caller shows how many entries are hidden instead of dropping them silently.
+    No query shows every group - the panel used to display only the first 100 and
+    silently hide the rest; with a query the labels and the parent-group names are
+    searched.
     """
     text_query = str(query or "").strip().lower()
     if text_query:
@@ -59,10 +58,9 @@ def filter_legend_groups(
                 if text_query in str(parent).lower() and group in children:
                     selected.append(group)
                     break
-        return selected, 0
+        return selected
 
-    capped = list(groups)[:max_items]
-    return capped, max(0, len(groups) - len(capped))
+    return list(groups)
 
 
 class MainWindowLegendActionsMixin(
@@ -139,18 +137,10 @@ class MainWindowLegendActionsMixin(
                 parent: set(parent_children(app_state, parent))
                 for parent in (app_state.parent_groups or {})
             }
-            groups_to_show, hidden_groups = filter_legend_groups(
-                list(groups), query, parent_map
-            )
+            groups_to_show = filter_legend_groups(list(groups), query, parent_map)
 
             entries = []
             if has_groups:
-                if hidden_groups:
-                    logger.info(
-                        "Legend shows %d of %d groups; the search box reaches the rest.",
-                        len(groups_to_show),
-                        len(groups_to_show) + hidden_groups,
-                    )
                 for group in groups_to_show:
                     entries.append({"type": "group", "key": group, "group": group})
             for overlay_entry in overlay_entries:
@@ -189,23 +179,8 @@ class MainWindowLegendActionsMixin(
                     entries, parents, child_parent, parent_names, order_index
                 )
 
-            if hidden_groups:
-                entries.append(
-                    {
-                        "type": "info",
-                        "key": "__legend_search_hint__",
-                        "text": translate(
-                            "Showing first {shown} groups; type in the search box for the rest."
-                        ).format(shown=len(groups_to_show)),
-                    }
-                )
-
             for entry in entries:
-                if entry["type"] == "info":
-                    hint = QListWidgetItem(str(entry["text"]))
-                    hint.setFlags(Qt.NoItemFlags)
-                    self._legend_list.addItem(hint)
-                elif entry["type"] == "parent":
+                if entry["type"] == "parent":
                     self._add_parent_legend_item(entry["parent"], depth=entry.get("depth", 0))
                 elif entry["type"] == "group":
                     group = entry["group"]
