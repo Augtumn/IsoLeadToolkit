@@ -111,3 +111,59 @@ Excel/CSV 文件
 ## 开发约定
 
 统一开发规范已拆分为独立文档：`docs/dev_conventions.md`。
+
+
+---
+
+## 项目结构
+
+```
+IsotopesAnalyse/
+├── main.py
+├── pyproject.toml
+├── application/            # 用例层（导入/导出/渲染编排）
+├── core/
+│   ├── config.py           # CONFIG + 用户配置
+│   ├── state/              # StateStore + Gateway + 声明式字段注册表
+│   ├── session/            # 会话持久化 + 版本迁移
+│   ├── localization.py     # 双语
+│   └── cache.py            # LRU 嵌入缓存
+├── data/
+│   ├── loader.py           # Excel/CSV 读取 + 列类型推断
+│   └── geochemistry/       # 地球化学计算 (engine, age, source, delta, isochron)
+├── plugins/                # 插件系统（api / manager / registry / builtins / examples）
+├── ui/
+│   ├── main_window.py      # 主窗口（组合根由 ui/factory.py 提供）
+│   ├── main_window_parts/  # 菜单/工具栏/图例/画布
+│   ├── panels/             # 分区控制面板
+│   ├── dialogs/            # 专用对话框（含尺寸记忆）
+│   └── widgets.py          # 可复用组件
+├── visualization/
+│   ├── events.py           # 交互事件编排
+│   ├── embedding_worker.py # QThread 异步嵌入
+│   ├── event_handlers/     # 选择/指针/图例事件
+│   └── plotting/           # 渲染管线 (rendering/geochem/styling)
+├── locales/                # en.json / zh.json
+├── scripts/                # 守卫脚本 / 发布检查 / 脚手架
+├── tests/                  # 测试与真实窗口夹具
+└── docs/                   # 本目录
+```
+
+## 质量守卫
+
+`scripts/check_*.py` 共 11 个静态守卫，由 `tests/test_guards.py` 逐个执行，全部要求输出 `TOTAL=0`：
+
+| 守卫 | 约束 |
+|------|------|
+| `check_state_mutations.py` / `check_state_dict_mutations.py` | 状态只能经 `state_gateway` 修改 |
+| `check_gateway_direct_state_assignments.py` | 网关旁路写入 |
+| `check_gateway_generic_mutations.py` / `check_gateway_generic_mutations_in_tests.py` | 通用 `set_attr` / `set_attrs` 调用与测试写法 |
+| `check_state_sync_coverage.py` | 快照字段必须能回写到状态（运行时扰动核对，探测 174 字段） |
+| `check_state_field_coverage.py` | 每个快照字段要么在 `core/state/fields.py` 注册表里，要么在允许清单里注明原因 |
+| `check_self_attribute_probes.py` | 禁止 `getattr(self, "控件", None)` 式自省探测（基线为 0） |
+| `check_silent_exceptions.py` | 禁止静默吞掉异常（基线为 0） |
+| `check_cross_mixin_calls.py` | 跨 mixin 调用必须声明为 `REQUIRES_<Class>`，并检测同名类 |
+| `check_panel_self_resolution.py` | 面板方法解析与调用参数个数 |
+
+状态字段集中在 `core/state/fields.py` 的声明式注册表（默认值 / 强转 / 拷贝 / holder 一处声明），
+强转函数集中在 `core/state/coercers.py`；新增字段只需在注册表声明一次。
