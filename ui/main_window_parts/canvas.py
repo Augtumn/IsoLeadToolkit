@@ -188,6 +188,8 @@ class TernaryZoomEventFilter(QObject):
         self._toolbar = toolbar
         self._press: tuple[float, float] | None = None
         self._axes = None
+        #: Where a middle-button pan started, in data coordinates.
+        self._pan_from: tuple[float, float] | None = None
 
     def _zoom_tool_active(self) -> bool:
         """True while the toolbar's magnifier is selected.
@@ -218,6 +220,89 @@ class TernaryZoomEventFilter(QObject):
             except Exception:
                 axes = None
         return axes
+
+
+    def _handle_wheel(self, axes, coords, event) -> None:
+        """Wheel over the plot: zoom about the cursor (any plot type)."""
+        from visualization.plotting.ternary import cartesian_to_ternary
+        from visualization.plotting.view_zoom import (
+            is_ternary_axes,
+            wheel_factor,
+            zoom_cartesian,
+            zoom_ternary,
+        )
+
+        factor = wheel_factor(event.angleDelta().y())
+        if factor == 1.0:
+            return
+        try:
+            if is_ternary_axes(axes):
+                t, l, r = cartesian_to_ternary(coords[0], coords[1])
+                limits = zoom_ternary(axes, factor, t, l, r)
+                self._remember_ternary_limits(limits)
+            else:
+                zoom_cartesian(axes, factor, coords[0], coords[1])
+            if self._canvas is not None:
+                self._canvas.draw_idle()
+        except Exception as err:
+            logger.warning("Wheel zoom failed: %s", err)
+
+    def _pan_view(self, current) -> None:
+        """Middle-button drag: translate the view by the drag delta."""
+        from visualization.plotting.view_zoom import (
+            is_ternary_axes,
+            pan_cartesian,
+            pan_ternary,
+        )
+
+        if self._pan_from is None or current is None:
+            return
+        dx = current[0] - self._pan_from[0]
+        dy = current[1] - self._pan_from[1]
+        axes = self._current_axes()
+        if axes is None:
+            return
+        try:
+            if is_ternary_axes(axes):
+                from visualization.plotting.ternary import cartesian_to_ternary
+
+                t0, l0, _r0 = cartesian_to_ternary(*self._pan_from)
+                t1, l1, _r1 = cartesian_to_ternary(*current)
+                limits = pan_ternary(axes, (t1 - t0 + l1 - l0) / 2.0)
+                self._remember_ternary_limits(limits)
+            else:
+                pan_cartesian(axes, -dx, -dy)
+            if self._canvas is not None:
+                self._canvas.draw_idle()
+        except Exception as err:
+            logger.warning("Pan failed: %s", err)
+        self._pan_from = current
+
+    def _remember_ternary_limits(self, limits) -> None:
+        """Persist a ternary view so a re-render keeps it."""
+        keys = ("tmin", "tmax", "lmin", "lmax", "rmin", "rmax")
+        try:
+            manual = dict(app_state.ternary_manual_limits or {})
+            manual.update(dict(zip(keys, limits)))
+            state_gateway.set_ternary_manual_limits(manual)
+            state_gateway.set_ternary_auto_zoom(True)
+            state_gateway.set_ternary_manual_limits_enabled(True)
+        except Exception as err:
+            logger.warning("Could not persist the ternary view: %s", err)
+
+    def _current_axes(self):
+        """The axes under the pointer: the ternary one when present, else the live axes.
+
+        ``_axes_now()`` deliberately only returns ternary axes (the drag zoom needs them);
+        wheel zoom and pan work on any plot type, so they use this wider accessor.
+        """
+        axes = self._ternary_axes()
+        if axes is not None:
+            return axes
+        try:
+            return app_state.ax
+        except Exception:
+            return None
 
     def _targets_canvas(self, obj) -> bool:
         """True when *obj* is (a child of) the canvas or its native window.
@@ -254,7 +339,7 @@ class TernaryZoomEventFilter(QObject):
                 return None
             ratio = self._canvas.devicePixelRatioF()
             display = (point.x() * ratio, (self._canvas.height() - point.y()) * ratio)
-            axes = self._axes if self._axes is not None else self._axes_now()
+            axes = self._axes if self._axes is not None else self._current_axes()
             if axes is None:
                 return None
             data = axes.transData.inverted().transform(display)
@@ -267,6 +352,26 @@ class TernaryZoomEventFilter(QObject):
     def eventFilter(self, obj, event) -> bool:
         try:
             kind = event.type()
+            if kind == QEvent.Wheel:
+                axes = self._current_axes()
+                coords = self._data_coords(obj, event) if axes is not None else None
+                if axes is not None and coords is not None:
+                    self._handle_wheel(axes, coords, event)
+                    return False
+            if kind == QEvent.MouseButtonPress and event.button() == Qt.MiddleButton:
+                if self._targets_canvas(obj):
+                    self._pan_from = self._data_coords(obj, event)
+                    return False
+            if kind == QEvent.MouseMove and self._pan_from is not None:
+                current = self._data_coords(obj, event)
+                if current is not None:
+                    self._pan_view(current)
+                    return False
+            if kind == QEvent.MouseButtonRelease and event.button() == Qt.MiddleButton:
+                if self._pan_from is not None:
+                    logger.debug("Pan finished.")
+                self._pan_from = None
+                return False
             if kind == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
                 if not self._zoom_tool_active():
                     return False
