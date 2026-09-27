@@ -7,6 +7,10 @@ name = "isotopesanalyse"
 version = "0.1.0"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
+
 description = "Isotopes analysis and visualization desktop application"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -65,6 +69,3 @@ required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
-classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-]

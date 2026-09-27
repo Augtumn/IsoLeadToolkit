@@ -156,6 +156,10 @@ def test_autosave_retries_instead_of_dropping_a_skipped_save(
     persistence.install_autosave(store, interval=3600.0)
     params_file = tmp_path / "params.json"
     try:
+        # The previous test may still have an async write in flight; its worker holds the
+        # lock, so wait for it before simulating a write in progress ourselves. Without this
+        # the acquire() below fails on a slower machine (observed on the Windows CI runner).
+        assert _wait_for_idle_autosave(), "previous async save did not finish in time"
         assert persistence._async_save_lock.acquire(blocking=False)
         try:
             for i in range(persistence.DEFAULT_AUTOSAVE_DISPATCHES):

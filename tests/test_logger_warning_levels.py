@@ -60,6 +60,11 @@ def test_the_writer_downgrades_warning_lines() -> None:
 def test_warning_capture_routes_warnings_to_logging(caplog) -> None:
     import warnings
 
+    # pytest installs its own warnings.showwarning recorder for the duration of every test,
+    # which shadows a handler installed at import time (logging.captureWarnings is a no-op
+    # once a showwarning is saved). Re-install inside the test so the routing under test is
+    # actually the one in place, instead of depending on the runner warning configuration.
+    logging.captureWarnings(False)
     enable_warning_capture()
 
     with caplog.at_level(logging.WARNING, logger="py.warnings"):
