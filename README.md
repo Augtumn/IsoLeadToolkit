@@ -212,6 +212,8 @@ class MyPlugin(BasePlugin):
 | 中国大陆地壳动力学模型 | `LiLongZhengYongFeiZhouJianBoZhongGuoDaLuDiKeQianTongWeiSuYanHuaDeDongLiXueMoXing2001` |
 | 朱炳泉 1998 教材 | `ZhuBingQuanDiQiuKeXueZhongTongWeiSuTiXiLiLunYuYingYongJianLunZhongGuoDaLuKeManYanHua1998` |
 | PbIso 实现参考 | `armisteadPbIsoPackageWeb2023` |
+| Plumbotectonics Version I（1979 章节） | `doeZartmanPlumbotectonicsPhanerozoic1979` |
+| PbIso 实现参考（期刊版） | `armisteadPbIsoPackageWeb2024` |
 | IsoplotR 实现参考 | `vermeeschIsoplotRFreeOpen2018` |
 | ASTR 工具箱 | `roseArchaeothommyASTR2026` |
 | GeoKit（V1V2 参数体系） | `LuYuanFaGeoKitYiGeYongVBAGouJianDeDiQiuHuaXueGongJuRuanJianBao2004` |
