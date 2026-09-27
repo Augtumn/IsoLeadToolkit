@@ -9,6 +9,7 @@ from PyQt5.QtCore import QSettings, Qt
 from PyQt5.QtWidgets import QDockWidget, QFileDialog, QMessageBox
 
 from core import app_state, state_gateway, translate
+from core.state.selection_history import SelectionHistory
 
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
@@ -24,7 +25,16 @@ logger = logging.getLogger(__name__)
 class MainWindowLifecycleMixin:
     """Window lifecycle methods and action callbacks."""
 
+    _selection_history = None
+
     legend_search_edit = None
+
+
+    def _history(self) -> SelectionHistory:
+        """The (lazily created) undo history for destructive selection operations."""
+        if self._selection_history is None:
+            self._selection_history = SelectionHistory()
+        return self._selection_history
 
     def keyPressEvent(self, event):
         """Keyboard interaction for the plot window.
@@ -66,13 +76,27 @@ class MainWindowLifecycleMixin:
                 event.accept()
                 return
             if app_state.selected_indices:
+                self._history().push(app_state.selected_indices)
                 state_gateway.clear_selected_indices()
                 event.accept()
                 return
 
+        if key == Qt.Key_Z and modifiers & Qt.ControlModifier:
+            previous = self._history().undo()
+            if previous is not None:
+                state_gateway.set_selected_indices(previous)
+                logging.getLogger(__name__).info(
+                    "Restored %d selected sample(s).", len(previous)
+                )
+                event.accept()
+                return
+            event.accept()
+            return
+
         if key in (Qt.Key_Delete, Qt.Key_Backspace):
             indices = list(app_state.selected_indices or [])
             if indices:
+                self._history().push(indices)
                 state_gateway.remove_selected_indices(indices)
                 logging.getLogger(__name__).info("Removed %d selected sample(s).", len(indices))
                 event.accept()
