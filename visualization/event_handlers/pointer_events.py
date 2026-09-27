@@ -17,6 +17,11 @@ from .shared import (
     translate,
 )
 
+from visualization.plotting.highlight import HoverHighlighter
+
+#: Highlights the hovered point so it is visible under the cursor.
+_hover_highlighter = HoverHighlighter()
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +72,7 @@ def on_hover(event: Any) -> None:
             return
 
         visible = False
+        redraw = False
 
         for sc in app_state.scatter_collections:
             if sc is None:
@@ -111,6 +117,8 @@ def on_hover(event: Any) -> None:
                 app_state.annotation.xy = (x, y)
                 app_state.annotation.set_text(txt)
                 app_state.annotation.set_visible(True)
+                if _hover_highlighter.highlight(sc, idx_in_scatter):
+                    redraw = True
                 visible = True
                 break
 
@@ -120,8 +128,13 @@ def on_hover(event: Any) -> None:
         if not visible:
             try:
                 app_state.annotation.set_visible(False)
+                if _hover_highlighter.clear():
+                    redraw = True
             except Exception as err:
                 logger.warning("on_hover failed: %s", err)
+
+        if redraw and app_state.fig is not None:
+            app_state.fig.canvas.draw_idle()
 
     except Exception as err:
         logger.warning("on_hover failed: %s", err)
