@@ -6,6 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green)
 ![Tests](https://img.shields.io/badge/Tests-pytest-brightgreen)
+![License](https://img.shields.io/badge/License-GPLv3-blue)
 ![Platform](https://img.shields.io/badge/Platform-Win%20x64-lightgrey)
 
 ---
@@ -190,3 +191,18 @@ class MyPlugin(BasePlugin):
         """返回 QWidget 自动显示在分析面板，返回 None 表示不显示 UI"""
         ...
 ```
+
+---
+
+## 许可证
+
+本项目以 **GNU General Public License v3.0 or later（GPL-3.0-or-later）** 发布，全文见 [LICENSE](LICENSE)。
+
+- **可以**：自由使用、修改、再分发，**包括商业用途**（GPL 并不禁止商用）；
+- **条件**：分发修改版或二进制时，必须同样以 GPL-3.0 授权，并向接收者提供**完整对应源码**（含构建脚本）；
+- **无担保**：软件按"现状"提供，不附带任何明示或默示担保。
+
+本项目的界面依赖 PyQt5（GPL v3），与本项目许可一致。若要把本项目用于**闭源商业产品**，
+需自行取得 PyQt5 的商业许可（Riverbank）并遵守其条款，或改用 LGPL 授权的 PySide6。
+
+分发打包产物（`dist/IsotopesAnalyse/`）时，对应源码即本仓库。
