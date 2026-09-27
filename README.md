@@ -194,6 +194,35 @@ class MyPlugin(BasePlugin):
 
 ---
 
+## 参考文献
+
+本工具的地球化学模型、衰变常数与算法实现依据以下文献（同一份清单在 Zotero 集合 `IsoLeadToolkit` 中维护）：
+
+1. Rose T. archaeothommy/ASTR[CP/OL]. (2026-09-25)[2026-09-27]. https://github.com/archaeothommy/ASTR.
+2. Albarede F, Davis G, Gentelli L, et al. Bullion mixtures in silver coinage from ancient greece and Egypt[J]. Journal of Archaeological Science, 2024, 162: 105918.
+3. Armistead S, Eglington B, Pehrsson S. PbIso: an R package and web app for calculating and plotting Pb isotope data[A]. Earth Sciences, 2023.
+4. Sun Z F, Liu S R, Zhang J, et al. Resolving the complex mixing history of ancient chinese bronzes by manifold learning and a bayesian mixing model[J]. Journal of Archaeological Science, 2023, 151: 105728.
+5. Maltese A, Mezger K. The Pb isotope evolution of bulk silicate earth: constraints from its accretion and early differentiation history[J]. Geochimica et Cosmochimica Acta, 2020, 271: 179-193.
+6. Vermeesch P. IsoplotR: a free and open toolbox for geochronology[J]. Geoscience Frontiers, 2018, 9(5): 1479-1493.
+7. Albarède F, Desaulty A M, Blichert-Toft J. A GEOLOGICAL PERSPECTIVE ON THE USE OF Pb ISOTOPES IN ARCHAEOMETRY[J]. Archaeometry, 2012, 54(5): 853-867.
+8. York D, Evensen N M, Martı́nez M L, et al. Unified equations for the slope, intercept, and standard errors of the best straight line[J]. American Journal of Physics, 2004, 72(3): 367-375.
+9. 路远发. GeoKit:一个用VBA构建的地球化学工具软件包[J]. 地球化学, 2004(5): 459-464.
+10. 李龙, 郑永飞, 周建波. 中国大陆地壳铅同位素演化的动力学模型[J]. 岩石学报, 2001(1): 1-8.
+11. 朱炳泉. 地球科学中同位素体系理论与应用——兼论中国大陆壳幔演化[M]. 科学出版社, 1998.
+12. Zhu B Q. The mapping of geochemical provinces in China based on Pb isotopes[J]. Journal of Geochemical Exploration, 1995, 55(1-3): 171-181.
+13. 朱炳泉. 矿石Pb同位素三维空间拓扑图解用于地球化学省与矿种区划[J]. 地球化学, 1993(3): 209-216.
+14. Zartman R E, Haines S M. The plumbotectonic model for Pb isotopic systematics among major terrestrial reservoirs—a case for bi-directional transport[J]. Geochimica et Cosmochimica Acta, 1988, 52(6): 1327-1339.
+15. Haines S M, Zartman R E. PLUMBO; a hewlett-packard series 200 BASIC language program for version IV of plumbotectonics: 88-269[R]//Open-File Report. U.S. Geological Survey, 1988.
+16. Albarède F, Juteau M. Unscrambling the lead model ages[J]. Geochimica et Cosmochimica Acta, 1984, 48(1): 207-212.
+17. Zartman R E, Doe B R. Plumbotectonics—the model[J]. Tectonophysics, 1981, 75(1-2): 135-162.
+18. Steiger R H, Jäger E. Subcommission on geochronology: convention on the use of decay constants in geo- and cosmochronology[J]. Earth and Planetary Science Letters, 1977, 36(3): 359-362.
+19. Cumming G L, Richards J R. Ore lead isotope ratios in a continuously changing earth[J]. Earth and Planetary Science Letters, 1975, 28(2): 155-171.
+20. Stacey J S, Kramers J D. Approximation of terrestrial lead isotope evolution by a two-stage model[J]. Earth and Planetary Science Letters, 1975, 26(2): 207-221.
+21. Tatsumoto M, Knight R J, Allegre C J. Time differences in the formation of meteorites as determined from the ratio of lead-207 to lead-206[J]. Science, 1973, 180(4092): 1279-1283.
+22. Jaffey A H, Flynn K F, Glendenin L E, et al. Precision measurement of half-lives and specific activities of U 235 and U 238[J]. Physical Review C, 1971, 4(5): 1889-1906.
+
+---
+
 ## 许可证
 
 本项目以 **GNU General Public License v3.0 or later（GPL-3.0-or-later）** 发布，全文见 [LICENSE](LICENSE)。
