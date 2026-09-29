@@ -899,5 +899,7 @@
   "Invert Selection": "Invert Selection",
   "Show every group again": "Show every group again",
   "Hide the visible groups and show the hidden ones": "Hide the visible groups and show the hidden ones",
-  "At least one group must stay visible.": "At least one group must stay visible."
+  "At least one group must stay visible.": "At least one group must stay visible.",
+  "Data Entry (Excel)...": "Data Entry (Excel)...",
+  "Generate the TerraLID entry template, validate it, or import it": "Generate the TerraLID entry template, validate it, or import it"
 }

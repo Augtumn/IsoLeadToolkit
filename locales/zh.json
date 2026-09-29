@@ -899,5 +899,7 @@
   "Invert Selection": "反选",
   "Show every group again": "重新显示所有分组",
   "Hide the visible groups and show the hidden ones": "隐藏当前可见分组，显示当前隐藏分组",
-  "At least one group must stay visible.": "至少需要保留一个分组可见。"
+  "At least one group must stay visible.": "至少需要保留一个分组可见。",
+  "Data Entry (Excel)...": "数据录入（Excel）...",
+  "Generate the TerraLID entry template, validate it, or import it": "生成 TerraLID 录入模板、校验或导入"
 }
