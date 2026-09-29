@@ -30,6 +30,26 @@ def _resolve_kde_style(target: str = 'kde') -> dict[str, Any]:
     return ensure_line_style(app_state, style_key, fallback)
 
 
+def _ternary_kde_window(x, y, span_fraction=0.25):
+    """Grid window that follows the data, in the axes' Cartesian frame.
+
+    A grid covering the whole simplex is far too coarse for a tight cluster: once the KDE
+    bandwidth is smaller than the grid step the sampled density collapses onto a handful of
+    cells and the iso-lines trace their outline - the diamond-shaped contours this used to
+    draw. Following the data (plus padding) keeps the resolution where the density actually
+    is, which is also what seaborn does when it picks its own grid.
+    """
+    import numpy as _np
+
+    x_values = _np.asarray(x, dtype=float)
+    y_values = _np.asarray(y, dtype=float)
+    x_min, x_max = float(_np.min(x_values)), float(_np.max(x_values))
+    y_min, y_max = float(_np.min(y_values)), float(_np.max(y_values))
+    pad_x = max(span_fraction * (x_max - x_min), 2e-3)
+    pad_y = max(span_fraction * (y_max - y_min), 2e-3)
+    return x_min - pad_x, x_max + pad_x, y_min - pad_y, y_max + pad_y
+
+
 def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, alpha) -> bool:
     """Density contours for a ternary plot, drawn in the axes' Cartesian frame.
 
@@ -53,15 +73,25 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
     if points.shape[0] < 3:
         return False
     try:
-        kde = gaussian_kde(points.T, bw_method="scott")
+        options = kde_compute_kwargs()
+        kde = gaussian_kde(points.T, bw_method=options.get("bw_method", "scott"))
+        # Honour the app's bandwidth option: this branch used to lose it (the seaborn kwargs
+        # were dropped when the ternary path stopped using kdeplot), so the density could not
+        # be widened for small groups.
+        bw_adjust = float(options.get("bw_adjust", 1.0) or 1.0)
+        if bw_adjust != 1.0:
+            kde.set_bandwidth(kde.factor * bw_adjust)
     except Exception as err:
         logger.warning("Ternary KDE estimator failed: %s", err)
         return False
 
     limit = 1.0 / np.sqrt(3.0)
-    step = 0.01
-    xs = np.arange(-limit, limit + step, step)
-    ys = np.arange(0.0, 1.0 + step, step)
+    x0, x1, y0, y1 = _ternary_kde_window(points[:, 0], points[:, 1])
+    x0, x1 = max(x0, -limit), min(x1, limit)
+    y0, y1 = max(y0, 0.0), min(y1, 1.0)
+    resolution = max(32, min(int(options.get("gridsize", 200)), 1024))
+    xs = np.linspace(x0, x1, resolution)
+    ys = np.linspace(y0, y1, resolution)
     grid_x, grid_y = np.meshgrid(xs, ys)
     # Outside the simplex the density stays NaN, so the contours stop at the edges.
     inside = np.abs(grid_x) <= (1.0 - grid_y) / np.sqrt(3.0)
@@ -72,12 +102,13 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
     peak = float(np.nanmax(density))
     if not np.isfinite(peak) or peak <= 0.0:
         return False
-    level_values = peak * np.linspace(0.1, 0.9, max(2, int(levels)))
+    lowest = max(0.1, min(float(options.get("thresh", 0.1) or 0.1), 0.9))
+    level_values = peak * np.linspace(lowest, 0.9, max(2, int(levels)))
     # Stated in the log so a running instance can be told apart from a stale one: this line
     # only exists in the Cartesian-frame implementation.
     logger.info(
-        "Ternary KDE: Cartesian grid %dx%d, %d levels, fill=%s (transData contours).",
-        grid_x.shape[1], grid_x.shape[0], len(level_values), fill,
+        "Ternary KDE: grid %dx%d over x=[%.3f, %.3f] y=[%.3f, %.3f], %d levels, fill=%s.",
+        grid_x.shape[1], grid_x.shape[0], x0, x1, y0, y1, len(level_values), fill,
     )
     try:
         if fill:
