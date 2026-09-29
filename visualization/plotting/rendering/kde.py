@@ -196,7 +196,10 @@ def _draw_ternary_kde(
             # fractions of the peak (as this used to) draws one set of concentric rings per
             # sample whenever the bandwidth is small - the ripple pattern reported from the
             # app - because every bump in the density gets its own bands.
-            fill_levels = np.concatenate([[0.0], level_values, [peak]])
+            # Start at the outermost iso-probability level, never at zero: filling from zero
+            # paints the whole grid window, whose straight edges show up as the rectangular
+            # background reported from the app.
+            fill_levels = np.unique(np.concatenate([level_values, [peak]]))
             filled = axes.contourf(
                 grid_x, grid_y, density, levels=fill_levels, cmap=gradient,
                 alpha=alpha, antialiased=True, transform=axes.transData,
