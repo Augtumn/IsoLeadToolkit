@@ -51,29 +51,37 @@ def _draw_ternary_kde(axes, x_cart, y_cart, color, levels, fill, alpha) -> bool:
         logger.warning("Ternary KDE estimator failed: %s", err)
         return False
 
-    step = 0.02
+    # The grid has to be fine: tricontour interpolates linearly inside the triangles of
+    # the (Delaunay) triangulation, so a coarse grid turns smooth iso-lines into visible
+    # polygons - the "hexagonal" contours this used to draw. The fill uses Gouraud shading,
+    # which interpolates across triangles, as in the mpltern density example.
+    step = 0.01
     axis = np.arange(step, 1.0, step)
     grid_t, grid_l = np.meshgrid(axis, axis, indexing="ij")
     inside = (grid_t + grid_l) <= 1.0
-    t_grid = grid_t[inside]
-    l_grid = grid_l[inside]
+    t_grid, l_grid = grid_t[inside], grid_l[inside]
     r_grid = 1.0 - t_grid - l_grid
-    density = kde(
-        np.vstack([0.5 * t_grid + r_grid, (np.sqrt(3.0) / 2.0) * t_grid])
-    )
+    density = kde(np.vstack([0.5 * t_grid + r_grid, (np.sqrt(3.0) / 2.0) * t_grid]))
     peak = float(np.max(density)) if density.size else 0.0
     if not np.isfinite(peak) or peak <= 0.0:
         return False
     level_values = peak * np.linspace(0.1, 0.9, max(2, int(levels)))
     try:
         if fill:
-            axes.tricontourf(
+            from matplotlib.colors import LinearSegmentedColormap, to_rgb
+
+            base = to_rgb(color)
+            gradient = LinearSegmentedColormap.from_list(
+                "ternary_kde", [(1.0, 1.0, 1.0, 0.0), (base[0], base[1], base[2], 1.0)]
+            )
+            axes.tripcolor(
                 t_grid, l_grid, r_grid, density,
-                levels=level_values, colors=[color], alpha=alpha, zorder=1,
+                shading="gouraud", cmap=gradient, vmin=0.0, vmax=peak,
+                alpha=alpha, rasterized=True, zorder=1,
             )
         axes.tricontour(
             t_grid, l_grid, r_grid, density,
-            levels=level_values, colors=[color], linewidths=0.8,
+            levels=level_values, colors=[color], linewidths=0.7,
             alpha=min(1.0, alpha + 0.3), zorder=1.1,
         )
     except Exception as err:
