@@ -143,6 +143,8 @@ def plot_embedding(
                 r_norm,
                 labels=t_cols,
                 auto_zoom=auto_zoom,
+                # The raw ratios label the axes; the geometry keeps using the normalised values.
+                raw_values=(ts, ls, rs),
             )
             state_gateway.set_ternary_ranges(
                 {

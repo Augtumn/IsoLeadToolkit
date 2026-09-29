@@ -395,3 +395,14 @@ def _normalize_str_dict_map(value: Any) -> dict[str, dict]:
     if not isinstance(value, dict):
         return {}
     return {str(key): dict(item or {}) for key, item in value.items()}
+
+
+def _normalize_ternary_value_display(value: Any) -> str:
+    """How a ternary axis is labelled: the original ratios or the normalised fractions.
+
+    Raw is the default. The geometry of a ternary diagram requires the three components to sum
+    to one, so normalising is an internal step; the numbers a reader sees on the axes should
+    still be the ratios the data holds.
+    """
+    name = str(value or "raw").strip().lower()
+    return name if name in ("raw", "normalized") else "raw"

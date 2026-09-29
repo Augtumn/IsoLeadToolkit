@@ -592,6 +592,9 @@ class AppStateGateway:
     def set_ternary_limit_mode(self, mode: str) -> None:
         self._dispatch("SET_TERNARY_LIMIT_MODE", mode=mode)
 
+    def set_ternary_value_display(self, mode: str) -> None:
+        self._dispatch("SET_TERNARY_VALUE_DISPLAY", mode=mode)
+
     def set_ternary_limit_anchor(self, anchor: str) -> None:
         self._dispatch("SET_TERNARY_LIMIT_ANCHOR", anchor=anchor)
 

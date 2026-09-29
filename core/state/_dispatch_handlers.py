@@ -765,6 +765,10 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         store._snapshot["ternary_limit_mode"] = _normalize_ternary_limit_mode(
             action.get("mode")
         )
+    elif action_type == "SET_TERNARY_VALUE_DISPLAY":
+        store._snapshot["ternary_value_display"] = _normalize_ternary_value_display(
+            action.get("mode")
+        )
 
     elif action_type == "SET_TERNARY_LIMIT_ANCHOR":
         store._snapshot["ternary_limit_anchor"] = _normalize_ternary_limit_anchor(

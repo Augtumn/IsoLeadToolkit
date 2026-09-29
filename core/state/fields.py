@@ -75,6 +75,13 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         holder=None,
     ),
     StateField(
+        "ternary_value_display",
+        'raw',
+        normalize=coercers._normalize_ternary_value_display,
+        copy=coercers._normalize_ternary_value_display,
+        holder=None,
+    ),
+    StateField(
         "ternary_limit_anchor",
         'min',
         normalize=coercers._as_str,

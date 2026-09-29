@@ -227,6 +227,69 @@ def use_ternary_layout(fig: Any) -> None:
         fig.set_layout_engine("none")
 
 
+def resolve_ternary_value_display(mode: Any = None) -> str:
+    """'raw' labels the axes with the original ratios, 'normalized' with the fractions."""
+    if mode is None:
+        mode = getattr(app_state, "ternary_value_display", "raw")
+    name = str(mode or "raw").strip().lower()
+    return name if name in ("raw", "normalized") else "raw"
+
+
+def _raw_scale(normalized, raw) -> float | None:
+    """The factor that turns this axis's fractions back into its own ratios.
+
+    Each axis is independent by design: normalising divided every component by its own sample sum,
+    so the factor that undoes it for one axis is the mean of that axis's ratios over the mean of
+    that axis's fractions. Using one shared factor would show a number that belongs to no axis.
+    """
+    import numpy as _np
+
+    norm = _np.asarray(normalized, dtype=float)
+    values = _np.asarray(raw, dtype=float)
+    mask = _np.isfinite(norm) & _np.isfinite(values)
+    if not _np.any(mask):
+        return None
+    denominator = float(_np.mean(norm[mask]))
+    if denominator <= 0.0:
+        return None
+    return float(_np.mean(values[mask])) / denominator
+
+
+def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display: str) -> int:
+    """Relabel the three axes in raw ratio units; returns how many axes were relabelled.
+
+    The tick positions are set here as well: mpltern's axis objects expose setters only (no
+    get_ticks), so the positions are derived from the limits the caller already computed, evenly
+    spaced inside whatever range is currently shown.
+    """
+    if ax is None or raw_values is None or resolve_ternary_value_display(display) != "raw":
+        return 0
+    if limits is None or len(limits) != 6:
+        return 0
+
+    changed = 0
+    for name, norm, raw, low, high in zip(
+        ("t", "l", "r"), normalized, raw_values, limits[0::2], limits[1::2]
+    ):
+        axis = getattr(ax, f"{name}axis", None)
+        if axis is None:
+            continue
+        scale = _raw_scale(norm, raw)
+        if not scale or not np.isfinite(scale):
+            continue
+        low, high = float(low), float(high)
+        if high <= low:
+            continue
+        positions = [low + (high - low) * index / 5.0 for index in range(6)]
+        try:
+            axis.set_ticks(positions)
+            axis.set_ticklabels([f"{position * scale:.2f}" for position in positions])
+            changed += 1
+        except Exception as err:
+            logger.warning("Could not relabel the %s axis in raw units: %s", name, err)
+    return changed
+
+
 def configure_ternary_axis(
     ax: Any,
     t_vals: Iterable[float],
@@ -235,6 +298,8 @@ def configure_ternary_axis(
     labels: tuple[str, str, str] | list[str] | None = None,
     *,
     auto_zoom: bool = True,
+    raw_values: tuple | list | None = None,
+    value_display: str | None = None,
 ) -> tuple[float, float, float, float, float, float]:
     """Configure mpltern axis labels and limits using mpltern API."""
     if labels and len(labels) == 3:
@@ -283,6 +348,14 @@ def configure_ternary_axis(
         logger.warning("Failed to configure ternary limits: %s", e)
         ax.set_ternary_lim(*_FULL_TERNARY_LIMITS)
         tmin, tmax, lmin, lmax, rmin, rmax = _FULL_TERNARY_LIMITS
+
+    apply_ternary_tick_display(
+        ax,
+        (tmin, tmax, lmin, lmax, rmin, rmax),
+        (t_vals, l_vals, r_vals),
+        raw_values,
+        resolve_ternary_value_display(value_display),
+    )
 
     try:
         ax.set_aspect('equal', adjustable='box')
