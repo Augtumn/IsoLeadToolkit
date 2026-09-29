@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import matplotlib
+from types import SimpleNamespace
 import pytest
 
 matplotlib.use("Qt5Agg")
@@ -41,8 +42,16 @@ def _canvas_with(projection: str | None):
     canvas.draw()
     APP.processEvents()
     state_gateway.set_figure_axes(figure, axes)
-    install_ternary_zoom_filter(canvas)
+    # The filter reads the magnifier state from the toolbar; a stub keeps the test
+    # independent of the real window while still exercising the gate.
+    toolbar = SimpleNamespace(mode="zoom rect")
+    install_ternary_zoom_filter(canvas, toolbar)
     return canvas, axes
+
+
+def _toolbar_for(canvas):
+    """The stub toolbar the installed filter reads its mode from."""
+    return canvas._ternary_zoom_filter._toolbar
 
 
 def _pixel(canvas, axes, x, y):
@@ -133,3 +142,38 @@ def test_wheel_outside_the_canvas_changes_nothing() -> None:
     _wheel(canvas, QPointF(canvas.width() + 60, canvas.height() + 60), notches=1)
 
     assert axes.get_xlim() == before
+
+
+def test_wheel_does_nothing_while_the_magnifier_is_off() -> None:
+    canvas, axes = _canvas_with(None)
+    before = axes.get_xlim()
+    _toolbar_for(canvas).mode = ""
+
+    _wheel(canvas, _pixel(canvas, axes, 0.5, 0.5), notches=1)
+
+    assert axes.get_xlim() == before
+
+
+def test_middle_drag_does_nothing_while_the_magnifier_is_off() -> None:
+    canvas, axes = _canvas_with(None)
+    before = axes.get_xlim()
+    _toolbar_for(canvas).mode = ""
+    start = _pixel(canvas, axes, 0.5, 0.5)
+    end = _pixel(canvas, axes, 0.35, 0.5)
+
+    _mouse(canvas, QEvent.MouseButtonPress, start, Qt.MiddleButton, Qt.MiddleButton)
+    _mouse(canvas, QEvent.MouseMove, end, Qt.NoButton, Qt.MiddleButton)
+    _mouse(canvas, QEvent.MouseButtonRelease, end, Qt.MiddleButton, Qt.NoButton)
+
+    assert axes.get_xlim() == before
+
+
+def test_wheel_works_again_after_the_magnifier_returns() -> None:
+    canvas, axes = _canvas_with(None)
+    _toolbar_for(canvas).mode = ""
+
+    _wheel(canvas, _pixel(canvas, axes, 0.5, 0.5), notches=1)
+    _toolbar_for(canvas).mode = "zoom rect"
+    _wheel(canvas, _pixel(canvas, axes, 0.5, 0.5), notches=1)
+
+    assert axes.get_xlim()[1] - axes.get_xlim()[0] < 1.0

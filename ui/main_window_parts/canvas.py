@@ -223,7 +223,11 @@ class TernaryZoomEventFilter(QObject):
 
 
     def _handle_wheel(self, axes, coords, event) -> None:
-        """Wheel over the plot: zoom about the cursor (any plot type)."""
+        """Wheel over the plot: zoom about the cursor (any plot type).
+
+        Only while the toolbar's magnifier is selected; otherwise the wheel belongs to
+        whatever else is listening (scrolling the panel, matplotlib's own handlers).
+        """
         from visualization.plotting.ternary import cartesian_to_ternary
         from visualization.plotting.view_zoom import (
             is_ternary_axes,
@@ -353,12 +357,18 @@ class TernaryZoomEventFilter(QObject):
         try:
             kind = event.type()
             if kind == QEvent.Wheel:
+                if not self._zoom_tool_active():
+                    return False
                 axes = self._current_axes()
                 coords = self._data_coords(obj, event) if axes is not None else None
                 if axes is not None and coords is not None:
                     self._handle_wheel(axes, coords, event)
                     return False
             if kind == QEvent.MouseButtonPress and event.button() == Qt.MiddleButton:
+                if not self._zoom_tool_active():
+                    # A pan left over from a previous mode must not continue.
+                    self._pan_from = None
+                    return False
                 if self._targets_canvas(obj):
                     self._pan_from = self._data_coords(obj, event)
                     return False
