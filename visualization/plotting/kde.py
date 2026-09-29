@@ -3,6 +3,8 @@ import logging
 from typing import Any
 
 import numpy as np
+
+import visualization.plotting.kde_common as kde_common
 from scipy.stats import gaussian_kde
 
 from core import app_state, state_gateway
@@ -83,11 +85,8 @@ def _resolve_kernel_name(value: Any) -> str:
 
 
 def _resolve_auto_bandwidth_method(value: Any) -> str:
-    method = str(value or _KDE_AUTO_BW_METHOD_DEFAULT).strip().lower()
-    if method == "lscv":
-        # Data-driven rule, shared with the joint densities (see kde_bandwidth).
-        return "lscv"
-    return method if method in _KDE_ALLOWED_AUTO_BW_METHODS else _KDE_AUTO_BW_METHOD_DEFAULT
+    """Bandwidth rule name; the vocabulary lives in kde_common."""
+    return kde_common.resolve_rule(value)
 
 
 def _resolve_marginal_bandwidth_method() -> str:
@@ -116,34 +115,19 @@ def _resolve_kernel_bandwidth(
     bandwidth: float,
     auto_bandwidth_method: str,
 ) -> float:
-    bw_adjust_safe = max(_KDE_BW_ADJUST_MIN, float(bw_adjust))
-    if bandwidth > 0.0:
-        return max(_KDE_BW_MIN, float(bandwidth) * bw_adjust_safe)
-
-    std = float(np.nanstd(data))
-    if not np.isfinite(std) or std <= _KDE_MIN_STD:
-        std = 1.0
-
-    n_samples = max(int(data.size), 2)
-    method = _resolve_auto_bandwidth_method(auto_bandwidth_method)
-    if method == "lscv":
-        from visualization.plotting.kde_bandwidth import lscv_factor
-
-        factor = float(lscv_factor(np.asarray(data, dtype=float)[:, None]))
-        return max(_KDE_BW_MIN, std * factor * bw_adjust_safe)
-    if method == "silverman":
-        factor = float((n_samples * 3.0 / 4.0) ** (-1.0 / 5.0))
-    else:
-        factor = float(n_samples ** (-1.0 / 5.0))
-    return max(_KDE_BW_MIN, std * factor * bw_adjust_safe)
+    """Bandwidth for a 1-D curve: kde_common owns the arithmetic."""
+    return kde_common.bandwidth_for(
+        auto_bandwidth_method,
+        data,
+        bw_adjust=bw_adjust,
+        absolute=bandwidth,
+        dim=1,
+    )
 
 
 def _to_float_array(values) -> np.ndarray:
-    """Return finite float array for KDE calculation."""
-    arr = np.asarray(values, dtype=float)
-    if arr.ndim == 0:
-        arr = arr.reshape(1)
-    return arr[np.isfinite(arr)]
+    """Finite float array for KDE calculation."""
+    return kde_common.finite_float_array(values)
 
 
 def _resolve_bw_method(value: Any) -> str:
@@ -168,7 +152,7 @@ def kde_compute_kwargs() -> dict[str, Any]:
 
         bw_method = lscv_bw_method()
     kwargs: dict[str, Any] = {
-        "bw_adjust": max(0.05, min(float(app_state.kde_bw_adjust), 5.0)),
+        "bw_adjust": kde_common.clamp_bw_adjust(app_state.kde_bw_adjust),
         "bw_method": bw_method,
         "gridsize": max(32, min(int(app_state.kde_gridsize), 1024)),
         "thresh": max(0.001, min(float(app_state.kde_thresh), 1.0)),
@@ -437,8 +421,8 @@ def draw_marginal_kde(
     kde_alpha = float(style.get('alpha', 0.25))
     kde_linewidth = float(style.get('linewidth', 1.0))
     kde_fill = bool(style.get('fill', True))
-    gridsize = max(32, min(int(style.get('gridsize', _KDE_GRID_SIZE_DEFAULT)), 1024))
-    bw_adjust = max(0.05, min(float(style.get('bw_adjust', _KDE_BW_ADJUST_DEFAULT)), 5.0))
+    gridsize = kde_common.clamp_gridsize(style.get('gridsize', _KDE_GRID_SIZE_DEFAULT))
+    bw_adjust = kde_common.clamp_bw_adjust(style.get('bw_adjust', _KDE_BW_ADJUST_DEFAULT))
     bandwidth = max(0.0, min(float(style.get('bandwidth', _KDE_BANDWIDTH_DEFAULT) or 0.0), 10.0))
     kernel = _resolve_kernel_name(style.get('kernel', _KDE_KERNEL_DEFAULT))
     auto_bandwidth_method = _resolve_auto_bandwidth_method(

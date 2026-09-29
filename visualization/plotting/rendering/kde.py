@@ -189,7 +189,9 @@ def _draw_ternary_kde(
     # above which the integral holds (1 - f) of the mass, so the outermost contour encloses
     # roughly the data. Peak-relative levels (fractions of the maximum) all sit near the mode
     # and produce contours far smaller than the group they describe.
-    lowest = max(0.05, min(float(options.get("thresh", 0.05) or 0.05), 0.9))
+    from visualization.plotting import kde_common
+
+    lowest = kde_common.clamp_thresh(options.get("thresh", 0.05) or 0.05)
     fractions = np.linspace(lowest, 0.9, max(2, int(levels)))
     finite = np.sort(density[np.isfinite(density)])[::-1]
     cumulative = np.cumsum(finite)

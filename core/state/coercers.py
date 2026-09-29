@@ -227,6 +227,14 @@ def _normalize_kde_kernel(value: Any) -> str:
     return text if text in MARGINAL_KDE_ALLOWED_KERNELS else MARGINAL_KDE_DEFAULT_KERNEL
 
 
+# The bandwidth rules the KDE code may use. Single source: the visualization helpers
+# import this instead of repeating the vocabulary (four copies once existed, and two
+# bugs came from them drifting - seaborn received the string "lscv", and the marginal
+# stopped resolving the rule the joint density used).
+KDE_BANDWIDTH_RULES = ("scott", "silverman", "lscv")
+KDE_BANDWIDTH_RULE_DEFAULT = "scott"
+
+
 def _normalize_kde_auto_bandwidth_method(value: Any) -> str:
     # LSCV is the data-driven rule offered beside the two rules of thumb.
     if str(value or "").strip().lower() == "lscv":
