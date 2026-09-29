@@ -218,9 +218,9 @@ def _draw_ternary_kde(
     if spacing > 0.0 and bandwidth and bandwidth < 2.0 * spacing:
         # The density then lives in one or two grid steps and the picture shows the grid
         # rather than the data; raising bw_adjust is the honest fix.
-        logger.warning(
-            "Ternary KDE bandwidth (%.4f) is below two grid steps (%.4f): raise the "
-            "bandwidth option (bw_adjust) for a smoother density.",
+        logger.info(
+            "Ternary KDE bandwidth (%.2e) is below two grid steps (%.2e); raising the "
+            "bandwidth option (bw_adjust) would smooth the density further.",
             bandwidth, spacing,
         )
     logger.info(

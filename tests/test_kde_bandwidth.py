@@ -88,3 +88,18 @@ def test_the_marginal_uses_the_lscv_factor_for_one_dimension() -> None:
     assert bandwidth > 0.0
     scott = float(np.nanstd(data)) * max(int(data.size), 2) ** (-1.0 / 5.0)
     assert bandwidth != scott, "LSCV must not silently fall back to Scott"
+
+
+def test_the_joint_density_never_hands_seaborn_the_string_lscv() -> None:
+    """Regression: seaborn rejected the literal 'lscv' and the KDE failed on Pb evolution plots."""
+    from core import state_gateway
+    from visualization.plotting.kde import kde_compute_kwargs
+
+    state_gateway.set_kde_compute_options(bw_method="lscv")
+    try:
+        method = kde_compute_kwargs()["bw_method"]
+    finally:
+        state_gateway.set_kde_compute_options(bw_method="scott")
+
+    assert method != "lscv", "seaborn only accepts scott, silverman, a scalar or a callable"
+    assert callable(method) or isinstance(method, (int, float))

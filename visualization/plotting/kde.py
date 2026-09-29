@@ -154,9 +154,17 @@ def _resolve_bw_method(value: Any) -> str:
 
 def kde_compute_kwargs() -> dict[str, Any]:
     """2D KDE computation options, read from app state."""
+    bw_method: Any = _resolve_bw_method(app_state.kde_bw_method)
+    if bw_method == "lscv":
+        # seaborn only accepts the two rules of thumb, a scalar or a callable; the callable is
+        # the correct form here, because seaborn builds one KDE per hue group and scipy calls it
+        # with that group's data, so LSCV is solved per group rather than once for all of them.
+        from visualization.plotting.kde_bandwidth import lscv_bw_method
+
+        bw_method = lscv_bw_method()
     kwargs: dict[str, Any] = {
         "bw_adjust": max(0.05, min(float(app_state.kde_bw_adjust), 5.0)),
-        "bw_method": _resolve_bw_method(app_state.kde_bw_method),
+        "bw_method": bw_method,
         "gridsize": max(32, min(int(app_state.kde_gridsize), 1024)),
         "thresh": max(0.001, min(float(app_state.kde_thresh), 1.0)),
         "common_norm": bool(app_state.kde_common_norm),
