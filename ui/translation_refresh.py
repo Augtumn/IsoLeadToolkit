@@ -1,4 +1,12 @@
-"""Translate an existing widget tree in place, in either direction.
+"""Translate an existing widget tree in place, in either direction - copy only.
+
+WARNING, learned the hard way: an earlier version matched every text it could find, with no tag
+required. On a real window that renamed docks and panel titles and rewrote combo entries holding
+data (algorithm names such as PCA or UMAP are locale keys too), so the UI rearranged itself when
+the language changed. Text matching cannot tell copy from data; only the widget can, through its
+tags. This module therefore rewrites tagged widgets alone, the same contract
+BasePanel._update_translations uses, and exists for the reverse direction (Chinese back to
+English) and for the extra widget types.
 
 The panels are built once, and their texts are baked in at that moment - which is why the data,
 display and legend panels stayed English while the menus switched. Tagging every widget with
@@ -78,33 +86,39 @@ def refresh_widget_tree(root: QWidget | None, language: str | None = None) -> in
             return
 
     for widget in [root, *root.findChildren(QWidget)]:
+        # Only copy is rewritten: a widget must be tagged, which is what _update_translations
+        # uses, or opt in via translate_items for item-based widgets.
+        if not widget.property("translate_key") and not widget.property("translate_items"):
+            continue
         if isinstance(widget, QGroupBox):
             apply(widget, "title", "setTitle")
         elif isinstance(widget, (QLabel, QPushButton, QCheckBox, QRadioButton, QToolButton)):
             apply(widget, "text", "setText")
-        elif isinstance(widget, QComboBox):
+        elif isinstance(widget, QComboBox) and widget.property("translate_items"):
             items = [widget.itemText(i) for i in range(widget.count())]
             for index, item in enumerate(items):
                 replacement = _convert(item, forward, reverse)
                 if replacement is not None and replacement != item:
                     widget.setItemText(index, replacement)
                     changed += 1
-        elif isinstance(widget, QTabWidget):
+        elif isinstance(widget, QTabWidget) and widget.property("translate_items"):
             for index in range(widget.count()):
                 current = widget.tabText(index)
                 replacement = _convert(current, forward, reverse)
                 if replacement is not None and replacement != current:
                     widget.setTabText(index, replacement)
                     changed += 1
-        elif isinstance(widget, QToolBox):
+        elif isinstance(widget, QToolBox) and widget.property("translate_items"):
             for index in range(widget.count()):
                 current = widget.itemText(index)
                 replacement = _convert(current, forward, reverse)
                 if replacement is not None and replacement != current:
                     widget.setItemText(index, replacement)
                     changed += 1
-        else:
-            apply(widget, "windowTitle", "setWindowTitle")
+        # No fallback on purpose. Rewriting windowTitle (or any other unlabelled text) renamed
+        # docks and panels, and matching combo items automatically renamed entries that hold
+        # data - algorithm names are locale keys too. A widget is only touched when it declares
+        # the text as copy via translate_key, or when it opts in through the properties below.
 
     return changed
 

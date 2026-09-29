@@ -467,13 +467,11 @@ class MainWindowSetupMixin:
         # switched - the panels are discovered by type so a new panel is covered automatically.
         try:
             from ui.panels.base_panel import BasePanel
-            from ui.translation_refresh import refresh_placeholder_texts, refresh_widget_tree
 
-            # In-place refresh by matching the texts already shown, so the panels follow the
-            # switch without being rebuilt (no flicker, no lost selection) and without needing
-            # every widget tagged with translate_key.
-            refresh_widget_tree(self)
-            refresh_placeholder_texts(self)
+            # Only widgets that declare themselves as copy are rewritten (translate_key), which
+            # is the whole point of that tag: matching texts automatically also rewrites data -
+            # combo items holding algorithm names, dock and panel titles, value labels - and the
+            # UI then rearranges itself on a language switch.
             for panel in self.findChildren(BasePanel):
                 panel._update_translations()
         except Exception as err:
