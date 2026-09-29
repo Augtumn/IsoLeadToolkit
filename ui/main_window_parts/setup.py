@@ -461,6 +461,17 @@ class MainWindowSetupMixin:
             actions["display"].setText(translate("Display"))
         if "analysis" in actions:
             actions["analysis"].setText(translate("Analysis"))
+        # Panels keep a widget tree tagged with translate_key; BasePanel._update_translations
+        # rewrites those texts in place. Nothing called it on a language change, so the data,
+        # display and legend panels stayed in the language they were built in while the menus
+        # switched - the panels are discovered by type so a new panel is covered automatically.
+        try:
+            from ui.panels.base_panel import BasePanel
+
+            for panel in self.findChildren(BasePanel):
+                panel._update_translations()
+        except Exception as err:
+            logger.warning("Could not refresh panel translations: %s", err)
         if "export" in actions:
             actions["export"].setText(translate("Export"))
         if "legend" in actions:
