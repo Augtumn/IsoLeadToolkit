@@ -132,12 +132,20 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
     finite = np.sort(density[np.isfinite(density)])[::-1]
     cumulative = np.cumsum(finite)
     if cumulative.size and cumulative[-1] > 0.0:
-        level_values = np.array(
-            [finite[min(int(np.searchsorted(cumulative, f * cumulative[-1])), finite.size - 1)]
-             for f in fractions]
+        # Ascending and deduplicated: contours require strictly increasing levels, and the
+        # thresholds taken by probability are naturally descending.
+        level_values = np.unique(
+            np.sort(
+                np.array(
+                    [finite[min(int(np.searchsorted(cumulative, f * cumulative[-1])), finite.size - 1)]
+                     for f in fractions]
+                )
+            )
         )
     else:
         level_values = peak * fractions
+    if level_values.size < 2:
+        level_values = peak * np.linspace(lowest, 0.9, max(2, int(levels)))
     # Stated in the log so a running instance can be told apart from a stale one: this line
     # only exists in the Cartesian-frame implementation.
     logger.info(
