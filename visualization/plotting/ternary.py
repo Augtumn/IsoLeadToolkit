@@ -352,6 +352,48 @@ def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display:
     return changed
 
 
+def install_ternary_tick_refresh(ax: Any) -> bool:
+    """Keep the raw labels applied after every draw.
+
+    Something clears them between configure_ternary_axis and the first paint - the reported symptom
+    is no labels on a fresh plot, appearing only once the view is zoomed. Rather than chase every
+    site that touches the limits, the labels are reapplied after each draw from the cached factors:
+    that covers the first paint, later zooms, resizes and plain redraws alike.
+    """
+    if ax is None:
+        return False
+    figure = getattr(ax, "figure", None)
+    canvas = getattr(figure, "canvas", None)
+    if canvas is None or getattr(ax, "_ternary_tick_refresh_installed", False):
+        return False
+
+    state = {"running": False}
+
+    def _on_draw(_event) -> None:
+        if state["running"]:
+            return
+        state["running"] = True
+        try:
+            limits = (
+                float(ax.get_tlim()[0]), float(ax.get_tlim()[1]),
+                float(ax.get_llim()[0]), float(ax.get_llim()[1]),
+                float(ax.get_rlim()[0]), float(ax.get_rlim()[1]),
+            )
+            relabel_ternary_ticks(ax, limits)
+        except Exception as err:  # pragma: no cover - cosmetic, never break a draw
+            logger.warning("Could not refresh ternary tick labels after a draw: %s", err)
+        finally:
+            state["running"] = False
+
+    try:
+        canvas.mpl_connect("draw_event", _on_draw)
+        setattr(ax, "_ternary_tick_refresh_installed", True)
+        return True
+    except Exception as err:
+        logger.warning("Could not install the ternary tick refresh: %s", err)
+        return False
+
+
 def relabel_ternary_ticks(ax: Any, limits, mode: str | None = None) -> int:
     """Redraw the raw tick labels for a new view range.
 
@@ -444,6 +486,7 @@ def configure_ternary_axis(
         ax.set_ternary_lim(*_FULL_TERNARY_LIMITS)
         tmin, tmax, lmin, lmax, rmin, rmax = _FULL_TERNARY_LIMITS
 
+    install_ternary_tick_refresh(ax)
     apply_ternary_tick_display(
         ax,
         effective_ternary_limits((tmin, tmax, lmin, lmax, rmin, rmax), mode),
