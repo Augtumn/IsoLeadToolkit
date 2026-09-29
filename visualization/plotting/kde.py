@@ -120,9 +120,14 @@ def _to_float_array(values) -> np.ndarray:
 
 
 def _resolve_bw_method(value: Any) -> str:
-    """seaborn accepts 'scott' / 'silverman' (or a scalar factor)."""
+    """The shared bandwidth rule: 'scott', 'silverman' or 'lscv'.
+
+    'lscv' selects the bandwidth by least-squares cross-validation (see kde_bandwidth); it is
+    resolved to a number before seaborn is called, which only accepts the two rules of thumb
+    or a scalar factor.
+    """
     name = str(value or "scott").strip().lower()
-    return name if name in ("scott", "silverman") else "scott"
+    return name if name in ("scott", "silverman", "lscv") else "scott"
 
 
 def kde_compute_kwargs() -> dict[str, Any]:

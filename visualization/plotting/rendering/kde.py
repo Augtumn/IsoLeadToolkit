@@ -154,8 +154,13 @@ def _draw_ternary_kde(
     if points.shape[0] < 3:
         return False
     options = kde_compute_kwargs()
+    rule = options.get("bw_method", "scott")
+    if rule == "lscv":
+        from visualization.plotting.kde_bandwidth import lscv_bw_method
+
+        rule = lscv_bw_method()
     try:
-        kde = _ternary_kde_estimator(points, options.get("bw_method", "scott"))
+        kde = _ternary_kde_estimator(points, rule)
         bw_adjust = float(options.get("bw_adjust", 1.0) or 1.0)
         if bw_adjust != 1.0:
             kde.set_bandwidth(kde.factor * bw_adjust)
