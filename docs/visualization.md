@@ -851,22 +851,44 @@ plotting/__init__.py ← 导出所有公共 API
 
 改进建议已迁移至 `docs/development_plan.md`。
 
-## 三元图局部放大
+## 三元图显示范围与局部放大
 
-工具栏的框选缩放对三元图无效（它只能表达笛卡尔矩形）。**在数据面板勾选「手动限值」后**，
-在三元图上按住左键拖动即放大（交互不依赖工具栏状态，全部取自事件本身）：
+**默认绘制整个三角形。** 由数据推断的范围（`infer_ternary_limits()`）只用于**标注刻度**，不裁剪绘制：
+它既是刻度标签报告的范围，也是调用方写入 `app_state.ternary_ranges` 的值。按分量收窄的范围是三角形与
+一个盒子的交（六边形）；实测 21 种 `aspect` / `adjustable` / `box_aspect` / `xlim` / `ylim` /
+`position` / mpltern `fit` 组合，没有一种能让它同时保持等边且不让数据变形，因此等边约束只在整三角形下
+成立（`tests/test_ternary_rendered_geometry.py` 从渲染像素测量，不用 `transData`）。刻度按原始比值在
+每条轴上**等密度**布置（`_raw_tick_values()`），位置取自坐标轴实际绘制的边界
+（`_ternary_tick_positions()`），所以读数始终对应画出来的那条边。
 
-1. 记录按下/释放点的笛卡尔数据坐标；
-2. **一次拖拽生成相似子三角形**（对齐 Origin 的手势）：以按下点为位似中心，沿拖动方向的射线在原三角形内的
-   参数 λ 决定缩放比 ρ=1/λ——因此**松开点恰好落在新三角形边界上**；ρ≥1（向外拖/未移动）即视为还原。
-   再依 mpltern 的真实顶点约定（`t=1 → (0,1)`、`l=1 → (−1/√3,0)`、`r=1 → (1/√3,0)`）把三个顶点换算为
-   分量，取各分量 min/max 得 `(tmin,tmax,lmin,lmax,rmin,rmax)`；
-3. 写入 `ternary_manual_limits` 并启用 `ternary_manual_limits_enabled`（同时确保 `ternary_auto_zoom` 开启），
-   渲染时经 `configure_ternary_axis()` 传给 mpltern 的 `set_ternary_lim()`，坐标轴刻度/网格随子区域重建；
-4. 向外拖过头（覆盖近似整个三角形）视为**还原**，自动关闭「手动限值」；再次放大前需重新勾选。
+**显式放大 = 真正放大（会裁切），标签跟随所画内容。** 工具栏放大镜选中时（`_zoom_tool_active()`），
+三元图上的滚轮、左键拖拽、中键拖拽都把缩放后的窗口交给 mpltern 的 `set_ternary_lim()`
+（`apply_ternary_zoom_window()`）：点因此在屏幕上变大，刻度标签随绘制的窗口一起移动
+（`relabel_ternary_ticks()`）。轮廓随之变成该窗口的形状（上文的六边形，比整三角形扁平），这是放大本身
+的取舍，不再强加给默认视图。工具栏自带的框选缩放对三元图无效，它只能表达笛卡尔矩形。
 
-`visualization/plotting/ternary.py` 提供纯函数 `cartesian_to_ternary()`、`similar_subtriangle_limits()`、`ternary_limits_from_rect()`（矩形换算保留为工具）、
-`ternary_limits_cover_full_view()`；`tests/test_ternary_zoom.py` 用 mpltern 自身的几何做过顶点往返校验。
+拖拽的几何（`drag_ternary_window()` → `similar_subtriangle_limits()`；几何全部取自按下/释放事件本身，
+不用工具栏的矩形）：
+
+1. 记录按下/释放点的笛卡尔数据坐标；两者先映射进当前窗口，所以第二次拖拽是在**上一次的窗口内**继续
+   放大，而不是跳回整三角形；
+2. **一次拖拽生成相似子三角形**（对齐 Origin 的手势）：以按下点为位似中心，沿拖动方向的射线在（展开后的）
+   三角形内的参数 λ 决定缩放比 ρ=1/λ——因此**松开点恰好落在新三角形边界上**；ρ≥1（向外拖/未移动）即
+   视为还原。再依 mpltern 的真实顶点约定（`t=1 → (0,1)`、`l=1 → (−1/√3,0)`、`r=1 → (1/√3,0)`）把三个
+   顶点换算为分量，取各分量 min/max 得 `(tmin,tmax,lmin,lmax,rmin,rmax)`；短于视图 2% 的拖拽视为点击，
+   不改动任何状态；
+3. 写入 `app_state.ternary_manual_limits` 并确保 `ternary_auto_zoom` 开启，再交给
+   `apply_ternary_zoom_window()` 绘制。**不**在这里勾选「手动限值」：那会让一次缩放把复选框翻成勾选，
+   并在下次启动时仍显示为勾选（`ui/main_window_parts/canvas.py`）；
+4. 向外拖过头（覆盖近似整个三角形）视为**还原**：关闭「手动限值」，绘制还给整个三角形，刻度回到数据
+   推断的范围；再次放大不依赖该复选框。
+
+**「手动限值」复选框的含义是「渲染时保留我的窗口」。** 只有它被勾选时，`configure_ternary_axis()` 才把
+`app_state.ternary_manual_limits` 交给 mpltern 的 `set_ternary_lim()`，手动视图因此能在重绘后保留；
+未勾选时即使存了窗口，绘制的仍是整个三角形，只有刻度按推断范围标注。
+
+`visualization/plotting/ternary.py` 提供纯函数 `cartesian_to_ternary()`、`similar_subtriangle_limits()`、
+`drag_ternary_window()`、`ternary_limits_cover_full_view()`；`tests/test_ternary_zoom.py` 用 mpltern 自身的几何做过顶点往返校验。
 
 **Qt 层事件捕获（`ui/main_window_parts/canvas.py`）**：本应用中 matplotlib 的
 `mpl_connect` 回调在真机上收不到画布鼠标事件，因此手势在 Qt 层捕获，过滤器安装在应用级。
@@ -878,5 +900,5 @@ plotting/__init__.py ← 导出所有公共 API
 - 与画布无关的 widget（面板、菜单、工具栏）一律拒绝，防止被全局坐标回退误判为手势起点；
 - release 确实落在画布上但超出画布边界时取消手势。
 
-回归测试见 `tests/test_ternary_zoom_qt.py`（真实 Qt 组件 + 真实鼠标事件）；
-`visualization/event_handlers/ternary_zoom.py` 是基于 `mpl_connect` 的同功能实现，真机无效，仅供对照。
+回归测试见 `tests/test_ternary_zoom_qt.py`（真实 Qt 组件 + 真实鼠标事件）；拖拽几何与像素测量的回归见
+`tests/test_ternary_rendered_geometry.py`。手势只有 Qt 层这一份实现，没有基于 `mpl_connect` 的并行版本。
