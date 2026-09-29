@@ -161,6 +161,7 @@ ui/
 | 菜单 | 操作 | 快捷键 |
 |------|------|--------|
 | 文件 | 重新加载数据、退出 | Ctrl+R / Ctrl+Q |
+| 文件 | 数据录入（Excel）… —— 生成 TerraLID 录入模板 / 校验 / 导入 | Ctrl+N |
 | 数据 | 打开数据配置对话框 | Ctrl+D |
 | 显示 | 打开显示设置对话框 | Ctrl+Shift+D |
 | 分析 | 打开分析工具对话框 | Ctrl+Shift+A |
@@ -455,6 +456,9 @@ def _delete_theme(self)   # 删除已保存主题
 | `tooltip_dialog.py` | 127 | 悬停提示配置 |
 | `sheet_dialog.py` | 116 | Excel 工作表选择 |
 | `progress_dialog.py` | 64 | 进度指示器 |
+| `entry_workbook.py` | 346 | TerraLID 数据录入：生成模板 / 校验（只读）/ 导入 + 报告视图 |
+| `log_viewer.py` | 148 | 应用内日志查看器 |
+| `geometry.py` | 38 | 对话框尺寸/位置记忆 |
 
 ### 通用对话框模式
 
@@ -502,6 +506,19 @@ class SomeDialog(QDialog):
 - ML 参数 (DBSCAN eps, XGBoost 参数, SMOTE 开关)
 - 预测阈值
 - 模块分层：`dialog.py`(初始化/默认路径)、`build.py`(UI 构建/列自动识别)、`workflow.py`(数据加载/训练执行/结果应用导出)
+
+#### Qt5EntryWorkbookDialog (entry_workbook.py)
+- 三个动作：**生成模板…**（已存在时先确认，取消则不覆盖）、**校验录入表…**（只读，不写盘）、
+  **导入录入表…**（先确认，再由用例层补齐派生比值并回写，写前自动备份）+ **打开录入表**（系统默认程序）
+- 报告区 `QPlainTextEdit`：档案版本、读到的表/记录数、补齐的比值条数、error/warning 计数，
+  问题按工作表分组逐条列出（严重级别 / 记录 / 列 / 消息）
+- 报告里的消息用 `translate(issue.message_key).format(**params)` 渲染；渲染失败（占位符对不上）
+  回退到用例层给的英文原文，而不是抛异常把报告吞掉。这些 key 是**运行时**取值的，
+  静态扫描看不到，故在 `locales/runtime_keys.py` 集中登记（否则会被本地化检查判为"未被引用的键"）
+- 用例层入口在方法内**延迟导入**，使本对话框在没有 openpyxl 的环境里也能构建
+- 本地文件 IO 是毫秒级，故不开 `QThread`；用忙碌光标标明"正在处理"（§6.1 的权衡）
+- 编辑的其实是 Excel 工作簿，字段定义/词表/校验/推导都在 `data/metadata_profile/`，
+  **完整说明见 [`docs/metadata_profile.md`](metadata_profile.md)**
 
 ---
 
