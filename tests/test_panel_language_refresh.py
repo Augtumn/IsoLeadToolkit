@@ -67,12 +67,20 @@ def test_panels_retranslate_when_the_language_changes(main_window) -> None:
 )
 def test_panel_texts_return_to_english(main_window) -> None:
     """Switching back must restore the English texts, not leave a half-translated UI."""
-    state_gateway.set_language_code("zh")
-    main_window._refresh_language()
-    zh_count = _non_ascii(_texts(main_window))
+    from core.state import app_state
 
-    state_gateway.set_language_code("en")
-    main_window._refresh_language()
-    en_count = _non_ascii(_texts(main_window))
+    original = getattr(app_state, "language", "en")
+    try:
+        state_gateway.set_language_code("zh")
+        main_window._refresh_language()
+        zh_count = _non_ascii(_texts(main_window))
+
+        state_gateway.set_language_code("en")
+        main_window._refresh_language()
+        en_count = _non_ascii(_texts(main_window))
+    finally:
+        # Leaving the language switched leaks into every later test that reads translate().
+        state_gateway.set_language_code(original)
+        main_window._refresh_language()
 
     assert zh_count > en_count, f"zh={zh_count} en={en_count}"

@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QApplication
 
 from core import app_state, state_gateway
 from ui.main_window_parts.canvas import install_ternary_zoom_filter
+from visualization.plotting.ternary import get_ternary_label_range
 
 APP = QApplication.instance() or QApplication([])
 
@@ -68,7 +69,7 @@ def test_qt_drag_zooms_the_ternary_axes(qt_ternary) -> None:
     limits = dict(app_state.ternary_manual_limits or {})
     assert limits.get("tmin") == pytest.approx(1 / 6, abs=0.02), limits
     assert limits.get("tmax") == pytest.approx(2 / 3, abs=0.02), limits
-    assert app_state.ternary_manual_limits_enabled is True
+    assert app_state.ternary_manual_limits_enabled is False
 
 
 def test_qt_drag_outside_the_canvas_does_nothing(qt_ternary) -> None:
@@ -146,7 +147,7 @@ def test_release_seen_twice_still_applies_the_zoom(qt_ternary) -> None:
     limits = dict(app_state.ternary_manual_limits or {})
     assert limits.get("tmin") == pytest.approx(1 / 6, abs=0.02), limits
     assert limits.get("tmax") == pytest.approx(2 / 3, abs=0.02), limits
-    assert app_state.ternary_manual_limits_enabled is True
+    assert app_state.ternary_manual_limits_enabled is False
 
 
 def test_drag_without_the_zoom_tool_does_nothing(qt_ternary) -> None:
@@ -161,5 +162,72 @@ def test_drag_without_the_zoom_tool_does_nothing(qt_ternary) -> None:
     _send(canvas, "press", start, Qt.LeftButton, Qt.LeftButton)
     _send(canvas, "release", end, Qt.NoButton, Qt.LeftButton)
 
+    assert app_state.ternary_manual_limits_enabled is False
+    assert tuple(float(v) for v in axes.get_tlim()) == pytest.approx((0.0, 1.0))
+
+
+def test_qt_drag_magnifies_the_view_and_the_labels(qt_ternary) -> None:
+    """The magnifier drag really magnifies: what is drawn becomes the drag window, labels included."""
+    canvas, axes = qt_ternary
+    start = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
+    end = _pixel(canvas, axes, 0.0, 2.0 / 3.0)
+
+    _send(canvas, "press", start, Qt.LeftButton, Qt.LeftButton)
+    _send(canvas, "release", end, Qt.NoButton, Qt.LeftButton)
+
+    window = get_ternary_label_range(axes)
+    assert window is not None, "the drag recorded no window"
+    assert window[0] == pytest.approx(1 / 6, abs=0.02), window
+    assert window[1] == pytest.approx(2 / 3, abs=0.02), window
+    drawn = tuple(float(v) for v in axes.get_tlim())
+    assert drawn == pytest.approx(window[0:2]), (
+        "the drag must magnify the drawing, not only relabel it"
+    )
+    assert drawn[1] - drawn[0] < 1.0, "the view must actually be narrower than the full triangle"
+
+
+def test_qt_click_without_a_drag_keeps_the_zoom(qt_ternary) -> None:
+    """A plain click is not a zoom gesture: it must not throw the current view away."""
+    canvas, axes = qt_ternary
+    _send(canvas, "press", _pixel(canvas, axes, 0.0, 1.0 / 3.0), Qt.LeftButton, Qt.LeftButton)
+    _send(canvas, "release", _pixel(canvas, axes, 0.0, 2.0 / 3.0), Qt.NoButton, Qt.LeftButton)
+    zoomed = get_ternary_label_range(axes)
+    assert zoomed is not None, "the drag recorded no window"
+
+    point = _pixel(canvas, axes, 0.0, 5.0 / 12.0)
+    _send(canvas, "press", point, Qt.LeftButton, Qt.LeftButton)
+    _send(canvas, "release", point, Qt.NoButton, Qt.LeftButton)
+
+    assert get_ternary_label_range(axes) == pytest.approx(zoomed)
+    assert tuple(float(v) for v in axes.get_tlim()) == pytest.approx(zoomed[0:2])
+
+
+def test_qt_outward_drag_restores_the_data_range_labels(qt_ternary) -> None:
+    """The reset gesture puts the whole triangle back and the labels on the range the data implies."""
+    canvas, axes = qt_ternary
+    data_range = {"t": (0.171, 0.239), "l": (0.185, 0.413), "r": (0.413, 0.642)}
+    previous_ranges = dict(getattr(app_state, "ternary_ranges", {}) or {})
+    state_gateway.set_ternary_ranges(data_range)
+    try:
+        # Zoom in first, so the reset has something to undo.
+        _send(canvas, "press", _pixel(canvas, axes, 0.0, 1.0 / 3.0), Qt.LeftButton, Qt.LeftButton)
+        _send(canvas, "release", _pixel(canvas, axes, 0.0, 2.0 / 3.0), Qt.NoButton, Qt.LeftButton)
+        zoomed = get_ternary_label_range(axes)
+        assert zoomed is not None, "the drag recorded no window"
+        assert tuple(float(v) for v in axes.get_tlim()) == pytest.approx(zoomed[0:2]), (
+            "the drag did not magnify the drawing"
+        )
+
+        # Releasing outside the region that is drawn is the reset gesture.  The drag is measured
+        # inside the current window, so a release in the canvas margin - away from the magnified
+        # region, which the axes fill - asks for the whole triangle again.
+        _send(canvas, "press", _pixel(canvas, axes, 0.0, 5.0 / 12.0), Qt.LeftButton, Qt.LeftButton)
+        _send(canvas, "release", QPoint(2, 2), Qt.NoButton, Qt.LeftButton)
+    finally:
+        state_gateway.set_ternary_ranges(previous_ranges)
+
+    window = get_ternary_label_range(axes)
+    assert window == pytest.approx((0.171, 0.239, 0.185, 0.413, 0.413, 0.642)), window
+    assert window != pytest.approx(zoomed)
     assert app_state.ternary_manual_limits_enabled is False
     assert tuple(float(v) for v in axes.get_tlim()) == pytest.approx((0.0, 1.0))

@@ -79,6 +79,7 @@ UI_STATE_FIELDS: frozenset[str] = frozenset({
     "geo_model_name", "use_real_age_for_mu_kappa", "mu_kappa_age_col",
     # ternary
     "ternary_auto_zoom", "ternary_limit_mode", "ternary_limit_anchor",
+    "ternary_value_display",
     "ternary_boundary_percent", "ternary_manual_limits",
     "ternary_manual_limits_enabled", "ternary_stretch", "ternary_stretch_mode",
     "ternary_factors", "ternary_ranges", "ternary_render_margin",

@@ -211,6 +211,7 @@ def _snapshot_state() -> dict[str, Any]:
         "ternary_auto_zoom": bool(getattr(app_state, "ternary_auto_zoom", True)),
         "ternary_limit_mode": str(getattr(app_state, "ternary_limit_mode", "min")),
         "ternary_limit_anchor": str(getattr(app_state, "ternary_limit_anchor", "min")),
+        "ternary_value_display": str(getattr(app_state, "ternary_value_display", "raw")),
         "ternary_boundary_percent": float(getattr(app_state, "ternary_boundary_percent", 5.0)),
         "ternary_manual_limits_enabled": bool(getattr(app_state, "ternary_manual_limits_enabled", False)),
         "ternary_manual_limits": dict(getattr(app_state, "ternary_manual_limits", {}) or {}),

@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QApplication  # noqa: E402
 
 from core import state_gateway  # noqa: E402
 from ui.main_window_parts.canvas import install_ternary_zoom_filter  # noqa: E402
+from visualization.plotting.ternary import get_ternary_label_range  # noqa: E402
 from visualization.plotting.view_zoom import (  # noqa: E402
     MIN_SPAN,
     wheel_factor,
@@ -118,9 +119,55 @@ def test_wheel_zooms_the_ternary_view() -> None:
 
     _wheel(canvas, _pixel(canvas, axes, 0.0, 1.0 / 3.0), notches=1)
 
-    tmin, tmax = axes.get_tlim()
-    assert tmax - tmin < 1.0 + 1e-9
-    assert tmax - tmin >= MIN_SPAN
+    # The magnification the user asked for: the wheel narrows the region that is drawn, and the
+    # label window follows it so the numbers describe the picture.
+    window = get_ternary_label_range(axes)
+    assert window is not None, "the wheel recorded no label window"
+    assert window[1] - window[0] < 1.0, "wheel up must narrow the view"
+    assert window[1] - window[0] >= MIN_SPAN
+    drawn = (float(axes.get_tlim()[0]), float(axes.get_tlim()[1]))
+    assert drawn == pytest.approx(window[0:2]), (
+        f"the drawing must follow the zoom: drawn {drawn}, labels {window[0:2]}"
+    )
+    assert float(axes.get_llim()[1]) == pytest.approx(window[3])
+    assert float(axes.get_rlim()[1]) == pytest.approx(window[5])
+
+
+def test_wheel_zooms_the_ternary_view_further_with_a_second_notch() -> None:
+    """Repeated notches compose: the next one is measured on what is drawn."""
+    canvas, axes = _canvas_with("ternary")
+    point = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
+
+    _wheel(canvas, point, notches=1)
+    first = get_ternary_label_range(axes)
+    assert first is not None
+    _wheel(canvas, point, notches=1)
+    second = get_ternary_label_range(axes)
+    assert second is not None
+
+    assert second[1] - second[0] < first[1] - first[0], (first, second)
+    assert (float(axes.get_tlim()[0]), float(axes.get_tlim()[1])) == pytest.approx(second[0:2])
+
+
+def test_middle_drag_pans_the_ternary_view() -> None:
+    """A ternary pan moves the drawing too; the labels keep describing it."""
+    canvas, axes = _canvas_with("ternary")
+    _wheel(canvas, _pixel(canvas, axes, 0.0, 1.0 / 3.0), notches=1)
+    zoomed = get_ternary_label_range(axes)
+    assert zoomed is not None
+
+    start = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
+    end = _pixel(canvas, axes, 0.0, 0.5)
+    _mouse(canvas, QEvent.MouseButtonPress, start, Qt.MiddleButton, Qt.MiddleButton)
+    _mouse(canvas, QEvent.MouseMove, end, Qt.NoButton, Qt.MiddleButton)
+    _mouse(canvas, QEvent.MouseButtonRelease, end, Qt.MiddleButton, Qt.NoButton)
+
+    panned = get_ternary_label_range(axes)
+    assert panned is not None, "the pan recorded no window"
+    assert panned[0] > zoomed[0], f"the pan did not move the view: {zoomed} -> {panned}"
+    assert (float(axes.get_tlim()[0]), float(axes.get_tlim()[1])) == pytest.approx(panned[0:2]), (
+        "the drawing must follow the pan"
+    )
 
 
 def test_middle_drag_pans_the_cartesian_view() -> None:
