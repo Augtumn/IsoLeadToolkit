@@ -766,7 +766,8 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             action.get("mode")
         )
     elif action_type == "SET_TERNARY_VALUE_DISPLAY":
-        store._snapshot["ternary_value_display"] = _normalize_ternary_value_display(
+        from .coercers import _normalize_ternary_value_display as _normalize_value_display
+        store._snapshot["ternary_value_display"] = _normalize_value_display(
             action.get("mode")
         )
 
