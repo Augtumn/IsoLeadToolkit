@@ -143,14 +143,9 @@ def _resolve_bw_method(value: Any) -> str:
 
 def kde_compute_kwargs() -> dict[str, Any]:
     """2D KDE computation options, read from app state."""
-    bw_method: Any = _resolve_bw_method(app_state.kde_bw_method)
-    if bw_method == "lscv":
-        # seaborn only accepts the two rules of thumb, a scalar or a callable; the callable is
-        # the correct form here, because seaborn builds one KDE per hue group and scipy calls it
-        # with that group's data, so LSCV is solved per group rather than once for all of them.
-        from visualization.plotting.kde_bandwidth import lscv_bw_method
-
-        bw_method = lscv_bw_method()
+    # The callable form matters here: seaborn builds one KDE per hue group and scipy calls the
+    # method with that group's data, so LSCV is solved per group rather than once for all.
+    bw_method: Any = kde_common.scipy_bw_method(app_state.kde_bw_method)
     kwargs: dict[str, Any] = {
         "bw_adjust": kde_common.clamp_bw_adjust(app_state.kde_bw_adjust),
         "bw_method": bw_method,
@@ -203,6 +198,9 @@ def _estimate_density_curve(
 
     kernel_name = _resolve_kernel_name(kernel)
     auto_bw_method = _resolve_auto_bandwidth_method(auto_bandwidth_method)
+    # scipy takes 'scott', 'silverman', a scalar or a callable - not 'lscv'. Passing the name
+    # raised, the exception was swallowed by the except below, and the curve came back as None.
+    auto_bw_method = kde_common.scipy_bw_method(auto_bw_method)
     bandwidth_value = max(0.0, float(bandwidth))
 
     try:
@@ -234,7 +232,7 @@ def _estimate_density_curve(
                     data,
                     bw_adjust=bw_adjust,
                     bandwidth=bandwidth_value,
-                    auto_bandwidth_method=auto_bw_method,
+                    auto_bandwidth_method=_resolve_auto_bandwidth_method(auto_bandwidth_method),
                 ),
                 kernel=kernel_name,
             )

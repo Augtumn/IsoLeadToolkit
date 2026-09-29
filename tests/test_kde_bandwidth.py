@@ -121,3 +121,41 @@ def test_the_marginal_never_keeps_a_stale_default_over_a_deliberate_main_rule() 
 
     assert _resolve_marginal_bandwidth_method() == _resolve_bw_method(app_state.kde_bw_method)
     assert str(_KDE_AUTO_BW_METHOD_DEFAULT).strip().lower() in ("scott", "silverman")
+
+
+def test_the_marginal_curve_survives_lscv() -> None:
+    """Regression: the curve came back as None, so the marginal KDE vanished.
+
+    scipy takes 'scott', 'silverman', a scalar or a callable - never the literal 'lscv'. The
+    name was handed to set_bandwidth, the exception was swallowed, and the caller drew nothing.
+    """
+    import numpy as np
+
+    from visualization.plotting.kde import _estimate_density_curve
+
+    data = np.random.default_rng(0).normal(0.2, 0.01, 25)
+
+    result = _estimate_density_curve(
+        data,
+        bw_adjust=1.0,
+        bandwidth=0.0,
+        kernel="gaussian",
+        auto_bandwidth_method="lscv",
+        gridsize=200,
+        cut=0.0,
+        log_transform=False,
+    )
+
+    assert result is not None, "selecting LSCV must not remove the marginal curve"
+    grid, density = result
+    assert grid.size and np.isfinite(density).all() and density.max() > 0.0
+
+
+def test_the_scipy_bandwidth_form_never_carries_the_rule_name() -> None:
+    """One helper decides how a rule reaches scipy and seaborn."""
+    from visualization.plotting.kde_common import scipy_bw_method
+
+    assert scipy_bw_method("scott") == "scott"
+    assert scipy_bw_method("silverman") == "silverman"
+    method = scipy_bw_method("lscv")
+    assert method != "lscv" and callable(method)

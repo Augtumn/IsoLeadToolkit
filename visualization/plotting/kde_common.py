@@ -98,3 +98,19 @@ def bandwidth_for(
         else:
             factor = float(n ** exponent)
     return max(KDE_BW_MIN, std * factor * adjust)
+
+
+def scipy_bw_method(rule: str):
+    """The rule in a form scipy's gaussian_kde and seaborn accept.
+
+    They take 'scott', 'silverman', a scalar or a callable - never the literal 'lscv'. Handing
+    them the name raised "bw_method should be 'scott', 'silverman', a scalar or a callable",
+    which was caught and turned into a missing curve: that is why the marginal KDE vanished when
+    LSCV was selected, and why the 2-D overlay failed to render at all.
+    """
+    name = resolve_rule(rule)
+    if name == "lscv":
+        from visualization.plotting.kde_bandwidth import lscv_bw_method
+
+        return lscv_bw_method()
+    return name
