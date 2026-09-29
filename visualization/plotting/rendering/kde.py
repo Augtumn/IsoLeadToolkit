@@ -50,6 +50,30 @@ def _ternary_kde_window(x, y, span_fraction=0.25):
     return x_min - pad_x, x_max + pad_x, y_min - pad_y, y_max + pad_y
 
 
+def _ternary_kde_estimator(points, bw_method):
+    """A gaussian_kde for ternary points, tolerating nearly collinear groups.
+
+    Pb isotope groups follow mixing lines, so their sample covariance can be singular and
+    gaussian_kde refuses to build. The retry adds jitter three orders of magnitude below the
+    group's own spread, seeded from the group mean so a redraw gives the same picture.
+    """
+    from scipy.stats import gaussian_kde
+
+    try:
+        return gaussian_kde(points.T, bw_method=bw_method)
+    except Exception as err:
+        spread = float(np.max(np.ptp(points, axis=0)))
+        jitter = max(spread, 1e-3) * 1e-3
+        seed = abs(hash(tuple(np.round(points.mean(axis=0), 6)))) % 2**32
+        rng = np.random.default_rng(seed)
+        logger.warning(
+            "Ternary KDE covariance is singular (%s); retrying with jitter %.2e.", err, jitter
+        )
+        return gaussian_kde(
+            (points + rng.normal(0.0, jitter, points.shape)).T, bw_method=bw_method
+        )
+
+
 def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, alpha) -> bool:
     """Density contours for a ternary plot, drawn in the axes' Cartesian frame.
 
@@ -72,12 +96,9 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
     points = np.column_stack([(r - l) / np.sqrt(3.0), t])
     if points.shape[0] < 3:
         return False
+    options = kde_compute_kwargs()
     try:
-        options = kde_compute_kwargs()
-        kde = gaussian_kde(points.T, bw_method=options.get("bw_method", "scott"))
-        # Honour the app's bandwidth option: this branch used to lose it (the seaborn kwargs
-        # were dropped when the ternary path stopped using kdeplot), so the density could not
-        # be widened for small groups.
+        kde = _ternary_kde_estimator(points, options.get("bw_method", "scott"))
         bw_adjust = float(options.get("bw_adjust", 1.0) or 1.0)
         if bw_adjust != 1.0:
             kde.set_bandwidth(kde.factor * bw_adjust)
