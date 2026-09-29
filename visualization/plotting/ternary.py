@@ -273,6 +273,40 @@ def _raw_scale(normalized, raw) -> float | None:
     return float(_np.mean(values[mask])) / denominator
 
 
+def _nice_tick_step(target: float) -> float:
+    """A readable step (1, 2, 2.5 or 5 times a power of ten) close to *target*."""
+    import math as _math
+
+    if not _math.isfinite(target) or target <= 0.0:
+        return 1.0
+    exponent = _math.floor(_math.log10(target))
+    base = target / (10.0 ** exponent)
+    for candidate in (1.0, 2.0, 2.5, 5.0, 10.0):
+        if base <= candidate:
+            return candidate * (10.0 ** exponent)
+    return 10.0 ** (exponent + 1)
+
+
+def _raw_tick_values(low_raw: float, high_raw: float, target_count: int = 6):
+    """Tick values at a constant density along the axis, on readable numbers.
+
+    The count is what has to stay steady: placing a fixed number of ticks across whatever range
+    is visible makes them sparse when zoomed out and crowded when zoomed in, because the range
+    changes by orders of magnitude between plots.
+    """
+    import math as _math
+
+    span = high_raw - low_raw
+    if not _math.isfinite(span) or span <= 0.0:
+        return []
+    step = _nice_tick_step(span / max(1, target_count))
+    start = _math.ceil(low_raw / step) * step
+    # Indexed rather than accumulated: adding the step repeatedly drifts (18.599999999999998),
+    # and the labels are meant to read as round values.
+    count = int((high_raw - start) // step) + 1 if start <= high_raw else 0
+    return [start + index * step for index in range(max(0, min(count, 40)))]
+
+
 def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display: str) -> int:
     """Relabel the three axes in raw ratio units; returns how many axes were relabelled.
 
@@ -298,11 +332,15 @@ def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display:
         low, high = float(low), float(high)
         if high <= low:
             continue
-        positions = [low + (high - low) * index / 5.0 for index in range(6)]
+        values = _raw_tick_values(low * scale, high * scale)
+        if len(values) < 2:
+            continue
         try:
-            axis.set_ticks(positions)
-            axis.set_ticklabels([f"{position * scale:.2f}" for position in positions])
+            axis.set_ticks([value / scale for value in values])
+            axis.set_ticklabels([f"{value:.2f}" for value in values])
             changed += 1
+        except Exception as err:
+            logger.warning("Could not relabel the %s axis in raw units: %s", name, err)
         except Exception as err:
             logger.warning("Could not relabel the %s axis in raw units: %s", name, err)
     return changed
