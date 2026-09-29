@@ -227,6 +227,62 @@ class MainWindowLegendInteractionMixin:
         new_action.triggered.connect(lambda checked=False: self._create_parent_group())
         menu.exec_(self._legend_list.mapToGlobal(pos))
 
+    def _legend_groups(self):
+        """Every group key the plot currently knows about."""
+        groups = app_state.available_groups
+        if groups:
+            return list(groups)
+        df = app_state.df_global
+        column = app_state.last_group_col
+        if df is None or not column or column not in df.columns:
+            return []
+        return list(df[column].unique())
+
+    def _visible_groups_now(self, groups):
+        """The visible subset; ``None`` in the state means "everything is visible"."""
+        if app_state.visible_groups is None:
+            return set(groups)
+        return set(app_state.visible_groups) & set(groups)
+
+    def _apply_visible_groups(self, visible, groups):
+        """Write the visible subset through the gateway (None means "all visible")."""
+        if len(visible) >= len(groups):
+            state_gateway.set_visible_groups(None)
+        else:
+            state_gateway.set_visible_groups(sorted(visible))
+        try:
+            self._refresh_plot()
+        except Exception as err:
+            logger.warning("Could not refresh the plot after a batch legend change: %s", err)
+
+    def _on_legend_select_all(self):
+        """Batch counterpart of ticking every legend checkbox."""
+        groups = self._legend_groups()
+        if not groups:
+            return
+        logger.info("Legend: showing all %d group(s).", len(groups))
+        self._apply_visible_groups(set(groups), groups)
+
+    def _on_legend_invert_selection(self):
+        """Swap visible and hidden groups.
+
+        A state with nothing visible cannot be expressed: an empty visible set normalizes
+        to None ("everything visible"), which is the same limit the per-row checkboxes
+        have. So when every group is visible the selection is left alone and the status
+        bar explains why instead of silently doing nothing.
+        """
+        groups = self._legend_groups()
+        if not groups:
+            return
+        inverted = set(groups) - self._visible_groups_now(groups)
+        if not inverted:
+            self.statusBar().showMessage(
+                translate("At least one group must stay visible."), 3000
+            )
+            return
+        logger.info("Legend: inverted the selection over %d group(s).", len(groups))
+        self._apply_visible_groups(inverted, groups)
+
     def _on_group_checkbox_change(self, group, state):
         if (not app_state.last_group_col
                 or app_state.df_global is None
