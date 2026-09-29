@@ -22,8 +22,11 @@ are mutually exclusive.  The two halves of the agreed behaviour follow from that
   outline then has the window's shape, the hexagon above: flat, and visibly not a composition
   triangle.  That is the accepted trade-off of zooming - magnifying a box inside a triangle cannot
   stay equilateral - and it is no longer imposed on the default view.
-* The manual-limits checkbox is the one setting that draws a stored window at render time; the
-  automatic range never does.
+* **Persisted zoom** - the window a gesture sets (the wheel, the magnifier drag, a middle-drag pan)
+  is drawn by *every* later render of those axes, whatever triggered it: a data-point change, a KDE
+  toggle, a style change, a panel change.  Only an explicit reset drops it
+  (``reset_ternary_view``).  The manual-limits checkbox does not decide that any more: it keeps
+  meaning "use my stored window" and is effectively always true while a zoom's window exists.
 
 These tests read pixels rather than transforms.  ``ax.transData`` on mpltern axes describes
 mpltern's internal ternary transform, not the geometry on screen: it once reported three equal
@@ -51,6 +54,7 @@ from visualization.plotting.ternary import (  # noqa: E402
     get_ternary_label_range,
     manual_ternary_label_range,
     reset_ternary_view,
+    stored_ternary_view_window,
     ternary_axes_limits,
 )
 
@@ -92,6 +96,13 @@ FULL_COMPONENTS = (
     np.array([1.0, 0.0, 0.0]),
     np.array([0.0, 1.0, 0.0]),
     np.array([0.0, 0.0, 1.0]),
+)
+#: The same data moved, so a refresh has different points and a different inferred range behind it:
+#: what a data-point change or a KDE toggle hands the render path.
+SHIFTED_COMPONENTS = (
+    np.array([0.18, 0.32, 0.50]),
+    np.array([0.24, 0.24, 0.52]),
+    np.array([0.16, 0.36, 0.48]),
 )
 
 #: A colour per marker, so each known data point can be found again in the rendered pixels.
@@ -174,6 +185,34 @@ def configured_axes(
     if points:
         axes.scatter(t_vals, l_vals, r_vals, c=list(POINT_COLOURS), s=90, edgecolors="none")
     return figure, axes
+
+
+def rerender_ternary(
+    axes,
+    components=NARROW_COMPONENTS,
+    points: bool = False,
+    manual_enabled: bool = False,
+) -> None:
+    """Run the app's render path again on the *same* axes: clear, configure, scatter.
+
+    ``plot_embedding`` clears the axes and configures them again on every refresh, so a data-point
+    change, a KDE toggle, a style change or a panel change is exactly this sequence - and whatever
+    the previous render recorded on the axes has to survive it.  The manual-limits box is left where
+    the caller puts it, because a zoom must not depend on it.
+    """
+    state_gateway.set_ternary_manual_limits_enabled(manual_enabled)
+    t_vals, l_vals, r_vals = components
+    axes.clear()
+    configure_ternary_axis(
+        axes,
+        t_vals,
+        l_vals,
+        r_vals,
+        labels=("T", "L", "R"),
+        raw_values=(t_vals * RAW_SCALE, l_vals * RAW_SCALE, r_vals * RAW_SCALE),
+    )
+    if points:
+        axes.scatter(t_vals, l_vals, r_vals, c=list(POINT_COLOURS), s=90, edgecolors="none")
 
 
 def drawn_pixels(axes, figure) -> tuple[float, float] | None:
@@ -376,24 +415,112 @@ def test_a_manual_window_is_drawn_at_render_time() -> None:
     assert shape_ratio(drawn_pixels(clipped_axes, clipped_figure)) is not None
 
 
-def test_a_zoomed_window_survives_a_re_render_only_with_the_manual_box() -> None:
-    """The gesture stores its window; the checkbox is what makes the next render draw it again.
+def test_a_stored_window_without_a_zoom_is_not_drawn_by_a_fresh_render() -> None:
+    """A window merely present in the state is not a zoom: a fresh plot still draws the triangle.
 
-    ``_remember_ternary_limits`` writes the window but deliberately leaves the box alone, so a
-    re-render is the default view until the user ticks it - and the stored window from then on.
+    This is the range the last session persisted, loaded again with the checkbox clear - drawing it
+    is what produced the flat trapezoid.  With the box ticked that same window is the manual one the
+    user asked for, and it *is* drawn: the box keeps meaning "use my stored window".
     """
     state_gateway.set_ternary_manual_limits(dict(zip(MANUAL_KEYS, ZOOMED_RANGE)))
 
-    # Box clear: the next render is the default view again - whole triangle, inferred labels.
+    # Box clear, and no zoom was made in this view: the whole triangle, labelled with the data range.
     _, plain = configured_axes(manual_enabled=False)
     assert ternary_axes_limits(plain) == pytest.approx(FULL_LIMITS)
     assert get_ternary_label_range(plain) != pytest.approx(FULL_LIMITS)
+    assert stored_ternary_view_window(plain) is None, "nothing zoomed, nothing to draw again"
 
-    # Box ticked: the stored window is drawn and labelled, so the zoom survives the re-render.
+    # Box ticked: the stored window is drawn and labelled, as the manual settings ask.
     _, kept = configured_axes(manual_enabled=True)
     expected = manual_ternary_label_range("both")
     assert ternary_axes_limits(kept) == pytest.approx(expected)
     assert get_ternary_label_range(kept) == pytest.approx(expected)
+
+
+def test_a_zoom_is_drawn_again_by_every_later_render() -> None:
+    """The request, measured in pixels: after a zoom a refresh draws the same window again.
+
+    The refresh is ``plot_embedding``'s own sequence run on the same axes (``rerender_ternary``),
+    twice: once with the same markers - a style or KDE-style repaint, where nothing may move - and
+    once with different data behind the same window, where the window and its labels must stay put
+    instead of following the new data.  The magnification is measured on the markers themselves,
+    because the outline of a zoomed window is not the triangle (see ``point_centroids``).
+    """
+    figure, axes = configured_axes(points=True)
+    fresh_pixels = drawn_pixels(axes, figure)
+    fresh_points = pairwise_distances(point_centroids(figure, axes))
+
+    window = apply_ternary_zoom_window(axes, ZOOMED_RANGE)
+    assert window == pytest.approx(ZOOMED_RANGE), window
+    # The gesture persists the window for the panel and the session; the box stays out of it.
+    state_gateway.set_ternary_manual_limits(dict(zip(MANUAL_KEYS, window)))
+    zoomed_pixels = drawn_pixels(axes, figure)
+    zoomed_points = pairwise_distances(point_centroids(figure, axes))
+    assert zoomed_pixels != fresh_pixels, "the zoom did not move the drawing"
+    for index, (before, after) in enumerate(zip(fresh_points, zoomed_points)):
+        assert after > 1.5 * before, (
+            f"marker pair {index} did not grow: {before:.1f} -> {after:.1f} px"
+        )
+
+    # A refresh with the same data and markers: the drawing and the magnification must not move.
+    rerender_ternary(axes, points=True)
+    assert ternary_axes_limits(axes) == pytest.approx(window), (
+        "the refresh drew the whole triangle again instead of the zoomed window"
+    )
+    assert drawn_pixels(axes, figure) == zoomed_pixels, "the refresh moved the drawn window"
+    assert pairwise_distances(point_centroids(figure, axes)) == pytest.approx(zoomed_points), (
+        "the refresh changed the magnification"
+    )
+    assert app_state.ternary_manual_limits_enabled is False, "a zoom must not tick the box"
+
+    # A refresh with different data behind the same window: the window stays and the labels keep
+    # describing it, instead of jumping to the range the new data implies.
+    rerender_ternary(axes, components=SHIFTED_COMPONENTS)
+    assert ternary_axes_limits(axes) == pytest.approx(window), (
+        "the refresh with new data lost the zoom"
+    )
+    assert get_ternary_label_range(axes) == pytest.approx(window), (
+        "the labels must keep describing the window that is drawn"
+    )
+    assert drawn_pixels(axes, figure) == zoomed_pixels, "the drawn window moved with the data"
+
+
+def test_a_reset_after_a_re_render_restores_the_triangle_and_the_data_labels() -> None:
+    """Only the explicit reset clears the window, and it comes back to the data-range labels.
+
+    The refresh in the middle is what makes this different from the fresh-plot reset: the window the
+    refresh reports is the zoom, so a reset that read that back would restore the zoom it is meant to
+    undo.  What it restores is measured in pixels, markers included.
+    """
+    figure, axes = configured_axes(points=True)
+    data_window = get_ternary_label_range(axes)
+    assert data_window is not None, "a fresh plot records no label window"
+    fresh_pixels = drawn_pixels(axes, figure)
+    fresh_points = pairwise_distances(point_centroids(figure, axes))
+
+    apply_ternary_zoom_window(axes, ZOOMED_RANGE)
+    rerender_ternary(axes, points=True)
+    assert ternary_axes_limits(axes) == pytest.approx(ZOOMED_RANGE), (
+        "the refresh did not keep the zoom"
+    )
+
+    reset_ternary_view(axes)
+
+    assert ternary_axes_limits(axes) == pytest.approx(FULL_LIMITS), (
+        "the reset must draw the whole triangle again"
+    )
+    assert get_ternary_label_range(axes) == pytest.approx(data_window), (
+        "the reset must label with the range the data implies, not with the window it dropped"
+    )
+    assert stored_ternary_view_window(axes) is None, "the reset must clear the stored window"
+    assert drawn_pixels(axes, figure) == fresh_pixels, "the reset did not restore the drawing"
+    assert pairwise_distances(point_centroids(figure, axes)) == pytest.approx(fresh_points), (
+        "the reset did not put the points back where they were"
+    )
+
+    # The window is gone, so the next render draws the whole triangle as well.
+    rerender_ternary(axes, points=True)
+    assert ternary_axes_limits(axes) == pytest.approx(FULL_LIMITS)
 
 
 def test_an_explicit_zoom_magnifies_the_points_and_moves_the_labels() -> None:

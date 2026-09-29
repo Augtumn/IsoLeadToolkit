@@ -15,7 +15,10 @@ from PyQt5.QtWidgets import QApplication
 
 from core import app_state, state_gateway
 from ui.main_window_parts.canvas import install_ternary_zoom_filter
-from visualization.plotting.ternary import get_ternary_label_range
+from visualization.plotting.ternary import (  # noqa: E402
+    get_ternary_label_range,
+    stored_ternary_view_window,
+)
 
 APP = QApplication.instance() or QApplication([])
 
@@ -184,6 +187,9 @@ def test_qt_drag_magnifies_the_view_and_the_labels(qt_ternary) -> None:
         "the drag must magnify the drawing, not only relabel it"
     )
     assert drawn[1] - drawn[0] < 1.0, "the view must actually be narrower than the full triangle"
+    assert stored_ternary_view_window(axes) == pytest.approx(window), (
+        "the drag must leave the window every later render draws"
+    )
 
 
 def test_qt_click_without_a_drag_keeps_the_zoom(qt_ternary) -> None:
@@ -231,3 +237,6 @@ def test_qt_outward_drag_restores_the_data_range_labels(qt_ternary) -> None:
     assert window != pytest.approx(zoomed)
     assert app_state.ternary_manual_limits_enabled is False
     assert tuple(float(v) for v in axes.get_tlim()) == pytest.approx((0.0, 1.0))
+    assert stored_ternary_view_window(axes) is None, (
+        "the outward drag is the reset gesture: the stored window must be gone"
+    )

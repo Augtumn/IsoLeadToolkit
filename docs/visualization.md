@@ -859,7 +859,8 @@ plotting/__init__.py ← 导出所有公共 API
 `position` / mpltern `fit` 组合，没有一种能让它同时保持等边且不让数据变形，因此等边约束只在整三角形下
 成立（`tests/test_ternary_rendered_geometry.py` 从渲染像素测量，不用 `transData`）。刻度按原始比值在
 每条轴上**等密度**布置（`_raw_tick_values()`），位置取自坐标轴实际绘制的边界
-（`_ternary_tick_positions()`），所以读数始终对应画出来的那条边。
+（`_ternary_tick_positions()`），所以读数始终对应画出来的那条边。只有显式缩放的窗口会裁剪绘制，而且它会被
+之后每一次重绘沿用，直到显式还原（见本节末「一次缩放保留到显式还原为止」）。
 
 **显式放大 = 真正放大（会裁切），标签跟随所画内容。** 工具栏放大镜选中时（`_zoom_tool_active()`），
 三元图上的滚轮、左键拖拽、中键拖拽都把缩放后的窗口交给 mpltern 的 `set_ternary_lim()`
@@ -878,14 +879,24 @@ plotting/__init__.py ← 导出所有公共 API
    顶点换算为分量，取各分量 min/max 得 `(tmin,tmax,lmin,lmax,rmin,rmax)`；短于视图 2% 的拖拽视为点击，
    不改动任何状态；
 3. 写入 `app_state.ternary_manual_limits` 并确保 `ternary_auto_zoom` 开启，再交给
-   `apply_ternary_zoom_window()` 绘制。**不**在这里勾选「手动限值」：那会让一次缩放把复选框翻成勾选，
+   `apply_ternary_zoom_window()` 绘制；后者同时把窗口记在坐标轴上（`store_ternary_view_window()`），
+   之后每一次重绘都按它绘制。**不**在这里勾选「手动限值」：那会让一次缩放把复选框翻成勾选，
    并在下次启动时仍显示为勾选（`ui/main_window_parts/canvas.py`）；
-4. 向外拖过头（覆盖近似整个三角形）视为**还原**：关闭「手动限值」，绘制还给整个三角形，刻度回到数据
-   推断的范围；再次放大不依赖该复选框。
+4. 向外拖过头（覆盖近似整个三角形）视为**还原**：关闭「手动限值」，清除坐标轴上的窗口记录，绘制还给整个
+   三角形，刻度回到数据推断的范围；再次放大不依赖该复选框。
 
-**「手动限值」复选框的含义是「渲染时保留我的窗口」。** 只有它被勾选时，`configure_ternary_axis()` 才把
-`app_state.ternary_manual_limits` 交给 mpltern 的 `set_ternary_lim()`，手动视图因此能在重绘后保留；
-未勾选时即使存了窗口，绘制的仍是整个三角形，只有刻度按推断范围标注。
+**一次缩放保留到显式还原为止。** 手势把窗口记在坐标轴上（`store_ternary_view_window()`），该次渲染另把
+数据推断出的范围记在旁边（`set_ternary_data_range()`）。因此**之后每一次重绘**——换数据点、KDE 开关、样式、
+面板——都由 `configure_ternary_axis()` 按该窗口绘制，刻度标签跟随所画内容；只有显式**还原**（向外拖拽 /
+`reset_ternary_view()`）会清除它，绘制回到整三角形、刻度回到数据推断范围。全新图表（坐标轴上没有窗口记录）
+仍是整三角形：上次会话持久化在 `app_state.ternary_manual_limits` 的范围不会裁剪新图。
+
+**「手动限值」复选框的含义仍是「用我存下的窗口」，并且在存在显式窗口时等效为常真。** 勾选时渲染把
+`app_state.ternary_manual_limits` 交给 mpltern 的 `set_ternary_lim()`，手动输入框因此始终是它的编辑器
+（`ui/panels/data/projection.py`）；未勾选时，只要坐标轴上存有缩放窗口就照样按它绘制。它不再是「缩放能否在
+重绘后保留」的开关，缩放也不会去勾选它。像素回归见 `tests/test_ternary_rendered_geometry.py`
+（`test_a_zoom_is_drawn_again_by_every_later_render`、
+`test_a_reset_after_a_re_render_restores_the_triangle_and_the_data_labels`）。
 
 `visualization/plotting/ternary.py` 提供纯函数 `cartesian_to_ternary()`、`similar_subtriangle_limits()`、
 `drag_ternary_window()`、`ternary_limits_cover_full_view()`；`tests/test_ternary_zoom.py` 用 mpltern 自身的几何做过顶点往返校验。

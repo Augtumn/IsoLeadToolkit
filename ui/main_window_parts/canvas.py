@@ -227,7 +227,7 @@ class TernaryZoomEventFilter(QObject):
 
         A ternary wheel zoom magnifies the view the same way the 2D one does - the axes are handed
         the zoomed window, so the points grow on screen - and the tick labels move with the
-        drawing. The window is recorded so a re-render with the manual-limits box ticked keeps it.
+        drawing. The window is recorded so a re-render keeps it (no checkbox needed).
 
         Only while the toolbar's magnifier is selected; otherwise the wheel belongs to
         whatever else is listening (scrolling the panel, matplotlib's own handlers).
@@ -287,11 +287,13 @@ class TernaryZoomEventFilter(QObject):
         self._pan_from = current
 
     def _remember_ternary_limits(self, limits) -> None:
-        """Persist a ternary view window so a re-render with manual limits keeps it.
+        """Persist a ternary view window so every later render keeps it.
 
         The window is the region the gesture asked to see, so it is what the drawing shows and what
-        the labels report. The manual-limits box keeps meaning "my window, not the inferred one",
-        and this deliberately does not touch it.
+        the labels report. The zoom itself records it on the axes (``store_ternary_view_window`` in
+        visualization/plotting/ternary.py), which is what makes the next render draw it again; this
+        write is the copy the panel and the session keep. The manual-limits box keeps meaning "my
+        window, not the inferred one", and this deliberately does not touch it.
         """
         keys = ("tmin", "tmax", "lmin", "lmax", "rmin", "rmax")
         try:
@@ -464,9 +466,10 @@ class TernaryZoomEventFilter(QObject):
         full_view = ternary_limits_cover_full_view(limits)
         try:
             if full_view:
-                # An outward drag is the reset gesture: the drawing goes back to the whole triangle
-                # and the labels to the range the data implies, which is also what unticking the
-                # manual-limits box asks for.
+                # An outward drag is the reset gesture: it drops the stored window, so the drawing
+                # goes back to the whole triangle and the labels to the range the data implies. The
+                # manual-limits box is cleared with it, because its window is not what is being
+                # asked for here.
                 state_gateway.set_ternary_manual_limits_enabled(False)
                 self._reset_ternary_view(axes)
                 logger.info("Ternary zoom reset by an outward drag.")
@@ -485,8 +488,8 @@ class TernaryZoomEventFilter(QObject):
         except Exception as err:
             logger.warning("Failed to apply ternary zoom (Qt): %s", err)
             return
-        # The canvas needs a repaint - never a fresh render, which would put the inferred window
-        # back and undo the zoom the gesture just asked for.
+        # The canvas needs a repaint, not a fresh render: the zoom would survive a render now, but a
+        # repaint is all this gesture asks for.
         if self._canvas is not None:
             self._canvas.draw_idle()
 

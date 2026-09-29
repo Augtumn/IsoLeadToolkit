@@ -16,7 +16,10 @@ from PyQt5.QtWidgets import QApplication  # noqa: E402
 
 from core import state_gateway  # noqa: E402
 from ui.main_window_parts.canvas import install_ternary_zoom_filter  # noqa: E402
-from visualization.plotting.ternary import get_ternary_label_range  # noqa: E402
+from visualization.plotting.ternary import (  # noqa: E402
+    get_ternary_label_range,
+    stored_ternary_view_window,
+)
 from visualization.plotting.view_zoom import (  # noqa: E402
     MIN_SPAN,
     wheel_factor,
@@ -131,6 +134,9 @@ def test_wheel_zooms_the_ternary_view() -> None:
     )
     assert float(axes.get_llim()[1]) == pytest.approx(window[3])
     assert float(axes.get_rlim()[1]) == pytest.approx(window[5])
+    assert stored_ternary_view_window(axes) == pytest.approx(window), (
+        "the wheel must leave the window every later render draws"
+    )
 
 
 def test_wheel_zooms_the_ternary_view_further_with_a_second_notch() -> None:
@@ -167,6 +173,9 @@ def test_middle_drag_pans_the_ternary_view() -> None:
     assert panned[0] > zoomed[0], f"the pan did not move the view: {zoomed} -> {panned}"
     assert (float(axes.get_tlim()[0]), float(axes.get_tlim()[1])) == pytest.approx(panned[0:2]), (
         "the drawing must follow the pan"
+    )
+    assert stored_ternary_view_window(axes) == pytest.approx(panned), (
+        "the pan must leave the window every later render draws"
     )
 
 

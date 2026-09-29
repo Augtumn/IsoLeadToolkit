@@ -379,6 +379,77 @@ def get_ternary_label_range(ax: Any) -> tuple[float, ...] | None:
     return values if len(values) == 6 else None
 
 
+#: Where the window an explicit zoom asked for is kept: every later render draws it again, and only
+#: an explicit reset drops it.  It lives on the axes rather than in app_state.ternary_manual_limits
+#: because that field is persisted - a window loaded from the last session must not clip a fresh
+#: plot, which is the flattened trapezoid tests/test_ternary_rendered_geometry.py is about.
+_TERNARY_VIEW_WINDOW_ATTR = "_ternary_view_window"
+#: Where the range the data implies is kept, so a reset can go back to the numbers a fresh plot has.
+_TERNARY_DATA_RANGE_ATTR = "_ternary_data_range"
+
+
+def _coerce_ternary_window(limits) -> tuple[float, ...] | None:
+    """A six-value window as floats, or None when *limits* is not one."""
+    try:
+        if limits is None or len(limits) != 6:
+            return None
+        return tuple(float(value) for value in limits)
+    except (TypeError, ValueError):
+        return None
+
+
+def store_ternary_view_window(ax: Any, limits) -> tuple[float, ...] | None:
+    """Record *limits* as the window every later render draws; an unusable or full one clears it.
+
+    This is what makes a zoom persist: :func:`configure_ternary_axis` draws the stored window on
+    every render, so a data-point change, a KDE toggle, a style change or a panel change cannot
+    throw it away, and only :func:`reset_ternary_view` drops it.  A window that covers the whole
+    triangle is not a zoom - zooming out fully is a reset in all but the name - so it clears the
+    record instead of storing it.
+    """
+    window = _coerce_ternary_window(limits)
+    if window is None or ternary_limits_cover_full_view(window):
+        clear_ternary_view_window(ax)
+        return None
+    try:
+        setattr(ax, _TERNARY_VIEW_WINDOW_ATTR, window)
+    except Exception as err:
+        logger.warning("Could not store the ternary view window: %s", err)
+        return None
+    return window
+
+
+def stored_ternary_view_window(ax: Any) -> tuple[float, ...] | None:
+    """The window an explicit zoom asked for, or None while nothing is zoomed."""
+    return _coerce_ternary_window(getattr(ax, _TERNARY_VIEW_WINDOW_ATTR, None))
+
+
+def clear_ternary_view_window(ax: Any) -> None:
+    """Drop the stored window: the next render draws the whole triangle again."""
+    try:
+        setattr(ax, _TERNARY_VIEW_WINDOW_ATTR, None)
+    except Exception as err:
+        logger.warning("Could not clear the ternary view window: %s", err)
+
+
+def set_ternary_data_range(ax: Any, limits) -> tuple[float, ...] | None:
+    """Record the range the data implies, for :func:`reset_ternary_view` to come back to."""
+    window = _coerce_ternary_window(limits)
+    if window is None:
+        return None
+    try:
+        setattr(ax, _TERNARY_DATA_RANGE_ATTR, window)
+    except Exception as err:
+        logger.warning("Could not store the ternary data range: %s", err)
+        return None
+    return window
+
+
+def get_ternary_data_range(ax: Any) -> tuple[float, ...] | None:
+    """The range the last render inferred from the data, or None when it recorded none."""
+    return _coerce_ternary_window(getattr(ax, _TERNARY_DATA_RANGE_ATTR, None))
+
+
 def ternary_axes_limits(ax: Any) -> tuple[float, ...] | None:
     """The axes' own limits as one six-tuple, or None when they cannot be read."""
     try:
@@ -421,6 +492,9 @@ def apply_ternary_zoom_window(ax: Any, limits) -> tuple[float, ...] | None:
     ``1 - lmin - rmin`` caps ``tmax`` and the same for the other components.  The drawn limits are
     therefore read back and *they* become the label window and the return value, so the numbers on
     screen describe the region that is really there.
+
+    The window that comes out is recorded (:func:`store_ternary_view_window`), so every later render
+    of these axes draws it again; only :func:`reset_ternary_view` clears it.
     """
     window = set_ternary_label_range(ax, limits)
     if window is None:
@@ -438,6 +512,9 @@ def apply_ternary_zoom_window(ax: Any, limits) -> tuple[float, ...] | None:
             tuple(round(float(value), 4) for value in drawn),
         )
         window = set_ternary_label_range(ax, drawn) or window
+    # What is really drawn is what every later render has to draw again: this record is what an
+    # explicit zoom leaves behind, and only an explicit reset clears it.
+    store_ternary_view_window(ax, window)
     relabel_ternary_ticks(ax, window)
     return window
 
@@ -472,11 +549,13 @@ def _stored_ternary_label_range() -> tuple[float, ...] | None:
 
 
 def reset_ternary_label_window() -> tuple[float, ...]:
-    """The window a zoom reset labels the axes with: the range the data implies.
+    """The window a zoom reset falls back to when the axes recorded no data range: the data range.
 
-    ``app_state.ternary_ranges`` holds the window the last render reported - the inferred range,
-    unless the manual-limits checkbox was ticked, in which case it is the user's window and the
-    range is inferred from the data of the last ternary embedding instead.
+    ``app_state.ternary_ranges`` holds the window the last render reported, which is the inferred
+    range unless that render drew a stored window, the checkbox's or a zoom's.  A reset therefore
+    prefers the data range the render recorded on the axes (:func:`get_ternary_data_range`) and
+    comes here only for axes that never rendered; the range is then inferred from the data of the
+    last ternary embedding when that is known, and the stored window is the last resort.
     """
     if not bool(app_state.ternary_manual_limits_enabled):
         window = _stored_ternary_label_range()
@@ -491,12 +570,14 @@ def reset_ternary_label_window() -> tuple[float, ...]:
 def reset_ternary_view(ax: Any) -> tuple[float, ...]:
     """Put the view back to the default: the whole triangle, labelled with the data range.
 
-    The counterpart of :func:`apply_ternary_zoom_window`.  An explicit zoom is undone by handing
-    the axes the full triangle again - the drawing really goes back, it is not just relabelled -
-    and the ticks go back to the range the data implies, which is the window a fresh render labels
-    with.  Returns that window.
+    The counterpart of :func:`apply_ternary_zoom_window`, and the only thing that clears the window
+    that function stored: the explicit zoom is dropped here and the axes are handed the full
+    triangle again - the drawing really goes back, it is not just relabelled - while the ticks go
+    back to the range the data implies, which is the window a fresh render labels with.  Returns
+    that window.
     """
-    window = reset_ternary_label_window()
+    window = get_ternary_data_range(ax) or reset_ternary_label_window()
+    clear_ternary_view_window(ax)
     set_ternary_label_range(ax, window)
     try:
         ax.set_ternary_lim(*_FULL_TERNARY_LIMITS)
@@ -818,9 +899,15 @@ def configure_ternary_axis(
     only *labels* the axes - it is what the tick labels report and what the callers store as
     app_state.ternary_ranges - and it never clips the drawing.
 
-    The manual-limits checkbox is the one exception, and that is exactly what it means: with it
-    ticked the stored window is handed to ``set_ternary_lim`` at render time, so the user's view
-    survives a redraw instead of being reset to the whole triangle.
+    A window an explicit zoom asked for is the exception, and it is drawn here on *every* render: the
+    gesture records it on the axes (:func:`store_ternary_view_window`) and only an explicit reset
+    (:func:`reset_ternary_view`) drops it, so a data-point change, a KDE toggle, a style change or a
+    panel change cannot throw the zoom away - and the ticks follow what is drawn.
+
+    The manual-limits checkbox keeps its meaning - "use my stored window" - and is effectively
+    always true while such a window exists: ticked, the window from
+    ``app_state.ternary_manual_limits`` is drawn as well, which is what keeps the manual spin boxes
+    live; it no longer decides whether a zoom survives a render.
     """
     if labels and len(labels) == 3:
         try:
@@ -836,22 +923,29 @@ def configure_ternary_axis(
     tmin, tmax, lmin, lmax, rmin, rmax = _FULL_TERNARY_LIMITS
     drawn = _FULL_TERNARY_LIMITS
     manual_window = False
+    data_range = _FULL_TERNARY_LIMITS
 
     use_ternary_layout(getattr(ax, "figure", None))
 
     try:
+        # The range the data implies: it labels a plot that is not zoomed, and it is what a reset
+        # comes back to, so it is recorded on the axes on every render.
+        data_range = infer_ternary_label_range(t_vals, l_vals, r_vals, mode)
         if auto_zoom:
-            # The range that labels the axes: the user's window, or the one the data implies.
+            # The window to draw: the one an explicit zoom stored, or the user's manual window.
+            # Either is drawn, not merely labelled - and the labels describe what was drawn.
+            window = stored_ternary_view_window(ax)
             if bool(app_state.ternary_manual_limits_enabled):
-                tmin, tmax, lmin, lmax, rmin, rmax = manual_ternary_label_range(mode)
-                # A manual window is drawn, not merely labelled - and the labels describe it.
+                # The checkbox means "use my stored window" - and its spin boxes are the editor for
+                # the manual copy of it, so that copy wins while the box asks for it.
+                window = manual_ternary_label_range(mode)
+            if window is None:
+                # Automatic: the inferred range labels the axes and never narrows the drawing.
+                tmin, tmax, lmin, lmax, rmin, rmax = data_range
+            else:
+                tmin, tmax, lmin, lmax, rmin, rmax = window
                 drawn = (tmin, tmax, lmin, lmax, rmin, rmax)
                 manual_window = True
-            else:
-                # Automatic: the inferred range labels the axes and never narrows the drawing.
-                tmin, tmax, lmin, lmax, rmin, rmax = infer_ternary_label_range(
-                    t_vals, l_vals, r_vals, mode
-                )
 
         ax.set_ternary_lim(*drawn)
         if manual_window:
@@ -868,6 +962,7 @@ def configure_ternary_axis(
 
     label_range = (tmin, tmax, lmin, lmax, rmin, rmax)
     set_ternary_label_range(ax, label_range)
+    set_ternary_data_range(ax, data_range)
     apply_ternary_axis_style(ax)
     install_ternary_tick_refresh(ax)
     apply_ternary_tick_display(
