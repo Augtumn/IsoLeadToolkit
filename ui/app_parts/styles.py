@@ -29,7 +29,14 @@ def _clear_widget_styles(widget: Any) -> None:
             target.setStyleSheet("")
 
     _clear(widget)
-    for child in widget.findChildren(QWidget):
+    find_children = getattr(widget, "findChildren", None)
+    if not callable(find_children):
+        # The application-level event filter also sees non-widget objects (native QWindow
+        # copies, actions, the application itself). They have no child widgets, and asking
+        # them for children raised TypeError on every Show event - an exception per event
+        # in the error log, which also disturbed redraw.
+        return
+    for child in find_children(QWidget):
         _clear(child)
 
 

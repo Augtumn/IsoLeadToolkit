@@ -1,15 +1,11 @@
-"""Ternary density must be drawn in ternary coordinates.
-
-Regression: the ternary branch handed Cartesian x/y to seaborn's kdeplot on an mpltern
-axes, which cannot draw them, so neither the density nor its marginals appeared.
-"""
+"""Regression: ternary density must be drawn in ternary coordinates."""
 from __future__ import annotations
 
 import matplotlib
 
 matplotlib.use("Agg")
 
-import mpltern  # noqa: F401  (registers the ternary projection)
+import mpltern  # noqa: F401,E402  (registers the ternary projection)
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -36,14 +32,8 @@ def _frame() -> pd.DataFrame:
     t = rng.uniform(0.25, 0.55, 60)
     l = rng.uniform(0.25, 0.55, 60)
     r = np.maximum(0.02, 1.0 - t - l)
-    return pd.DataFrame(
-        {
-            "_emb_t": t,
-            "_emb_l": l,
-            "_emb_r": r,
-            "Province": ["A"] * 30 + ["B"] * 30,
-        }
-    )
+    return pd.DataFrame({"_emb_t": t, "_emb_l": l, "_emb_r": r,
+                         "Province": ["A"] * 30 + ["B"] * 30})
 
 
 def test_ternary_kde_draws_contours(ternary_axes) -> None:
@@ -60,9 +50,7 @@ def test_ternary_kde_is_quiet_when_disabled(ternary_axes) -> None:
     state_gateway.set_show_kde(False)
     before = len(ternary_axes.collections)
 
-    kde_render._render_kde_overlay(
-        "TERNARY", _frame(), "Province", ["A"], {"A": "#333333"}
-    )
+    kde_render._render_kde_overlay("TERNARY", _frame(), "Province", ["A"], {"A": "#333333"})
 
     assert len(ternary_axes.collections) == before
 
@@ -71,7 +59,7 @@ def test_marginal_kde_is_skipped_on_ternary(ternary_axes) -> None:
     """Marginals need rectangular axes; on a simplex the call must be a no-op."""
     state_gateway.set_show_marginal_kde(True)
     try:
-        # ax, df_plot, group_col, palette, unique_cats are the five required parameters
+        # ax, df_plot, group_col, palette, unique_cats are the five required parameters.
         kde_module.draw_marginal_kde(None, None, None, None, None)
     finally:
         state_gateway.set_show_marginal_kde(False)
