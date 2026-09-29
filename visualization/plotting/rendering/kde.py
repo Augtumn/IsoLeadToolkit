@@ -148,6 +148,19 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
         level_values = peak * np.linspace(lowest, 0.9, max(2, int(levels)))
     # Stated in the log so a running instance can be told apart from a stale one: this line
     # only exists in the Cartesian-frame implementation.
+    spacing = float(np.mean(np.diff(xs))) if xs.size > 1 else 0.0
+    try:
+        bandwidth = float(np.sqrt(np.max(np.linalg.eigvalsh(kde.covariance))))
+    except Exception:
+        bandwidth = 0.0
+    if spacing > 0.0 and bandwidth and bandwidth < 2.0 * spacing:
+        # The density then lives in one or two grid steps and the picture shows the grid
+        # rather than the data; raising bw_adjust is the honest fix.
+        logger.warning(
+            "Ternary KDE bandwidth (%.4f) is below two grid steps (%.4f): raise the "
+            "bandwidth option (bw_adjust) for a smoother density.",
+            bandwidth, spacing,
+        )
     logger.info(
         "Ternary KDE: grid %dx%d over x=[%.3f, %.3f] y=[%.3f, %.3f], %d levels, fill=%s.",
         grid_x.shape[1], grid_x.shape[0], x0, x1, y0, y1, len(level_values), fill,
@@ -160,9 +173,14 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
             gradient = LinearSegmentedColormap.from_list(
                 "ternary_kde", [(1.0, 1.0, 1.0, 0.0), (base[0], base[1], base[2], 1.0)]
             )
+            # The fill uses the same iso-probability levels as the lines. Filling at fixed
+            # fractions of the peak (as this used to) draws one set of concentric rings per
+            # sample whenever the bandwidth is small - the ripple pattern reported from the
+            # app - because every bump in the density gets its own bands.
+            fill_levels = np.concatenate([[0.0], level_values, [peak]])
             axes.contourf(
-                grid_x, grid_y, density, levels=np.linspace(0.0, peak, 64), cmap=gradient,
-                alpha=alpha, transform=axes.transData, zorder=1,
+                grid_x, grid_y, density, levels=fill_levels, cmap=gradient,
+                alpha=alpha, antialiased=True, transform=axes.transData, zorder=1,
             )
         axes.contour(
             grid_x, grid_y, density, levels=level_values, colors=[color], linewidths=0.7,
