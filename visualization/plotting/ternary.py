@@ -227,6 +227,24 @@ def use_ternary_layout(fig: Any) -> None:
         fig.set_layout_engine("none")
 
 
+def effective_ternary_limits(limits, mode: str | None = None) -> tuple:
+    """The range actually drawn, given the limit mode.
+
+    mpltern's modes matter here: with 'min' only set_ternary_min is called, so the axes keep their
+    upper bound at 1 - ticks placed across the inferred range then covered a sliver of each edge
+    instead of the edge itself, which is what "the ticks should span the axis" was about.
+    """
+    if limits is None or len(limits) != 6:
+        return limits
+    resolved = resolve_ternary_limit_mode(mode)
+    tmin, tmax, lmin, lmax, rmin, rmax = (float(v) for v in limits)
+    if resolved == "min":
+        return (tmin, 1.0, lmin, 1.0, rmin, 1.0)
+    if resolved == "max":
+        return (0.0, tmax, 0.0, lmax, 0.0, rmax)
+    return (tmin, tmax, lmin, lmax, rmin, rmax)
+
+
 def resolve_ternary_value_display(mode: Any = None) -> str:
     """'raw' labels the axes with the original ratios, 'normalized' with the fractions."""
     if mode is None:
@@ -351,7 +369,7 @@ def configure_ternary_axis(
 
     apply_ternary_tick_display(
         ax,
-        (tmin, tmax, lmin, lmax, rmin, rmax),
+        effective_ternary_limits((tmin, tmax, lmin, lmax, rmin, rmax), mode),
         (t_vals, l_vals, r_vals),
         raw_values,
         resolve_ternary_value_display(value_display),
