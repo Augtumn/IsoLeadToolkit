@@ -113,3 +113,19 @@ def set_language(language: str) -> bool:
     if callable(notify):
         notify()
     return True
+
+
+def translation_table(language: str) -> Dict[str, str]:
+    """Read-only view of the loaded table for *language*.
+
+    The UI layer needs the table itself to translate a widget tree in place by matching the
+    text it already shows, which is how the panels pick up a language switch without being
+    rebuilt or tagged one widget at a time.
+    """
+    ensure_language(language)
+    return dict(_TRANSLATIONS.get(language, {}))
+
+
+def default_language() -> str:
+    """The language whose texts are the lookup keys."""
+    return _FALLBACK_LANGUAGE

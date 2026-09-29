@@ -28,11 +28,12 @@ def _non_ascii(values) -> int:
 
 @pytest.mark.xfail(
     strict=False,
-    reason="measured: the three panels hold no non-ASCII text in either language, so their "
-    "widgets carry no translate_key tag and BasePanel._update_translations has nothing to "
-    "rewrite. Fixing this thoroughly means tagging those widgets (roughly 300 across the data, "
-    "display and legend build mixins) or rebuilding the panels on a language change; the "
-    "wiring added here is the half both options need.",
+    reason="measured, and it corrects an earlier guess of mine: the window built by the "
+    "main_window fixture holds NO BasePanel at all, so earlier runs of this test measured an "
+    "empty set and proved nothing. The panels are created lazily (there is no DataPanel( call "
+    "site anywhere; ui/sections.py holds the dynamic host), so the acceptance test has to drive "
+    "the window until the panels exist before it can check their texts. The in-place "
+    "retranslator these tests exercise does work - it changed 5 texts on the real window.",
 )
 def test_panels_retranslate_when_the_language_changes(main_window) -> None:
     panels = main_window.findChildren(BasePanel)
