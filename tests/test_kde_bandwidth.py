@@ -103,3 +103,21 @@ def test_the_joint_density_never_hands_seaborn_the_string_lscv() -> None:
 
     assert method != "lscv", "seaborn only accepts scott, silverman, a scalar or a callable"
     assert callable(method) or isinstance(method, (int, float))
+
+
+def test_the_marginal_never_keeps_a_stale_default_over_a_deliberate_main_rule() -> None:
+    """Saved styles store the old default; a deliberate main rule must still win.
+
+    The marginal reads its rule from a persisted style, so a value equal to the fallback is
+    leftover state rather than a choice - that is what made LSCV look inert on the marginals.
+    """
+    from visualization.plotting.kde import (
+        _KDE_AUTO_BW_METHOD_DEFAULT,
+        _resolve_bw_method,
+        _resolve_marginal_bandwidth_method,
+    )
+
+    from core import app_state
+
+    assert _resolve_marginal_bandwidth_method() == _resolve_bw_method(app_state.kde_bw_method)
+    assert str(_KDE_AUTO_BW_METHOD_DEFAULT).strip().lower() in ("scott", "silverman")

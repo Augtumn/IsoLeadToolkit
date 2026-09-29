@@ -98,10 +98,15 @@ def _resolve_marginal_bandwidth_method() -> str:
     explicit marginal setting still takes precedence, and the marginal keeps its own
     bw_adjust / absolute bandwidth because the curves are a different size on screen.
     """
+    main_rule = _resolve_bw_method(app_state.kde_bw_method)
     explicit = str(app_state.marginal_kde_auto_bandwidth_method or "").strip().lower()
-    if explicit and explicit not in ("auto", "default"):
-        return _resolve_auto_bandwidth_method(explicit)
-    return _resolve_bw_method(app_state.kde_bw_method)
+    if explicit in ("", "auto", "default"):
+        return main_rule
+    # A value equal to the fallback is style state left over from before this option existed,
+    # not a choice: if the joint density uses something else deliberately, follow it.
+    if explicit == str(_KDE_AUTO_BW_METHOD_DEFAULT).strip().lower():
+        return main_rule
+    return _resolve_auto_bandwidth_method(explicit)
 
 
 def _resolve_kernel_bandwidth(
@@ -445,6 +450,14 @@ def draw_marginal_kde(
     cut = max(0.0, min(float(style.get('cut', _KDE_CUT_DEFAULT)), 5.0))
     log_transform = bool(style.get('log_transform', False))
     max_points = max(200, min(max_points, 50000))
+
+    logger.info(
+        "Marginal KDE: rule=%s, absolute bandwidth=%s, bw_adjust=%.2f, gridsize=%d.",
+        auto_bandwidth_method,
+        f"{bandwidth:g}" if bandwidth > 0.0 else "none (rule decides)",
+        bw_adjust,
+        gridsize,
+    )
 
     x_peaks: list[float] = []
     y_peaks: list[float] = []
