@@ -228,6 +228,9 @@ def _normalize_kde_kernel(value: Any) -> str:
 
 
 def _normalize_kde_auto_bandwidth_method(value: Any) -> str:
+    # LSCV is the data-driven rule offered beside the two rules of thumb.
+    if str(value or "").strip().lower() == "lscv":
+        return "lscv"
     text = str(value or MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD).strip().lower()
     return (
         text

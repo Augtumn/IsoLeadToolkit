@@ -166,6 +166,9 @@ class DisplayPanelKdeStyleMixin:
             kde_bw_method_combo.setObjectName('kde_bw_method_combo')
             for method_name in ('scott', 'silverman'):
                 kde_bw_method_combo.addItem(method_name, method_name)
+            # Data-driven rule: least-squares cross-validation. Offered beside the two rules of
+            # thumb, and (unlike them) it looks at the sample rather than assuming a shape.
+            kde_bw_method_combo.addItem(translate("LSCV (cross-validation)"), "lscv")
             kde_bw_method_combo.setCurrentIndex(
                 max(0, kde_bw_method_combo.findData(str(app_state.kde_bw_method)))
             )
@@ -352,6 +355,7 @@ class DisplayPanelKdeStyleMixin:
             auto_bw_method_combo = QComboBox()
             auto_bw_method_combo.addItem(translate("Scott"), "scott")
             auto_bw_method_combo.addItem(translate("Silverman"), "silverman")
+            auto_bw_method_combo.addItem(translate("LSCV (cross-validation)"), "lscv")
             current_auto_bw_method = str(
                 getattr(
                     app_state,
@@ -371,7 +375,7 @@ class DisplayPanelKdeStyleMixin:
 
             auto_bw_hint = QLabel(
                 translate(
-                    "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data."
+                    "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data; LSCV chooses the bandwidth from the sample itself, which can undersmooth small, clustered groups."
                 )
             )
             auto_bw_hint.setWordWrap(True)

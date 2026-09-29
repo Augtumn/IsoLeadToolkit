@@ -151,6 +151,12 @@ class MainWindowLegendCoreMixin:
         """Re-stack the plot from the legend order, then the tooltip on top."""
         self._apply_legend_z_order_inner()
         raise_tooltip_above_data(app_state.ax, app_state.annotation)
+        try:
+            figure = app_state.fig
+            if figure is not None and figure.canvas is not None:
+                figure.canvas.draw_idle()
+        except Exception as err:
+            logger.warning("Could not redraw after a legend restack: %s", err)
 
     def _apply_legend_z_order_inner(self):
         if not self._legend_list is not None or self._legend_list is None:
@@ -191,6 +197,24 @@ class MainWindowLegendCoreMixin:
         overlay_map = app_state.overlay_artists or {}
         group_map = app_state.group_to_scatter or {}
 
+        # Density overlays tag their artists with the group they belong to
+        # (visualization/plotting/rendering/kde.py). Stack them from the legend too, half a
+        # slot below their own scatter so the points stay readable - their z-order is baked
+        # in at draw time, which is why dragging a legend row used to leave the density
+        # stacked the old way.
+        density_artists: dict[str, list] = {}
+        for artist in ax.get_children():
+            group_key = getattr(artist, "_legend_group", None)
+            if group_key is not None:
+                density_artists.setdefault(group_key, []).append(artist)
+
+        def _stack_density(group_key, slot):
+            for artist in density_artists.get(group_key, ()):
+                try:
+                    artist.set_zorder(slot - 0.5)
+                except Exception as err:
+                    logger.warning("Could not restack a density artist: %s", err)
+
         # Parent groups form stacking blocks: a top-level parent row occupies
         # one z-slot shared by ALL descendant groups (nested parents expand
         # recursively), so dragging the parent row moves the whole merged
@@ -217,6 +241,7 @@ class MainWindowLegendCoreMixin:
                             artist.set_zorder(target_z)
                         except Exception as err:
                             logger.warning("_apply_legend_z_order_inner failed: %s", err)
+                    _stack_density(child, target_z)
             elif entry_type == "group":
                 if entry_key in handled_children:
                     # Z-order of children is decided by their parent row.
@@ -227,6 +252,7 @@ class MainWindowLegendCoreMixin:
                         artist.set_zorder(target_z)
                     except Exception as err:
                         logger.warning("_apply_legend_z_order_inner failed: %s", err)
+                _stack_density(entry_key, target_z)
             elif entry_type == "overlay":
                 for artist in self._overlay_artists_for_style(entry_key, overlay_map=overlay_map):
                     try:

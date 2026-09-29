@@ -30,6 +30,240 @@ def _resolve_kde_style(target: str = 'kde') -> dict[str, Any]:
     return ensure_line_style(app_state, style_key, fallback)
 
 
+def _ternary_kde_window(x, y, span_fraction=0.25):
+    """Grid window that follows the data, in the axes' Cartesian frame.
+
+    A grid covering the whole simplex is far too coarse for a tight cluster: once the KDE
+    bandwidth is smaller than the grid step the sampled density collapses onto a handful of
+    cells and the iso-lines trace their outline - the diamond-shaped contours this used to
+    draw. Following the data (plus padding) keeps the resolution where the density actually
+    is, which is also what seaborn does when it picks its own grid.
+    """
+    import numpy as _np
+
+    x_values = _np.asarray(x, dtype=float)
+    y_values = _np.asarray(y, dtype=float)
+    x_min, x_max = float(_np.min(x_values)), float(_np.max(x_values))
+    y_min, y_max = float(_np.min(y_values)), float(_np.max(y_values))
+    pad_x = max(span_fraction * (x_max - x_min), 2e-3)
+    pad_y = max(span_fraction * (y_max - y_min), 2e-3)
+    return x_min - pad_x, x_max + pad_x, y_min - pad_y, y_max + pad_y
+
+
+def _ternary_kde_estimator(points, bw_method):
+    """A gaussian_kde for ternary points, tolerating nearly collinear groups.
+
+    Pb isotope groups follow mixing lines, so their sample covariance can be singular and
+    gaussian_kde refuses to build. The retry adds jitter three orders of magnitude below the
+    group's own spread, seeded from the group mean so a redraw gives the same picture.
+    """
+    from scipy.stats import gaussian_kde
+
+    try:
+        return gaussian_kde(points.T, bw_method=bw_method)
+    except Exception as err:
+        spread = float(np.max(np.ptp(points, axis=0)))
+        jitter = max(spread, 1e-3) * 1e-3
+        seed = abs(hash(tuple(np.round(points.mean(axis=0), 6)))) % 2**32
+        rng = np.random.default_rng(seed)
+        logger.warning(
+            "Ternary KDE covariance is singular (%s); retrying with jitter %.2e.", err, jitter
+        )
+        return gaussian_kde(
+            (points + rng.normal(0.0, jitter, points.shape)).T, bw_method=bw_method
+        )
+
+
+def _ternary_peak(t_values, l_values, r_values):
+    """Peak density of one group, for the shared colour scale of common_norm.
+
+    Cheap pre-pass: it evaluates the same estimator on the same data-following grid and
+    returns only the maximum, so the drawing pass can colour every group against the largest
+    peak instead of each group against its own.
+    """
+    from scipy.stats import gaussian_kde
+
+    t = np.asarray(t_values, dtype=float)
+    l = np.asarray(l_values, dtype=float)
+    r = np.asarray(r_values, dtype=float)
+    points = np.column_stack([(r - l) / np.sqrt(3.0), t])
+    if points.shape[0] < 3:
+        return 0.0
+    try:
+        kde = _ternary_kde_estimator(points, "scott")
+        options = kde_compute_kwargs()
+        adjust = float(options.get("bw_adjust", 1.0) or 1.0)
+        if adjust != 1.0:
+            kde.set_bandwidth(kde.factor * adjust)
+    except Exception as err:
+        logger.warning("Ternary KDE peak pre-pass failed: %s", err)
+        return 0.0
+    limit = 1.0 / np.sqrt(3.0)
+    x0, x1, y0, y1 = _ternary_kde_window(points[:, 0], points[:, 1])
+    x0, x1 = max(x0, -limit), min(x1, limit)
+    y0, y1 = max(y0, 0.0), min(y1, 1.0)
+    xs = np.linspace(x0, x1, 120)
+    ys = np.linspace(y0, y1, 120)
+    grid_x, grid_y = np.meshgrid(xs, ys)
+    inside = np.abs(grid_x) <= (1.0 - grid_y) / np.sqrt(3.0)
+    if not np.any(inside):
+        return 0.0
+    density = kde(np.vstack([grid_x[inside], grid_y[inside]]))
+    return float(np.max(density)) if density.size else 0.0
+
+
+def _tag_legend_group(contour_set, group) -> None:
+    """Mark the artists of *contour_set* with the group they belong to.
+
+    The legend owns the stacking order (ui/main_window_parts/legend_core.py applies it to the
+    scatter artists). Tagging the density artists with the same group key lets that code stack
+    the densities the way the legend lists them instead of leaving them at one fixed z-order.
+    """
+    if group is None or contour_set is None:
+        return
+    for artist in getattr(contour_set, "collections", [contour_set]):
+        try:
+            artist._legend_group = group
+        except Exception as err:  # pragma: no cover - artists accept attributes
+            logger.warning("Could not tag a ternary KDE artist: %s", err)
+
+
+def _draw_ternary_kde(
+    axes, t_values, l_values, r_values, color, levels, fill, alpha,
+    zorder_base=1.0, group=None, shared_peak=None,
+) -> bool:
+    """Density contours for a ternary plot, drawn in the axes' Cartesian frame.
+
+    An mpltern axes has its own Cartesian data space: the triangle vertices are (0, 1),
+    (-1/sqrt(3), 0) and (+1/sqrt(3), 0), so a composition (t, l, r) sits at
+    x = (r - l)/sqrt(3), y = t (mpltern's "Cartesian coordinates" example). Estimating the
+    density on a rectangular grid in that frame and drawing it with transform=ax.transData
+    gives smooth iso-lines.
+
+    Two earlier attempts failed for instructive reasons: handing Cartesian data to
+    ax.contour without the transform draws nothing (the axes read the arrays as (t, l, r)),
+    and going through tricontour on a simplex grid makes the iso-lines follow triangle edges,
+    which looks like concentric hexagons.
+    """
+    from scipy.stats import gaussian_kde
+
+    t = np.asarray(t_values, dtype=float)
+    l = np.asarray(l_values, dtype=float)
+    r = np.asarray(r_values, dtype=float)
+    points = np.column_stack([(r - l) / np.sqrt(3.0), t])
+    if points.shape[0] < 3:
+        return False
+    options = kde_compute_kwargs()
+    rule = options.get("bw_method", "scott")
+    if rule == "lscv":
+        from visualization.plotting.kde_bandwidth import lscv_bw_method
+
+        rule = lscv_bw_method()
+    try:
+        kde = _ternary_kde_estimator(points, rule)
+        bw_adjust = float(options.get("bw_adjust", 1.0) or 1.0)
+        if bw_adjust != 1.0:
+            kde.set_bandwidth(kde.factor * bw_adjust)
+    except Exception as err:
+        logger.warning("Ternary KDE estimator failed: %s", err)
+        return False
+
+    limit = 1.0 / np.sqrt(3.0)
+    x0, x1, y0, y1 = _ternary_kde_window(points[:, 0], points[:, 1])
+    x0, x1 = max(x0, -limit), min(x1, limit)
+    y0, y1 = max(y0, 0.0), min(y1, 1.0)
+    resolution = max(32, min(int(options.get("gridsize", 200)), 1024))
+    xs = np.linspace(x0, x1, resolution)
+    ys = np.linspace(y0, y1, resolution)
+    grid_x, grid_y = np.meshgrid(xs, ys)
+    # Outside the simplex the density stays NaN, so the contours stop at the edges.
+    inside = np.abs(grid_x) <= (1.0 - grid_y) / np.sqrt(3.0)
+    if not np.any(inside):
+        return False
+    density = np.full(grid_x.shape, np.nan)
+    density[inside] = kde(np.vstack([grid_x[inside], grid_y[inside]]))
+    peak = float(np.nanmax(density))
+    if not np.isfinite(peak) or peak <= 0.0:
+        return False
+    # Iso-probability levels, as seaborn uses: the level for a fraction f is the density
+    # above which the integral holds (1 - f) of the mass, so the outermost contour encloses
+    # roughly the data. Peak-relative levels (fractions of the maximum) all sit near the mode
+    # and produce contours far smaller than the group they describe.
+    lowest = max(0.05, min(float(options.get("thresh", 0.05) or 0.05), 0.9))
+    fractions = np.linspace(lowest, 0.9, max(2, int(levels)))
+    finite = np.sort(density[np.isfinite(density)])[::-1]
+    cumulative = np.cumsum(finite)
+    if cumulative.size and cumulative[-1] > 0.0:
+        # Ascending and deduplicated: contours require strictly increasing levels, and the
+        # thresholds taken by probability are naturally descending.
+        level_values = np.unique(
+            np.sort(
+                np.array(
+                    [finite[min(int(np.searchsorted(cumulative, f * cumulative[-1])), finite.size - 1)]
+                     for f in fractions]
+                )
+            )
+        )
+    else:
+        level_values = peak * fractions
+    if level_values.size < 2:
+        level_values = peak * np.linspace(lowest, 0.9, max(2, int(levels)))
+    # Stated in the log so a running instance can be told apart from a stale one: this line
+    # only exists in the Cartesian-frame implementation.
+    spacing = float(np.mean(np.diff(xs))) if xs.size > 1 else 0.0
+    try:
+        bandwidth = float(np.sqrt(np.max(np.linalg.eigvalsh(kde.covariance))))
+    except Exception:
+        bandwidth = 0.0
+    if spacing > 0.0 and bandwidth and bandwidth < 2.0 * spacing:
+        # The density then lives in one or two grid steps and the picture shows the grid
+        # rather than the data; raising bw_adjust is the honest fix.
+        logger.warning(
+            "Ternary KDE bandwidth (%.4f) is below two grid steps (%.4f): raise the "
+            "bandwidth option (bw_adjust) for a smoother density.",
+            bandwidth, spacing,
+        )
+    logger.info(
+        "Ternary KDE: grid %dx%d over x=[%.3f, %.3f] y=[%.3f, %.3f], %d levels, fill=%s.",
+        grid_x.shape[1], grid_x.shape[0], x0, x1, y0, y1, len(level_values), fill,
+    )
+    try:
+        if fill:
+            from matplotlib.colors import LinearSegmentedColormap, to_rgb
+
+            base = to_rgb(color)
+            gradient = LinearSegmentedColormap.from_list(
+                "ternary_kde", [(1.0, 1.0, 1.0, 0.0), (base[0], base[1], base[2], 1.0)]
+            )
+            # The fill uses the same iso-probability levels as the lines. Filling at fixed
+            # fractions of the peak (as this used to) draws one set of concentric rings per
+            # sample whenever the bandwidth is small - the ripple pattern reported from the
+            # app - because every bump in the density gets its own bands.
+            # Start at the outermost iso-probability level, never at zero: filling from zero
+            # paints the whole grid window, whose straight edges show up as the rectangular
+            # background reported from the app.
+            fill_levels = np.unique(np.concatenate([level_values, [peak]]))
+            # With common_norm the fill is coloured against the same top value for every
+            # group, so densities can be compared across groups; otherwise each group is
+            # scaled to its own peak (seaborn's common_norm=False).
+            filled = axes.contourf(
+                grid_x, grid_y, density, levels=fill_levels, cmap=gradient,
+                alpha=alpha, antialiased=True, transform=axes.transData,
+                zorder=zorder_base, vmin=0.0, vmax=float(shared_peak or peak),
+            )
+            _tag_legend_group(filled, group)
+        lines = axes.contour(
+            grid_x, grid_y, density, levels=level_values, colors=[color], linewidths=0.7,
+            alpha=min(1.0, alpha + 0.3), transform=axes.transData,
+            zorder=zorder_base + 0.005,
+        )
+        _tag_legend_group(lines, group)
+    except Exception as err:
+        logger.warning("Ternary KDE contours failed: %s", err)
+        return False
+    return True
+
+
 def _render_kde_overlay(
     actual_algorithm: str,
     df_plot: Any,
@@ -43,7 +277,28 @@ def _render_kde_overlay(
         kde_utils.lazy_import_seaborn()
         if actual_algorithm == 'TERNARY':
             logger.info("Generating KDE for Ternary Plot...")
-            for cat in unique_cats:
+            _common_peak = None
+            if bool(kde_compute_kwargs().get("common_norm", False)):
+                _peaks = []
+                for _cat in unique_cats:
+                    _subset = df_plot[df_plot[group_col] == _cat]
+                    if _subset.empty:
+                        continue
+                    if {'_emb_tn', '_emb_ln', '_emb_rn'}.issubset(_subset.columns):
+                        _peaks.append(_ternary_peak(
+                            _subset['_emb_tn'].to_numpy(dtype=float), None,
+                            _subset['_emb_rn'].to_numpy(dtype=float),
+                        ))
+                    else:
+                        _t_pre, _l_pre, _r_pre = prepare_ternary_components(
+                            _subset['_emb_t'].to_numpy(dtype=float),
+                            _subset['_emb_l'].to_numpy(dtype=float),
+                            _subset['_emb_r'].to_numpy(dtype=float),
+                        )
+                        _peaks.append(_ternary_peak(_t_pre, _l_pre, _r_pre))
+                _common_peak = max(_peaks) if _peaks else None
+                logger.info("Ternary KDE common_norm: shared peak %.6g.", _common_peak or 0.0)
+            for index, cat in enumerate(unique_cats):
                 subset = df_plot[df_plot[group_col] == cat].copy()
                 if subset.empty:
                     continue
@@ -57,35 +312,29 @@ def _render_kde_overlay(
                     rs = subset['_emb_r'].to_numpy(dtype=float)
                     t_norm, _, r_norm = prepare_ternary_components(ts, ls, rs)
 
-                x_cart = 0.5 * t_norm + r_norm
-                y_cart = (np.sqrt(3.0) / 2.0) * t_norm
-
                 kde_style = _resolve_kde_style('kde')
                 kde_fill = bool(kde_style.get('fill', True))
-                kde_kwargs: dict[str, Any] = {
-                    'levels': int(kde_style.get('levels', 10)),
-                    'fill': kde_fill,
-                    'alpha': float(kde_style.get('alpha', 0.6)),
-                    'legend': False,
-                    'zorder': 1,
-                    # Bandwidth, grid, threshold, clip range and the
-                    # normalisation/singular-warning switches come from the KDE
-                    # computation options (per-group normalisation is the
-                    # default: with common_norm a tight-spike group scales down
-                    # every other group's contours).
-                    **kde_compute_kwargs(),
-                }
-                if not kde_fill:
-                    # seaborn warns when 'linewidth' is passed to filled
-                    # contours; only pass 'linewidths' for line-only contours.
-                    kde_kwargs['linewidths'] = float(kde_style.get('linewidth', 1.0))
-                kde_utils.sns.kdeplot(
-                    x=x_cart,
-                    y=y_cart,
-                    color=new_palette[cat],
-                    ax=app_state.ax,
-                    **kde_kwargs,
+                logger.info(
+                    "Ternary KDE group %s: n=%d (Scott/Silverman bandwidth x %.2f).",
+                    cat, len(t_norm), float(kde_compute_kwargs().get("bw_adjust", 1.0) or 1.0),
                 )
+                if len(t_norm) < 5:
+                    logger.warning(
+                        "Ternary KDE for group %s uses only %d sample(s): the shape is "
+                        "dominated by the bandwidth, not by the data.",
+                        cat, len(t_norm),
+                    )
+                if not _draw_ternary_kde(
+                    app_state.ax, t_norm, 1.0 - t_norm - r_norm, r_norm, new_palette[cat],
+                    int(kde_style.get('levels', 10)), kde_fill,
+                    float(kde_style.get('alpha', 0.6)),
+                    zorder_base=1.0 + index * 0.01, group=cat,
+                    shared_peak=_common_peak,
+                ):
+                    logger.warning(
+                        "Ternary KDE skipped for group %s (too few points or bad density).",
+                        cat,
+                    )
         else:
             logger.info("Generating KDE for %s...", actual_algorithm)
             kde_style = _resolve_kde_style('kde')
