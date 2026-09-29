@@ -57,6 +57,7 @@ def zoom_ternary(axes: Any, factor: float, t: float, l: float, r: float) -> tupl
         new_low, new_high = zoom_pair(low, high, factor, anchor)
         limits.extend(_clamp_window(new_low, new_high))
     axes.set_ternary_lim(*limits)
+    _relabel_after_zoom(axes, limits)
     return tuple(limits)
 
 
@@ -66,7 +67,18 @@ def pan_ternary(axes: Any, shift: float) -> tuple[float, ...]:
     for low, high in (axes.get_tlim(), axes.get_llim(), axes.get_rlim()):
         limits.extend(_clamp_window(low + shift, high + shift))
     axes.set_ternary_lim(*limits)
+    _relabel_after_zoom(axes, limits)
     return tuple(limits)
+
+
+def _relabel_after_zoom(axes: Any, limits) -> None:
+    """Keep the raw tick labels in step with the view after a wheel zoom or a pan."""
+    try:
+        from visualization.plotting.ternary import relabel_ternary_ticks
+
+        relabel_ternary_ticks(axes, limits)
+    except Exception as err:  # pragma: no cover - cosmetic, never break the zoom
+        logger.warning("Could not relabel ternary ticks after zooming: %s", err)
 
 
 def is_ternary_axes(axes: Any) -> bool:

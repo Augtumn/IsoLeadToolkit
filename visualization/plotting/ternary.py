@@ -320,6 +320,7 @@ def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display:
         return 0
 
     changed = 0
+    scales: dict = {}
     for name, norm, raw, low, high in zip(
         ("t", "l", "r"), normalized, raw_values, limits[0::2], limits[1::2]
     ):
@@ -338,11 +339,49 @@ def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display:
         try:
             axis.set_ticks([value / scale for value in values])
             axis.set_ticklabels([f"{value:.2f}" for value in values])
+            scales[name] = scale
             changed += 1
         except Exception as err:
             logger.warning("Could not relabel the %s axis in raw units: %s", name, err)
         except Exception as err:
             logger.warning("Could not relabel the %s axis in raw units: %s", name, err)
+    if scales:
+        # Cached because the factors depend on the data alone, never on the zoom: the wheel and
+        # magnifier paths relabel from this instead of reaching for the data again.
+        setattr(ax, "_ternary_raw_scales", scales)
+    return changed
+
+
+def relabel_ternary_ticks(ax: Any, limits, mode: str | None = None) -> int:
+    """Redraw the raw tick labels for a new view range.
+
+    Zooming changes set_ternary_lim without going through configure_ternary_axis, so the labels
+    used to keep the numbers of the previous view - the axis length is fixed, the labels have to
+    follow the zoom. The per-axis factors cached at render time supply the mapping.
+    """
+    if ax is None or limits is None or len(limits) != 6:
+        return 0
+    scales = getattr(ax, "_ternary_raw_scales", None)
+    if not scales or resolve_ternary_value_display(mode) != "raw":
+        return 0
+    changed = 0
+    for name, low, high in zip(("t", "l", "r"), limits[0::2], limits[1::2]):
+        axis = getattr(ax, f"{name}axis", None)
+        scale = scales.get(name)
+        if axis is None or not scale:
+            continue
+        low, high = float(low), float(high)
+        if high <= low:
+            continue
+        values = _raw_tick_values(low * scale, high * scale)
+        if len(values) < 2:
+            continue
+        try:
+            axis.set_ticks([value / scale for value in values])
+            axis.set_ticklabels([f"{value:.2f}" for value in values])
+            changed += 1
+        except Exception as err:
+            logger.warning("Could not relabel the %s axis after a zoom: %s", name, err)
     return changed
 
 
