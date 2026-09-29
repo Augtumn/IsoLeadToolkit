@@ -86,6 +86,12 @@ def bandwidth_for(
     if not np.isfinite(std) or std <= 1e-12:
         std = 1.0
 
+    # Idempotent on purpose: kde_compute_kwargs already converts the rule, and the ternary path
+    # converted again. resolve_rule does not know a callable, so it fell back to Scott and LSCV
+    # silently did nothing there. Anything scipy already accepts is passed through untouched.
+    if callable(rule) or isinstance(rule, (int, float)) and not isinstance(rule, bool):
+        return rule
+
     name = resolve_rule(rule)
     if name == "lscv":
         shaped = data[:, None] if np.ndim(data) == 1 else data
@@ -108,6 +114,12 @@ def scipy_bw_method(rule: str):
     which was caught and turned into a missing curve: that is why the marginal KDE vanished when
     LSCV was selected, and why the 2-D overlay failed to render at all.
     """
+    # Idempotent on purpose: kde_compute_kwargs already converts the rule and the ternary
+    # path converted it again. resolve_rule does not know a callable, so it fell back to
+    # Scott and LSCV silently did nothing there. Anything scipy already accepts passes through.
+    if callable(rule) or (isinstance(rule, (int, float)) and not isinstance(rule, bool)):
+        return rule
+
     name = resolve_rule(rule)
     if name == "lscv":
         from visualization.plotting.kde_bandwidth import lscv_bw_method

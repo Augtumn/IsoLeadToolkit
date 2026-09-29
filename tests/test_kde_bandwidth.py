@@ -159,3 +159,31 @@ def test_the_scipy_bandwidth_form_never_carries_the_rule_name() -> None:
     assert scipy_bw_method("silverman") == "silverman"
     method = scipy_bw_method("lscv")
     assert method != "lscv" and callable(method)
+
+
+def test_the_bandwidth_helper_is_idempotent() -> None:
+    """Regression: the ternary path converts twice, and the second conversion lost LSCV.
+
+    kde_compute_kwargs already turns "lscv" into the callable scipy needs; the ternary estimator
+    handed that callable back to the same helper, resolve_rule did not recognise it, and the rule
+    silently became Scott - so selecting LSCV changed nothing on a ternary plot (measured factor
+    0.5407 instead of 0.1260 for 40 samples). Anything scipy already accepts must pass through.
+    """
+    from scipy.stats import gaussian_kde
+
+    import numpy as np
+
+    from visualization.plotting.kde_common import scipy_bw_method
+
+    once = scipy_bw_method("lscv")
+    assert callable(once) or isinstance(once, (int, float)), once
+
+    twice = scipy_bw_method(once)
+    assert twice == once or twice is once, f"the helper is not idempotent: {once!r} -> {twice!r}"
+
+    points = np.random.default_rng(0).normal(0.2, 0.01, (40, 2))
+    lscv_factor = gaussian_kde(points.T, bw_method=twice).factor
+    scott_factor = gaussian_kde(points.T, bw_method="scott").factor
+    assert abs(lscv_factor - scott_factor) > 1e-9, (
+        f"LSCV collapsed into Scott: {lscv_factor} vs {scott_factor}"
+    )
