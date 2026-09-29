@@ -74,6 +74,44 @@ def _ternary_kde_estimator(points, bw_method):
         )
 
 
+def _ternary_peak(t_values, l_values, r_values):
+    """Peak density of one group, for the shared colour scale of common_norm.
+
+    Cheap pre-pass: it evaluates the same estimator on the same data-following grid and
+    returns only the maximum, so the drawing pass can colour every group against the largest
+    peak instead of each group against its own.
+    """
+    from scipy.stats import gaussian_kde
+
+    t = np.asarray(t_values, dtype=float)
+    l = np.asarray(l_values, dtype=float)
+    r = np.asarray(r_values, dtype=float)
+    points = np.column_stack([(r - l) / np.sqrt(3.0), t])
+    if points.shape[0] < 3:
+        return 0.0
+    try:
+        kde = _ternary_kde_estimator(points, "scott")
+        options = kde_compute_kwargs()
+        adjust = float(options.get("bw_adjust", 1.0) or 1.0)
+        if adjust != 1.0:
+            kde.set_bandwidth(kde.factor * adjust)
+    except Exception as err:
+        logger.warning("Ternary KDE peak pre-pass failed: %s", err)
+        return 0.0
+    limit = 1.0 / np.sqrt(3.0)
+    x0, x1, y0, y1 = _ternary_kde_window(points[:, 0], points[:, 1])
+    x0, x1 = max(x0, -limit), min(x1, limit)
+    y0, y1 = max(y0, 0.0), min(y1, 1.0)
+    xs = np.linspace(x0, x1, 120)
+    ys = np.linspace(y0, y1, 120)
+    grid_x, grid_y = np.meshgrid(xs, ys)
+    inside = np.abs(grid_x) <= (1.0 - grid_y) / np.sqrt(3.0)
+    if not np.any(inside):
+        return 0.0
+    density = kde(np.vstack([grid_x[inside], grid_y[inside]]))
+    return float(np.max(density)) if density.size else 0.0
+
+
 def _tag_legend_group(contour_set, group) -> None:
     """Mark the artists of *contour_set* with the group they belong to.
 
@@ -92,7 +130,7 @@ def _tag_legend_group(contour_set, group) -> None:
 
 def _draw_ternary_kde(
     axes, t_values, l_values, r_values, color, levels, fill, alpha,
-    zorder_base=1.0, group=None,
+    zorder_base=1.0, group=None, shared_peak=None,
 ) -> bool:
     """Density contours for a ternary plot, drawn in the axes' Cartesian frame.
 
@@ -146,7 +184,7 @@ def _draw_ternary_kde(
     # above which the integral holds (1 - f) of the mass, so the outermost contour encloses
     # roughly the data. Peak-relative levels (fractions of the maximum) all sit near the mode
     # and produce contours far smaller than the group they describe.
-    lowest = max(0.1, min(float(options.get("thresh", 0.1) or 0.1), 0.9))
+    lowest = max(0.05, min(float(options.get("thresh", 0.05) or 0.05), 0.9))
     fractions = np.linspace(lowest, 0.9, max(2, int(levels)))
     finite = np.sort(density[np.isfinite(density)])[::-1]
     cumulative = np.cumsum(finite)
@@ -200,10 +238,13 @@ def _draw_ternary_kde(
             # paints the whole grid window, whose straight edges show up as the rectangular
             # background reported from the app.
             fill_levels = np.unique(np.concatenate([level_values, [peak]]))
+            # With common_norm the fill is coloured against the same top value for every
+            # group, so densities can be compared across groups; otherwise each group is
+            # scaled to its own peak (seaborn's common_norm=False).
             filled = axes.contourf(
                 grid_x, grid_y, density, levels=fill_levels, cmap=gradient,
                 alpha=alpha, antialiased=True, transform=axes.transData,
-                zorder=zorder_base,
+                zorder=zorder_base, vmin=0.0, vmax=float(shared_peak or peak),
             )
             _tag_legend_group(filled, group)
         lines = axes.contour(
@@ -231,6 +272,27 @@ def _render_kde_overlay(
         kde_utils.lazy_import_seaborn()
         if actual_algorithm == 'TERNARY':
             logger.info("Generating KDE for Ternary Plot...")
+            _common_peak = None
+            if bool(kde_compute_kwargs().get("common_norm", False)):
+                _peaks = []
+                for _cat in unique_cats:
+                    _subset = df_plot[df_plot[group_col] == _cat]
+                    if _subset.empty:
+                        continue
+                    if {'_emb_tn', '_emb_ln', '_emb_rn'}.issubset(_subset.columns):
+                        _peaks.append(_ternary_peak(
+                            _subset['_emb_tn'].to_numpy(dtype=float), None,
+                            _subset['_emb_rn'].to_numpy(dtype=float),
+                        ))
+                    else:
+                        _t_pre, _l_pre, _r_pre = prepare_ternary_components(
+                            _subset['_emb_t'].to_numpy(dtype=float),
+                            _subset['_emb_l'].to_numpy(dtype=float),
+                            _subset['_emb_r'].to_numpy(dtype=float),
+                        )
+                        _peaks.append(_ternary_peak(_t_pre, _l_pre, _r_pre))
+                _common_peak = max(_peaks) if _peaks else None
+                logger.info("Ternary KDE common_norm: shared peak %.6g.", _common_peak or 0.0)
             for index, cat in enumerate(unique_cats):
                 subset = df_plot[df_plot[group_col] == cat].copy()
                 if subset.empty:
@@ -247,6 +309,10 @@ def _render_kde_overlay(
 
                 kde_style = _resolve_kde_style('kde')
                 kde_fill = bool(kde_style.get('fill', True))
+                logger.info(
+                    "Ternary KDE group %s: n=%d (Scott/Silverman bandwidth x %.2f).",
+                    cat, len(t_norm), float(kde_compute_kwargs().get("bw_adjust", 1.0) or 1.0),
+                )
                 if len(t_norm) < 5:
                     logger.warning(
                         "Ternary KDE for group %s uses only %d sample(s): the shape is "
@@ -258,6 +324,7 @@ def _render_kde_overlay(
                     int(kde_style.get('levels', 10)), kde_fill,
                     float(kde_style.get('alpha', 0.6)),
                     zorder_base=1.0 + index * 0.01, group=cat,
+                    shared_peak=_common_peak,
                 ):
                     logger.warning(
                         "Ternary KDE skipped for group %s (too few points or bad density).",

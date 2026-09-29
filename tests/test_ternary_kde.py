@@ -87,3 +87,48 @@ def test_marginal_kde_is_skipped_on_ternary(ternary_axes) -> None:
         state_gateway.set_show_marginal_kde(False)
 
     assert app_state.marginal_axes is None
+
+
+def test_common_norm_shares_the_colour_scale(ternary_axes, monkeypatch) -> None:
+    """With common_norm every group is drawn against one shared peak.
+
+    The assertion watches the value handed to the drawer: contourf overwrites the norm's vmax
+    with the group's own level maximum, so the colour scale cannot be read back from the
+    artists.
+    """
+    seen: list = []
+    original = kde_render._draw_ternary_kde
+
+    def _capture(*args, **kwargs):
+        seen.append(kwargs.get("shared_peak"))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(kde_render, "_draw_ternary_kde", _capture)
+    state_gateway.set_kde_compute_options(common_norm=True)
+    try:
+        kde_render._render_kde_overlay(
+            "TERNARY", _frame(), "Province", ["A", "B"], {"A": "#d62728", "B": "#1f77b4"}
+        )
+    finally:
+        state_gateway.set_kde_compute_options(common_norm=False)
+
+    assert seen, "no group reached the drawer"
+    assert all(value is not None for value in seen), f"no shared peak was passed: {seen}"
+    assert len(set(seen)) == 1, f"groups were scaled differently: {seen}"
+
+
+def test_without_common_norm_each_group_keeps_its_own_scale(ternary_axes, monkeypatch) -> None:
+    seen: list = []
+    original = kde_render._draw_ternary_kde
+
+    def _capture(*args, **kwargs):
+        seen.append(kwargs.get("shared_peak"))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(kde_render, "_draw_ternary_kde", _capture)
+    state_gateway.set_kde_compute_options(common_norm=False)
+    kde_render._render_kde_overlay(
+        "TERNARY", _frame(), "Province", ["A", "B"], {"A": "#d62728", "B": "#1f77b4"}
+    )
+
+    assert seen and all(value is None for value in seen), f"unexpected shared peak: {seen}"
