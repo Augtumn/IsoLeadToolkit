@@ -26,7 +26,10 @@ _DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 class DisplayThemeMixin:
     """Theme management methods for display panel."""
-    findChildren = None
+    # NOTE: do not declare findChildren here. It shadows QWidget.findChildren, so
+    # self.findChildren became None: theme application never blocked any signal (one full
+    # style commit per widget instead of one) and BasePanel._update_translations raised
+    # TypeError, which aborted the main window's per-panel translation loop.
 
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
