@@ -76,7 +76,7 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.selected_3d_cols = []
     state.selected_ternary_cols = []
     state.ternary_auto_zoom = True
-    state.ternary_limit_mode = 'min'
+    state.ternary_limit_mode = 'both'
     state.ternary_manual_limits_enabled = False
     state.ternary_manual_limits = {
         'tmin': 0.0,

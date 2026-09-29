@@ -69,7 +69,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "ternary_limit_mode",
-        'min',
+        'both',
         normalize=coercers._as_str,
         copy=coercers._as_str,
         holder=None,
