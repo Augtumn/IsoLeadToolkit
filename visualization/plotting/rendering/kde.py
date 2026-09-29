@@ -30,19 +30,26 @@ def _resolve_kde_style(target: str = 'kde') -> dict[str, Any]:
     return ensure_line_style(app_state, style_key, fallback)
 
 
-def _draw_ternary_kde(axes, x_cart, y_cart, color, levels, fill, alpha) -> bool:
-    """Density contours for a ternary plot, in ternary coordinates.
+def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, alpha) -> bool:
+    """Density contours for a ternary plot, drawn in the axes' Cartesian frame.
 
-    seaborn's kdeplot cannot be used on an mpltern axes: it builds a Cartesian grid and
-    calls contour() with Cartesian data, which is why the ternary density never drew. The
-    density is evaluated on a grid that covers the simplex and then handed to mpltern's
-    tricontour/tricontourf, which take (t, l, r) coordinates.
+    An mpltern axes has its own Cartesian data space: the triangle vertices are (0, 1),
+    (-1/sqrt(3), 0) and (+1/sqrt(3), 0), so a composition (t, l, r) sits at
+    x = (r - l)/sqrt(3), y = t (mpltern's "Cartesian coordinates" example). Estimating the
+    density on a rectangular grid in that frame and drawing it with transform=ax.transData
+    gives smooth iso-lines.
+
+    Two earlier attempts failed for instructive reasons: handing Cartesian data to
+    ax.contour without the transform draws nothing (the axes read the arrays as (t, l, r)),
+    and going through tricontour on a simplex grid makes the iso-lines follow triangle edges,
+    which looks like concentric hexagons.
     """
     from scipy.stats import gaussian_kde
 
-    points = np.column_stack(
-        [np.asarray(x_cart, dtype=float), np.asarray(y_cart, dtype=float)]
-    )
+    t = np.asarray(t_values, dtype=float)
+    l = np.asarray(l_values, dtype=float)
+    r = np.asarray(r_values, dtype=float)
+    points = np.column_stack([(r - l) / np.sqrt(3.0), t])
     if points.shape[0] < 3:
         return False
     try:
@@ -51,18 +58,18 @@ def _draw_ternary_kde(axes, x_cart, y_cart, color, levels, fill, alpha) -> bool:
         logger.warning("Ternary KDE estimator failed: %s", err)
         return False
 
-    # The grid has to be fine: tricontour interpolates linearly inside the triangles of
-    # the (Delaunay) triangulation, so a coarse grid turns smooth iso-lines into visible
-    # polygons - the "hexagonal" contours this used to draw. The fill uses Gouraud shading,
-    # which interpolates across triangles, as in the mpltern density example.
+    limit = 1.0 / np.sqrt(3.0)
     step = 0.01
-    axis = np.arange(step, 1.0, step)
-    grid_t, grid_l = np.meshgrid(axis, axis, indexing="ij")
-    inside = (grid_t + grid_l) <= 1.0
-    t_grid, l_grid = grid_t[inside], grid_l[inside]
-    r_grid = 1.0 - t_grid - l_grid
-    density = kde(np.vstack([0.5 * t_grid + r_grid, (np.sqrt(3.0) / 2.0) * t_grid]))
-    peak = float(np.max(density)) if density.size else 0.0
+    xs = np.arange(-limit, limit + step, step)
+    ys = np.arange(0.0, 1.0 + step, step)
+    grid_x, grid_y = np.meshgrid(xs, ys)
+    # Outside the simplex the density stays NaN, so the contours stop at the edges.
+    inside = np.abs(grid_x) <= (1.0 - grid_y) / np.sqrt(3.0)
+    if not np.any(inside):
+        return False
+    density = np.full(grid_x.shape, np.nan)
+    density[inside] = kde(np.vstack([grid_x[inside], grid_y[inside]]))
+    peak = float(np.nanmax(density))
     if not np.isfinite(peak) or peak <= 0.0:
         return False
     level_values = peak * np.linspace(0.1, 0.9, max(2, int(levels)))
@@ -74,15 +81,13 @@ def _draw_ternary_kde(axes, x_cart, y_cart, color, levels, fill, alpha) -> bool:
             gradient = LinearSegmentedColormap.from_list(
                 "ternary_kde", [(1.0, 1.0, 1.0, 0.0), (base[0], base[1], base[2], 1.0)]
             )
-            axes.tripcolor(
-                t_grid, l_grid, r_grid, density,
-                shading="gouraud", cmap=gradient, vmin=0.0, vmax=peak,
-                alpha=alpha, rasterized=True, zorder=1,
+            axes.contourf(
+                grid_x, grid_y, density, levels=np.linspace(0.0, peak, 64), cmap=gradient,
+                alpha=alpha, transform=axes.transData, zorder=1,
             )
-        axes.tricontour(
-            t_grid, l_grid, r_grid, density,
-            levels=level_values, colors=[color], linewidths=0.7,
-            alpha=min(1.0, alpha + 0.3), zorder=1.1,
+        axes.contour(
+            grid_x, grid_y, density, levels=level_values, colors=[color], linewidths=0.7,
+            alpha=min(1.0, alpha + 0.3), transform=axes.transData, zorder=1.1,
         )
     except Exception as err:
         logger.warning("Ternary KDE contours failed: %s", err)
@@ -117,13 +122,10 @@ def _render_kde_overlay(
                     rs = subset['_emb_r'].to_numpy(dtype=float)
                     t_norm, _, r_norm = prepare_ternary_components(ts, ls, rs)
 
-                x_cart = 0.5 * t_norm + r_norm
-                y_cart = (np.sqrt(3.0) / 2.0) * t_norm
-
                 kde_style = _resolve_kde_style('kde')
                 kde_fill = bool(kde_style.get('fill', True))
                 if not _draw_ternary_kde(
-                    app_state.ax, x_cart, y_cart, new_palette[cat],
+                    app_state.ax, t_norm, 1.0 - t_norm - r_norm, r_norm, new_palette[cat],
                     int(kde_style.get('levels', 10)), kde_fill,
                     float(kde_style.get('alpha', 0.6)),
                 ):
