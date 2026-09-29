@@ -290,7 +290,8 @@ class TernaryZoomEventFilter(QObject):
             manual.update(dict(zip(keys, limits)))
             state_gateway.set_ternary_manual_limits(manual)
             state_gateway.set_ternary_auto_zoom(True)
-            state_gateway.set_ternary_manual_limits_enabled(True)
+            # The manual-limits checkbox is left to the user: enabling it here made a zoom
+            # flip it on, and it then came up ticked on the next launch.
         except Exception as err:
             logger.warning("Could not persist the ternary view: %s", err)
 
@@ -450,7 +451,8 @@ class TernaryZoomEventFilter(QObject):
                 manual.update(dict(zip(_LIMIT_KEYS, limits)))
                 state_gateway.set_ternary_manual_limits(manual)
                 state_gateway.set_ternary_auto_zoom(True)
-                state_gateway.set_ternary_manual_limits_enabled(True)
+                # The manual-limits checkbox is left to the user: enabling it here made a zoom
+                # flip it on, and it then came up ticked on the next launch.
                 if axes is not None:
                     axes.set_ternary_lim(*limits)
                 logger.info(
