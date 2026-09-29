@@ -245,6 +245,68 @@ def effective_ternary_limits(limits, mode: str | None = None) -> tuple:
     return (tmin, tmax, lmin, lmax, rmin, rmax)
 
 
+TERNARY_AXIS_STYLE_KEY = "ternary_axis"
+
+# The ternary axes had no style entry at all: the tick format was written into the code twice, and
+# everything else was mpltern's defaults. Registering the key here puts the ternary plot under the
+# style manager like the other overlays, so the same panel that edits a curve edits these too.
+TERNARY_AXIS_STYLE_DEFAULTS = {
+    "tick_format": "%.2f",
+    "tick_labelsize": 10.0,
+    "tick_length": 4.0,
+    "tick_width": 1.0,
+    "label_size": 11.0,
+    "edge_color": "black",
+    "edge_width": 1.0,
+    "grid": False,
+    "grid_color": "#cbd5e1",
+    "grid_width": 0.6,
+}
+
+
+def ternary_axis_style() -> dict:
+    """The resolved ternary axis style (registered on first use)."""
+    try:
+        from visualization.line_styles import ensure_line_style
+
+        return ensure_line_style(app_state, TERNARY_AXIS_STYLE_KEY, dict(TERNARY_AXIS_STYLE_DEFAULTS))
+    except Exception as err:
+        logger.warning("Could not resolve the ternary axis style: %s", err)
+        return dict(TERNARY_AXIS_STYLE_DEFAULTS)
+
+
+def format_ternary_tick(value: float, style: dict | None = None) -> str:
+    """One formatter for every ternary tick, driven by the style."""
+    style = style or ternary_axis_style()
+    template = str(style.get("tick_format", "%.2f"))
+    try:
+        return template % float(value)
+    except Exception:
+        return f"{float(value):.2f}"
+
+
+def apply_ternary_axis_style(ax: Any, style: dict | None = None) -> None:
+    """Push the cosmetic parts of the style onto the axes (never the geometry)."""
+    style = style or ternary_axis_style()
+    for name in ("t", "l", "r"):
+        axis = getattr(ax, f"{name}axis", None)
+        if axis is None:
+            continue
+        try:
+            axis.set_tick_params(
+                labelsize=float(style.get("tick_labelsize", 10.0)),
+                length=float(style.get("tick_length", 4.0)),
+                width=float(style.get("tick_width", 1.0)),
+            )
+        except Exception:
+            pass
+        try:
+            label = getattr(ax, f"set_{name}label")
+            label(getattr(ax, f"get_{name}label")(), fontsize=float(style.get("label_size", 11.0)))
+        except Exception:
+            pass
+
+
 def resolve_ternary_value_display(mode: Any = None) -> str:
     """'raw' labels the axes with the original ratios, 'normalized' with the fractions."""
     if mode is None:
@@ -319,6 +381,7 @@ def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display:
     if limits is None or len(limits) != 6:
         return 0
 
+    style = ternary_axis_style()
     changed = 0
     scales: dict = {}
     for name, norm, raw, low, high in zip(
@@ -338,7 +401,7 @@ def apply_ternary_tick_display(ax: Any, limits, normalized, raw_values, display:
             continue
         try:
             axis.set_ticks([value / scale for value in values])
-            axis.set_ticklabels([f"{value:.2f}" for value in values])
+            axis.set_ticklabels([format_ternary_tick(value, style) for value in values])
             scales[name] = scale
             changed += 1
         except Exception as err:
@@ -406,6 +469,7 @@ def relabel_ternary_ticks(ax: Any, limits, mode: str | None = None) -> int:
     scales = getattr(ax, "_ternary_raw_scales", None)
     if not scales or resolve_ternary_value_display(mode) != "raw":
         return 0
+    style = ternary_axis_style()
     changed = 0
     for name, low, high in zip(("t", "l", "r"), limits[0::2], limits[1::2]):
         axis = getattr(ax, f"{name}axis", None)
@@ -420,7 +484,7 @@ def relabel_ternary_ticks(ax: Any, limits, mode: str | None = None) -> int:
             continue
         try:
             axis.set_ticks([value / scale for value in values])
-            axis.set_ticklabels([f"{value:.2f}" for value in values])
+            axis.set_ticklabels([format_ternary_tick(value, style) for value in values])
             changed += 1
         except Exception as err:
             logger.warning("Could not relabel the %s axis after a zoom: %s", name, err)
@@ -486,6 +550,7 @@ def configure_ternary_axis(
         ax.set_ternary_lim(*_FULL_TERNARY_LIMITS)
         tmin, tmax, lmin, lmax, rmin, rmax = _FULL_TERNARY_LIMITS
 
+    apply_ternary_axis_style(ax)
     install_ternary_tick_refresh(ax)
     apply_ternary_tick_display(
         ax,
