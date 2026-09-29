@@ -16,7 +16,6 @@ REQUIRES_DisplayThemeMixin = (
     "_on_change",
     "_on_style_change",
     "_set_color_control_value",
-    "_set_legend_position_button",
 )
 
 logger = logging.getLogger(__name__)
@@ -26,6 +25,18 @@ _DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 class DisplayThemeMixin:
     """Theme management methods for display panel."""
+    # Widgets this panel may or may not build. Declared as class defaults (the
+    # panel_style.py pattern) so theme save/load never raises AttributeError
+    # from inside a Qt slot, which aborts the process: the four line widths and
+    # the legend-frame controls are not built by this panel at all, so save and
+    # load fall back to app_state / state_gateway for them.
+    model_curve_width_spin = None
+    paleoisochron_width_spin = None
+    model_age_width_spin = None
+    isochron_width_spin = None
+    legend_frame_on_check = None
+    legend_frame_alpha_spin = None
+
     # NOTE: do not declare findChildren here. It shadows QWidget.findChildren, so
     # self.findChildren became None: theme application never blocked any signal (one full
     # style commit per widget instead of one) and BasePanel._update_translations raised
@@ -108,10 +119,10 @@ class DisplayThemeMixin:
             'scatter_edgewidth': self.scatter_edgewidth_spin.value() if self.scatter_edgewidth_spin else 0.4,
             # Width/legend-frame controls are not built in this panel; read
             # the live app_state values so themes round-trip real state.
-            'model_curve_width': self.model_curve_width_spin.value() if self.model_curve_width_spin else app_state.model_curve_width,
-            'paleoisochron_width': self.paleoisochron_width_spin.value() if self.paleoisochron_width_spin else app_state.paleoisochron_width,
-            'model_age_line_width': self.model_age_width_spin.value() if self.model_age_width_spin else app_state.model_age_line_width,
-            'isochron_line_width': self.isochron_width_spin.value() if self.isochron_width_spin else app_state.isochron_line_width,
+            'model_curve_width': self.model_curve_width_spin.value() if self.model_curve_width_spin is not None else float(app_state.model_curve_width),
+            'paleoisochron_width': self.paleoisochron_width_spin.value() if self.paleoisochron_width_spin is not None else float(app_state.paleoisochron_width),
+            'model_age_line_width': self.model_age_width_spin.value() if self.model_age_width_spin is not None else float(app_state.model_age_line_width),
+            'isochron_line_width': self.isochron_width_spin.value() if self.isochron_width_spin is not None else float(app_state.isochron_line_width),
             'line_styles': app_state.line_styles,
             'label_color': self._get_color_control_value(self.label_color_edit, '#1f2937'),
             'label_weight': self.label_weight_combo.currentText() if self.label_weight_combo else 'normal',
@@ -121,8 +132,8 @@ class DisplayThemeMixin:
             'title_pad': self.title_pad_spin.value() if self.title_pad_spin else 20.0,
             'legend_location': app_state.legend_location,
             'legend_position': app_state.legend_position,
-            'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check else bool(app_state.legend_frame_on),
-            'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin else float(app_state.legend_frame_alpha),
+            'legend_frame_on': bool(self.legend_frame_on_check.isChecked()) if self.legend_frame_on_check is not None else bool(app_state.legend_frame_on),
+            'legend_frame_alpha': self.legend_frame_alpha_spin.value() if self.legend_frame_alpha_spin is not None else float(app_state.legend_frame_alpha),
             'legend_frame_facecolor': self.legend_frame_face_edit.text() if self.legend_frame_face_edit else str(app_state.legend_frame_facecolor),
             'legend_frame_edgecolor': self.legend_frame_edge_edit.text() if self.legend_frame_edge_edit else str(app_state.legend_frame_edgecolor),
             'adjust_text_force_text': [
@@ -264,12 +275,20 @@ class DisplayThemeMixin:
                 self.scatter_edgewidth_spin.setValue(float(data.get('scatter_edgewidth', 0.4)))
             if self.model_curve_width_spin:
                 self.model_curve_width_spin.setValue(float(data.get('model_curve_width', 1.2)))
+            else:
+                state_gateway.set_model_curve_width(float(data.get('model_curve_width', app_state.model_curve_width)))
             if self.paleoisochron_width_spin:
                 self.paleoisochron_width_spin.setValue(float(data.get('paleoisochron_width', 0.9)))
+            else:
+                state_gateway.set_paleoisochron_width(float(data.get('paleoisochron_width', app_state.paleoisochron_width)))
             if self.model_age_width_spin:
                 self.model_age_width_spin.setValue(float(data.get('model_age_line_width', 0.7)))
+            else:
+                state_gateway.set_model_age_line_width(float(data.get('model_age_line_width', app_state.model_age_line_width)))
             if self.isochron_width_spin:
                 self.isochron_width_spin.setValue(float(data.get('isochron_line_width', 1.5)))
+            else:
+                state_gateway.set_isochron_line_width(float(data.get('isochron_line_width', app_state.isochron_line_width)))
             if 'line_styles' in data:
                 state_gateway.set_line_styles(data.get('line_styles', {}))
             if self.label_color_edit:
@@ -286,8 +305,12 @@ class DisplayThemeMixin:
                 self.title_pad_spin.setValue(float(data.get('title_pad', 20.0)))
             if self.legend_frame_on_check:
                 self.legend_frame_on_check.setChecked(bool(data.get('legend_frame_on', True)))
+            else:
+                state_gateway.set_legend_frame_on(bool(data.get('legend_frame_on', app_state.legend_frame_on)))
             if self.legend_frame_alpha_spin:
                 self.legend_frame_alpha_spin.setValue(float(data.get('legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA)))
+            else:
+                state_gateway.set_legend_frame_alpha(float(data.get('legend_frame_alpha', app_state.legend_frame_alpha)))
             if self.legend_frame_face_edit:
                 self.legend_frame_face_edit.setText(data.get('legend_frame_facecolor', '#ffffff'))
             if self.legend_frame_edge_edit:
@@ -341,7 +364,6 @@ class DisplayThemeMixin:
 
             state_gateway.set_legend_location(legend_outside)
             state_gateway.set_legend_position(legend_inside)
-            self._set_legend_position_button(legend_inside, legend_outside)
         except Exception as exc:
             logger.warning("Failed to apply theme '%s': %s", name, exc)
             QMessageBox.warning(
@@ -407,13 +429,23 @@ class DisplayThemeMixin:
             return
         self._apply_ui_theme(self.ui_theme_combo.currentText())
 
-    def _apply_ui_theme(self, theme_name):
+    def _apply_ui_theme(self, theme_name, refresh=True, apply_mpl=True):
         """Apply the selected UI theme: Qt palette via app-level QSS and the
         matplotlib style, then re-render so the plot follows.
 
         "Modern Light" keeps the native style (empty QSS); other themes
         install a small QSS palette driven by the theme definition. The
         per-widget _NativeStyleFilter does not touch the app-level stylesheet.
+
+        ``refresh=False`` is used for the one application at build time, where
+        nothing has been rendered yet and firing the panel's change callback
+        would trigger a redraw of a figure that does not exist.
+
+        ``apply_mpl=False`` likewise belongs to that build-time call: plt.style.use resets
+        matplotlib's global rcParams, and doing it while the window is being assembled changed the
+        figure geometry the ternary axes inherits - the triangle came out stretched and gained a
+        grid. The Qt stylesheet is applied either way; the plot style is applied when the user
+        picks a theme, and the render path re-applies it from state.
         """
         if not theme_name:
             theme_name = 'Modern Light'
@@ -434,14 +466,16 @@ class DisplayThemeMixin:
         except Exception as exc:
             logger.warning("Failed to apply UI theme stylesheet: %s", exc)
 
-        try:
-            import matplotlib.pyplot as plt
+        if apply_mpl:
+            try:
+                import matplotlib.pyplot as plt
 
-            plt.style.use((theme or {}).get('mpl_style') or 'default')
-        except Exception as exc:
-            logger.warning("Failed to apply matplotlib theme: %s", exc)
+                plt.style.use((theme or {}).get('mpl_style') or 'default')
+            except Exception as exc:
+                logger.warning("Failed to apply matplotlib theme: %s", exc)
 
-        self._on_change()
+        if refresh:
+            self._on_change()
 
 
 def _build_theme_qss(theme: dict) -> str:

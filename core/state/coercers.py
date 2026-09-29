@@ -40,6 +40,10 @@ DEFAULT_PLOT_FONT_SIZES = {
     "legend": 10,
 }
 MIN_EXPORT_DPI = 72
+#: Marker size bounds. The widget range, its tooltip and the normalizer must agree;
+#: they did not (the spin box stopped at 500 while its tooltip advertised 2000).
+MIN_PLOT_MARKER_SIZE = 1
+MAX_PLOT_MARKER_SIZE = 2000
 DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 DEFAULT_CONFIDENCE_LEVEL = 0.95
 MARGINAL_KDE_DEFAULT_KERNEL = "gaussian"
@@ -109,7 +113,7 @@ def _normalize_algorithm_params(params: Any) -> dict[str, Any]:
 
 
 def _normalize_plot_marker_size(value: Any) -> int:
-    return max(1, min(int(value), 2000))
+    return max(MIN_PLOT_MARKER_SIZE, min(int(value), MAX_PLOT_MARKER_SIZE))
 
 
 def _normalize_plot_marker_alpha(value: Any) -> float:

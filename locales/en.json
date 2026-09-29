@@ -800,7 +800,6 @@
   "Export data with new group column to CSV/Excel": "Export data with new group column to CSV/Excel",
   "No data to export.": "No data to export.",
   "Data exported to: {path}": "Data exported to: {path}",
-  "Marker size (1-2000)": "Marker size (1-2000)",
   "Point transparency (0-1)": "Point transparency (0-1)",
   "Figure resolution (DPI)": "Figure resolution (DPI)",
   "Grid line transparency (0-1)": "Grid line transparency (0-1)",
@@ -931,5 +930,8 @@
   "Select Entry Workbook": "Select Entry Workbook",
   "Sheets read: {sheets} | Records read: {records}": "Sheets read: {sheets} | Records read: {records}",
   "Validate Workbook...": "Validate Workbook...",
-  "Validation finished: {errors} error(s), {warnings} warning(s)": "Validation finished: {errors} error(s), {warnings} warning(s)"
+  "Validation finished: {errors} error(s), {warnings} warning(s)": "Validation finished: {errors} error(s), {warnings} warning(s)",
+  "Edit the KDE overlay style": "Edit the KDE overlay style",
+  "Edit the marginal KDE overlay style": "Edit the marginal KDE overlay style",
+  "Marker size ({min}-{max})": "Marker size ({min}-{max})"
 }

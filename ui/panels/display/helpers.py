@@ -16,19 +16,9 @@ REQUIRES_DisplayControlHelperMixin = (
 
 class DisplayControlHelperMixin:
     """Color and legend-position helper methods for display panel."""
-    legend_panel = None
 
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
-
-    def _set_legend_position_button(self, inside_location, outside_location=None):
-        panel = self.legend_panel
-        if panel is None:
-            return
-        if hasattr(panel, '_set_legend_inside_position_button'):
-            panel._set_legend_inside_position_button(inside_location)
-        if hasattr(panel, '_set_legend_outside_position_button'):
-            panel._set_legend_outside_position_button(outside_location)
 
     def _normalize_color_value(self, value: str, fallback: str) -> str:
         """Normalize a color string to a valid hex representation."""

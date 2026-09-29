@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import logging
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -15,6 +19,13 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from core import app_state, translate
+from core.state.coercers import MIN_EXPORT_DPI
+
+#: Figure DPI widget bounds. The lower bound is the state clamp itself
+#: (core/state/coercers.py), so the widget cannot offer a value the store rejects.
+MAX_FIGURE_DPI = 600
+
+logger = logging.getLogger(__name__)
 
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
@@ -25,6 +36,31 @@ REQUIRES_DisplayBuildAxesMixin = (
 
 class DisplayBuildAxesMixin:
     """Axes, grid and canvas page builder for the display panel."""
+
+    @staticmethod
+    def _initial_combo_index(combo, value) -> int:
+        """Index of *value* in *combo*, or 0 when it is absent.
+
+        ``list.index``/``findText`` raise or return -1 for a restored value that is not in
+        the list (an unnormalised state value, or an older saved session), and the previous
+        ``max(0, items.index(default))`` raised ValueError before the fallback was reached.
+        Blocking the signals keeps this initial assignment from firing a style change while
+        the page is still being built; the widget's real signal is connected afterwards.
+        """
+        combo.blockSignals(True)
+        try:
+            index = combo.findText(str(value))
+            if index < 0:
+                logger.warning(
+                    "Combo value %r is not among %r; falling back to the first entry.",
+                    value,
+                    [combo.itemText(i) for i in range(combo.count())],
+                )
+                index = 0
+            combo.setCurrentIndex(index)
+            return index
+        finally:
+            combo.blockSignals(False)
 
     def _build_axes_page(self, axes_page_layout):
             """Build the axes, grid and canvas controls."""
@@ -62,10 +98,11 @@ class DisplayBuildAxesMixin:
             figure_grid = make_group("Figure")
             row = 0
             self.figure_dpi_spin = QSpinBox()
-            self.figure_dpi_spin.setRange(50, 600)
+            self.figure_dpi_spin.setRange(MIN_EXPORT_DPI, MAX_FIGURE_DPI)
             self.figure_dpi_spin.setSingleStep(1)
             self.figure_dpi_spin.setValue(int(app_state.plot_dpi))
             self.figure_dpi_spin.valueChanged.connect(self._on_style_change)
+            self.figure_dpi_spin.valueChanged.connect(self._resync_figure_dpi_from_state)
             self.figure_dpi_spin.setToolTip(translate("Figure resolution (DPI)"))
             row = add_row(figure_grid, "Figure DPI", self.figure_dpi_spin, row)
 
@@ -81,8 +118,7 @@ class DisplayBuildAxesMixin:
 
             grid_grid = make_group("Grid")
             row = 0
-            self.grid_check = QCheckBox(translate("Show Grid"))
-            self.grid_check.setProperty('translate_key', 'Show Grid')
+            self.grid_check = QCheckBox()
             self.grid_check.setChecked(app_state.plot_style_grid)
             self.grid_check.stateChanged.connect(self._on_style_change)
             row = add_row(grid_grid, "Show Grid", self.grid_check, row)
@@ -113,7 +149,7 @@ class DisplayBuildAxesMixin:
             grid_style_default = app_state.grid_linestyle
             self.grid_style_combo = QComboBox()
             self.grid_style_combo.addItems(grid_style_items)
-            self.grid_style_combo.setCurrentIndex(max(0, grid_style_items.index(grid_style_default)))
+            self._initial_combo_index(self.grid_style_combo, grid_style_default)
             self.grid_style_combo.currentTextChanged.connect(self._on_style_change)
             self.grid_style_combo.setToolTip(translate("Grid line style"))
             row = add_row(grid_grid, "Grid Style", self.grid_style_combo, row)
@@ -149,7 +185,7 @@ class DisplayBuildAxesMixin:
             minor_grid_style_default = app_state.minor_grid_linestyle
             self.minor_grid_style_combo = QComboBox()
             self.minor_grid_style_combo.addItems(minor_grid_style_items)
-            self.minor_grid_style_combo.setCurrentIndex(max(0, minor_grid_style_items.index(minor_grid_style_default)))
+            self.minor_grid_style_combo.setCurrentIndex(self._initial_combo_index(self.minor_grid_style_combo, minor_grid_style_default))
             self.minor_grid_style_combo.currentTextChanged.connect(self._on_style_change)
             row = add_row(grid_grid, "Minor Grid Style", self.minor_grid_style_combo, row)
 
@@ -159,7 +195,7 @@ class DisplayBuildAxesMixin:
             tick_dir_default = app_state.tick_direction
             self.tick_dir_combo = QComboBox()
             self.tick_dir_combo.addItems(tick_dir_items)
-            self.tick_dir_combo.setCurrentIndex(max(0, tick_dir_items.index(tick_dir_default)))
+            self.tick_dir_combo.setCurrentIndex(self._initial_combo_index(self.tick_dir_combo, tick_dir_default))
             self.tick_dir_combo.currentTextChanged.connect(self._on_style_change)
             row = add_row(tick_grid, "Tick Direction", self.tick_dir_combo, row)
 
@@ -241,7 +277,7 @@ class DisplayBuildAxesMixin:
             label_weight_default = app_state.label_weight
             self.label_weight_combo = QComboBox()
             self.label_weight_combo.addItems(weight_items)
-            self.label_weight_combo.setCurrentIndex(max(0, weight_items.index(label_weight_default)))
+            self.label_weight_combo.setCurrentIndex(self._initial_combo_index(self.label_weight_combo, label_weight_default))
             self.label_weight_combo.currentTextChanged.connect(self._on_style_change)
             row = add_row(text_grid, "Label Weight", self.label_weight_combo, row)
 
@@ -262,7 +298,7 @@ class DisplayBuildAxesMixin:
             title_weight_default = app_state.title_weight
             self.title_weight_combo = QComboBox()
             self.title_weight_combo.addItems(weight_items2)
-            self.title_weight_combo.setCurrentIndex(max(0, weight_items2.index(title_weight_default)))
+            self.title_weight_combo.setCurrentIndex(self._initial_combo_index(self.title_weight_combo, title_weight_default))
             self.title_weight_combo.currentTextChanged.connect(self._on_style_change)
             row = add_row(text_grid, "Title Weight", self.title_weight_combo, row)
 
@@ -347,3 +383,23 @@ class DisplayBuildAxesMixin:
 
             axes_group.setLayout(axes_layout)
             axes_page_layout.addWidget(axes_group)
+
+    def _resync_figure_dpi_from_state(self, *_args):
+        """Resync the DPI widget from the committed state value.
+
+        The widget range now starts at the state clamp, but a value can still arrive by
+        another route (a restored session or a theme), and the store normalizes it. Reading
+        the committed value back keeps the control and the rendered figure in agreement.
+        """
+        spin = self.figure_dpi_spin
+        if spin is None:
+            return
+        try:
+            committed = int(app_state.plot_dpi)
+        except Exception as exc:
+            logger.warning("_resync_figure_dpi_from_state failed: %s", exc)
+            return
+        if spin.value() != committed:
+            spin.blockSignals(True)
+            spin.setValue(committed)
+            spin.blockSignals(False)

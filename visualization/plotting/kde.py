@@ -19,7 +19,6 @@ _constrained_layout_disabled = False
 
 # Default maximum number of points per group for KDE sampling
 _KDE_MAX_POINTS_DEFAULT = 5000
-_KDE_GRID_SIZE_DEFAULT = 256
 _KDE_BW_ADJUST_DEFAULT = 1.0
 _KDE_BANDWIDTH_DEFAULT = 0.0
 _KDE_CUT_DEFAULT = 1.0
@@ -419,12 +418,14 @@ def draw_marginal_kde(
     kde_alpha = float(style.get('alpha', 0.25))
     kde_linewidth = float(style.get('linewidth', 1.0))
     kde_fill = bool(style.get('fill', True))
-    gridsize = kde_common.clamp_gridsize(style.get('gridsize', _KDE_GRID_SIZE_DEFAULT))
+    # gridsize comes from app_state: the marginal style used to carry a duplicate seed
+    # (bootstrap), which is what made the dialog's marginal_kde_gridsize inert.
+    gridsize = kde_common.clamp_gridsize(app_state.marginal_kde_gridsize)
     bw_adjust = kde_common.clamp_bw_adjust(style.get('bw_adjust', _KDE_BW_ADJUST_DEFAULT))
     bandwidth = max(0.0, min(float(style.get('bandwidth', _KDE_BANDWIDTH_DEFAULT) or 0.0), 10.0))
     kernel = _resolve_kernel_name(style.get('kernel', _KDE_KERNEL_DEFAULT))
     auto_bandwidth_method = _resolve_auto_bandwidth_method(
-        style.get('auto_bandwidth_method', _KDE_AUTO_BW_METHOD_DEFAULT)
+        style.get('auto_bandwidth_method') or _resolve_marginal_bandwidth_method()
     )
     clip_min = style.get('clip_min')
     clip_max = style.get('clip_max')

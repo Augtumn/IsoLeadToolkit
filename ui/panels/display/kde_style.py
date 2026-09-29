@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import ast
-import uuid
+from typing import Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -49,9 +48,6 @@ def _default_clip_bounds() -> tuple[float, float]:
 
 class DisplayPanelKdeStyleMixin:
     """KDE curve style handlers and dialog for the display panel."""
-    group_kde_check = None
-    kde_check = None
-    marginal_kde_check = None
     tools_kde_check = None
     tools_marginal_kde_check = None
 
@@ -63,8 +59,6 @@ class DisplayPanelKdeStyleMixin:
         state_gateway.set_show_kde(state == Qt.Checked)
         self._sync_toggle_widgets(
             app_state.show_kde,
-            self.kde_check,
-            self.group_kde_check,
             self.tools_kde_check,
         )
         self._on_change()
@@ -74,7 +68,6 @@ class DisplayPanelKdeStyleMixin:
         state_gateway.set_show_marginal_kde(state == Qt.Checked)
         self._sync_toggle_widgets(
             app_state.show_marginal_kde,
-            self.marginal_kde_check,
             self.tools_marginal_kde_check,
         )
         self._on_change()

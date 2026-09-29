@@ -8,7 +8,14 @@ DEFAULT_ELLIPSE_CONFIDENCE = 0.95
 
 
 def sync_overlay_kde_styles(state: Any) -> None:
-    """Initialize KDE style defaults and mirror them into overlay line styles."""
+    """Initialize KDE style defaults and mirror them into overlay line styles.
+
+    Only presentation keys are seeded here. The marginal computation options
+    (``auto_bandwidth_method``, ``gridsize``) are deliberately *not* seeded: once they
+    exist in the style dict they win over the fallback in ``ensure_line_style``, so the
+    live ``app_state`` values - the ones the dialog and the state layer own - never
+    reached the estimator, and the marginal silently kept 'scott'/256.
+    """
     state.overlay.line_styles.setdefault('kde_curve', {}).update({
         'linewidth': 1.0,
         'alpha': 0.6,
@@ -22,8 +29,6 @@ def sync_overlay_kde_styles(state: Any) -> None:
         'bw_adjust': 1.0,
         'bandwidth': 0.0,
         'kernel': 'gaussian',
-        'auto_bandwidth_method': 'scott',
-        'gridsize': 256,
         'cut': 1.0,
         'log_transform': False,
     })

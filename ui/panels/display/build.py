@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QRadioButton,
     QSpinBox,
     QToolBox,
     QVBoxLayout,
@@ -27,6 +28,7 @@ from .build_pages_axes import DisplayBuildAxesMixin
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
 REQUIRES_DisplayBuildMixin = (
+    "_apply_ui_theme",
     "_build_axes_page",
     "_build_font_page",
     "_build_kde_page",
@@ -43,7 +45,6 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
 
     def __init__(self, callback=None, parent=None):
         super().__init__(callback, parent)
-        self.legend_panel = None
 
     def reset_state(self):
         super().reset_state()
@@ -100,9 +101,15 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
         self._section_toolbox = None
         self._search_edit = None
         self._search_match_label = None
+        self._search_hidden_pages = []
 
     def _collect_widget_text(self, widget) -> str:
-        """Recursively collect display text from QLabel and QGroupBox widgets."""
+        """Recursively collect display text from a page's widgets.
+
+        Indexes every user-visible label, not only QLabel/QGroupBox: checkbox,
+        button and radio texts, combo item texts and toolbox tab texts are all
+        things a user types into the search box.
+        """
         texts = []
         if isinstance(widget, QLabel):
             t = widget.text()
@@ -112,6 +119,14 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
             t = widget.title()
             if t:
                 texts.append(t)
+        elif isinstance(widget, (QCheckBox, QPushButton, QRadioButton)):
+            t = widget.text()
+            if t:
+                texts.append(t)
+        elif isinstance(widget, QComboBox):
+            texts.extend(widget.itemText(index) for index in range(widget.count()))
+        elif isinstance(widget, QToolBox):
+            texts.extend(widget.itemText(index) for index in range(widget.count()))
         for label in widget.findChildren(QLabel):
             t = label.text()
             if t:
@@ -120,13 +135,55 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
             t = group.title()
             if t:
                 texts.append(t)
+        for toggle in widget.findChildren((QCheckBox, QRadioButton)):
+            t = toggle.text()
+            if t:
+                texts.append(t)
+        for button in widget.findChildren(QPushButton):
+            t = button.text()
+            if t:
+                texts.append(t)
+        for combo in widget.findChildren(QComboBox):
+            texts.extend(combo.itemText(index) for index in range(combo.count()))
         return ' '.join(texts)
+
+    def _hide_toolbox_items(self, toolbox, keep_indices) -> None:
+        """Remove every page outside *keep_indices* and remember it for restore.
+
+        QToolBox.setItemVisible() is not used: it aborts the process in this build
+        (verified on a bare QToolBox, offscreen and shown), so the pages are taken out
+        of the toolbox and put back with their original text and position.
+        """
+        hidden = []
+        for index in range(toolbox.count() - 1, -1, -1):
+            if index in keep_indices:
+                continue
+            hidden.append({
+                'index': index,
+                'widget': toolbox.widget(index),
+                'text': toolbox.itemText(index),
+            })
+            toolbox.removeItem(index)
+        self._search_hidden_pages = hidden
+
+    def _restore_hidden_toolbox_items(self, toolbox) -> None:
+        """Put back every page removed by :meth:`_hide_toolbox_items`."""
+        hidden = list(self._search_hidden_pages or [])
+        self._search_hidden_pages = []
+        if not hidden:
+            return
+        for entry in sorted(hidden, key=lambda item: item['index']):
+            widget = entry.get('widget')
+            if widget is None:
+                continue
+            toolbox.insertItem(entry['index'], widget, entry['text'])
 
     def _on_search_changed(self, text: str):
         """Filter toolbox pages by search text."""
         toolbox = self._section_toolbox
         if toolbox is None:
             return
+        self._restore_hidden_toolbox_items(toolbox)
         text = text.strip()
         if not text:
             for i in range(toolbox.count()):
@@ -134,22 +191,26 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
             self._search_match_label.setText('')
             return
 
-        match_count = 0
+        matches = []
         text_lower = text.lower()
         for i in range(toolbox.count()):
             page = toolbox.widget(i)
             page_text = self._collect_widget_text(page).lower()
             if text_lower in page_text:
                 toolbox.setItemEnabled(i, True)
-                match_count += 1
+                matches.append(i)
             else:
                 toolbox.setItemEnabled(i, False)
 
-        if match_count == 0:
+        # Hiding matters as much as disabling: a disabled current page stays
+        # visible, so "No matches" sat next to an un-filtered page.
+        self._hide_toolbox_items(toolbox, set(matches))
+
+        if not matches:
             self._search_match_label.setText(translate("No matches"))
         else:
             self._search_match_label.setText(
-                translate("{n} matches").format(n=match_count)
+                translate("{n} matches").format(n=len(matches))
             )
 
     def _clear_search(self):
@@ -189,8 +250,10 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
 
         section_toolbox = QToolBox()
         section_toolbox.setObjectName('display_section_toolbox')
-        # Language refresh: BasePanel._update_translations re-labels the tabs.
-        section_toolbox.setProperty('toolbox_tab_keys', '["Presets & Themes", "Text & Markers", "Axes, Grid & Canvas", "Kernel Density"]')
+        # Language refresh: BasePanel._update_translations re-labels the tabs. The pages
+        # added through add_group_page() append their own key, so only the three
+        # hand-built pages are listed here - listing the KDE page too duplicated the key.
+        section_toolbox.setProperty('toolbox_tab_keys', '["Presets & Themes", "Text & Markers", "Axes, Grid & Canvas"]')
         self._section_toolbox = section_toolbox
 
         presets_page = QWidget()
@@ -221,6 +284,11 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
         layout.addWidget(section_toolbox)
 
         self._sync_color_controls_from_state()
+
+        # The restored ui_theme reached the combo but was never applied: setStyleSheet /
+        # plt.style.use were only reachable from currentTextChanged, so a restarted
+        # session showed the saved theme name over the default palette.
+        self._apply_ui_theme(app_state.ui_theme, refresh=False, apply_mpl=False)
 
         layout.addStretch()
         return widget

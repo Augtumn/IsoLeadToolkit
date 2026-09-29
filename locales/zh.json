@@ -800,7 +800,6 @@
   "Export data with new group column to CSV/Excel": "导出带新分组列的数据到 CSV/Excel",
   "No data to export.": "无数据可导出。",
   "Data exported to: {path}": "数据已导出至：{path}",
-  "Marker size (1-2000)": "数据点标记大小，范围 1-2000。",
   "Point transparency (0-1)": "数据点透明度，0 为完全透明，1 为完全不透明。",
   "Figure resolution (DPI)": "图形分辨率（每英寸点数）。较高值产生更清晰的图像，但会增加文件大小。",
   "Grid line transparency (0-1)": "网格线透明度，0 为完全透明，1 为完全不透明。",
@@ -931,5 +930,8 @@
   "Select Entry Workbook": "Select Entry Workbook",
   "Sheets read: {sheets} | Records read: {records}": "读取工作表：{sheets} 个 | 读取记录：{records} 条",
   "Validate Workbook...": "Validate Workbook...",
-  "Validation finished: {errors} error(s), {warnings} warning(s)": "校验完成：{errors} 个错误，{warnings} 个警告"
+  "Validation finished: {errors} error(s), {warnings} warning(s)": "校验完成：{errors} 个错误，{warnings} 个警告",
+  "Edit the KDE overlay style": "编辑核密度叠加样式",
+  "Edit the marginal KDE overlay style": "编辑边缘核密度叠加样式",
+  "Marker size ({min}-{max})": "数据点标记大小，范围 {min}-{max}。"
 }

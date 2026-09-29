@@ -15,6 +15,13 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from core import app_state, translate
+from core.state.coercers import MAX_PLOT_MARKER_SIZE, MIN_PLOT_MARKER_SIZE
+
+#: Marker size bounds, shared with core/state/coercers.py: the widget range, the
+#: tooltip and the state normalizer are the same numbers (they disagreed: the
+#: widget stopped at 500 while the tooltip said 2000).
+MARKER_SIZE_MIN = MIN_PLOT_MARKER_SIZE
+MARKER_SIZE_MAX = MAX_PLOT_MARKER_SIZE
 
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
@@ -166,9 +173,13 @@ class DisplayBuildPagesMixin:
             marker_size_label.setProperty('translate_key', 'Size')
             marker_size_row.addWidget(marker_size_label)
             self.marker_size_spin = QSpinBox()
-            self.marker_size_spin.setRange(1, 500)
+            self.marker_size_spin.setRange(MARKER_SIZE_MIN, MARKER_SIZE_MAX)
             self.marker_size_spin.setValue(int(app_state.plot_marker_size))
-            self.marker_size_spin.setToolTip(translate("Marker size (1-2000)"))
+            self.marker_size_spin.setToolTip(
+                translate("Marker size ({min}-{max})").format(
+                    min=MARKER_SIZE_MIN, max=MARKER_SIZE_MAX
+                )
+            )
             self.marker_size_spin.valueChanged.connect(self._on_style_change)
             marker_size_row.addWidget(self.marker_size_spin)
             marker_layout.addLayout(marker_size_row)
