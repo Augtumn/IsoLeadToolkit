@@ -340,6 +340,11 @@ def draw_marginal_kde(
     y_col: str = '_emb_y',
 ) -> None:
     """Draw marginal KDEs on top/right axes for 2D plots."""
+    if app_state.ax is not None and hasattr(app_state.ax, "set_ternary_lim"):
+        # Marginals need rectangular top/right axes; a ternary simplex has none, and
+        # attaching Cartesian twins produced wrong or empty axes.
+        logger.info("Marginal KDE is not available for ternary plots; skipping.")
+        return
     global _constrained_layout_disabled
     try:
         from mpl_toolkits.axes_grid1 import make_axes_locatable
