@@ -73,6 +73,12 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
     if not np.isfinite(peak) or peak <= 0.0:
         return False
     level_values = peak * np.linspace(0.1, 0.9, max(2, int(levels)))
+    # Stated in the log so a running instance can be told apart from a stale one: this line
+    # only exists in the Cartesian-frame implementation.
+    logger.info(
+        "Ternary KDE: Cartesian grid %dx%d, %d levels, fill=%s (transData contours).",
+        grid_x.shape[1], grid_x.shape[0], len(level_values), fill,
+    )
     try:
         if fill:
             from matplotlib.colors import LinearSegmentedColormap, to_rgb
