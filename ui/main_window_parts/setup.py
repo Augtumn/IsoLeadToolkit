@@ -156,6 +156,22 @@ class MainWindowSetupMixin:
         search_layout.addWidget(self.legend_search_edit, 1)
         legend_layout.addWidget(search_row)
 
+        batch_row = QWidget()
+        batch_layout = QHBoxLayout(batch_row)
+        batch_layout.setContentsMargins(0, 0, 0, 0)
+        batch_layout.setSpacing(4)
+        self.legend_select_all_btn = QPushButton(translate("Select All"))
+        self.legend_select_all_btn.setToolTip(translate("Show every group again"))
+        self.legend_select_all_btn.clicked.connect(self._on_legend_select_all)
+        batch_layout.addWidget(self.legend_select_all_btn, 1)
+        self.legend_invert_btn = QPushButton(translate("Invert Selection"))
+        self.legend_invert_btn.setToolTip(
+            translate("Hide the visible groups and show the hidden ones")
+        )
+        self.legend_invert_btn.clicked.connect(self._on_legend_invert_selection)
+        batch_layout.addWidget(self.legend_invert_btn, 1)
+        legend_layout.addWidget(batch_row)
+
         legend_list = LegendListWidget()
         legend_list.setSelectionMode(QAbstractItemView.SingleSelection)
         legend_list.setUniformItemSizes(False)
@@ -218,6 +234,16 @@ class MainWindowSetupMixin:
 
         self.file_menu.addSeparator()
 
+        entry_workbook_action = QAction(translate("Data Entry (Excel)..."), self)
+        entry_workbook_action.setShortcut(QKeySequence("Ctrl+N"))
+        entry_workbook_action.setToolTip(
+            translate("Generate the TerraLID entry template, validate it, or import it")
+        )
+        entry_workbook_action.triggered.connect(self._show_entry_workbook)
+        self.file_menu.addAction(entry_workbook_action)
+
+        self.file_menu.addSeparator()
+
         exit_action = QAction(translate("Exit"), self)
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self.close)
@@ -235,6 +261,7 @@ class MainWindowSetupMixin:
             "log": log_action,
             "export_session": export_session_action,
             "import_session": import_session_action,
+            "entry_workbook": entry_workbook_action,
         }
 
         panels_menu = menubar.addMenu(translate("Panels"))
@@ -272,6 +299,15 @@ class MainWindowSetupMixin:
             show_log_viewer(self)
         except Exception as err:
             logger.warning("Failed to open log viewer: %s", err)
+
+    def _show_entry_workbook(self) -> None:
+        """Open the TerraLID lead-isotope data-entry (Excel workbook) dialog."""
+        try:
+            from ui.dialogs.entry_workbook import show_entry_workbook_dialog
+
+            show_entry_workbook_dialog(self)
+        except Exception as err:
+            logger.warning("Failed to open entry workbook dialog: %s", err)
 
     def _setup_toolbar(self):
         """设置工具栏"""
@@ -412,6 +448,11 @@ class MainWindowSetupMixin:
             actions["export_session"].setText(translate("Export Session..."))
         if "import_session" in actions:
             actions["import_session"].setText(translate("Import Session..."))
+        if "entry_workbook" in actions:
+            actions["entry_workbook"].setText(translate("Data Entry (Excel)..."))
+            actions["entry_workbook"].setToolTip(
+                translate("Generate the TerraLID entry template, validate it, or import it")
+            )
         if self.legend_settings_btn is not None and self.legend_settings_btn is not None:
             self.legend_settings_btn.setText(translate("Legend Settings..."))
         if "data" in actions:

@@ -345,7 +345,6 @@
   "Auto Bandwidth Method": "Auto Bandwidth Method",
   "Scott": "Scott",
   "Silverman": "Silverman",
-  "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data.": "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data.",
   "KDE Cut": "KDE Cut",
   "Log Transform Density": "Log Transform Density",
   "Fill": "Fill",
@@ -894,5 +893,14 @@
   "Applied: {notes}": "Applied: {notes}",
   "Search legend...": "Search legend...",
   "Edit axis, curve and image parameters": "Edit axis, curve and image parameters",
-  "Selection tool armed ({tool}) - press Escape to cancel.": "Selection tool armed ({tool}) - press Escape to cancel."
+  "Selection tool armed ({tool}) - press Escape to cancel.": "Selection tool armed ({tool}) - press Escape to cancel.",
+  "Select All": "Select All",
+  "Invert Selection": "Invert Selection",
+  "Show every group again": "Show every group again",
+  "Hide the visible groups and show the hidden ones": "Hide the visible groups and show the hidden ones",
+  "At least one group must stay visible.": "At least one group must stay visible.",
+  "Data Entry (Excel)...": "Data Entry (Excel)...",
+  "Generate the TerraLID entry template, validate it, or import it": "Generate the TerraLID entry template, validate it, or import it",
+  "LSCV (cross-validation)": "LSCV (cross-validation)",
+  "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data; LSCV chooses the bandwidth from the sample itself, which can undersmooth small, clustered groups.": "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data; LSCV chooses the bandwidth from the sample itself, which can undersmooth small, clustered groups."
 }

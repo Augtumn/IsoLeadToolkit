@@ -96,7 +96,6 @@
   "Auto Bandwidth Method": "自动带宽方法",
   "Scott": "Scott",
   "Silverman": "Silverman",
-  "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data.": "Scott 适合近似正态的单峰分布；Silverman 对偏态或重尾分布可提供更平滑的估计。",
   "KDE Cut": "KDE 截断范围",
   "Log Transform Density": "密度对数变换",
   "Fill": "填充",
@@ -894,5 +893,14 @@
   "Applied: {notes}": "已应用：{notes}",
   "Search legend...": "Search legend...",
   "Edit axis, curve and image parameters": "编辑坐标轴、曲线与图像参数",
-  "Selection tool armed ({tool}) - press Escape to cancel.": "已启用选择工具（{tool}）——按 Esc 取消。"
+  "Selection tool armed ({tool}) - press Escape to cancel.": "已启用选择工具（{tool}）——按 Esc 取消。",
+  "Select All": "全选",
+  "Invert Selection": "反选",
+  "Show every group again": "重新显示所有分组",
+  "Hide the visible groups and show the hidden ones": "隐藏当前可见分组，显示当前隐藏分组",
+  "At least one group must stay visible.": "至少需要保留一个分组可见。",
+  "Data Entry (Excel)...": "数据录入（Excel）...",
+  "Generate the TerraLID entry template, validate it, or import it": "生成 TerraLID 录入模板、校验或导入",
+  "LSCV (cross-validation)": "LSCV（交叉验证）",
+  "Scott suits near-normal unimodal data; Silverman provides smoother estimates for skewed or heavy-tail data; LSCV chooses the bandwidth from the sample itself, which can undersmooth small, clustered groups.": "Scott 适合接近正态的单峰数据；Silverman 对偏态或重尾数据更平滑；LSCV 由样本自身选择带宽，但对样本少、成簇的分组可能过度拟合（欠平滑）。"
 }
