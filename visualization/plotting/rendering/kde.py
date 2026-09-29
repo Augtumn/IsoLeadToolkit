@@ -102,8 +102,21 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
     peak = float(np.nanmax(density))
     if not np.isfinite(peak) or peak <= 0.0:
         return False
+    # Iso-probability levels, as seaborn uses: the level for a fraction f is the density
+    # above which the integral holds (1 - f) of the mass, so the outermost contour encloses
+    # roughly the data. Peak-relative levels (fractions of the maximum) all sit near the mode
+    # and produce contours far smaller than the group they describe.
     lowest = max(0.1, min(float(options.get("thresh", 0.1) or 0.1), 0.9))
-    level_values = peak * np.linspace(lowest, 0.9, max(2, int(levels)))
+    fractions = np.linspace(lowest, 0.9, max(2, int(levels)))
+    finite = np.sort(density[np.isfinite(density)])[::-1]
+    cumulative = np.cumsum(finite)
+    if cumulative.size and cumulative[-1] > 0.0:
+        level_values = np.array(
+            [finite[min(int(np.searchsorted(cumulative, f * cumulative[-1])), finite.size - 1)]
+             for f in fractions]
+        )
+    else:
+        level_values = peak * fractions
     # Stated in the log so a running instance can be told apart from a stale one: this line
     # only exists in the Cartesian-frame implementation.
     logger.info(
