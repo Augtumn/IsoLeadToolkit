@@ -86,10 +86,9 @@ def refresh_widget_tree(root: QWidget | None, language: str | None = None) -> in
             return
 
     for widget in [root, *root.findChildren(QWidget)]:
-        # Only copy is rewritten: a widget must be tagged, which is what _update_translations
-        # uses, or opt in via translate_items for item-based widgets.
-        if not widget.property("translate_key") and not widget.property("translate_items"):
-            continue
+        # Copy widgets are translated whether or not they are tagged - the panels' labels are
+        # what this is for - while the widget kinds that hold data or titles are excluded below.
+        # The earlier regression came from touching those, not from translating labels.
         if isinstance(widget, QGroupBox):
             apply(widget, "title", "setTitle")
         elif isinstance(widget, (QLabel, QPushButton, QCheckBox, QRadioButton, QToolButton)):
@@ -115,10 +114,8 @@ def refresh_widget_tree(root: QWidget | None, language: str | None = None) -> in
                 if replacement is not None and replacement != current:
                     widget.setItemText(index, replacement)
                     changed += 1
-        # No fallback on purpose. Rewriting windowTitle (or any other unlabelled text) renamed
-        # docks and panels, and matching combo items automatically renamed entries that hold
-        # data - algorithm names are locale keys too. A widget is only touched when it declares
-        # the text as copy via translate_key, or when it opts in through the properties below.
+        # Deliberately nothing here. Rewriting windowTitle renamed docks and panels, which is
+        # what rearranged the UI: titles are layout, not copy.
 
     return changed
 

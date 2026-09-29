@@ -467,11 +467,13 @@ class MainWindowSetupMixin:
         # switched - the panels are discovered by type so a new panel is covered automatically.
         try:
             from ui.panels.base_panel import BasePanel
+            from ui.translation_refresh import refresh_placeholder_texts, refresh_widget_tree
 
-            # Only widgets that declare themselves as copy are rewritten (translate_key), which
-            # is the whole point of that tag: matching texts automatically also rewrites data -
-            # combo items holding algorithm names, dock and panel titles, value labels - and the
-            # UI then rearranges itself on a language switch.
+            # Refresh the window's copy, then the widgets that tag themselves. The retranslator
+            # only touches label-like widgets: window titles, combo entries and tab/toolbox
+            # items are left alone, because those hold layout and data rather than copy.
+            refresh_widget_tree(self)
+            refresh_placeholder_texts(self)
             for panel in self.findChildren(BasePanel):
                 panel._update_translations()
         except Exception as err:
