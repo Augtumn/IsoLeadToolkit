@@ -74,7 +74,26 @@ def _ternary_kde_estimator(points, bw_method):
         )
 
 
-def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, alpha) -> bool:
+def _tag_legend_group(contour_set, group) -> None:
+    """Mark the artists of *contour_set* with the group they belong to.
+
+    The legend owns the stacking order (ui/main_window_parts/legend_core.py applies it to the
+    scatter artists). Tagging the density artists with the same group key lets that code stack
+    the densities the way the legend lists them instead of leaving them at one fixed z-order.
+    """
+    if group is None or contour_set is None:
+        return
+    for artist in getattr(contour_set, "collections", [contour_set]):
+        try:
+            artist._legend_group = group
+        except Exception as err:  # pragma: no cover - artists accept attributes
+            logger.warning("Could not tag a ternary KDE artist: %s", err)
+
+
+def _draw_ternary_kde(
+    axes, t_values, l_values, r_values, color, levels, fill, alpha,
+    zorder_base=1.0, group=None,
+) -> bool:
     """Density contours for a ternary plot, drawn in the axes' Cartesian frame.
 
     An mpltern axes has its own Cartesian data space: the triangle vertices are (0, 1),
@@ -178,14 +197,18 @@ def _draw_ternary_kde(axes, t_values, l_values, r_values, color, levels, fill, a
             # sample whenever the bandwidth is small - the ripple pattern reported from the
             # app - because every bump in the density gets its own bands.
             fill_levels = np.concatenate([[0.0], level_values, [peak]])
-            axes.contourf(
+            filled = axes.contourf(
                 grid_x, grid_y, density, levels=fill_levels, cmap=gradient,
-                alpha=alpha, antialiased=True, transform=axes.transData, zorder=1,
+                alpha=alpha, antialiased=True, transform=axes.transData,
+                zorder=zorder_base,
             )
-        axes.contour(
+            _tag_legend_group(filled, group)
+        lines = axes.contour(
             grid_x, grid_y, density, levels=level_values, colors=[color], linewidths=0.7,
-            alpha=min(1.0, alpha + 0.3), transform=axes.transData, zorder=1.1,
+            alpha=min(1.0, alpha + 0.3), transform=axes.transData,
+            zorder=zorder_base + 0.005,
         )
+        _tag_legend_group(lines, group)
     except Exception as err:
         logger.warning("Ternary KDE contours failed: %s", err)
         return False
@@ -205,7 +228,7 @@ def _render_kde_overlay(
         kde_utils.lazy_import_seaborn()
         if actual_algorithm == 'TERNARY':
             logger.info("Generating KDE for Ternary Plot...")
-            for cat in unique_cats:
+            for index, cat in enumerate(unique_cats):
                 subset = df_plot[df_plot[group_col] == cat].copy()
                 if subset.empty:
                     continue
@@ -221,10 +244,17 @@ def _render_kde_overlay(
 
                 kde_style = _resolve_kde_style('kde')
                 kde_fill = bool(kde_style.get('fill', True))
+                if len(t_norm) < 5:
+                    logger.warning(
+                        "Ternary KDE for group %s uses only %d sample(s): the shape is "
+                        "dominated by the bandwidth, not by the data.",
+                        cat, len(t_norm),
+                    )
                 if not _draw_ternary_kde(
                     app_state.ax, t_norm, 1.0 - t_norm - r_norm, r_norm, new_palette[cat],
                     int(kde_style.get('levels', 10)), kde_fill,
                     float(kde_style.get('alpha', 0.6)),
+                    zorder_base=1.0 + index * 0.01, group=cat,
                 ):
                     logger.warning(
                         "Ternary KDE skipped for group %s (too few points or bad density).",

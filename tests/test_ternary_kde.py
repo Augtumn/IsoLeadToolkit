@@ -46,6 +46,28 @@ def test_ternary_kde_draws_contours(ternary_axes) -> None:
     assert len(ternary_axes.collections) > before, "the ternary density drew nothing"
 
 
+def test_density_z_order_follows_the_legend_order(ternary_axes) -> None:
+    """Later legend entries must sit on top, not at one fixed z-order."""
+    kde_render._render_kde_overlay(
+        "TERNARY", _frame(), "Province", ["A", "B"], {"A": "#d62728", "B": "#1f77b4"}
+    )
+
+    tagged = [c for c in ternary_axes.collections if hasattr(c, "_legend_group")]
+    assert tagged, "the density artists carry no legend group tag"
+    order = [c.get_zorder() for c in tagged]
+    assert order == sorted(order), f"z-order does not increase with the legend: {order}"
+
+
+def test_a_small_group_is_reported(ternary_axes, caplog) -> None:
+    """Three samples cannot support a density: say so instead of drawing silently."""
+    frame = _frame().iloc[:3].copy()
+
+    with caplog.at_level("WARNING"):
+        kde_render._render_kde_overlay("TERNARY", frame, "Province", ["A"], {"A": "#333333"})
+
+    assert any("sample" in record.getMessage() for record in caplog.records), caplog.records
+
+
 def test_ternary_kde_is_quiet_when_disabled(ternary_axes) -> None:
     state_gateway.set_show_kde(False)
     before = len(ternary_axes.collections)
