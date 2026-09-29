@@ -84,7 +84,24 @@ def _resolve_kernel_name(value: Any) -> str:
 
 def _resolve_auto_bandwidth_method(value: Any) -> str:
     method = str(value or _KDE_AUTO_BW_METHOD_DEFAULT).strip().lower()
+    if method == "lscv":
+        # Data-driven rule, shared with the joint densities (see kde_bandwidth).
+        return "lscv"
     return method if method in _KDE_ALLOWED_AUTO_BW_METHODS else _KDE_AUTO_BW_METHOD_DEFAULT
+
+
+def _resolve_marginal_bandwidth_method() -> str:
+    """The bandwidth rule for the marginal curves.
+
+    Follows the main KDE, so choosing a rule there (Scott, Silverman or LSCV) smooths the
+    marginals the same way instead of leaving the two parameter families to drift apart. An
+    explicit marginal setting still takes precedence, and the marginal keeps its own
+    bw_adjust / absolute bandwidth because the curves are a different size on screen.
+    """
+    explicit = str(app_state.marginal_kde_auto_bandwidth_method or "").strip().lower()
+    if explicit and explicit not in ("auto", "default"):
+        return _resolve_auto_bandwidth_method(explicit)
+    return _resolve_bw_method(app_state.kde_bw_method)
 
 
 def _resolve_kernel_bandwidth(
@@ -104,6 +121,11 @@ def _resolve_kernel_bandwidth(
 
     n_samples = max(int(data.size), 2)
     method = _resolve_auto_bandwidth_method(auto_bandwidth_method)
+    if method == "lscv":
+        from visualization.plotting.kde_bandwidth import lscv_factor
+
+        factor = float(lscv_factor(np.asarray(data, dtype=float)[:, None]))
+        return max(_KDE_BW_MIN, std * factor * bw_adjust_safe)
     if method == "silverman":
         factor = float((n_samples * 3.0 / 4.0) ** (-1.0 / 5.0))
     else:
@@ -390,9 +412,7 @@ def draw_marginal_kde(
             'bw_adjust': float(app_state.marginal_kde_bw_adjust),
             'bandwidth': float(app_state.marginal_kde_bandwidth or 0.0),
             'kernel': _resolve_kernel_name(app_state.marginal_kde_kernel),
-            'auto_bandwidth_method': _resolve_auto_bandwidth_method(
-                app_state.marginal_kde_auto_bandwidth_method
-            ),
+            'auto_bandwidth_method': _resolve_marginal_bandwidth_method(),
             'gridsize': int(app_state.marginal_kde_gridsize),
             'cut': float(app_state.marginal_kde_cut),
             'log_transform': bool(app_state.marginal_kde_log_transform),
