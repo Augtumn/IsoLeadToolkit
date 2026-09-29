@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QSettings, QTimer
 
 from core import app_state, state_gateway, translate
+from .base_panel import _STYLE_WIDGET_MAP
 
 logger = logging.getLogger(__name__)
 
