@@ -187,6 +187,20 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         holder=None,
     ),
     StateField(
+        "axis_scale_locked",
+        False,
+        normalize=coercers._as_bool,
+        copy=coercers._as_bool,
+        holder=None,
+    ),
+    StateField(
+        "locked_axis_limits",
+        {},
+        normalize=coercers._normalize_locked_axis_limits,
+        copy=coercers._normalize_locked_axis_limits,
+        holder=None,
+    ),
+    StateField(
         "color_scheme",
         'vibrant',
         normalize=str,

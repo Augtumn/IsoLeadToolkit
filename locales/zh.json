@@ -933,5 +933,9 @@
   "Validation finished: {errors} error(s), {warnings} warning(s)": "校验完成：{errors} 个错误，{warnings} 个警告",
   "Edit the KDE overlay style": "编辑核密度叠加样式",
   "Edit the marginal KDE overlay style": "编辑边缘核密度叠加样式",
-  "Marker size ({min}-{max})": "数据点标记大小，范围 {min}-{max}。"
+  "Marker size ({min}-{max})": "数据点标记大小，范围 {min}-{max}。",
+  "Axis scale locked - new data is drawn on these axes.": "坐标轴刻度已锁定 - 新数据将绘制在同一坐标轴上。",
+  "Axis scale unlocked - the axes fit the data again.": "坐标轴刻度已解锁 - 坐标轴将重新适应数据。",
+  "Lock Axis Scale": "锁定坐标轴刻度",
+  "Lock the axis scale so new data is drawn on the same ranges. While it is on, the lock wins over a ternary zoom.": "锁定坐标轴刻度，使新数据绘制在相同范围内。锁定时以锁定范围为准，三元图缩放将被覆盖。"
 }

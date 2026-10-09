@@ -461,6 +461,16 @@ class MainWindowSetupMixin:
             actions["display"].setText(translate("Display"))
         if "analysis" in actions:
             actions["analysis"].setText(translate("Analysis"))
+        # The canvas toolbar's own actions are QActions, which refresh_widget_tree below does not
+        # reach (it walks widgets): the axis-scale lock carries copy, so it is retranslated here.
+        if self._axis_lock_action is not None:
+            self._axis_lock_action.setText(translate("Lock Axis Scale"))
+            self._axis_lock_action.setToolTip(
+                translate(
+                    "Lock the axis scale so new data is drawn on the same ranges. "
+                    "While it is on, the lock wins over a ternary zoom."
+                )
+            )
         # Panels keep a widget tree tagged with translate_key; BasePanel._update_translations
         # rewrites those texts in place. Nothing called it on a language change, so the data,
         # display and legend panels stayed in the language they were built in while the menus

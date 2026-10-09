@@ -100,6 +100,7 @@ from .coercers import (  # noqa: F401  (re-export)
     _normalize_kde_auto_bandwidth_method,
     _normalize_kde_bandwidth,
     _normalize_kde_kernel,
+    _normalize_locked_axis_limits,
     _normalize_kde_thresh,
     _normalize_marginal_size,
     _normalize_max_points,

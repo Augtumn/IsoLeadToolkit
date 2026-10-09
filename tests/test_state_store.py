@@ -209,6 +209,8 @@ def _snapshot_state() -> dict[str, Any]:
         "initial_render_done": bool(getattr(app_state, "initial_render_done", False)),
         "pca_component_indices": list(getattr(app_state, "pca_component_indices", [0, 1]) or [0, 1]),
         "ternary_auto_zoom": bool(getattr(app_state, "ternary_auto_zoom", True)),
+        "axis_scale_locked": bool(getattr(app_state, "axis_scale_locked", False)),
+        "locked_axis_limits": dict(getattr(app_state, "locked_axis_limits", {}) or {}),
         "ternary_limit_mode": str(getattr(app_state, "ternary_limit_mode", "min")),
         "ternary_limit_anchor": str(getattr(app_state, "ternary_limit_anchor", "min")),
         "ternary_value_display": str(getattr(app_state, "ternary_value_display", "raw")),
@@ -425,6 +427,8 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_initial_render_done(snapshot["initial_render_done"])
     state_gateway.set_pca_component_indices(snapshot["pca_component_indices"])
     state_gateway.set_ternary_auto_zoom(snapshot["ternary_auto_zoom"])
+    state_gateway.set_axis_scale_locked(snapshot["axis_scale_locked"])
+    state_gateway.set_locked_axis_limits(snapshot["locked_axis_limits"])
     state_gateway.set_ternary_limit_mode(snapshot["ternary_limit_mode"])
     state_gateway.set_ternary_limit_anchor(snapshot["ternary_limit_anchor"])
     state_gateway.set_ternary_boundary_percent(snapshot["ternary_boundary_percent"])

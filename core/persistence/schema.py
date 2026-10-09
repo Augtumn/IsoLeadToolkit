@@ -55,7 +55,7 @@ UI_STATE_FIELDS: frozenset[str] = frozenset({
     "legend_frame_edgecolor",
     "adjust_text_force_text", "adjust_text_force_static", "adjust_text_expand",
     "adjust_text_iter_lim", "adjust_text_time_lim",
-    "confidence_level", "draw_selection_ellipse",
+    "confidence_level", "draw_selection_ellipse", "axis_scale_locked", "locked_axis_limits",
     # analysis / overlays
     "mixing_endmembers", "mixing_mixtures", "equation_overlays",
     "show_model_curves", "show_paleoisochrons", "show_isochrons",

@@ -70,6 +70,8 @@ def copy_toolbar_actions(source, target, translations=None) -> None:
 class MainWindowCanvasMixin:
     """Canvas and toolbar behavior for main window."""
     _selection_tool_actions = None
+    #: The axis-scale lock switch; None until set_matplotlib_figure() builds it.
+    _axis_lock_action = None
 
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
@@ -107,6 +109,24 @@ class MainWindowCanvasMixin:
         }
         self._sync_selection_tool_actions()
 
+        # The axis-scale lock: while it is on, every render draws the ranges it recorded, so
+        # two datasets can be compared on the same axes. Built before the copy below, because
+        # that is what puts it on the main toolbar.
+        axis_lock_action = QAction(
+            self._get_selection_icon("axis_lock.svg"), translate("Lock Axis Scale"), self
+        )
+        axis_lock_action.setToolTip(
+            translate(
+                "Lock the axis scale so new data is drawn on the same ranges. "
+                "While it is on, the lock wins over a ternary zoom."
+            )
+        )
+        axis_lock_action.setCheckable(True)
+        axis_lock_action.triggered.connect(self._toggle_axis_scale_lock)
+        toolbar.addAction(axis_lock_action)
+        self._axis_lock_action = axis_lock_action
+        self._sync_axis_scale_lock_action()
+
         # Copy NavigationToolbar actions to main toolbar, translating tooltips
         copy_toolbar_actions(toolbar, self.toolbar, _MPL_TOOLTIP_TRANSLATIONS)
 
@@ -118,6 +138,15 @@ class MainWindowCanvasMixin:
         # Ternary zoom: a Qt-level drag over the canvas becomes a zoom into a
         # similar sub-triangle (the matplotlib event path never reaches us here).
         install_ternary_zoom_filter(canvas, toolbar)
+
+        # A canvas replaced while the lock is on must keep it: the record lives in the state,
+        # but the hook that re-applies it lives on the canvas. Imported here rather than at the
+        # top of the module because visualization.plotting's facade pulls in the whole render
+        # stack, and this module is imported while the window is being built.
+        if bool(getattr(app_state, "axis_scale_locked", False)):
+            from visualization.plotting.axis_lock import install_axis_scale_lock
+
+            install_axis_scale_lock(canvas)
 
         # NOTE: matplotlib event handlers (hover/click/legend-click) are
         # connected once in ui/app_parts/plotting.py::_connect_event_handlers
@@ -177,6 +206,51 @@ class MainWindowCanvasMixin:
         actions["lasso"].setChecked(lasso_checked)
         actions["rect"].blockSignals(False)
         actions["lasso"].blockSignals(False)
+
+    def _toggle_axis_scale_lock(self, checked):
+        """The toolbar's lock switch: record the ranges drawn now, or let go of them again.
+
+        The work itself lives in visualization/plotting/axis_lock.py; this only carries the
+        switch, keeps the button in step with the state and says what happened.
+        """
+        from visualization.plotting.axis_lock import (
+            disable_axis_scale_lock,
+            enable_axis_scale_lock,
+        )
+
+        locked = bool(checked)
+        try:
+            if locked:
+                enable_axis_scale_lock(getattr(app_state, "canvas", None))
+            else:
+                disable_axis_scale_lock(getattr(app_state, "canvas", None))
+        except Exception as exc:
+            logger.warning("Failed to toggle the axis scale lock: %s", exc)
+        self._sync_axis_scale_lock_action()
+        self._show_axis_lock_hint(locked)
+
+    def _sync_axis_scale_lock_action(self):
+        """Show the lock state the state holds - it is persisted, so it can be on at startup."""
+        action = self._axis_lock_action
+        if action is None:
+            return
+        action.blockSignals(True)
+        action.setChecked(bool(getattr(app_state, "axis_scale_locked", False)))
+        action.blockSignals(False)
+
+    def _show_axis_lock_hint(self, locked):
+        """Say what the lock now does, since its effect is only visible on the next render."""
+        status_bar = self.statusBar()
+        if status_bar is None:
+            return
+        if locked:
+            status_bar.showMessage(
+                translate("Axis scale locked - new data is drawn on these axes."), 4000
+            )
+        else:
+            status_bar.showMessage(
+                translate("Axis scale unlocked - the axes fit the data again."), 4000
+            )
 
 
 class TernaryZoomEventFilter(QObject):

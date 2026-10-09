@@ -933,5 +933,9 @@
   "Validation finished: {errors} error(s), {warnings} warning(s)": "Validation finished: {errors} error(s), {warnings} warning(s)",
   "Edit the KDE overlay style": "Edit the KDE overlay style",
   "Edit the marginal KDE overlay style": "Edit the marginal KDE overlay style",
-  "Marker size ({min}-{max})": "Marker size ({min}-{max})"
+  "Marker size ({min}-{max})": "Marker size ({min}-{max})",
+  "Axis scale locked - new data is drawn on these axes.": "Axis scale locked - new data is drawn on these axes.",
+  "Axis scale unlocked - the axes fit the data again.": "Axis scale unlocked - the axes fit the data again.",
+  "Lock Axis Scale": "Lock Axis Scale",
+  "Lock the axis scale so new data is drawn on the same ranges. While it is on, the lock wins over a ternary zoom.": "Lock the axis scale so new data is drawn on the same ranges. While it is on, the lock wins over a ternary zoom."
 }

@@ -30,6 +30,7 @@ from ._normalizers import (
     _normalize_kde_auto_bandwidth_method,
     _normalize_kde_bandwidth,
     _normalize_kde_kernel,
+    _normalize_locked_axis_limits,
     _normalize_marginal_size,
     _normalize_max_points,
     _normalize_pca_component_indices,
@@ -760,6 +761,14 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
 
     elif action_type == "SET_TERNARY_AUTO_ZOOM":
         store._snapshot["ternary_auto_zoom"] = bool(action.get("enabled", False))
+
+    elif action_type == "SET_AXIS_SCALE_LOCKED":
+        store._snapshot["axis_scale_locked"] = bool(action.get("enabled", False))
+
+    elif action_type == "SET_LOCKED_AXIS_LIMITS":
+        store._snapshot["locked_axis_limits"] = _normalize_locked_axis_limits(
+            action.get("limits")
+        )
 
     elif action_type == "SET_TERNARY_LIMIT_MODE":
         store._snapshot["ternary_limit_mode"] = _normalize_ternary_limit_mode(

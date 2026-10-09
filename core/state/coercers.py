@@ -346,6 +346,37 @@ def _normalize_ternary_manual_limits(limits: Any) -> dict[str, float]:
     return merged
 
 
+def _normalize_locked_axis_limits(limits: Any) -> dict[str, Any]:
+    """The axis ranges an axis-scale lock recorded, keyed per axes kind.
+
+    ``"2d"`` holds the cartesian x/y pair, ``"ternary"`` the six-value view window. Anything
+    else is dropped rather than stored, so a lock restored from a session file can never
+    hand the render path a shape it does not understand; an empty mapping simply means
+    "nothing recorded yet".
+    """
+    if not isinstance(limits, dict):
+        return {}
+    recorded: dict[str, Any] = {}
+    pair = limits.get("2d")
+    if isinstance(pair, dict):
+        try:
+            recorded["2d"] = {
+                "xlim": [float(pair["xlim"][0]), float(pair["xlim"][1])],
+                "ylim": [float(pair["ylim"][0]), float(pair["ylim"][1])],
+            }
+        except (KeyError, IndexError, TypeError, ValueError):
+            pass
+    window = limits.get("ternary")
+    if window is not None:
+        try:
+            values = [float(value) for value in window]
+        except (TypeError, ValueError):
+            values = []
+        if len(values) == 6:
+            recorded["ternary"] = values
+    return recorded
+
+
 def _normalize_ternary_render_margin(margin: Any) -> float:
     return max(0.0, min(float(margin if margin is not None else 0.002), 0.05))
 

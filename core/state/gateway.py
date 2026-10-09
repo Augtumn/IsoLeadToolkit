@@ -589,6 +589,12 @@ class AppStateGateway:
     def set_ternary_auto_zoom(self, enabled: bool) -> None:
         self._dispatch("SET_TERNARY_AUTO_ZOOM", enabled=bool(enabled))
 
+    def set_axis_scale_locked(self, enabled: bool) -> None:
+        self._dispatch("SET_AXIS_SCALE_LOCKED", enabled=bool(enabled))
+
+    def set_locked_axis_limits(self, limits: Any) -> None:
+        self._dispatch("SET_LOCKED_AXIS_LIMITS", limits=dict(limits or {}))
+
     def set_ternary_limit_mode(self, mode: str) -> None:
         self._dispatch("SET_TERNARY_LIMIT_MODE", mode=mode)
 

@@ -479,7 +479,7 @@ def apply_ternary_label_window(ax: Any, limits) -> tuple[float, ...] | None:
     return window
 
 
-def apply_ternary_zoom_window(ax: Any, limits) -> tuple[float, ...] | None:
+def apply_ternary_zoom_window(ax: Any, limits, *, store: bool = True) -> tuple[float, ...] | None:
     """Draw *limits* as the view and label the axes with it - the explicit zoom.
 
     Unlike :func:`apply_ternary_label_window` this really magnifies: mpltern is handed the window,
@@ -494,7 +494,11 @@ def apply_ternary_zoom_window(ax: Any, limits) -> tuple[float, ...] | None:
     screen describe the region that is really there.
 
     The window that comes out is recorded (:func:`store_ternary_view_window`), so every later render
-    of these axes draws it again; only :func:`reset_ternary_view` clears it.
+    of these axes draws it again; only :func:`reset_ternary_view` clears it.  With ``store=False``
+    the drawing moves and nothing is recorded: that is the shape an *imposed* view needs - the
+    axis-scale lock draws its recorded window on every render without becoming the zoom the
+    renderer keeps, so a window the user zoomed to before the lock is still there when it is
+    switched off again.
     """
     window = set_ternary_label_range(ax, limits)
     if window is None:
@@ -513,8 +517,10 @@ def apply_ternary_zoom_window(ax: Any, limits) -> tuple[float, ...] | None:
         )
         window = set_ternary_label_range(ax, drawn) or window
     # What is really drawn is what every later render has to draw again: this record is what an
-    # explicit zoom leaves behind, and only an explicit reset clears it.
-    store_ternary_view_window(ax, window)
+    # explicit zoom leaves behind, and only an explicit reset clears it. An imposed view
+    # (store=False) leaves the record alone.
+    if store:
+        store_ternary_view_window(ax, window)
     relabel_ternary_ticks(ax, window)
     return window
 
