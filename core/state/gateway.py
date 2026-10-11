@@ -70,6 +70,12 @@ class AppStateGateway:
     def get_ml_params(self) -> dict[str, Any]:
         return dict(self._store.snapshot().get("ml_params", {}))
 
+    def set_silverquest_params(self, params: Any) -> None:
+        self._dispatch("SET_SILVERQUEST_PARAMS", params=dict(params or {}))
+
+    def get_silverquest_params(self) -> dict[str, Any]:
+        return dict(self._store.snapshot().get("silverquest_params", {}))
+
     def set_v1v2_params(self, params: Any) -> None:
         self._dispatch("SET_V1V2_PARAMS", params=dict(params or {}))
 

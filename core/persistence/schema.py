@@ -19,6 +19,7 @@ SESSION_FIELDS: frozenset[str] = frozenset({
     "pca_params",
     "robust_pca_params",
     "ml_params",
+    "silverquest_params",
     "v1v2_params",
     "point_size",
     "last_group_col",

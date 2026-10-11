@@ -157,3 +157,31 @@ class HelloPlugin(BasePlugin):
 - 与宿主版本（**1.0**）不一致即拒绝加载，并记录到 `failure_info()`
   （`plugins/manager.py::load_plugin` 的兼容门；修改宿主版本需同步更新插件）
 - 预留的语义化策略：主版本不匹配直接拒绝，次版本差异仅告警——当前尚未实现
+
+## 案例：SilverQuest 按分组列取数
+
+`plugins/builtins/silverquest_plugin.py` 是"插件输入必须来自已加载数据"的范例。
+R 参考实现（`reference/r_packages/SilverQuest_v1/SilverQuest_R_v1.R`）从**两个工作簿**
+取数：样品文件（R 第 5 行）与方铅矿数据库（R 第 139 行）。移植后改为：
+
+| 角色 | 来源 | 入口 |
+|------|------|------|
+| 样品（artefact） | 分组列中被指派为样品的那几个取值对应的行 | `run_silverquest_on_groups` |
+| 参考（reference） | 分组列中被指派为参考的那几个取值对应的行 | 同上 |
+| 附加参考（可选） | R 包的 `Pb_DB_20240310AllGalenas.xlsx`（未 vendor，按路径读取） | `resolve_references` |
+
+- 两边最终都构造成 `data.silverquest.SilverQuestDatabase`，数值内核完全不知情
+  （`data/silverquest.py::database_from_records` 是工作簿加载器的内存对偶）。
+- 对话框（`ui/panels/analysis/dialogs/silverquest_dialog.py`）第一步选**分组列**
+  （候选来自 `app_state.group_cols`），第二步把该列的不同取值分别勾进
+  "样品分组"/"参考分组"两个列表；两边都勾中的取值按参考处理。
+- 结果回写为普通分组列 `_SilverQuest_Role`（`[Match] …` / `[Artefact] …` /
+  `[Reference] …` / `[Other Data]`）并经 `state_gateway.set_last_group_col` 设为当前分组：
+  绘图配色、图例条目与图例复选框全部复用既有分组机制，不新建绘图通道；
+  角色形状写在 `group_marker_map`。
+- 对话框选择通过 `state_gateway.set_silverquest_params()` 持久化
+  （字段 `silverquest_params`，声明在 `core/state/fields.py`，列入
+  `core/persistence/schema.py::SESSION_FIELDS`）。
+
+`tests/test_silverquest_plugin.py` 用一份带分组列的合成数据把样品匹配到参考，
+并断言具体距离；`tests/test_silverquest_dialog.py` 覆盖对话框到回写的整条链路。

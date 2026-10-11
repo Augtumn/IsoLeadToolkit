@@ -97,6 +97,11 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
     elif action_type == "SET_ML_PARAMS":
         store._snapshot["ml_params"] = _normalize_algorithm_params(action.get("params"))
 
+    elif action_type == "SET_SILVERQUEST_PARAMS":
+        store._snapshot["silverquest_params"] = _normalize_algorithm_params(
+            action.get("params")
+        )
+
     elif action_type == "SET_V1V2_PARAMS":
         store._snapshot["v1v2_params"] = _normalize_algorithm_params(action.get("params"))
 

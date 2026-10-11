@@ -204,6 +204,7 @@ class AnalysisPanelBuildMixin:
             "subset_plugin": self,
             "mixing_plugin": self,
             "neighborhood_plugin": self._on_run_neighborhood_search,
+            "silverquest_plugin": self._on_run_silverquest,
         }
 
         for name, plugin in plugin_manager.plugins.items():

@@ -481,6 +481,13 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         holder=None,
     ),
     StateField(
+        "silverquest_params",
+        {},
+        normalize=coercers._normalize_algorithm_params,
+        copy=dict,
+        holder=None,
+    ),
+    StateField(
         "geo_model_name",
         'Stacey & Kramers (2nd Stage)',
         normalize=str,

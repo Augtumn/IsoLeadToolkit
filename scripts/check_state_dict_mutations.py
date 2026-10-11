@@ -23,6 +23,7 @@ _SYNCED_DICT_FIELDS: set[str] = {
     "pca_params",
     "robust_pca_params",
     "ml_params",
+    "silverquest_params",
     "v1v2_params",
     "plot_font_sizes",
     "current_palette",

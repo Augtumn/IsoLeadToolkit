@@ -16,6 +16,7 @@ def _snapshot_state() -> dict[str, Any]:
         "pca_params": dict(getattr(app_state, "pca_params", {}) or {}),
         "robust_pca_params": dict(getattr(app_state, "robust_pca_params", {}) or {}),
         "ml_params": dict(getattr(app_state, "ml_params", {}) or {}),
+        "silverquest_params": dict(getattr(app_state, "silverquest_params", {}) or {}),
         "v1v2_params": dict(getattr(app_state, "v1v2_params", {}) or {}),
         "show_kde": bool(getattr(app_state, "show_kde", False)),
         "show_marginal_kde": bool(getattr(app_state, "show_marginal_kde", True)),
@@ -245,6 +246,7 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_pca_params(snapshot["pca_params"])
     state_gateway.set_robust_pca_params(snapshot["robust_pca_params"])
     state_gateway.set_ml_params(snapshot["ml_params"])
+    state_gateway.set_silverquest_params(snapshot["silverquest_params"])
     state_gateway.set_v1v2_params(snapshot["v1v2_params"])
     state_gateway.set_selection_mode(bool(snapshot["selection_mode"]))
     state_gateway.set_render_mode(str(snapshot["render_mode"]))

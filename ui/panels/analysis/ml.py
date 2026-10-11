@@ -90,3 +90,24 @@ class AnalysisPanelMlMixin:
                 translate("Error"),
                 translate("Neighborhood search failed: {error}").format(error=str(error)),
             )
+
+    def _on_run_silverquest(self):
+        """Open the SilverQuest provenance dialog (Pb isotopes vs galena DB)."""
+        if app_state.df_global is None:
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("Please load data first."),
+            )
+            return
+        try:
+            from ui.panels.analysis.dialogs.silverquest_dialog import show_silverquest
+
+            show_silverquest(self)
+        except Exception as error:
+            logger.error("SilverQuest provenance search failed: %s", error)
+            QMessageBox.warning(
+                self,
+                translate("Error"),
+                translate("SilverQuest search failed: {error}").format(error=str(error)),
+            )
