@@ -20,6 +20,10 @@ def _snapshot_rendering_state() -> dict[str, object]:
         "data_version", "last_embedding", "last_embedding_type",
     ]
     snapshot = {key: getattr(app_state, key, None) for key in keys}
+    # The legend's visibility selection is state the render paths read; leaving it out of
+    # the snapshot let one test's selection leak into the next.
+    snapshot["visible_groups"] = getattr(app_state, "visible_groups", None)
+    snapshot["available_groups"] = list(getattr(app_state, "available_groups", None) or [])
     # Save embedding cache entries to prevent cross-test pollution.
     # get() moves entries to MRU position, so iterate _store directly.
     cache_store = getattr(app_state.embedding_cache, '_store', {})
@@ -43,6 +47,8 @@ def _restore_rendering_state(snapshot: dict[str, object]) -> None:
     state_gateway.set_render_mode(str(snapshot.get("render_mode") or "UMAP"))
     state_gateway.set_umap_params(dict(snapshot.get("umap_params") or {}))
     state_gateway.set_current_plot_title(str(snapshot.get("current_plot_title") or ""))
+    state_gateway.sync_available_and_visible_groups(list(snapshot.get("available_groups") or []))
+    state_gateway.set_visible_groups(snapshot.get("visible_groups"))
     # Restore embedding cache (avoids cross-test pollution of LRU state)
     app_state.embedding_cache.clear()
     for key, value in snapshot.get("_cache_pairs", []):
@@ -318,3 +324,114 @@ def test_set_algorithm_updates_render_mode() -> None:
         assert app_state.render_mode == "tSNE"
     finally:
         state_gateway.set_render_mode(original[0])
+
+
+# ── legend visibility across render modes ────────────────────────────────
+#
+# Reported as "切换渲染模式后，不应该刷新图例可见性": the visibility selection belongs to
+# the user, and a render (including the one a mode switch triggers) must neither rewrite it
+# nor ignore it.
+
+
+def test_the_3d_render_honours_the_legend_visibility_filter() -> None:
+    """3D used to ignore ``visible_groups``, so switching to it redrew hidden groups."""
+    from visualization.plotting import plot_3d_data
+
+    snapshot = _snapshot_rendering_state()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    try:
+        state_gateway.set_figure_axes(fig, ax)
+        state_gateway.set_dataframe_and_source(
+            _make_test_df(n_samples=12, n_groups=3), file_path=None, sheet_name=None
+        )
+        state_gateway.set_group_data_columns(
+            ["Group"], ["Pb206_204", "Pb207_204", "Pb208_204"]
+        )
+        state_gateway.set_last_group_col("Group")
+        state_gateway.set_visible_groups(["A"])
+
+        assert plot_3d_data(
+            "Group", ["Pb206_204", "Pb207_204", "Pb208_204"], size=30
+        ) is True
+
+        drawn = {scatter.get_label() for scatter in app_state.scatter_collections}
+        assert drawn == {"A"}, f"3D drew {sorted(drawn)} although only A is visible"
+        assert app_state.visible_groups == ["A"]
+    finally:
+        plt.close("all")
+        _restore_rendering_state(snapshot)
+
+
+def test_a_2d_render_keeps_a_visibility_selection_it_cannot_draw() -> None:
+    """The renderer filters by the selection; it never rewrites it.
+
+    Group ``A`` has no complete row in the two plotted columns, so the 2D projection cannot
+    draw it. The old behaviour re-ticked every group in the legend (``visible_groups`` ->
+    None) and, when the failure path ran, silently fell back to UMAP - so one mode switch
+    changed both the plot and the legend. Now the frame stays empty and the selection stays.
+    """
+    from visualization.plotting import plot_2d_data
+
+    snapshot = _snapshot_rendering_state()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    try:
+        state_gateway.set_figure_axes(fig, ax)
+        frame = pd.DataFrame(
+            {
+                "Pb206_204": [18.1, 18.2, 18.3, 18.4],
+                "Pb207_204": [np.nan, np.nan, 15.6, 15.7],
+                "Group": ["A", "A", "B", "B"],
+            }
+        )
+        state_gateway.set_dataframe_and_source(frame, file_path=None, sheet_name=None)
+        state_gateway.set_group_data_columns(["Group"], ["Pb206_204", "Pb207_204"])
+        state_gateway.set_last_group_col("Group")
+        state_gateway.set_render_mode("2D")
+        state_gateway.set_visible_groups(["A"])
+
+        assert plot_2d_data("Group", ["Pb206_204", "Pb207_204"], size=30) is True
+
+        assert not app_state.scatter_collections, "nothing visible must draw nothing"
+        assert app_state.visible_groups == ["A"], "the selection must survive the render"
+        assert app_state.render_mode == "2D", "no silent fall back to another mode"
+    finally:
+        plt.close("all")
+        _restore_rendering_state(snapshot)
+
+
+def test_an_empty_visibility_selection_draws_nothing_and_stays_empty() -> None:
+    """Unticking every group is allowed: the frame is empty and no group is re-ticked.
+
+    An empty selection used to normalise to "no filter", so the state could not express it
+    and the plot showed everything again. It is now a real state - the legend can reach it,
+    and the render answers with an empty frame instead of resurrecting the groups.
+    """
+    from visualization.plotting import plot_2d_data
+
+    snapshot = _snapshot_rendering_state()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    try:
+        state_gateway.set_figure_axes(fig, ax)
+        state_gateway.set_dataframe_and_source(
+            _make_test_df(n_samples=9, n_groups=3), file_path=None, sheet_name=None
+        )
+        state_gateway.set_group_data_columns(["Group"], ["Pb206_204", "Pb207_204"])
+        state_gateway.set_last_group_col("Group")
+        # The render use case syncs the data's groups before rendering; do the same here so
+        # the assertion does not depend on groups left behind by another test.
+        state_gateway.sync_available_and_visible_groups(["A", "B", "C"])
+        state_gateway.set_render_mode("2D")
+        state_gateway.set_visible_groups([])
+
+        assert plot_2d_data("Group", ["Pb206_204", "Pb207_204"], size=30) is True
+
+        assert not app_state.scatter_collections, "nothing visible must draw nothing"
+        assert app_state.visible_groups == [], "the empty selection must survive"
+        assert app_state.available_groups, "the data's groups stay available to tick again"
+        assert app_state.render_mode == "2D"
+    finally:
+        plt.close("all")
+        _restore_rendering_state(snapshot)

@@ -133,10 +133,11 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
             # 恢复会话参数（须在导入向导之前，确保 render_mode 等已同步）
             self._restore_session_state(session_data)
 
-            # 加载数据
+            # 加载数据（对话框由 UI 层负责，用例层只做校验与状态注入）
             logger.info("Loading data...")
-            from application.use_cases import load_dataset
-            if not load_dataset(show_file_dialog=True, show_config_dialog=True):
+            from ui.panels.data.dialogs.data_import.load_flow import load_dataset_via_dialogs
+
+            if not load_dataset_via_dialogs():
                 logger.error("Failed to load data. Exiting.")
                 return False
 
@@ -177,6 +178,10 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
 
             # 连接事件处理器
             self._connect_event_handlers()
+            # A window showing several figures has several canvases, and a handler connected to
+            # one canvas never sees another's events, so each of them is connected too.
+            for record in list(getattr(app_state, "plot_panel_windows", []) or []):
+                self._connect_event_handlers(record.get("canvas"))
 
             # 渲染初始绘图
             self._render_initial_plot()

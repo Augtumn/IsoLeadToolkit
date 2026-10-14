@@ -31,9 +31,16 @@ def _build_isochron_label(result_dict: dict[str, Any]) -> str:
         parts.append(f"b={result_dict['intercept']:.4f}")
     return ", ".join(parts) if parts else ""
 
-def refresh_paleoisochron_labels() -> None:
-    """Refresh paleoisochron label positions after zoom/pan."""
-    ax = app_state.ax
+def refresh_paleoisochron_labels(ax: Any = None) -> None:
+    """Refresh paleoisochron label positions after zoom/pan.
+
+    The axes to lay the labels out on. It defaults to the state's axes, which is what a
+    single-figure window needs; a window showing several panels passes the axes of the panel whose
+    view moved, because the state only ever mirrors one of them - laying the labels out on that one
+    put them on another panel's figure, where they were not visible at all.
+    """
+    if ax is None:
+        ax = app_state.ax
     if ax is None:
         return
     if bool(app_state.overlay_label_refreshing):
@@ -43,13 +50,22 @@ def refresh_paleoisochron_labels() -> None:
     try:
         adjusted_labels = []
 
-        label_data = app_state.paleoisochron_label_data
+        # This axes' own labels first: the state's list belongs to whichever panel rendered last,
+        # so laying the others out from it used another panel's artists.
+        label_data = getattr(ax, "_paleoisochron_label_data", None)
+        if not label_data:
+            label_data = app_state.paleoisochron_label_data
         if not label_data:
             label_data = []
 
         for entry in label_data:
             text_artist = entry.get('text')
             if text_artist is None:
+                continue
+            # Only the labels drawn on this axes: the data is one list of artists belonging to
+            # different figures, and laying another panel's label out on this axes moved it to the
+            # wrong place - which is why only one panel's labels came back into view.
+            if getattr(text_artist, 'axes', None) is not ax:
                 continue
             style_key = entry.get('style_key') or 'paleoisochron'
             if not _is_overlay_label_style_visible(style_key):
@@ -155,6 +171,14 @@ def refresh_paleoisochron_labels() -> None:
             except Exception as err:
                 logger.warning("refresh_paleoisochron_labels failed: %s", err)
 
+        # adjustText decides where a label fits from the text's measured pixel extent, and that
+        # only exists after the figure has been drawn. A panel figure is created fresh, so its
+        # extents were empty and the labels were pushed far outside the view - exactly what was
+        # reported once the plots became child windows of their own.
+        try:
+            ax.figure.canvas.draw()
+        except Exception as err:
+            logger.warning("Could not draw before laying out the labels: %s", err)
         apply_adjust_text_to_labels(ax, adjusted_labels)
     finally:
         state_gateway.set_overlay_label_refreshing(False)

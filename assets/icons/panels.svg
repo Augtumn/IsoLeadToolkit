@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="#2b2b2b" stroke-width="1.6" stroke-linejoin="round">
+  <!-- Two independent figures side by side, like the panels the button opens. -->
+  <rect x="2.5" y="4.5" width="9" height="15" rx="1.2"/>
+  <rect x="12.5" y="4.5" width="9" height="15" rx="1.2"/>
+  <path d="M5 15.5l2-3 1.5 2 1-1.5" stroke-linecap="round"/>
+  <path d="M15 9.5l2 2.5 1.5-2 1 1.5" stroke-linecap="round"/>
+</svg>

@@ -46,14 +46,18 @@ def test_load_preset_returns_false_for_unknown_model() -> None:
     assert ge_engine.current_model_name == "Stacey & Kramers (2nd Stage)"
 
 
-def test_update_parameters_ignores_unknown_and_invalid_values() -> None:
+def test_update_parameters_ignores_unknown_keys_but_rejects_invalid_values() -> None:
+    """A key the engine does not own is dropped; a non-numeric value is a caller error.
+
+    Reported as "不做兜底，该报错就报错": the old code kept the previous value and said
+    nothing, so a bad parameter looked like a successful update.
+    """
     ge_engine = GeochemistryEngine()
 
     ge_engine.update_parameters(
         {
             "age_model": "single_stage",
             "mu_M": "10.5",
-            "T1": "invalid",
             "unknown_key": 123,
         }
     )
@@ -61,9 +65,12 @@ def test_update_parameters_ignores_unknown_and_invalid_values() -> None:
     params = ge_engine.get_parameters()
     assert params["age_model"] == "single_stage"
     assert params["mu_M"] == pytest.approx(10.5)
-    assert params["T1"] == pytest.approx(T_SK_STAGE2)
     assert "unknown_key" not in params
     assert params["v_M"] == pytest.approx(float(params["mu_M"]) * float(params["U_ratio"]))
+
+    with pytest.raises(ValueError, match="T1"):
+        ge_engine.update_parameters({"T1": "invalid"})
+    assert ge_engine.get_parameters()["T1"] == pytest.approx(T_SK_STAGE2)
 
 
 def test_load_cumming_richards_preset_uses_named_evolution_constants() -> None:

@@ -14,6 +14,7 @@ from matplotlib.figure import Figure  # noqa: E402
 
 from application.use_cases import export_origin  # noqa: E402
 from core import app_state  # noqa: E402
+from visualization.plotting import origin_export_data as origin_data  # noqa: E402
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────
@@ -41,16 +42,21 @@ def patched_axes(monkeypatch, scatter_axes):
 
 # ── pure helpers ──────────────────────────────────────────────────────────
 
+def _export_data() -> dict:
+    """What the UI hands the use case: the axes read by the presentation layer."""
+    return origin_data.collect_origin_export_data(app_state.ax)
+
+
 def test_hex_color_converts_and_falls_back() -> None:
-    assert export_origin._hex_color("#ff0000") == "#ff0000"
-    assert export_origin._hex_color((0.0, 0.0, 1.0)) == "#0000ff"
-    assert export_origin._hex_color("not-a-color") == "#333333"
+    assert origin_data._hex_color("#ff0000") == "#ff0000"
+    assert origin_data._hex_color((0.0, 0.0, 1.0)) == "#0000ff"
+    assert origin_data._hex_color("not-a-color") == "#333333"
 
 
 def test_origin_marker_maps_known_symbols() -> None:
-    assert export_origin._origin_marker("o") == 1
-    assert export_origin._origin_marker("s") == 0
-    assert export_origin._origin_marker("totally-unknown") == 1
+    assert origin_data._origin_marker("o") == 1
+    assert origin_data._origin_marker("s") == 0
+    assert origin_data._origin_marker("totally-unknown") == 1
 
 
 def test_origin_sheet_name_sanitises_and_deduplicates() -> None:
@@ -71,7 +77,7 @@ def test_origin_sheet_name_sanitises_and_deduplicates() -> None:
 # ── extraction ────────────────────────────────────────────────────────────
 
 def test_collect_origin_export_data_reads_scatter_groups(scatter_axes) -> None:
-    data = export_origin.collect_origin_export_data(scatter_axes, mode="2D")
+    data = origin_data.collect_origin_export_data(scatter_axes, mode="2D")
 
     assert data["mode"] == "2D"
     assert data["is_ternary"] is False
@@ -93,12 +99,12 @@ def test_collect_origin_export_data_without_collections_is_empty() -> None:
     figure = Figure()
     axis = figure.add_subplot(111)
     axis.plot([0.0, 1.0], [0.0, 1.0])
-    data = export_origin.collect_origin_export_data(axis, mode="2D")
+    data = origin_data.collect_origin_export_data(axis, mode="2D")
     assert data["scatter_groups"] == []
 
 
 def test_pb_evolution_overlays_are_extracted_without_origin() -> None:
-    curves = export_origin._extract_pb_evolution_overlay_data("PB_EVOL_76", (0.0, 45.0))
+    curves = origin_data._extract_pb_evolution_overlay_data("PB_EVOL_76", (0.0, 45.0))
     assert curves, "PB evolution modes must provide model curves"
     for entries in curves.values():
         assert entries
@@ -256,7 +262,11 @@ def test_origin_project_exports_sheets_plots_legend_and_axis_titles(
     _patch_origin(monkeypatch, stub)
     target = tmp_path / "project.opju"
 
-    ok, reason, notes = export_origin.export_to_origin_detailed(str(target))
+    ok, reason, notes = export_origin.export_to_origin_detailed(
+
+        _export_data(), str(target)
+
+    )
 
     assert ok is True, reason
     assert reason == ""
@@ -287,7 +297,11 @@ def test_origin_project_returns_reason_when_building_fails(
     stub = _StubOrigin(fail_book=True)
     _patch_origin(monkeypatch, stub)
 
-    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(
+
+        _export_data(), str(tmp_path / "project.opju")
+
+    )
 
     assert ok is False
     assert "Origin" in reason
@@ -295,18 +309,20 @@ def test_origin_project_returns_reason_when_building_fails(
 
 def test_origin_export_reports_missing_package(monkeypatch, patched_axes, tmp_path: Path) -> None:
     _patch_origin(monkeypatch, None)
-    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(
+        _export_data(), str(tmp_path / "project.opju")
+    )
     assert ok is False and "originpro" in reason
 
     # the bool API stays compatible
-    assert export_origin.export_to_origin(str(tmp_path / "project.opju")) is False
+    assert export_origin.export_to_origin(_export_data(), str(tmp_path / "project.opju")) is False
 
 
 def test_origin_export_reports_missing_axes(monkeypatch, tmp_path: Path) -> None:
+    """No axes is a caller error now: the extractor refuses to guess a view."""
     monkeypatch.setattr(app_state, "ax", None, raising=False)
-    _patch_origin(monkeypatch, _StubOrigin())
-    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
-    assert ok is False and "axes" in reason
+    with pytest.raises(ValueError, match="axes"):
+        origin_data.collect_origin_export_data(app_state.ax)
 
 
 def test_origin_export_reports_missing_scatter_data(monkeypatch, tmp_path: Path) -> None:
@@ -317,7 +333,11 @@ def test_origin_export_reports_missing_scatter_data(monkeypatch, tmp_path: Path)
     monkeypatch.setattr(app_state, "render_mode", "2D", raising=False)
     _patch_origin(monkeypatch, _StubOrigin())
 
-    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "project.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(
+
+        _export_data(), str(tmp_path / "project.opju")
+
+    )
     assert ok is False and "scatter" in reason
 
 
@@ -326,7 +346,7 @@ def test_origin_export_reports_missing_scatter_data(monkeypatch, tmp_path: Path)
 def test_origin_ready_data_writes_one_sheet_per_series(patched_axes, tmp_path: Path) -> None:
     target = tmp_path / "origin_data.xlsx"
 
-    assert export_origin.export_origin_ready_data(str(target)) is True
+    assert export_origin.export_origin_ready_data(_export_data(), str(target)) is True
     assert target.exists()
 
     workbook = pd.read_excel(target, sheet_name=None)
@@ -354,20 +374,26 @@ def test_origin_ready_data_uses_unique_sheet_names(tmp_path: Path, monkeypatch) 
     monkeypatch.setattr(app_state, "group_marker_map", {}, raising=False)
 
     target = tmp_path / "dupes.xlsx"
-    assert export_origin.export_origin_ready_data(str(target)) is True
+    assert export_origin.export_origin_ready_data(_export_data(), str(target)) is True
     sheets = set(pd.read_excel(target, sheet_name=None))
     assert len(sheets) == 3, sheets  # Info + two deduplicated series sheets
 
 
 def test_origin_ready_data_without_axes_or_data_is_reported(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(app_state, "ax", None, raising=False)
-    assert export_origin.export_origin_ready_data(str(tmp_path / "none.xlsx")) is False
+    with pytest.raises(ValueError, match="axes"):
+        origin_data.collect_origin_export_data(app_state.ax)
 
     figure = Figure()
     axis = figure.add_subplot(111)
     axis.plot([0.0, 1.0], [0.0, 1.0])
     monkeypatch.setattr(app_state, "ax", axis, raising=False)
-    assert export_origin.export_origin_ready_data(str(tmp_path / "empty.xlsx")) is False
+    assert (
+        export_origin.export_origin_ready_data(
+            _export_data(), str(tmp_path / "empty.xlsx")
+        )
+        is False
+    )
 
 
 # ── ternary compatibility ────────────────────────────────────────────────
@@ -386,7 +412,7 @@ def _ternary_group(label: str = "TGroup") -> dict:
 
 def _patch_ternary(monkeypatch, group: dict) -> None:
     monkeypatch.setattr(
-        export_origin, "_extract_ternary_data", lambda ax: [group], raising=False
+        origin_data, "_extract_ternary_data", lambda ax: [group], raising=False
     )
     monkeypatch.setattr(app_state, "selected_ternary_cols", ["Top", "Left", "Right"], raising=False)
 
@@ -399,7 +425,11 @@ def test_ternary_export_writes_percent_and_maps_three_components(
     stub = _StubOrigin()
     _patch_origin(monkeypatch, stub)
 
-    ok, reason, notes = export_origin.export_to_origin_detailed(str(tmp_path / "ternary.opju"))
+    ok, reason, notes = export_origin.export_to_origin_detailed(
+
+        _export_data(), str(tmp_path / "ternary.opju")
+
+    )
 
     assert ok is True, reason
     assert "ternary graph template" in notes
@@ -433,7 +463,11 @@ def test_ternary_template_fallback_is_reported(
     stub = _StubOrigin(fail_ternary_template=True)
     _patch_origin(monkeypatch, stub)
 
-    ok, reason, notes = export_origin.export_to_origin_detailed(str(tmp_path / "ternary2.opju"))
+    ok, reason, notes = export_origin.export_to_origin_detailed(
+
+        _export_data(), str(tmp_path / "ternary2.opju")
+
+    )
 
     assert ok is True, reason
     assert any("ternary template unavailable" in note for note in notes), notes
@@ -449,7 +483,11 @@ def test_column_metadata_symbol_size_and_axis_ranges_are_applied(
     monkeypatch.setattr(app_state, "point_size", 30, raising=False)
     _patch_origin(monkeypatch, _StubOrigin())
 
-    ok, reason, _notes = export_origin.export_to_origin_detailed(str(tmp_path / "meta.opju"))
+    ok, reason, _notes = export_origin.export_to_origin_detailed(
+
+        _export_data(), str(tmp_path / "meta.opju")
+
+    )
     assert ok is True, reason
 
     stub = export_origin._lazy_import_originpro()

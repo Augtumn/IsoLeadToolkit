@@ -307,16 +307,7 @@ class DisplayPanelKdeStyleMixin:
             bandwidth_spin.setRange(0.0, 10.0)
             bandwidth_spin.setSingleStep(0.05)
             bandwidth_spin.setDecimals(3)
-            bandwidth_spin.setValue(
-                float(
-                    getattr(
-                        app_state,
-                        'marginal_kde_bandwidth',
-                        style.get('bandwidth', 0.0),
-                    )
-                    or 0.0
-                )
-            )
+            bandwidth_spin.setValue(float(app_state.marginal_kde_bandwidth or 0.0))
             bandwidth_row.addWidget(bandwidth_spin)
             bandwidth_row.addStretch()
             layout.addLayout(bandwidth_row)
@@ -326,14 +317,7 @@ class DisplayPanelKdeStyleMixin:
             kernel_combo = QComboBox()
             for kernel_name in ('gaussian', 'tophat', 'epanechnikov', 'exponential', 'linear', 'cosine'):
                 kernel_combo.addItem(kernel_name, kernel_name)
-            current_kernel = str(
-                getattr(
-                    app_state,
-                    'marginal_kde_kernel',
-                    style.get('kernel', 'gaussian'),
-                )
-                or 'gaussian'
-            ).strip().lower()
+            current_kernel = str(app_state.marginal_kde_kernel or 'gaussian').strip().lower()
             kernel_index = kernel_combo.findData(current_kernel)
             if kernel_index < 0:
                 kernel_index = kernel_combo.findData('gaussian')
@@ -350,12 +334,7 @@ class DisplayPanelKdeStyleMixin:
             auto_bw_method_combo.addItem(translate("Silverman"), "silverman")
             auto_bw_method_combo.addItem(translate("LSCV (cross-validation)"), "lscv")
             current_auto_bw_method = str(
-                getattr(
-                    app_state,
-                    'marginal_kde_auto_bandwidth_method',
-                    style.get('auto_bandwidth_method', 'scott'),
-                )
-                or 'scott'
+                app_state.marginal_kde_auto_bandwidth_method or 'scott'
             ).strip().lower()
             auto_bw_method_index = auto_bw_method_combo.findData(current_auto_bw_method)
             if auto_bw_method_index < 0:

@@ -79,6 +79,14 @@ class Qt5AppSessionMixin:
         state_gateway.set_ui_theme(session_data.get("ui_theme") or "Modern Light")
         logger.info("Restored UI theme: %s", app_state.ui_theme)
 
+        saved_panels = session_data.get("plot_panels") or []
+        if len(saved_panels) > 1:
+            state_gateway.set_plot_panels(saved_panels)
+            logger.info("Restored plot panels: %s", saved_panels)
+        saved_decomposition = session_data.get("group_decomposition") or {}
+        if saved_decomposition:
+            state_gateway.set_group_decomposition(saved_decomposition)
+            logger.info("Restored group decomposition: %s", saved_decomposition)
         saved_parents = session_data.get("parent_groups") or {}
         if saved_parents:
             state_gateway.set_parent_groups(saved_parents)

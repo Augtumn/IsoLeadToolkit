@@ -16,7 +16,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 BASELINE = Path(__file__).resolve().parent / "silent_exceptions_baseline.json"
-SCANNED = ("ui", "visualization", "application")
+#: Every production package: a swallowed exception is a defect wherever it happens, and the
+#: 2026 standard is "no silent fallback - log it or raise it" (docs/dev_conventions.md §18.6).
+SCANNED = (
+    "adapters", "application", "core", "data", "plugins", "ui", "utils", "visualization",
+)
 
 
 def silent_handlers(path: Path) -> int:

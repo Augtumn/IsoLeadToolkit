@@ -631,10 +631,12 @@ def test_vocab_without_terms_is_not_checked(monkeypatch) -> None:
     assert validate.validate_columns((vocab_column(),), {"object_material": "anything"}) == []
 
 
-def test_vocab_module_unavailable_is_lenient(monkeypatch) -> None:
-    """vocab.py 未落地时回退 open_ended=True：跳过成员判断（只记 debug）。"""
+def test_vocab_module_missing_is_reported(monkeypatch) -> None:
+    """vocab.py 缺失不再是"跳过检查"：校验上下文必须拿到词表模块，缺失即报错。"""
     install_vocab(monkeypatch, None)
-    assert validate.validate_columns((vocab_column(),), {"object_material": "copper"}) == []
+    monkeypatch.setattr(validate, "_load_vocab_module", lambda: None)
+    with pytest.raises(RuntimeError, match="vocabulary"):
+        validate.validate_columns((vocab_column(),), {"object_material": "copper"})
 
 
 def test_vocab_id_resolved_by_oid_when_field_has_none(monkeypatch) -> None:
@@ -653,8 +655,8 @@ def test_non_vocab_kind_is_not_checked_against_vocabulary(monkeypatch) -> None:
     assert validate.validate_columns((column,), {"object_material": "copper"}) == []
 
 
-def test_vocab_lookup_failure_degrades_without_raising(monkeypatch, caplog) -> None:
-    caplog.set_level(logging.WARNING, logger="data.metadata_profile.validate")
+def test_vocab_lookup_failure_propagates(monkeypatch) -> None:
+    """词表查询抛错不再被降级吞掉：坏掉的词表要暴露，而不是当作"值在词表内"。"""
     module = fake_vocab({"object_material": ("ore",)})
 
     def broken_contains(vocab_id, value):
@@ -662,8 +664,8 @@ def test_vocab_lookup_failure_degrades_without_raising(monkeypatch, caplog) -> N
 
     module.contains = broken_contains
     install_vocab(monkeypatch, module)
-    assert validate.validate_columns((vocab_column(),), {"object_material": "ore"}) == []
-    assert caplog.records
+    with pytest.raises(RuntimeError, match="boom"):
+        validate.validate_columns((vocab_column(),), {"object_material": "ore"})
 
 
 def test_real_vocab_module_integration() -> None:

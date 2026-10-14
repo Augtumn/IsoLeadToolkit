@@ -94,7 +94,11 @@ class SelectionInteractionUseCase:
         target_group: str,
         target_visible: bool,
     ) -> list[str] | None:
-        """Return updated visible groups list (None means all visible)."""
+        """Return updated visible groups list.
+
+        ``None`` means "all visible"; an empty list is a real answer too - it comes back
+        when the last visible group is clicked off, and the plot then draws nothing.
+        """
         visible_groups = list(all_groups) if current_visible_groups is None else list(current_visible_groups)
 
         if target_visible:

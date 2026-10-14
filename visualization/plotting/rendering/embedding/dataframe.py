@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from core import app_state, state_gateway
+from core import app_state
 
 from ..common.state_access import _active_subset_indices, _df_global
 
@@ -80,27 +80,20 @@ def prepare_plot_dataframe(
         logger.error('Unable to prepare plotting data for column: %s', group_col)
         return None
 
-    all_groups = sorted(df_plot[group_col].unique())
-    state_gateway.sync_available_and_visible_groups(all_groups)
-
+    # Apply the legend's visibility filter, but never rewrite it: the selection belongs to
+    # the user, and a render - including the one a render-mode switch triggers - must not
+    # change it.  ``available_groups`` is synced from the loaded data by the render use
+    # case, so a projection that drops rows cannot prune the selection either.
     visible_groups = app_state.visible_groups
     if visible_groups is not None:
-        allowed = set(visible_groups)
-        mask = df_plot[group_col].isin(allowed)
-        if not allowed:
-            df_plot = df_plot[mask].copy()
-        elif not mask.any():
-            logger.info('No data matches the selected legend filter; showing all groups instead.')
-            state_gateway.set_visible_groups(None)
-        else:
-            df_plot = df_plot[mask].copy()
-            if df_plot.empty:
-                logger.info('Filtered plot data is empty; showing all groups instead.')
-                df_plot = _reset_plot_dataframe(df_source, embedding, actual_algorithm, group_col)
-                if df_plot is None:
-                    return None
-                state_gateway.set_visible_groups(None)
-                state_gateway.sync_available_and_visible_groups(sorted(df_plot[group_col].unique()))
+        allowed = {str(group) for group in visible_groups}
+        df_plot = df_plot[df_plot[group_col].isin(allowed)].copy()
+        if df_plot.empty:
+            logger.warning(
+                'No point belongs to a visible group (%s); the plot stays empty until a '
+                'group is ticked in the legend.',
+                ', '.join(sorted(allowed)) or 'none',
+            )
 
     unique_cats = sorted(df_plot[group_col].unique())
     logger.debug('Unique categories in %s: %s', group_col, unique_cats)

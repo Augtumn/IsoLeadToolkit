@@ -48,6 +48,8 @@ DEFAULT_AUTOSAVE_DISPATCHES = 20
 #: tests/test_persistence.py::test_immediate_save_actions_are_real_actions).
 IMMEDIATE_SAVE_ACTIONS: frozenset[str] = frozenset({
     "SET_PARENT_GROUPS",
+    "SET_GROUP_DECOMPOSITION",
+    "SET_PLOT_PANELS",
     "SET_PARENT_SHAPE_MAP",
     "SET_PARAM_PRESETS",
     "SET_SAVED_THEMES",
@@ -228,7 +230,7 @@ def _make_autosave_hook(store: Any, interval: float) -> Any:
             from .cache import save_cache_async
             from .paths import CACHE_FILE
 
-            cache = getattr(app_state, "embedding_cache", None)
+            cache = app_state.embedding_cache
             if isinstance(cache, EmbeddingCache) and len(cache) > 0:
                 save_cache_async(cache, CACHE_FILE)
         except Exception:

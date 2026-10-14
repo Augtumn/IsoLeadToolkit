@@ -45,6 +45,245 @@ class MainWindowLegendGroupMixin:
             str(k): list(v or []) for k, v in (app_state.parent_groups or {}).items()
         }
 
+    #: Grouping column holding the labels a decomposition produces. As far as the rest of
+    #: the application is concerned it is an ordinary grouping column.
+    DECOMPOSED_GROUP_COLUMN = "__decomposed_group__"
+
+    #: Reserved key in the decomposition map holding the column the chain starts from. It is
+    #: prefixed with the path separator so it can never collide with a real path: a real path
+    #: never starts with the separator, because an empty value is not a path.
+    BASE_DECOMPOSITION_KEY = "\x1fbase_column"
+
+    def _decomposition_spec(self):
+        """Return ``({path key -> splitting column}, base column)`` from the stored map."""
+        spec = dict(app_state.group_decomposition or {})
+        base = spec.pop(self.BASE_DECOMPOSITION_KEY, None)
+        return spec, (str(base) if base else None)
+
+    def _path_of_label(self, label):
+        """The value path a legend label stands for, e.g. ``Tarim / casting`` -> two values."""
+        from visualization.plotting.decomposition import SEPARATOR
+
+        return tuple(str(label).split(SEPARATOR))
+
+    def _write_decomposition(self, spec, base) -> bool:
+        """Materialise *spec* into the grouping column and the parent map.
+
+        The labels become an ordinary column and the parent/child map goes through
+        ``set_parent_groups``, so the plot, the legend, the colours, the per-parent marker
+        shape and the visibility checkboxes all keep using the pipeline that is already there.
+        """
+        from visualization.plotting.decomposition import decompose, validate_spec
+
+        frame = app_state.df_global
+        if frame is None or not base or base not in frame.columns:
+            QMessageBox.warning(
+                self, translate("Warning"), translate("Please load data first.")
+            )
+            return False
+        if not spec:
+            # Nothing is decomposed: drop the column and go back to the original grouping.
+            parents = {
+                str(k): [c for c in list(v or []) if c in set(app_state.available_groups or [])]
+                for k, v in (app_state.parent_groups or {}).items()
+            }
+            state_gateway.set_group_decomposition({})
+            state_gateway.set_parent_groups(
+                {k: v for k, v in parents.items() if v}
+            )
+            if self.DECOMPOSED_GROUP_COLUMN in frame.columns:
+                state_gateway.set_dataframe_and_source(
+                    frame.drop(columns=[self.DECOMPOSED_GROUP_COLUMN]),
+                    file_path=app_state.file_path,
+                    sheet_name=app_state.sheet_name,
+                )
+                columns = [c for c in (app_state.group_cols or [])
+                           if c != self.DECOMPOSED_GROUP_COLUMN]
+                state_gateway.set_group_data_columns(columns, list(app_state.data_cols or []))
+            if base in (app_state.group_cols or []):
+                state_gateway.set_last_group_col(base)
+            # Visibility is left as it is: the labels that disappeared with the step are filtered
+            # out when the group list is synced, so ticking everything is never the answer.
+            state_gateway.bump_data_version()
+            self._reload_legend_panel()
+            self._refresh_after_decomposition(spec)
+            return True
+
+        try:
+            validate_spec(frame, base, spec)
+            labels, children = decompose(frame, base, spec)
+        except (KeyError, ValueError, TypeError) as err:
+            # The repository bans silent fallbacks: say what is wrong instead of skipping it.
+            QMessageBox.warning(self, translate("Warning"), str(err))
+            return False
+
+        decomposed = frame.copy()
+        decomposed[self.DECOMPOSED_GROUP_COLUMN] = list(labels)
+        state_gateway.set_dataframe_and_source(
+            decomposed, file_path=app_state.file_path, sheet_name=app_state.sheet_name
+        )
+        columns = list(app_state.group_cols or [])
+        if self.DECOMPOSED_GROUP_COLUMN not in columns:
+            columns.append(self.DECOMPOSED_GROUP_COLUMN)
+        state_gateway.set_group_data_columns(columns, list(app_state.data_cols or []))
+        parents = dict(app_state.parent_groups or {})
+        parents.update(children)
+        # Every parent this feature made comes from a path in the specification, so the ones the
+        # specification no longer names are dropped rather than merged over: collapsing a step has
+        # to remove the group it created, not leave it behind.
+        from visualization.plotting.decomposition import SEPARATOR as _SEP, path_values
+
+        previous = dict(app_state.group_decomposition or {})
+        previous.pop(self.BASE_DECOMPOSITION_KEY, None)
+        for key in previous:
+            parents.pop(_SEP.join(path_values(key)), None)
+        parents.update(children)
+        state_gateway.set_parent_groups({k: v for k, v in parents.items() if v})
+        state_gateway.set_group_decomposition({self.BASE_DECOMPOSITION_KEY: base, **spec})
+        state_gateway.set_last_group_col(self.DECOMPOSED_GROUP_COLUMN)
+        # Keep the selection the user had instead of ticking everything: a group that was visible
+        # becomes the children it was refined into, and one that was hidden stays hidden.
+        current = app_state.visible_groups
+        if current is not None:
+            visible = set(current)
+            for label, kids in children.items():
+                if label in visible:
+                    visible.discard(label)
+                    visible.update(kids)
+            state_gateway.set_visible_groups(sorted(visible))
+        state_gateway.bump_data_version()
+        self._reload_legend_panel()
+        self._refresh_after_decomposition(spec)
+        return True
+
+    def _refresh_after_decomposition(self, spec) -> None:
+        try:
+            from visualization.events import on_slider_change
+
+            on_slider_change()
+        except Exception as err:  # pragma: no cover - headless harness
+            logger.warning("Could not refresh the plot after decomposing: %s", err)
+        logger.info("Legend decomposition is now %s", spec or "(none)")
+
+    def decompose_group_by(self, parent, by_column) -> bool:
+        """Refine legend entry *parent* by *by_column*, inside itself.
+
+        The entry is named by the path of values that leads to it, so splitting a child
+        refines that child alone and leaves its siblings - and its ancestors' other
+        branches - exactly as they were.
+        """
+        from visualization.plotting.decomposition import path_key
+
+        spec, base = self._decomposition_spec()
+        if base is None:
+            base = app_state.last_group_col
+        if base == self.DECOMPOSED_GROUP_COLUMN or base not in (app_state.group_cols or []):
+            # No base to split from: the active column is the one a previous split produced.
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("Choose a grouping column before decomposing."),
+            )
+            return False
+        # The dialog disables these columns and the method refuses them too: one that is constant
+        # inside this group could only ever produce a single child, and reaching the same state by
+        # another route must not do it silently.
+        if str(by_column) in self._used_decomposition_columns(parent):
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("That column is already in use on this group's path."),
+            )
+            return False
+        spec[path_key(self._path_of_label(parent))] = str(by_column)
+        return self._write_decomposition(spec, base)
+    def clear_group_decomposition(self, parent=None) -> bool:
+        """Undo the decomposition of *parent* and everything split inside it.
+
+        The split of a group is what defines its children, so clearing it has to clear the
+        steps taken inside those children as well; otherwise they would name paths that no
+        longer exist.
+        """
+        from visualization.plotting.decomposition import PATH_SEPARATOR, path_key, path_values
+
+        spec, base = self._decomposition_spec()
+        if parent is None:
+            spec = {}
+        else:
+            prefix = self._path_of_label(parent)
+            spec = {
+                key: column
+                for key, column in spec.items()
+                if tuple(path_values(key))[: len(prefix)] != prefix
+            }
+        return self._write_decomposition(spec, base)
+
+    def _decomposition_columns(self):
+        """Every column the data can be grouped by, in offered order.
+
+        The declared grouping columns come first, then any other column the data holds. The
+        computed column a previous split produced is not offered; nothing else is filtered
+        out, because which columns make sense to refine by is the user's call.
+        """
+        frame = app_state.df_global
+        if frame is None:
+            return []
+        candidates: list[str] = []
+        for column in [*(app_state.group_cols or []), *frame.columns]:
+            name = str(column)
+            if name in candidates or name not in frame.columns:
+                continue
+            if name == self.DECOMPOSED_GROUP_COLUMN:
+                continue
+            candidates.append(name)
+        return candidates
+
+    def _used_decomposition_columns(self, parent=None):
+        """Columns that cannot refine *parent*: those already used **on its own path**.
+
+        The active grouping column and the column of every step that produced this group are
+        constant inside it, so refining by one of them could only ever yield a single child -
+        that is why they are locked here. A column used in another branch is not restricted:
+        nothing about that branch says anything about this one.
+        """
+        from visualization.plotting.decomposition import path_key
+
+        spec, base = self._decomposition_spec()
+        if base is None:
+            # Nothing is decomposed yet, so the column in force is the active one.
+            base = app_state.last_group_col
+        columns = {str(base)} if base else set()
+        if parent is not None:
+            path = self._path_of_label(parent)
+            for depth in range(1, len(path) + 1):
+                column = spec.get(path_key(path[:depth]))
+                if column:
+                    columns.add(str(column))
+        return columns
+
+    def _choose_decomposition(self, parent) -> bool:
+        """Ask which column refines *parent* in a window, then apply it."""
+        from .legend_decompose_dialog import LegendDecomposeDialog
+
+        columns = self._decomposition_columns()
+        if not columns:
+            QMessageBox.warning(
+                self, translate("Warning"), translate("Please load data first.")
+            )
+            return False
+        dialog = LegendDecomposeDialog(
+            self,
+            columns,
+            used=self._used_decomposition_columns(parent),
+            group_label=str(parent),
+        )
+        if dialog.exec_() != dialog.Accepted:
+            return False
+        column = dialog.selected_column()
+        if column is None:
+            return False
+        return self.decompose_group_by(parent, column)
+
     def _create_parent_group(self):
         from PyQt5.QtWidgets import QInputDialog
 

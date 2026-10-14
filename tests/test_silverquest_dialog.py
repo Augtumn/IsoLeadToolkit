@@ -19,10 +19,11 @@ import pytest
 
 from core import app_state, state_gateway, translate
 from plugins.builtins.silverquest_plugin import (
-    ROLE_REFERENCE_MATCH_PREFIX,
-    ROLE_MATCH_PREFIX,
     ROLE_OTHER,
-    ROLE_REFERENCE_PREFIX,
+    ROLE_REFERENCE_MATCHED_PREFIX,
+    ROLE_REFERENCE_UNMATCHED_PREFIX,
+    ROLE_SAMPLE_MATCHED_PREFIX,
+    ROLE_SAMPLE_UNMATCHED_PREFIX,
 )
 from ui.panels.analysis.dialogs.silverquest_dialog import (
     MAX_DISPLAY_ROWS,
@@ -31,6 +32,7 @@ from ui.panels.analysis.dialogs.silverquest_dialog import (
     build_artefact_records,
     candidate_group_columns,
     resolve_artefact_columns,
+    role_counts_text,
 )
 
 #: The worked example from Readme.pdf ("Input Example").
@@ -349,6 +351,14 @@ def test_dialog_runs_the_search_from_the_loaded_groups(qapp, restore_state) -> N
         assert translate("references: {count} selected row(s)").format(
             count=3
         ) in dialog.info_label.text()
+        # The two sides and their two outcomes are reported next to the hit table,
+        # which itself lists only the matches.
+        assert translate(
+            "Samples: {entered} in the search, {matched} matched, {unmatched} unmatched."
+        ).format(entered=2, matched=2, unmatched=0) in dialog.info_label.text()
+        assert translate(
+            "References: {entered} in the search, {matched} matched, {unmatched} unmatched."
+        ).format(entered=3, matched=1, unmatched=2) in dialog.info_label.text()
 
         # The hit table is closest-first and names the matching ore.
         assert dialog.result_table.rowCount() == 2
@@ -417,15 +427,16 @@ def test_dialog_applies_the_roles_as_a_group_column(qapp, restore_state, monkeyp
         frame = app_state.df_global
         assert ROLE_COLUMN in frame.columns
         assert frame[ROLE_COLUMN].tolist() == [
-            ROLE_MATCH_PREFIX + "SiteA",
-            ROLE_MATCH_PREFIX + "SiteA",
+            ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+            ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
             ROLE_OTHER,
-            ROLE_REFERENCE_MATCH_PREFIX + "OreX",
-            ROLE_REFERENCE_PREFIX + "OreX",
+            ROLE_REFERENCE_MATCHED_PREFIX + "OreX",
+            ROLE_REFERENCE_UNMATCHED_PREFIX + "OreX",
             ROLE_OTHER,
         ]
         # The new column becomes the active grouping, so the plot colours by it
-        # and the legend lists "[Match] SiteA" / "[Reference] OreX" / "[Other Data]".
+        # and the legend lists "[Sample Matched] SiteA" / "[Reference Matched] OreX"
+        # / "[Other Data]".
         assert ROLE_COLUMN in app_state.group_cols
         assert app_state.last_group_col == ROLE_COLUMN
         # No shape by role: every value of one grouping column is drawn with the same
@@ -470,7 +481,7 @@ def test_dialog_warns_when_no_role_is_selected(qapp, restore_state, monkeypatch)
         _select(dialog, artefacts=[], references=["OreX"])
         assert dialog._search_payload() is None
         assert warned and warned[-1] == translate(
-            "Please select at least one artefact group."
+            "Please select at least one sample group."
         )
 
         warned.clear()
@@ -507,6 +518,45 @@ def test_dialog_search_warns_when_data_is_absent(qapp, monkeypatch, restore_stat
 
 def test_display_cap_is_a_sane_positive_number() -> None:
     assert MAX_DISPLAY_ROWS >= 100
+
+
+def test_role_counts_text_reports_both_sides() -> None:
+    """The result line names each side and each outcome, and its exclusions."""
+    payload = {
+        "role_counts": {
+            "samples": {
+                "selected": 12,
+                "entered": 10,
+                "matched": 6,
+                "unmatched": 4,
+                "excluded": 2,
+            },
+            "references": {
+                "selected": 30,
+                "entered": 30,
+                "matched": 9,
+                "unmatched": 21,
+                "excluded": 0,
+            },
+        }
+    }
+
+    lines = role_counts_text(payload).splitlines()
+
+    assert translate(
+        "Samples: {entered} in the search, {matched} matched, {unmatched} unmatched."
+    ).format(entered=10, matched=6, unmatched=4) in lines
+    assert translate(
+        "References: {entered} in the search, {matched} matched, {unmatched} unmatched."
+    ).format(entered=30, matched=9, unmatched=21) in lines
+    assert translate("Samples: {excluded} row(s) left out (unusable Pb ratios).").format(
+        excluded=2
+    ) in lines
+    # A side with nothing excluded gets no extra line.
+    assert len(lines) == 3
+    # A payload from before the counts existed is answered with nothing, not a crash.
+    assert role_counts_text({}) == ""
+    assert role_counts_text(None) == ""
 
 
 def test_a_search_leaves_no_wait_cursor_behind(qapp, restore_state) -> None:
@@ -649,7 +699,21 @@ def test_apply_to_data_opens_a_group_column(qapp, restore_state, monkeypatch) ->
         assert ROLE_COLUMN in (app_state.group_cols or []), f"not registered; dialogs={messages}"
         assert app_state.last_group_col == ROLE_COLUMN, f"active grouping is {app_state.last_group_col!r}"
         roles = [str(v) for v in frame[ROLE_COLUMN]]
-        assert any(r.startswith("[Reference]") for r in roles), roles
-        assert any(r.startswith(("[No Match]", "[Other Data]")) for r in roles), roles
+        assert any(r.startswith(ROLE_SAMPLE_MATCHED_PREFIX) for r in roles), roles
+        assert any(r.startswith(ROLE_SAMPLE_UNMATCHED_PREFIX) for r in roles), roles
+        assert any(r.startswith(ROLE_REFERENCE_MATCHED_PREFIX) for r in roles), roles
+        assert any(r.startswith(ROLE_REFERENCE_UNMATCHED_PREFIX) for r in roles), roles
+        assert all(
+            r.startswith(
+                (
+                    ROLE_SAMPLE_MATCHED_PREFIX,
+                    ROLE_SAMPLE_UNMATCHED_PREFIX,
+                    ROLE_REFERENCE_MATCHED_PREFIX,
+                    ROLE_REFERENCE_UNMATCHED_PREFIX,
+                    ROLE_OTHER,
+                )
+            )
+            for r in roles
+        ), roles
     finally:
         dialog.deleteLater()

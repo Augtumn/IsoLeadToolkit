@@ -214,8 +214,8 @@ def _first_inliner(documents: tuple[TableDocument, ...]) -> dict[Block, TableKey
 def _build_table_spec(
     document: TableDocument,
     blocks_doc: BlockDocument,
-    vocab_lookup: Callable[[FieldSpec], str | None] | None,
-    label_lookup: Callable[[FieldSpec], str] | None,
+    vocab_lookup: Callable[[FieldSpec], str | None],
+    label_lookup: Callable[[FieldSpec], str],
 ) -> TableSpec:
     """把一份模块文档组装成 `TableSpec`（含内联块展开）。
 
@@ -225,8 +225,8 @@ def _build_table_spec(
     Args:
         document: 模块文档解析结果。
         blocks_doc: 块文档解析结果（提供块成员定义）。
-        vocab_lookup: `vocab.vocab_id_for`；不可用时 `None`。
-        label_lookup: `labels.label_for`；不可用时 `None`。
+        vocab_lookup: `vocab.vocab_id_for`。
+        label_lookup: `labels.label_for`。
 
     Returns:
         该模块的表定义。
@@ -261,109 +261,74 @@ def _build_table_spec(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 可选依赖：vocab / labels
+# vocab / labels 查询（同一包的模块，懒导入只是为了不拉入大块词表）
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _load_vocab_lookup() -> Callable[[FieldSpec], str | None] | None:
-    """延迟导入 `vocab.vocab_id_for`；模块缺席或当前不可导入时回退为 `None`。
+def _load_vocab_lookup() -> Callable[[FieldSpec], str | None]:
+    """延迟导入 `vocab.vocab_id_for`。
 
-    依赖缺席（本包并行开发中）属于预期情况，记 debug；模块存在但导入失败（半成品、
-    语法错误）属于异常情况，记 warning —— 两种情况下注册表都必须仍然可用。
-
-    Returns:
-        `vocab_id_for`；不可用时返回 `None`。
+    `vocab` 是本包的组成部分，导入失败即安装/代码损坏：直接抛 `ImportError`，
+    不做"缺席就降级"的处理（docs/dev_conventions.md §18.6）。
     """
-    try:
-        from .vocab import vocab_id_for
-    except ImportError as err:
-        logger.debug("vocab 模块不可用，vocab_id 一律回退为 None: %s", err)
-        return None
-    except Exception as err:  # 可选模块的导入缺陷不应让整份注册表不可用
-        logger.warning("vocab 模块导入失败，vocab_id 一律回退为 None: %s", err)
-        return None
+    from .vocab import vocab_id_for
+
     return vocab_id_for
 
 
-def _load_label_lookup() -> Callable[[FieldSpec], str] | None:
-    """延迟导入 `labels.label_for`；模块缺席或当前不可导入时回退为 `None`。
+def _load_label_lookup() -> Callable[[FieldSpec], str]:
+    """延迟导入 `labels.label_for`（同样不做缺席降级）。"""
+    from .labels import label_for
 
-    Returns:
-        `label_for`；不可用时返回 `None`（`label_zh` 回退为 `label_en`）。
-    """
-    try:
-        from .labels import label_for
-    except ImportError as err:
-        logger.debug("labels 模块不可用，label_zh 一律回退为 label_en: %s", err)
-        return None
-    except Exception as err:  # 同上：可选模块的导入缺陷不应让注册表不可用
-        logger.warning("labels 模块导入失败，label_zh 一律回退为 label_en: %s", err)
-        return None
     return label_for
 
 
 def _lookup_vocab_id(
     lookup: Callable[[FieldSpec], str | None] | None, spec: FieldSpec
 ) -> str | None:
-    """查询受控词表 ID，失败即回退为 `None`。
+    """查询受控词表 ID；结果为空时为 `None`（"该字段没有受控词表"）。
 
     Args:
-        lookup: `vocab.vocab_id_for`；依赖缺席时为 `None`。
+        lookup: `vocab.vocab_id_for`。
         spec: 待查询字段。
 
     Returns:
-        词表 ID；依赖缺席、查询抛错或结果为空时返回 `None`。
+        词表 ID 或 `None`。
     """
-    if lookup is None:
-        return None
-    try:
-        value = lookup(spec)
-    except Exception as err:  # 可选依赖的实现缺陷不应让整份注册表不可用，故宽捕获并记录
-        logger.debug("字段 %s 的 vocab_id 查询失败，回退为 None: %s", spec.oid, err)
-        return None
-    return value or None
+    return lookup(spec) or None
 
 
-def _lookup_label_zh(
-    lookup: Callable[[FieldSpec], str] | None, spec: FieldSpec
-) -> str:
-    """查询字段中文标签，失败即回退为 `label_en`。
+def _lookup_label_zh(lookup: Callable[[FieldSpec], str], spec: FieldSpec) -> str:
+    """查询字段中文标签，查询结果为空时回退为 `label_en`。
 
     Args:
-        lookup: `labels.label_for`；依赖缺席时为 `None`。
+        lookup: `labels.label_for`。
         spec: 待查询字段。
 
     Returns:
-        中文标签；依赖缺席、查询抛错或结果为空时返回 `label_en`。
+        中文标签。
     """
     fallback = spec.label_zh or spec.label_en
-    if lookup is None:
-        return fallback
-    try:
-        value = lookup(spec)
-    except Exception as err:  # 同上：单个字段的标签缺失不应让注册表不可用
-        logger.debug("字段 %s 的 label_zh 查询失败，回退为 %r: %s", spec.oid, fallback, err)
-        return fallback
-    return value or fallback
+    return lookup(spec) or fallback
 
 
 def _enrich(
     spec: FieldSpec,
-    vocab_lookup: Callable[[FieldSpec], str | None] | None,
-    label_lookup: Callable[[FieldSpec], str] | None,
+    vocab_lookup: Callable[[FieldSpec], str | None],
+    label_lookup: Callable[[FieldSpec], str],
 ) -> FieldSpec:
     """填充字段的 `vocab_id` / `label_zh`，并按词表登记提升 `value_kind`。
 
     提升规则：`vocab_id_for(spec)` 返回非 `None` 且解析层的 `value_kind` 属于笼统类型
     （`FREE_TEXT` / `MIXED`）时改为 `CONTROLLED_VOCAB`；解析层已给出精确类型
     （`SIGMA` / `RATIO_NAME` / `GEOL_TYPE` / …）时保持原值。词表查询用的是**提升前**的
-    `spec`，因此重复富化同一字段结果稳定；`vocab` 缺席时不改写 `value_kind`。
+    `spec`，因此重复富化同一字段结果稳定。
     "哪些字段有受控词表"以 `vocab.py` 的登记为唯一真源，解析层不重复维护一份。
 
     Args:
         spec: 解析得到的字段定义（`vocab_id=None`、`label_zh=""`）。
-        vocab_lookup: `vocab.vocab_id_for`；不可用时 `None`。
-        label_lookup: `labels.label_for`；不可用时 `None`。
+        vocab_lookup: `vocab.vocab_id_for`。
+        label_lookup: `labels.label_for`。
 
     Returns:
         填充后的新 `FieldSpec`（`FieldSpec` frozen，故用 `dataclasses.replace`）。

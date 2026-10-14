@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -67,25 +68,81 @@ def copy_toolbar_actions(source, target, translations=None) -> None:
                 break
 
 
+def _scatter_bounds(axis):
+    """``(xs, ys, zs)`` of every finite point the axes currently draws."""
+    xs: list[float] = []
+    ys: list[float] = []
+    zs: list[float] = []
+    for collection in getattr(axis, "collections", []) or []:
+        try:
+            offsets = collection.get_offsets()
+        except Exception:
+            continue
+        for point in offsets if offsets is not None else []:
+            try:
+                x, y = float(point[0]), float(point[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+            if not (math.isfinite(x) and math.isfinite(y)):
+                continue
+            xs.append(x)
+            ys.append(y)
+            if len(point) > 2:
+                try:
+                    z = float(point[2])
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(z):
+                    zs.append(z)
+    return xs, ys, zs
+
+
 class MainWindowCanvasMixin:
     """Canvas and toolbar behavior for main window."""
     _selection_tool_actions = None
     #: The axis-scale lock switch; None until set_matplotlib_figure() builds it.
     _axis_lock_action = None
+    #: The area that holds the panel child windows; None until one is needed.
+    _panel_mdi_area = None
+    #: The actions this application adds to the main toolbar, kept so the toolbar can be rebuilt
+    #: around another canvas when the user moves to a different panel.
+    _plot_actions = None
+    #: The plotting toolbar currently on the main one. Kept so the tool in use - the magnifier or
+    #: the hand - survives the rebuild that follows a change of panel, which is why the wheel
+    #: appeared to stop working: the magnifier was no longer selected.
+    _plot_toolbar = None
 
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
 
     def set_matplotlib_figure(self, fig):
         """设置 matplotlib 图形"""
+        # The panel area belongs to this layout and is reused between rebuilds, so it is left
+        # alone here - removing it would leave the child windows parented to nothing and thus
+        # invisible. It is dropped explicitly when the window goes back to a single figure.
         for i in reversed(range(self.canvas_layout.count())):
             widget = self.canvas_layout.itemAt(i).widget()
-            if widget:
+            if widget and widget is not self._panel_mdi_area:
                 widget.setParent(None)
+        app_state.plot_panel_windows[:] = []
 
-        canvas = FigureCanvas(fig)
+        # Several figures means independent child windows, one per panel, each with its own
+        # figure and canvas. Everything below - the selection tools, the panel, fit and hover
+        # buttons, and the copy that puts them on the main toolbar - runs for both cases, with
+        # the first panel standing in for the single canvas. Returning early here is what once
+        # left the main toolbar empty.
+        modes = [str(mode) for mode in list(getattr(app_state, "plot_panels", []) or [])]
+        records = self._build_panel_windows(modes) if len(modes) > 1 else []
+        if records:
+            canvas = records[0]["canvas"]
+        else:
+            if self._panel_mdi_area is not None:
+                self._panel_mdi_area.setParent(None)
+                self._panel_mdi_area = None
+            canvas = FigureCanvas(fig)
         toolbar = NavigationToolbar(canvas, self)
         toolbar.setVisible(False)  # Keep hidden; actions are extracted below
+        self._plot_toolbar = toolbar
 
         rect_select_action = QAction(self._get_selection_icon("selection_rect.svg"), translate("Box Select"), self)
         rect_select_action.setToolTip(translate("Box Select"))
@@ -99,9 +156,14 @@ class MainWindowCanvasMixin:
         lasso_select_action.setCheckable(True)
         lasso_select_action.triggered.connect(lambda: self._toggle_selection_tool("lasso"))
 
-        toolbar.addSeparator()
-        toolbar.addAction(rect_select_action)
-        toolbar.addAction(lasso_select_action)
+        # The toolbar is rebuilt whenever the figure or the panel list changes, so it is emptied
+        # first: without this the actions below were appended again on every switch and the
+        # toolbar grew a row of duplicates each time.
+        self.toolbar.clear()
+
+        self.toolbar.addSeparator()
+        self.toolbar.addAction(rect_select_action)
+        self.toolbar.addAction(lasso_select_action)
 
         self._selection_tool_actions = {
             "rect": rect_select_action,
@@ -123,16 +185,91 @@ class MainWindowCanvasMixin:
         )
         axis_lock_action.setCheckable(True)
         axis_lock_action.triggered.connect(self._toggle_axis_scale_lock)
-        toolbar.addAction(axis_lock_action)
+        self.toolbar.addAction(axis_lock_action)
         self._axis_lock_action = axis_lock_action
         self._sync_axis_scale_lock_action()
 
+        # Several figures in one window, so the same data can be judged by different means at
+        # once; hovering a point highlights the same sample in every panel.
+        panels_action = QAction(
+            self._get_selection_icon("panels.svg"), translate("Multi-Panel..."), self
+        )
+        panels_action.setToolTip(
+            translate(
+                "Show more than one figure at once. Hovering a point highlights the same "
+                "sample in every panel."
+            )
+        )
+        panels_action.triggered.connect(self._open_multi_panel_dialog)
+        self.toolbar.addAction(panels_action)
+
+        # Frame the data so the points fill the window, per panel; the counterpart of a
+        # navigation toolbar's home button, which only ever restores the last saved limits.
+        fit_action = QAction(
+            self._get_selection_icon("fit_view.svg"), translate("Fit to Data..."), self
+        )
+        fit_action.setToolTip(
+            translate("Zoom every panel so the data fills the window.")
+        )
+        fit_action.triggered.connect(self._fit_panels_to_data)
+        self.toolbar.addAction(fit_action)
+
+        # One switch for the hover readout: the tooltip and the point it marks. It used to be
+        # always on and buried in the data panel, and it enlarged a whole group rather than the
+        # point under the cursor, which told the user nothing.
+        hover_action = QAction(
+            self._get_selection_icon("hover_readout.svg"), translate("Hover Tooltip"), self
+        )
+        hover_action.setToolTip(
+            translate("Show the sample under the cursor and highlight that point in every panel.")
+        )
+        hover_action.setCheckable(True)
+        hover_action.setChecked(bool(app_state.show_tooltip))
+        hover_action.toggled.connect(self._toggle_hover_readout)
+        self.toolbar.addAction(hover_action)
+        self._hover_action = hover_action
+
+        # One set of navigation buttons that act on the panel in use: the zoom, the hand and home.
+        # Each panel keeps its own toolbar, hidden, because a NavigationToolbar's modes register
+        # their events on the canvas they were built with and cannot be moved to another; these
+        # buttons call into the one belonging to the panel the user is working in. They appear with
+        # panels only - the ordinary window keeps matplotlib's own buttons, right for its canvas.
+        self._navigation_actions = []
+        if records:
+            self._navigation_actions = [
+                self._navigation_action("zoom", translate("Zoom to Rectangle")),
+                self._navigation_action("pan", translate("Pan")),
+                self._navigation_action("home", translate("Home")),
+            ]
+            self.toolbar.addSeparator()
+            for action in self._navigation_actions:
+                self.toolbar.addAction(action)
+
         # Copy NavigationToolbar actions to main toolbar, translating tooltips
-        copy_toolbar_actions(toolbar, self.toolbar, _MPL_TOOLTIP_TRANSLATIONS)
+        # Kept so the toolbar can be rebuilt around another canvas when the user switches panels.
+        self._plot_actions = [
+            rect_select_action,
+            lasso_select_action,
+            axis_lock_action,
+            panels_action,
+            fit_action,
+            hover_action,
+        ]
+        # Freshly built actions start unchecked, so a tool that is still active in the state
+        # would show as unselected - the reported "tool state does not follow".
+        self._sync_selection_tool_actions()
 
-        self.canvas_layout.addWidget(canvas)
+        # With several windows the navigation buttons are rebuilt per panel instead, so this
+        # copy is only for the single-figure window; the panel case aims them at the first one.
+        if not records:
+            copy_toolbar_actions(toolbar, self.toolbar, _MPL_TOOLTIP_TRANSLATIONS)
+        else:
+            self._retarget_toolbar(canvas)
 
-        state_gateway.set_figure(fig)
+        if not records:
+            self.canvas_layout.addWidget(canvas)
+
+        state_gateway.set_figure(records[0]["figure"] if records else fig)
         state_gateway.set_canvas(canvas)
 
         # Ternary zoom: a Qt-level drag over the canvas becomes a zoom into a
@@ -143,7 +280,7 @@ class MainWindowCanvasMixin:
         # but the hook that re-applies it lives on the canvas. Imported here rather than at the
         # top of the module because visualization.plotting's facade pulls in the whole render
         # stack, and this module is imported while the window is being built.
-        if bool(getattr(app_state, "axis_scale_locked", False)):
+        if bool(app_state.axis_scale_locked):
             from visualization.plotting.axis_lock import install_axis_scale_lock
 
             install_axis_scale_lock(canvas)
@@ -153,6 +290,306 @@ class MainWindowCanvasMixin:
         # on app_state.fig.canvas (this same canvas). Connecting them again
         # here would double-fire every event (e.g. in-plot legend clicks and
         # double-click selection would toggle twice = net no-op).
+
+    def _focused_panel_record(self):
+        """The record of the panel in use: the active one, else the one the state mirrors, else none."""
+        records = list(app_state.plot_panel_windows or [])
+        for record in records:
+            if record.get("active"):
+                return record
+        for record in records:
+            axis = record.get("axes")
+            if axis is not None and axis is app_state.ax:
+                return record
+        return records[0] if records else None
+
+    def _focused_toolbar(self):
+        """The hidden navigation toolbar of the panel in use, so the buttons act on that panel."""
+        record = self._focused_panel_record()
+        if record is not None and record.get("toolbar") is not None:
+            return record["toolbar"]
+        return self._plot_toolbar
+
+    def _borrowed_navigation_icon(self, kind: str):
+        """matplotlib's own icon for a navigation button, borrowed so the look matches."""
+        for record in list(app_state.plot_panel_windows or []):
+            toolbar = record.get("toolbar")
+            if toolbar is None:
+                continue
+            for candidate in list(getattr(toolbar, "actions", lambda: [])()):
+                text = str(getattr(candidate, "text", lambda: "")() or "").lower()
+                if kind in text:
+                    icon = candidate.icon()
+                    if icon is not None and not icon.isNull():
+                        return icon
+        return self._get_selection_icon("panels.svg")
+
+    def _navigation_action(self, kind: str, label: str) -> QAction:
+        """A main-toolbar button that drives the toolbar of the panel in use."""
+        action = QAction(self._borrowed_navigation_icon(kind), label, self)
+        action.setToolTip(label)
+        if kind in ("zoom", "pan"):
+            action.setCheckable(True)
+
+        def _trigger(checked: bool = False, kind: str = kind, action=action) -> None:
+            target = self._focused_toolbar()
+            if target is None:
+                logger.warning("No panel toolbar to drive yet")
+                return
+            if kind == "home":
+                try:
+                    target.home()
+                    target.canvas.draw_idle()
+                except Exception as err:
+                    logger.warning("Could not go home in the panel: %s", err)
+                return
+            method = getattr(target, kind, None)
+            if method is None:
+                logger.warning("The panel toolbar has no %s", kind)
+                return
+            try:
+                method()
+            except Exception as err:
+                logger.warning("Could not switch the panel tool: %s", err)
+                return
+            # One set of buttons for every panel, so exactly one of them can be held at a time.
+            for other in self._navigation_actions or []:
+                if other is not action:
+                    other.setChecked(False)
+
+        action.triggered.connect(_trigger)
+        return action
+
+    def _toggle_hover_readout(self, checked: bool) -> None:
+        """One switch for the hover readout: the tooltip and the point it marks.
+
+        Switching it off clears both at once, rather than waiting for the next mouse move, and
+        every panel is repainted so the enlarged point goes back to its base size.
+        """
+        state_gateway.set_show_tooltip(bool(checked))
+        if not checked:
+            from visualization.event_handlers.pointer_events import clear_hover_highlight
+
+            clear_hover_highlight()
+        logger.info("Hover readout %s", "on" if checked else "off")
+
+    def _panels_for_fit(self):
+        """The axes to frame: one per panel window, or the single active axes."""
+        axes = []
+        for record in list(app_state.plot_panel_windows or []):
+            axis = record.get("axes")
+            if axis is not None:
+                axes.append((str(record.get("mode", "")), axis))
+        if not axes and app_state.ax is not None:
+            axes.append((str(getattr(app_state, "render_mode", "") or ""), app_state.ax))
+        return axes
+
+    @staticmethod
+    def _fit_one_axes(mode, axis) -> bool:
+        """Frame one axes around the points it draws; True when something was framed."""
+        name = getattr(axis, "name", "")
+        if name == "ternary" or str(mode).strip().upper() == "TERNARY":
+            # The whole triangle is the widest view a ternary diagram has.
+            axis.set_ternary_lim(0.0, 1.0, 0.0, 1.0, 0.0, 1.0)
+            return True
+        xs, ys, zs = _scatter_bounds(axis)
+        if not xs:
+            return False
+        if name == "3d":
+            axis.set_xlim(min(xs), max(xs))
+            axis.set_ylim(min(ys), max(ys))
+            if zs:
+                axis.set_zlim(min(zs), max(zs))
+            return True
+        span_x = max(xs) - min(xs)
+        span_y = max(ys) - min(ys)
+        pad_x = span_x * 0.05 if span_x > 0 else 1.0
+        pad_y = span_y * 0.05 if span_y > 0 else 1.0
+        axis.set_xlim(min(xs) - pad_x, max(xs) + pad_x)
+        axis.set_ylim(min(ys) - pad_y, max(ys) + pad_y)
+        return True
+
+    def _retarget_toolbar(self, canvas) -> None:
+        """Point the main toolbar's navigation buttons at *canvas*, by rebuilding them.
+
+        A NavigationToolbar2QT cannot be moved to another canvas - its zoom and pan modes register
+        their events on the canvas they were built with - so the toolbar is rebuilt around the new
+        one instead. That is what makes a single set of buttons follow the panel in use.
+        """
+        if canvas is None or self.toolbar is None:
+            return
+        try:
+            previous = self._plot_toolbar
+            # matplotlib names the held tool differently across versions: mode.name on the
+            # current one, _active on older builds. Both are read, and neither is assumed.
+            active = ""
+            if previous is not None:
+                held = getattr(previous, "mode", None)
+                active = str(getattr(held, "name", "") or "") or str(
+                    getattr(previous, "_active", "") or ""
+                )
+            self.toolbar.clear()
+            for action in self._plot_actions or []:
+                self.toolbar.addAction(action)
+            navigation = NavigationToolbar(canvas, self)
+            navigation.setVisible(False)
+            self._plot_toolbar = navigation
+            # The tool the user is holding stays held: switching panel used to drop the magnifier,
+            # and with it the wheel zoom that depends on it.
+            held_tool = active.strip().lower()
+            if "zoom" in held_tool:
+                navigation.zoom()
+                logger.info("Restored the magnifier after rebuilding the toolbar")
+            elif "pan" in held_tool:
+                navigation.pan()
+                logger.info("Restored the pan tool after rebuilding the toolbar")
+            copy_toolbar_actions(navigation, self.toolbar, _MPL_TOOLTIP_TRANSLATIONS)
+            install_ternary_zoom_filter(canvas, self.toolbar)
+            # A selection tool belongs to one canvas: the previous one has to let go of it, or a
+            # tool the user cancelled keeps working on the old window, and the new window never
+            # receives it, so the tool appears to lose its selection when the focus moves.
+            from visualization.events import _disable_rectangle_selector, toggle_selection_mode
+
+            try:
+                _disable_rectangle_selector()
+            except Exception as err:
+                logger.warning("Could not clear the selection tool: %s", err)
+            self._sync_selection_tool_actions()
+            mode = str(getattr(app_state, "selection_mode", "") or "")
+            if mode:
+                state_gateway.disable_selection_mode()
+                toggle_selection_mode(mode)
+        except Exception as err:
+            logger.warning("Could not retarget the toolbar: %s", err)
+
+    def _on_panel_closed(self, window) -> None:
+        """The user closed a child window: drop its panel and rebuild around what is left.
+
+        Reported: closing a window left the panel list unsynchronised - the application still
+        believed in a panel whose figure had gone. The list is corrected here and the rest is
+        rebuilt the same way a change of the panel count is.
+        """
+        records = [
+            record for record in list(app_state.plot_panel_windows or [])
+            if record.get("window") is not window
+        ]
+        modes = [str(record.get("mode")) for record in records]
+        state_gateway.set_plot_panels(modes if len(modes) > 1 else [])
+        figure = records[0].get("figure") if records else app_state.fig
+        app_state.plot_panel_windows[:] = records
+        logger.info("Panel window closed; %d panel(s) left", len(records))
+        self.set_matplotlib_figure(figure)
+
+    def _on_panel_activated(self, window) -> None:
+        """Follow the child window in use: its figure, axes and canvas become the active ones.
+
+        Reported: zoom, pan and the rest only ever worked in the first panel. The navigation
+        toolbar is built around one canvas, so its buttons drove that one whatever the user had
+        clicked; re-pointing it at the activated child makes the buttons act on the panel being
+        used, and the application state follows so hover and selection do too.
+        """
+        if window is None:
+            return
+        for index, record in enumerate(list(app_state.plot_panel_windows or [])):
+            if record.get("window") is not window:
+                continue
+            # Exactly one panel is the active one, and the tools act on it. The flag lives in the
+            # records rather than in a new state field, and the single-figure references are
+            # mirrored from it, so nothing silently keeps acting on the first panel.
+            for other in list(app_state.plot_panel_windows or []):
+                other["active"] = other is record
+            # The mode of the panel in use is mirrored too, so the code that reads the single
+            # render mode (titles, exports, parts of the render) agrees with the active panel
+            # instead of being left on whichever mode the single-figure window last had.
+            mode = str(record.get("mode") or "")
+            if mode and mode != str(getattr(app_state, "render_mode", "")):
+                state_gateway.set_render_mode(mode)
+            state_gateway.set_figure(record["figure"])
+            state_gateway.set_axis(record["axes"])
+            state_gateway.set_canvas(record["canvas"])
+            # The toolbar is NOT rebuilt here. Rebuilding it for every activation cleared it and
+            # re-added the same action objects, which destroyed the checked state and the
+            # connections - reported as the tools losing their state and refusing to turn on or
+            # off. The panels are equal, and the interactions that matter per panel (wheel, middle
+            # drag, box and lasso selection) are handled by the canvas under the pointer.
+            logger.info("Active panel is now %s (index %d)", record.get("mode"), index)
+            return
+
+    def _fit_panels_to_data(self):
+        """Zoom every panel so its points fill the window."""
+        axes = self._panels_for_fit()
+        fitted = 0
+        for mode, axis in axes:
+            try:
+                if self._fit_one_axes(mode, axis):
+                    fitted += 1
+            except Exception as err:
+                logger.warning("Could not fit a panel to the data: %s", err)
+        for _mode, axis in axes:
+            canvas = getattr(getattr(axis, "figure", None), "canvas", None)
+            if canvas is not None:
+                try:
+                    canvas.draw_idle()
+                except Exception as err:
+                    logger.warning("Could not redraw after fitting: %s", err)
+        logger.info("Fitted %d of %d panel(s) to the data", fitted, len(axes))
+
+    def _build_panel_windows(self, modes) -> list:
+        """Show one independent child window per panel; the records, or [] if impossible."""
+        from .mdi_panels import DEFAULT_PANEL_SIZE, PanelWindows, create_mdi_area
+
+        try:
+            area = self._panel_mdi_area
+            if area is None:
+                area = create_mdi_area(self.plot_container)
+                # Once: the buttons must follow whichever child window is in use.
+                area.subWindowActivated.connect(self._on_panel_activated)
+                self.canvas_layout.addWidget(area)
+                self._panel_mdi_area = area
+            else:
+                # It is reused, so it has to be in the layout before it can be seen.
+                if self.canvas_layout.indexOf(area) < 0:
+                    self.canvas_layout.addWidget(area)
+                area.setVisible(True)
+            panel = PanelWindows(area, on_close=self._on_panel_closed)
+            records = panel.sync(modes)
+        except Exception as err:
+            logger.warning("Could not build the panel windows: %s", err)
+            return []
+        if not records:
+            return []
+        # The first panel is active when the windows are built; the user's click moves it.
+        for index, record in enumerate(records):
+            record["active"] = index == 0
+        # A sub-window that was never shown, or shown at no size, would draw nothing.
+        for record in records:
+            window = record.get("window")
+            if window is None:
+                continue
+            if window.width() < 50 or window.height() < 50:
+                window.resize(*DEFAULT_PANEL_SIZE)
+            window.show()
+        panel.tile()
+        # Each child has its own canvas, and a matplotlib handler connected to one canvas never
+        # sees another's events - so every child is connected here, at the moment it is built.
+        from visualization.events import on_click, on_hover, on_legend_click
+
+        for record in records:
+            canvas = record.get("canvas")
+            if canvas is None:
+                continue
+            canvas.mpl_connect("motion_notify_event", on_hover)
+            canvas.mpl_connect("button_press_event", on_click)
+            canvas.mpl_connect("button_press_event", on_legend_click)
+        # Everything that reads app_state.fig must see the panel being worked in; the first is
+        # the natural start and the active one takes over as soon as it is clicked. Written
+        # through the gateway, which is the only way this project's guard allows state to move.
+        state_gateway.set_figure(records[0]["figure"])
+        state_gateway.set_axis(records[0]["axes"])
+        state_gateway.set_canvas(records[0]["canvas"])
+        app_state.plot_panel_windows[:] = records
+        logger.info("Built %d panel window(s): %s", len(records), modes)
+        return records
 
     def _get_selection_icon(self, filename):
         """Resolve selection tool icon from assets."""
@@ -207,6 +644,28 @@ class MainWindowCanvasMixin:
         actions["rect"].blockSignals(False)
         actions["lasso"].blockSignals(False)
 
+    def _open_multi_panel_dialog(self):
+        """Ask how many figures to show and what each draws, then redraw."""
+        from .multi_panel_dialog import MultiPanelDialog
+
+        dialog = MultiPanelDialog(
+            self,
+            panels=list(getattr(app_state, "plot_panels", []) or []),
+            default_mode=str(getattr(app_state, "render_mode", "2D") or "2D"),
+        )
+        if dialog.exec_() != dialog.Accepted:
+            return
+        state_gateway.set_plot_panels(dialog.selected_panels())
+        # The child windows follow the panel list, so they are rebuilt before the redraw - and
+        # rebuilt again when the list goes back to one, which restores the single canvas.
+        self.set_matplotlib_figure(app_state.fig)
+        try:
+            from visualization.events import on_slider_change
+
+            on_slider_change()
+        except Exception as err:  # pragma: no cover - needs a live canvas
+            logger.warning("Could not redraw after choosing panels: %s", err)
+
     def _toggle_axis_scale_lock(self, checked):
         """The toolbar's lock switch: record the ranges drawn now, or let go of them again.
 
@@ -235,7 +694,7 @@ class MainWindowCanvasMixin:
         if action is None:
             return
         action.blockSignals(True)
-        action.setChecked(bool(getattr(app_state, "axis_scale_locked", False)))
+        action.setChecked(bool(app_state.axis_scale_locked))
         action.blockSignals(False)
 
     def _show_axis_lock_hint(self, locked):
@@ -254,6 +713,8 @@ class MainWindowCanvasMixin:
 
 
 class TernaryZoomEventFilter(QObject):
+    #: The last wheel event already handled, so the second filter does not apply it again.
+    _last_wheel_event = None
     """Turns a left-button drag over the canvas into ternary limits."""
 
     def __init__(self, canvas: QWidget, toolbar=None) -> None:
@@ -296,6 +757,50 @@ class TernaryZoomEventFilter(QObject):
         return axes
 
 
+    def _zoom_tool_active_for(self, canvas) -> bool:
+        """True while the panel shown in *canvas* holds the magnifier.
+
+        Every panel has its own toolbar and the state mirrors one of them, so the tool must be read
+        from the panel the event is over.
+        """
+        for record in list(getattr(app_state, "plot_panel_windows", []) or []):
+            if record.get("canvas") is not canvas:
+                continue
+            toolbar = record.get("toolbar")
+            mode = str(getattr(getattr(toolbar, "mode", None), "name", "") or "")
+            return mode.upper() == "ZOOM"
+        return self._zoom_tool_active()
+
+    def _zoom_cartesian(self, axes, coords, event) -> None:
+        """Zoom a 2D axes around the pointer, by one wheel step.
+
+        Kept here rather than left to the toolbar's magnifier so that it works in every panel and
+        cannot be lost when the toolbar is rebuilt for another one.
+        """
+        try:
+            delta = int(event.angleDelta().y())
+        except Exception as err:
+            logger.warning("Could not read the wheel delta: %s", err)
+            return
+        if delta == 0:
+            return
+        factor = 0.85 if delta > 0 else 1.0 / 0.85
+        try:
+            x, y = float(coords[0]), float(coords[1])
+        except Exception:
+            return
+        try:
+            x0, x1 = axes.get_xlim()
+            y0, y1 = axes.get_ylim()
+            axes.set_xlim(x - (x - x0) * factor, x + (x1 - x) * factor)
+            axes.set_ylim(y - (y - y0) * factor, y + (y1 - y) * factor)
+            figure = getattr(axes, "figure", None)
+            if figure is not None:
+                figure.canvas.draw_idle()
+        except Exception as err:
+            logger.warning("Could not zoom the panel: %s", err)
+
+
     def _handle_wheel(self, axes, coords, event) -> None:
         """Wheel over the plot: zoom about the cursor (any plot type).
 
@@ -306,6 +811,12 @@ class TernaryZoomEventFilter(QObject):
         Only while the toolbar's magnifier is selected; otherwise the wheel belongs to
         whatever else is listening (scrolling the panel, matplotlib's own handlers).
         """
+        if str(getattr(axes, "name", "")) != "ternary":
+            # The wheel zooms here, per canvas, whatever the toolbar is doing: depending on the
+            # magnifier being selected meant the zoom quietly stopped whenever the toolbar was
+            # rebuilt for another panel.
+            self._zoom_cartesian(axes, coords, event)
+            return
         from visualization.plotting.ternary import cartesian_to_ternary
         from visualization.plotting.view_zoom import (
             is_ternary_axes,
@@ -440,13 +951,89 @@ class TernaryZoomEventFilter(QObject):
 
     # ── event filter ─────────────────────────────────────────────────────
     def eventFilter(self, obj, event) -> bool:
+        # Qt-level tracing, because on a real machine matplotlib's own mouse callbacks do not
+        # receive canvas events at all: without this, a click that does nothing gives no clue
+        # whether Qt saw it, whether it was a canvas, or whether it arrived as a double click.
+        try:
+            kind = event.type()
+            if kind in (
+                QEvent.MouseButtonPress,
+                QEvent.MouseButtonRelease,
+                QEvent.MouseButtonDblClick,
+            ):
+                widget = obj if isinstance(obj, QWidget) else None
+                is_canvas = bool(widget is not None and hasattr(widget, "figure"))
+                if kind != QEvent.MouseMove or is_canvas:
+                    logger.info(
+                        "qt mouse: %s on %s (canvas=%s) button=%s",
+                        kind,
+                        type(obj).__name__,
+                        is_canvas,
+                        getattr(event, "button", lambda: None)(),
+                    )
+                if (
+                    is_canvas
+                    and kind == QEvent.MouseButtonDblClick
+                    and event.button() == Qt.LeftButton
+                    and not app_state.selection_mode
+                ):
+                    # Only when no selection tool is active: with the tool on, the tool already
+                    # handles the click, and forwarding it as well toggled the sample twice -
+                    # the conflict where a double click appeared to do nothing.
+                    # Qt saw a double click on a canvas but matplotlib's callback may never be
+                    # called, so the click handler is invoked here with an equivalent event.
+                    from matplotlib.backend_bases import MouseEvent
+                    from visualization.event_handlers import on_click
+
+                    position = event.pos()
+                    height = widget.figure.bbox.height if widget.figure is not None else 0.0
+                    synthetic = MouseEvent(
+                        "button_press_event",
+                        widget,
+                        float(position.x()),
+                        float(height - position.y()),
+                        button=1,
+                    )
+                    synthetic.dblclick = True
+                    on_click(synthetic)
+                    return True
+        except Exception as err:
+            logger.warning("qt mouse tracing failed: %s", err)
+
         try:
             kind = event.type()
             if kind == QEvent.Wheel:
-                if not self._zoom_tool_active():
+                # One notch is one step. Qt hands the same event to every filter that watches it,
+                # and this filter is installed on the application as well as on each canvas, so a
+                # notch was applied twice - and a different number of times per window.
+                # The event itself, not its id: an id is reused once the event is collected, and a
+                # later notch then looked like the same one and was skipped.
+                if event is self._last_wheel_event:
                     return False
-                axes = self._current_axes()
-                coords = self._data_coords(obj, event) if axes is not None else None
+                self._last_wheel_event = event
+                # Bound to the magnifier, as asked, and to the magnifier of the panel the wheel is
+                # over: a wheel that ignores the tool is what this used to be.
+                canvas = obj if isinstance(obj, QWidget) and hasattr(obj, "figure") else self._canvas
+                if not self._zoom_tool_active_for(canvas):
+                    return False
+                axes = None
+                coords = None
+                try:
+                    point = canvas.mapFromGlobal(event.globalPos())
+                    ratio = canvas.devicePixelRatioF()
+                    display = (point.x() * ratio, (canvas.height() - point.y()) * ratio)
+                    for candidate in list(canvas.figure.axes):
+                        try:
+                            if candidate.bbox.contains(*display):
+                                axes = candidate
+                                break
+                        except Exception:
+                            continue
+                    if axes is not None:
+                        data = axes.transData.inverted().transform(display)
+                        coords = (float(data[0]), float(data[1]))
+                except Exception as err:
+                    logger.warning("Wheel: could not resolve the panel under the pointer: %s", err)
                 if axes is not None and coords is not None:
                     self._handle_wheel(axes, coords, event)
                     return False

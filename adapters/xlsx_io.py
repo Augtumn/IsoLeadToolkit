@@ -26,7 +26,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from .layout import SHEET_CHECK, SheetSpec, WorkbookLayout
+from data.metadata_profile.layout import SHEET_CHECK, SheetSpec, WorkbookLayout
 
 logger = logging.getLogger(__name__)
 

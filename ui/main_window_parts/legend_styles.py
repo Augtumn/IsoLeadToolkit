@@ -52,15 +52,16 @@ class MainWindowLegendStyleMixin:
             state_gateway.set_palette_and_marker_map(updated_palette, marker_map)
             self._update_marker_swatch(group, swatch)
 
-            if group in app_state.group_to_scatter:
-                sc = app_state.group_to_scatter[group]
-                try:
-                    sc.set_color(new_hex)
-                    sc.set_edgecolor("#1e293b")
-                    if app_state.fig:
-                        app_state.fig.canvas.draw_idle()
-                except Exception as exc:
-                    logger.warning("Failed to update color for %s: %s", group, exc)
+            # The palette just written to the state is the source of truth, so every panel is
+            # redrawn from it. Mutating the artists here reached only the one artist the state
+            # happened to point at - the first panel - which is why a colour change showed up in
+            # one window. The panels are equals: any change redraws all of them.
+            try:
+                from visualization.events import on_slider_change
+
+                on_slider_change()
+            except Exception as exc:
+                logger.warning("Failed to redraw after the colour change for %s: %s", group, exc)
 
     def _set_group_shape_value(self, group, marker_value, swatch):
         self._ensure_marker_shape_map()

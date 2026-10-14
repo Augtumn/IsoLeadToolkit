@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
+from application.use_cases import geochemistry as geochem_usecase
 from core import app_state, state_gateway, translate
 
 #: Methods this class expects from the classes it is composed with
@@ -40,11 +41,12 @@ class DataPanelGroupingMixin:
             panel._update_group_list()
 
     def _sync_geochem_model_for_mode(self, mode):
-        try:
-            from application.use_cases import geochemistry as geochem_usecase
-        except Exception:
-            return
+        """Keep the geochemistry preset in step with the render mode.
 
+        The use case is imported at module level (it is ours; a failed import is a broken
+        build, not a runtime condition). Failures while switching preset are logged and
+        reported instead of aborting the render-mode change.
+        """
         target_model = None
         if mode == "V1V2":
             target_model = "V1V2 (Zhu 1993)"
@@ -54,18 +56,21 @@ class DataPanelGroupingMixin:
         if not target_model:
             return
 
-        current_model = geochem_usecase.get_current_model_name()
-        if current_model == target_model:
-            return
+        try:
+            current_model = geochem_usecase.get_current_model_name()
+            if current_model == target_model:
+                return
 
-        # In dialog mode, DataPanel and GeoPanel are opened separately,
-        # so DataPanel may not hold a live geo_model_combo reference.
-        available_models = geochem_usecase.get_available_models()
-        if target_model not in available_models:
-            return
+            # In dialog mode, DataPanel and GeoPanel are opened separately,
+            # so DataPanel may not hold a live geo_model_combo reference.
+            available_models = geochem_usecase.get_available_models()
+            if target_model not in available_models:
+                return
 
-        if geochem_usecase.load_preset(target_model):
-            state_gateway.set_geo_model_name(target_model)
+            if geochem_usecase.load_preset(target_model):
+                state_gateway.set_geo_model_name(target_model)
+        except Exception as err:
+            logger.warning("Could not switch the geochemistry preset to %r: %s", target_model, err)
 
     def _refresh_group_column_radios(self):
         """Refresh grouping column radio buttons."""

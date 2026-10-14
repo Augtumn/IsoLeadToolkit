@@ -657,7 +657,7 @@ class AppStateGateway:
         # dispatch (and the immediate autosave it triggers) when nothing
         # actually changed.
         normalized = [str(item) for item in list(order or [])]
-        if normalized == list(getattr(self._state, "legend_item_order", []) or []):
+        if normalized == list(self._state.legend_item_order or []):
             return
         self._dispatch("SET_LEGEND_ITEM_ORDER", order=normalized)
 
@@ -821,6 +821,13 @@ class AppStateGateway:
 
     def set_parent_groups(self, mapping: dict[str, list[str]]) -> None:
         self._dispatch("SET_PARENT_GROUPS", mapping=dict(mapping or {}))
+
+    def set_group_decomposition(self, mapping: dict[str, str]) -> None:
+        self._dispatch("SET_GROUP_DECOMPOSITION", mapping=dict(mapping or {}))
+
+    def set_plot_panels(self, panels: list[str]) -> None:
+        """The render mode per panel; [] or one entry is the ordinary one-figure window."""
+        self._dispatch("SET_PLOT_PANELS", panels=[str(panel) for panel in list(panels or [])])
 
     def restore_snapshot(self, payload: dict) -> None:
         """Bulk-restore whitelisted persisted fields (startup only)."""

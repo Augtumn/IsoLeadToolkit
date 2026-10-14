@@ -17,10 +17,10 @@
 | `ratios` | 8 个比值的推导与不确定度换算 |
 | `validate` | 字段级/联动/外键校验 → 问题清单 |
 | `validate_sheets` | 工作表辅助列与块表归属校验 |
-| `io_xlsx` | 工作簿读写（原子写 + 覆盖前备份） |
 
-符号按 PEP 562 懒解析，照 `data/__init__.py` 的既有做法：`spec` 之外的模块会拉入
-`openpyxl`（`io_xlsx`）或大块词表数据（`vocab`/`labels`），不该在只想要常量时被牵连。
+符号按 PEP 562 懒解析，照 `data/__init__.py` 的既有做法：`spec` 之外的模块会拉入大块
+词表数据（`vocab`/`labels`），不该在只想要常量时被牵连。工作簿读写已移出本包（
+`adapters/xlsx_io.py`）：`data/` 是 domain，不依赖 openpyxl。
 
 工作簿的生成在 `scripts/build_entry_workbook.py`，用例编排在
 `application/use_cases/entry_workbook.py`，Qt 入口在 `ui/dialogs/entry_workbook.py`。
@@ -195,19 +195,6 @@ _register(
     ),
 )
 _register("validate_sheets", ("validate_sheet_helpers",))
-_register(
-    "io_xlsx",
-    (
-        "CHECK_FIRST_DATA_ROW",
-        "CHECK_HEADERS",
-        "SheetReadResult",
-        "backup_file",
-        "read_sheet",
-        "read_sheets",
-        "write_check_report",
-        "write_records",
-    ),
-)
 
 
 def __getattr__(name: str) -> Any:

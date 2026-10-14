@@ -7,8 +7,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from core import app_state
-
 logger = logging.getLogger(__name__)
 
 TSNE = None
@@ -41,25 +39,21 @@ def _lazy_import_ml() -> None:
         SimpleImputer = _SimpleImputer
 
 
-def _lazy_import_geochemistry() -> tuple[Any | None, Any | None]:
-    """Lazy-load the geochemistry module. Returns (module, calculate_all_parameters)."""
+def _lazy_import_geochemistry() -> tuple[Any, Any]:
+    """Lazy-load the geochemistry module. Returns (module, calculate_all_parameters).
+
+    ``data.geochemistry`` ships with the application, so a failed import is a broken
+    installation and is raised rather than turning V1V2 into "unavailable".
+    """
     global _geochemistry, _calculate_all_parameters, _geochem_checked
     if _geochem_checked:
         return _geochemistry, _calculate_all_parameters
     _geochem_checked = True
-    try:
-        from data import geochemistry as _geochemistry_mod
-        from data.geochemistry import calculate_all_parameters as _calc
-    except ImportError as err:
-        logger.warning(
-            "Geochemistry module not found. V1V2 algorithm will not be available: %s",
-            err,
-        )
-        _geochemistry = None
-        _calculate_all_parameters = None
-    else:
-        _geochemistry = _geochemistry_mod
-        _calculate_all_parameters = _calc
+    from data import geochemistry as _geochemistry_mod
+    from data.geochemistry import calculate_all_parameters as _calc
+
+    _geochemistry = _geochemistry_mod
+    _calculate_all_parameters = _calc
     return _geochemistry, _calculate_all_parameters
 
 

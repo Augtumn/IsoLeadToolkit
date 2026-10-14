@@ -193,7 +193,7 @@ class MainWindowLegendActionsMixin(
                     }
                 )
 
-            order_keys = getattr(app_state, "legend_item_order", []) or []
+            order_keys = app_state.legend_item_order or []
             order_index = {key: idx for idx, key in enumerate(order_keys)}
             entries.sort(key=lambda e: order_index.get(self._legend_order_key(e["type"], e["key"]), 10_000))
 

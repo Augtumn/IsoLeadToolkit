@@ -9,7 +9,7 @@
 - 校验规则 → `validate.py`
 - 比值推导 → `ratios.py`
 - 与既有扁平列互转 → `mapping.py`
-- xlsx 读写 → `io_xlsx.py`
+- xlsx 读写 → `adapters/xlsx_io.py`
 
 设计约束：本模块不得导入 PyQt5 / pandas / openpyxl，也不做文件 IO —— 保持纯数据结构，
 便于单测与被脚本层复用。

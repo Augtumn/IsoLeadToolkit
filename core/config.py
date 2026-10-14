@@ -25,12 +25,6 @@ else:
     BASE_DIR = Path(__file__).resolve().parent.parent
 
 LOCALES_DIR = BASE_DIR / 'locales'
-# Only try to create if it doesn't exist (it might be read-only in frozen app)
-if not LOCALES_DIR.exists():
-    try:
-        LOCALES_DIR.mkdir(exist_ok=True)
-    except Exception:
-        pass
 
 CONFIG = {
     'export_csv': 'selected_samples.csv',

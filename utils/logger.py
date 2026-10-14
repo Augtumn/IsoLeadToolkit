@@ -97,12 +97,13 @@ class LoggerWriter:
         self.linebuf = ''
 
     def write(self, buf: str) -> None:
-        # Write to original stream (console)
+        # Write to original stream (console). Logging must never raise - if the console
+        # stream is gone, the failure goes to the interpreter's own stderr instead.
         try:
             self.original_stream.write(buf)
             self.original_stream.flush()
-        except Exception:
-            pass
+        except Exception as err:
+            sys.__stderr__.write(f"[logger] console stream write failed: {err}\n")
 
         # Buffer and write to logger
         self.linebuf += buf
@@ -128,8 +129,8 @@ class LoggerWriter:
     def flush(self) -> None:
         try:
             self.original_stream.flush()
-        except Exception:
-            pass
+        except Exception as err:
+            sys.__stderr__.write(f"[logger] console stream flush failed: {err}\n")
 
 
 def _archive_previous_log(log_path: Path, keep: int = DEFAULT_ARCHIVE_KEEP) -> None:

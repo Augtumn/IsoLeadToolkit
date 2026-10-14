@@ -24,57 +24,226 @@ _hover_highlighter = HoverHighlighter()
 
 logger = logging.getLogger(__name__)
 
+#: One hover tooltip per figure, created on demand: a window showing several figures needs one in
+#: each of them, or the tooltip appears in whichever figure happens to own the shared annotation.
+_figure_annotations: dict[int, Any] = {}
+
 
 def _resolve_sample_index(event: object) -> int | None:
-    """Attempt to map a Matplotlib event to a sample index."""
+    """Attempt to map a Matplotlib event to a sample index, in the panel it happened in."""
     try:
-        for sc in app_state.scatter_collections:
+        # The panel the event happened in owns the collections and the mapping to look in. Using
+        # the single-figure ones resolved against the first panel, which is why a click or a
+        # double click in another window found no sample at all.
+        panel = _panel_for(getattr(event, "inaxes", None))
+        collections = (
+            list(panel.get("collections") or []) if panel is not None
+            else list(app_state.scatter_collections)
+        )
+        mapping = (
+            dict(panel.get("artist_to_sample") or {}) if panel is not None
+            else dict(app_state.artist_to_sample)
+        )
+
+        for sc in collections:
             if sc is None:
                 continue
             try:
                 cont, ind = sc.contains(event)
-            except Exception:
+            except Exception as err:
+                logger.warning("Hit testing failed for a collection: %s", err)
                 continue
             if not cont or 'ind' not in ind or not ind['ind']:
                 continue
             idx_in_scatter = int(ind['ind'][0])
-            sample_idx = app_state.artist_to_sample.get((id(sc), idx_in_scatter))
+            sample_idx = mapping.get((id(sc), idx_in_scatter))
             if sample_idx is not None:
                 return sample_idx
 
-        if event is not None and event.xdata is not None and event.ydata is not None:
+        # The coordinate fallback belongs to the active figure: the stored coordinates are the
+        # ones that figure draws, and nearest-to-a-point means nothing in another projection.
+        if panel is None and event is not None and event.xdata is not None and event.ydata is not None:
             return SELECTION_USE_CASE.nearest_sample_index(
                 app_state.sample_coordinates,
                 x=float(event.xdata),
                 y=float(event.ydata),
             )
-    except Exception:
+    except Exception as err:
+        logger.warning("Could not resolve a sample index: %s", err)
         return None
     return None
+
+
+def _panel_highlight_targets(sample_idx: int) -> list[tuple[Any, int]]:
+    """Where *sample_idx* is drawn, one ``(collection, index)`` per panel that draws it.
+
+    Built from the record each render leaves behind per panel, so a hover in one panel can
+    enlarge the same sample in all of them. Empty for the ordinary single-figure window,
+    where the caller's own collection is the only place the sample is drawn.
+    """
+    targets: list[tuple[Any, int]] = []
+    for state in getattr(app_state, "plot_panel_states", []) or []:
+        pair = (state.get("sample_to_artist") or {}).get(int(sample_idx))
+        if not pair:
+            continue
+        artist_id, index = pair
+        for collection in state.get("collections") or []:
+            if id(collection) == artist_id:
+                targets.append((collection, int(index)))
+                break
+    return targets
+
+
+def _panel_for(axes: Any) -> dict | None:
+    """The record of the panel drawn into *axes*, if any."""
+    for state in getattr(app_state, "plot_panel_states", []) or []:
+        if state.get("ax") is axes:
+            return state
+    return None
+
+
+def _annotation_for(figure: Any) -> Any:
+    """The hover tooltip belonging to *figure*, created on first use.
+
+    A window showing several figures has several figures, and an annotation belongs to one of
+    them: sharing a single annotation meant the tooltip was drawn in whichever figure happened to
+    own it rather than in the window being pointed at.
+    """
+    if figure is None:
+        return None
+    key = id(figure)
+    found = _figure_annotations.get(key)
+    if found is not None:
+        return found
+    axis = figure.axes[0] if getattr(figure, "axes", None) else None
+    if axis is None:
+        return None
+    try:
+        # The same tooltip the renderers build, so the one for a second figure looks and behaves
+        # identically: placed at the point with an offset, boxed and arrowed - not a bare
+        # top-left text, which is what an earlier version of this helper wrongly created.
+        found = axis.annotate(
+            "",
+            xy=(0, 0),
+            xytext=(20, 20),
+            textcoords="offset points",
+            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cbd5e1", alpha=0.95),
+            arrowprops=dict(arrowstyle="->", color="#475569"),
+        )
+        found.set_visible(False)
+    except Exception as err:
+        logger.warning("Could not create the hover annotation: %s", err)
+        return None
+        try:
+            from visualization.plotting.tooltip import raise_tooltip_above_data
+
+            raise_tooltip_above_data(axis, found)
+        except Exception as err:
+            logger.warning("Could not raise the hover annotation: %s", err)
+    _figure_annotations[key] = found
+    return found
+
+
+def clear_hover_highlight() -> bool:
+    """Hide the tooltip of the readout; the marked sample is left alone.
+
+    The mark belongs to the double click that set it, not to hovering, so switching the readout
+    off must not silently drop the sample being studied.
+    """
+    changed = False
+    try:
+        if app_state.annotation is not None and app_state.annotation.get_visible():
+            app_state.annotation.set_visible(False)
+            changed = True
+    except Exception as err:
+        logger.warning("Could not hide the hover annotation: %s", err)
+    if changed and app_state.fig is not None:
+        try:
+            app_state.fig.canvas.draw_idle()
+        except Exception as err:
+            logger.warning("Could not repaint after clearing the hover highlight: %s", err)
+    return changed
 
 
 def on_hover(event: Any) -> None:
     """Handle mouse hover events."""
     try:
-        if app_state.render_mode == '3D':
-            return
-
         if event is None or not hasattr(event, 'inaxes'):
+            logger.info("click ignored: the event carries no inaxes (event=%s)", type(event).__name__)
             return
 
-        if event.inaxes != app_state.ax or app_state.annotation is None:
+        panel = _panel_for(event.inaxes)
+        if event.inaxes != app_state.ax and panel is None:
             return
+        if panel is not None and str(panel.get("mode", "")).upper() == "3D":
+            # A 3D panel has no hit testing; the others still do.
+            return
+        # Resolve and apply the highlight first, independently of the tooltip. Both checks that
+        # used to stand here returned before the highlight ever ran: with several figures the
+        # annotation belongs to another figure or does not exist yet, and the readout is off by
+        # default - which is why the highlight never appeared.
+        collections = (
+            list(panel.get("collections") or []) if panel is not None
+            else list(app_state.scatter_collections)
+        )
+        mapping = (
+            dict(panel.get("artist_to_sample") or {}) if panel is not None
+            else dict(app_state.artist_to_sample)
+        )
+
+        def _sample_under(event):
+            for collection in collections:
+                if collection is None:
+                    continue
+                try:
+                    cont, ind = collection.contains(event)
+                except Exception:
+                    continue
+                if not cont or not ind or 'ind' not in ind or len(ind['ind']) == 0:
+                    continue
+                found = mapping.get((id(collection), int(ind['ind'][0])))
+                if found is not None:
+                    return found, collection, int(ind['ind'][0])
+            return None, None, None
+
+        sample_under, under_collection, under_index = _sample_under(event)
+
+        # The tooltip belongs to the figure being pointed at, not to a single shared annotation.
+        hovered_figure = getattr(event.inaxes, "figure", None)
+        annotation = app_state.annotation
+        if hovered_figure is not None and getattr(annotation, "figure", None) is not hovered_figure:
+            annotation = _annotation_for(hovered_figure)
+
         if not app_state.show_tooltip:
-            try:
-                app_state.annotation.set_visible(False)
-            except Exception as err:
-                logger.warning("on_hover failed: %s", err)
+            if annotation is not None:
+                try:
+                    annotation.set_visible(False)
+                except Exception as err:
+                    logger.warning("on_hover failed: %s", err)
+            if _hover_highlighter.clear() and app_state.fig is not None:
+                try:
+                    app_state.fig.canvas.draw_idle()
+                except Exception as err:
+                    logger.warning("on_hover failed: %s", err)
+            return
+
+        redraw = False
+        # The highlight is NOT a hover effect. It is set by a double click and stays until it is
+        # cleared, so the same sample can be studied across every projection without keeping the
+        # pointer on it - and hovering never disturbs it.
+
+        if annotation is None:
+            # No tooltip to show - the highlight above still stands.
+            if redraw and hovered_figure is not None:
+                try:
+                    hovered_figure.canvas.draw_idle()
+                except Exception as err:
+                    logger.warning("on_hover failed: %s", err)
             return
 
         visible = False
-        redraw = False
 
-        for sc in app_state.scatter_collections:
+        for sc in collections:
             if sc is None:
                 continue
 
@@ -84,7 +253,7 @@ def on_hover(event: Any) -> None:
                     continue
 
                 idx_in_scatter = int(ind['ind'][0])
-                sample_idx = app_state.artist_to_sample.get((id(sc), idx_in_scatter))
+                sample_idx = mapping.get((id(sc), idx_in_scatter))
                 if sample_idx is None:
                     continue
 
@@ -114,11 +283,12 @@ def on_hover(event: Any) -> None:
                     selected_status_label=translate('Status: Selected'),
                 )
 
-                app_state.annotation.xy = (x, y)
-                app_state.annotation.set_text(txt)
-                app_state.annotation.set_visible(True)
-                if _hover_highlighter.highlight(sc, idx_in_scatter):
-                    redraw = True
+                annotation.xy = (x, y)
+                annotation.set_text(txt)
+                annotation.set_visible(True)
+                # Hovering shows the tooltip and nothing else: the mark belongs to the double
+                # click, and a hover used to move it here, which is why the highlight wandered.
+                redraw = True
                 visible = True
                 break
 
@@ -127,14 +297,20 @@ def on_hover(event: Any) -> None:
 
         if not visible:
             try:
-                app_state.annotation.set_visible(False)
-                if _hover_highlighter.clear():
-                    redraw = True
+                annotation.set_visible(False)
+                redraw = True
             except Exception as err:
                 logger.warning("on_hover failed: %s", err)
 
-        if redraw and app_state.fig is not None:
-            app_state.fig.canvas.draw_idle()
+        # Every figure involved is repainted: the one being pointed at, because the tooltip is
+        # drawn there, and the active one, because the highlight is applied to all of them.
+        for figure in (hovered_figure, app_state.fig):
+            if figure is None:
+                continue
+            try:
+                figure.canvas.draw_idle()
+            except Exception as err:
+                logger.warning("on_hover failed: %s", err)
 
     except Exception as err:
         logger.warning("on_hover failed: %s", err)
@@ -166,35 +342,89 @@ def _resolve_group_at(event: Any):
     return value
 
 
+def _figures_for_panels() -> list[Any]:
+    """The figures the panels draw into, so a change can be repainted in all of them."""
+    figures: list[Any] = []
+    for record in getattr(app_state, "plot_panel_windows", []) or []:
+        figure = record.get("figure")
+        if figure is not None and figure not in figures:
+            figures.append(figure)
+    if not figures and app_state.fig is not None:
+        figures.append(app_state.fig)
+    return figures
+
+
+def _log_click(event: Any) -> None:
+    """Say what a click looks like before anything decides what to do with it.
+
+    Detailed on purpose: a click that does nothing has several possible reasons - it never
+    arrived, it arrived in a panel that was not recognised, the sample was not resolved, or the
+    selection did not refresh - and guessing between them wastes the user's time.
+    """
+    inaxes = getattr(event, "inaxes", None)
+    panel = _panel_for(inaxes) if inaxes is not None else None
+    logger.info(
+        "click: button=%s dblclick=%s inaxes=%s panel=%s selection_mode=%s state_ax_is_it=%s",
+        getattr(event, "button", None),
+        getattr(event, "dblclick", False),
+        "none" if inaxes is None else getattr(inaxes, "name", "axes"),
+        "none" if panel is None else panel.get("mode"),
+        app_state.selection_mode,
+        inaxes is app_state.ax,
+    )
+
+
 def on_click(event: Any) -> None:
     """Handle mouse click events for interactive selection."""
     try:
         if app_state.render_mode == '3D':
+            logger.info("click ignored: the single render mode says 3D")
             return
 
         if event is None or not hasattr(event, 'inaxes'):
             return
+        _log_click(event)
+        logger.debug(
+            "click detail: has_inaxes=%s inaxes=%s button=%s dblclick=%s xdata=%s ydata=%s",
+            hasattr(event, "inaxes"),
+            getattr(event, "inaxes", None),
+            getattr(event, "button", None),
+            getattr(event, "dblclick", False),
+            getattr(event, "xdata", None),
+            getattr(event, "ydata", None),
+        )
 
-        if event.inaxes != app_state.ax:
+        # A click counts in any panel, not only in the one the state mirrors: the panels are
+        # equals, and requiring the active one is why a click sometimes did nothing.
+        if event.inaxes != app_state.ax and _panel_for(event.inaxes) is None:
+            logger.info("click ignored: the axes belongs to no known panel")
             return
 
         if not hasattr(event, 'button') or event.button != 1:
+            logger.info(
+                "click ignored: button=%s (only the left button acts) dblclick=%s",
+                getattr(event, "button", None),
+                getattr(event, "dblclick", False),
+            )
+            return
+
+        if not app_state.selection_mode and not getattr(event, 'dblclick', False):
             return
 
         if not app_state.selection_mode:
             if getattr(event, 'dblclick', False):
-                # Selecting a sample requires the selection mode; without it a
-                # double click reveals the clicked point's group in the legend.
+                # Without the selection mode, a double click reveals the clicked point's group in
+                # the legend - and then selects that point, further down, with the same selection
+                # the selection tool makes. There is one way to mark a sample, not two: the
+                # separate highlight kept failing, and the selection already draws in every panel.
                 group = _resolve_group_at(event)
                 callback = getattr(app_state, 'group_reveal_callback', None)
                 if group is not None and callback is not None:
                     callback(group)
                     logger.info('Revealed group %s in the legend.', group)
-            return
-
-        if app_state.selection_mode:
             if getattr(event, 'dblclick', False):
                 sample_idx = _resolve_sample_index(event)
+                logger.info("double click: resolved sample=%s", sample_idx)
                 if sample_idx is None:
                     logger.warning('No point detected for selection.')
                     return
@@ -218,9 +448,18 @@ def on_click(event: Any) -> None:
                     logger.info('Deselected sample %s.', lab_label)
                 else:
                     state_gateway.add_selected_indices([sample_idx])
-                    logger.info('Selected sample %s.', lab_label)
+                    logger.info(
+                        'Selected sample %s; the selection now holds %d.',
+                        lab_label,
+                        len(app_state.selected_indices or ()),
+                    )
 
                 refresh_selection_overlay()
+                logger.info(
+                    'Selection overlay refreshed for %d panel(s): %s',
+                    len(app_state.plot_panel_states or []),
+                    [str(state.get('mode')) for state in (app_state.plot_panel_states or [])],
+                )
             return
 
     except Exception as err:

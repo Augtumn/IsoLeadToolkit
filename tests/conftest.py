@@ -74,6 +74,27 @@ def _sweep_stale_guard_probes():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _clear_panel_state_between_tests():
+    """Leave no panel records behind.
+
+    A record holds a canvas, and the event filters find the panel of an event by its canvas, so a
+    record left by one test made the next test's own canvas look like a panel that held a tool: the
+    gesture then ran in a test that expects it not to.
+    """
+    yield
+    from core import app_state
+
+    for name in ("plot_panel_windows", "plot_panel_states"):
+        collection = getattr(app_state, name, None)
+        if collection is None:
+            continue
+        try:
+            collection[:] = []
+        except TypeError:
+            setattr(app_state, name, [])
+
+
 # ── UI fixtures (composition root) ──────────────────────────────────────
 
 @pytest.fixture(scope="session")

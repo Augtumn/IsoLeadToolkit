@@ -10,10 +10,32 @@ from core import app_state, state_gateway
 from ...core import _build_group_palette, _ensure_axes
 from ...grouping import resolve_group_marker
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
-from ..common.legend import _place_inline_legend
+from ..common.legend import _notify_legend_panel, _place_inline_legend
 from ..common.state_access import _active_subset_indices, _df_global
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_frame_labels(data_columns: list[str], group_col: str) -> None:
+    """Title and axis labels of the 3D frame.
+
+    Shared by the drawn and the empty path: a frame with nothing visible still has to say
+    which columns it shows, or the canvas looks like a failed render.
+    """
+    subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
+    title = (
+        f'3D Scatter Plot{subset_info} ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n'
+        f'Colored by {group_col}'
+    )
+    state_gateway.set_current_plot_title(title)
+    if app_state.show_plot_title:
+        app_state.ax.set_title(title, pad=app_state.title_pad)
+    else:
+        app_state.ax.set_title('')
+    app_state.ax.set_xlabel(data_columns[0])
+    app_state.ax.set_ylabel(data_columns[1])
+    app_state.ax.set_zlabel(data_columns[2])
+    _apply_axis_text_style(app_state.ax)
 
 
 def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> bool:
@@ -60,6 +82,20 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
 
         df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
 
+        # The legend's visibility filter applies in 3D exactly as it does to the 2D and
+        # embedding renders: switching render mode must neither drop the user's selection
+        # nor ignore it (a group hidden in the legend used to come back on the 3D canvas).
+        visible_groups = app_state.visible_groups
+        if visible_groups is not None:
+            allowed = {str(group) for group in visible_groups}
+            df_plot = df_plot[df_plot[group_col].isin(allowed)].copy()
+            if df_plot.empty:
+                logger.warning(
+                    'No 3D row belongs to a visible group (%s); the plot stays empty until '
+                    'a group is ticked in the legend.',
+                    ', '.join(sorted(allowed)) or 'none',
+                )
+
         _apply_current_style()
 
         app_state.ax.clear()
@@ -104,6 +140,16 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
         legend_labels = list(unique_cats)
 
         if not app_state.scatter_collections:
+            if df_plot.empty:
+                # Every group the user keeps visible is absent from this projection: keep
+                # the 3D frame and the render mode instead of reporting a failure, which
+                # would send the use case looking for another mode to draw in.  The legend
+                # panel is still told, so its checkboxes match the selection that produced
+                # this empty frame (an empty selection must not leave them all ticked).
+                _apply_frame_labels(data_columns, group_col)
+                _notify_legend_panel(group_col, [], [])
+                state_gateway.set_annotation(None)
+                return True
             logger.error('No points were plotted in 3D')
             try:
                 app_state.fig.canvas.draw_idle()
@@ -122,20 +168,7 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
         except Exception as legend_err:
             logger.warning('3D legend creation error: %s', legend_err)
 
-        subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
-        title = (
-            f'3D Scatter Plot{subset_info} ({data_columns[0]}, {data_columns[1]}, {data_columns[2]})\n'
-            f'Colored by {group_col}'
-        )
-        state_gateway.set_current_plot_title(title)
-        if app_state.show_plot_title:
-            app_state.ax.set_title(title, pad=app_state.title_pad)
-        else:
-            app_state.ax.set_title('')
-        app_state.ax.set_xlabel(data_columns[0])
-        app_state.ax.set_ylabel(data_columns[1])
-        app_state.ax.set_zlabel(data_columns[2])
-        _apply_axis_text_style(app_state.ax)
+        _apply_frame_labels(data_columns, group_col)
 
         state_gateway.set_annotation(None)
         return True

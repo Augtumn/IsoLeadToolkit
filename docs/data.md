@@ -11,13 +11,12 @@
 | 文件 | 行数 | 职责 |
 |------|------|------|
 | `__init__.py` | 30 | 模块入口，PEP 562 懒加载导出地球化学 API |
-| `loader.py` | 53 | Excel/CSV 读取与列类型检测 |
 | `geochemistry/` | 1,861 | 铅同位素地球化学计算引擎 (拆分模块) |
 | `plumbotectonics_data.py` | 98 | Plumbotectonics 曲线数据 |
 
 ---
 
-## 1. loader.py — 数据加载
+## 1. 数据加载（`adapters/loader.py`）
 
 ### 职责
 从 Excel/CSV 文件加载数据，自动检测列类型。
@@ -32,8 +31,10 @@ def read_data_frame(excel_file: str, sheet_name: str = None) -> pd.DataFrame
 - 自动检测数值列 (>50% 数值即为数值列)；非数值单元格被强制转换时记录 warning
 - 分类列空值替换为 `"empty"` 字符串
 
-> 文件/工作表/列选择、数值列验证与 `app_state.df_global` 写入由用例层
-> `application/use_cases/load_dataset.py` 负责；`data/loader.py` 只做读取与类型清洗。
+> 读取与类型清洗在 `adapters/loader.py`（文件 IO 属基础设施，已移出 `data/`）；**对话框由 UI 层负责**（
+> `ui/panels/data/dialogs/data_import/load_flow.py` 收集文件/工作表/列后组成 `DatasetImport`），
+> 用例层 `application/use_cases/load_dataset.py` 只做校验与 `app_state.df_global` 注入
+> （`docs/dev_conventions.md` §18.1：UI 不得直接调用 data 内部清洗，必须经 UseCase 编排）。
 
 ### 数据流
 
@@ -41,10 +42,12 @@ def read_data_frame(excel_file: str, sheet_name: str = None) -> pd.DataFrame
 Excel/CSV 文件
   → read_data_frame() [calamine/openpyxl]
   → 类型检测 (数值 vs 分类)
-  → application/use_cases/load_dataset.py (对话框选择文件/工作表/列)
-  → 验证
+  → ui/.../data_import/load_flow.py (对话框选择文件/工作表/列 → DatasetImport)
+  → application/use_cases/load_dataset.py (验证 + 清洗 + 注入)
   → app_state.df_global
 ```
+
+> `metadata_profile/` 的工作簿读写也已移出 `data/`：`adapters/xlsx_io.py`。
 
 ---
 

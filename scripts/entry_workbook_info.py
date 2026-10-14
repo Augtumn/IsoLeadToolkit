@@ -8,7 +8,7 @@
 - `scripts/build_entry_workbook.py` 负责录入表（双层表头、批注、下拉、必填条件格式）
   与命令行入口，并**单向**导入本模块。
 
-`99_CHECK` 的表头直接从 `data/metadata_profile/io_xlsx.py` 取（与导入器共用一份约定），
+`99_CHECK` 的表头直接从 `adapters/xlsx_io.py` 取（与导入器共用一份约定），
 不在这里另抄一份字符串，避免两侧漂移。
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ from openpyxl.utils import absolute_coordinate, get_column_letter, quote_sheetna
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.worksheet import Worksheet
 
-from data.metadata_profile.io_xlsx import CHECK_FIRST_DATA_ROW, CHECK_HEADERS
+from adapters.xlsx_io import CHECK_FIRST_DATA_ROW, CHECK_HEADERS
 from data.metadata_profile.layout import (
     OWNER_SHEET_COLUMN,
     RATIO_HOST_COLUMN,
@@ -194,7 +194,7 @@ def write_schema_sheet(worksheet: Worksheet, rows: Sequence[Sequence[object]]) -
 
 
 def write_check_sheet(worksheet: Worksheet) -> None:
-    """写 `99_CHECK` 表头（列与顺序取自 `io_xlsx`，与导入器共用一份约定）。"""
+    """写 `99_CHECK` 表头（列与顺序取自 `xlsx_io`，与导入器共用一份约定）。"""
     _write_simple_header(worksheet, CHECK_HEADERS, CHECK_WIDTHS)
     worksheet.freeze_panes = f"A{CHECK_FIRST_DATA_ROW}"
 

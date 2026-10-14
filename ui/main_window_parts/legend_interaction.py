@@ -44,6 +44,10 @@ REQUIRES_MainWindowLegendInteractionMixin = (
     "_reload_legend_panel",
     "_remove_group_from_parent",
     "_update_legend_panel",
+    # Provided by MainWindowLegendGroupMixin: the decomposition lives with the parent groups.
+    "_choose_decomposition",
+    "_decomposition_columns",
+    "clear_group_decomposition",
 )
 
 
@@ -223,6 +227,23 @@ class MainWindowLegendInteractionMixin:
             )
             menu.addSeparator()
 
+        if entry_key is not None and app_state.df_global is not None:
+            # Whatever the data can sensibly be grouped by - not just the columns already
+            # declared as grouping columns, which may only be the active one.
+            # A window rather than a submenu: every column can be offered, with the ones already
+            # in use shown disabled, instead of the short list a submenu would have to be.
+            if self._decomposition_columns():
+                decompose_action = menu.addAction(translate("Decompose by..."))
+                decompose_action.triggered.connect(
+                    lambda checked=False, g=entry_key: self._choose_decomposition(g)
+                )
+            if (app_state.group_decomposition or {}) and entry_type in {"group", "parent"}:
+                clear_action = menu.addAction(translate("Collapse Decomposition"))
+                clear_action.triggered.connect(
+                    lambda checked=False, g=entry_key: self.clear_group_decomposition(g)
+                )
+            menu.addSeparator()
+
         new_action = menu.addAction(translate("New Parent Group..."))
         new_action.triggered.connect(lambda checked=False: self._create_parent_group())
         menu.exec_(self._legend_list.mapToGlobal(pos))
@@ -245,7 +266,11 @@ class MainWindowLegendInteractionMixin:
         return set(app_state.visible_groups) & set(groups)
 
     def _apply_visible_groups(self, visible, groups):
-        """Write the visible subset through the gateway (None means "all visible")."""
+        """Write the visible subset through the gateway.
+
+        ``None`` means "all visible"; an empty subset is stored as an empty selection
+        ("nothing visible"), which the renderers honour with an empty frame.
+        """
         if len(visible) >= len(groups):
             state_gateway.set_visible_groups(None)
         else:
@@ -266,21 +291,14 @@ class MainWindowLegendInteractionMixin:
     def _on_legend_invert_selection(self):
         """Swap visible and hidden groups.
 
-        A state with nothing visible cannot be expressed: an empty visible set normalizes
-        to None ("everything visible"), which is the same limit the per-row checkboxes
-        have. So when every group is visible the selection is left alone and the status
-        bar explains why instead of silently doing nothing.
+        Unticking everything is allowed, so inverting a full selection yields the empty
+        selection: the plot then draws an empty frame until a group is ticked again.
         """
         groups = self._legend_groups()
         if not groups:
             return
         inverted = set(groups) - self._visible_groups_now(groups)
-        if not inverted:
-            self.statusBar().showMessage(
-                translate("At least one group must stay visible."), 3000
-            )
-            return
-        logger.info("Legend: inverted the selection over %d group(s).", len(groups))
+        logger.info("Legend: inverting the selection over %d group(s).", len(groups))
         self._apply_visible_groups(inverted, groups)
 
     def _on_group_checkbox_change(self, group, state):
@@ -326,19 +344,54 @@ class MainWindowLegendInteractionMixin:
         logger.info("Group %s is not shown in the legend panel.", group)
 
     def _bring_to_front(self, group):
-        if group in app_state.group_to_scatter:
-            sc = app_state.group_to_scatter[group]
-            try:
-                max_z = 2
-                for c in app_state.scatter_collections:
-                    max_z = max(max_z, c.get_zorder())
+        """Bring *group* to the front in every panel, not only in the mirrored one.
 
-                sc.set_zorder(max_z + 1)
-                if app_state.fig:
-                    app_state.fig.canvas.draw_idle()
+        The state's group map belongs to one panel, so using it raised the artist of that panel and
+        left the others as they were - part of why an edit looked like it applied to one window.
+        """
+        panels = list(getattr(app_state, "plot_panel_states", []) or [])
+        if panels:
+            for panel in panels:
+                self._raise_group_in(panel, group)
+        else:
+            self._raise_group_in(
+                {
+                    "ax": app_state.ax,
+                    "collections": list(app_state.scatter_collections or []),
+                    "group_to_scatter": dict(app_state.group_to_scatter or {}),
+                },
+                group,
+            )
+        for figure in self._panel_figures():
+            try:
+                figure.canvas.draw_idle()
             except Exception as exc:
-                logger.warning("Failed to bring %s to front: %s", group, exc)
+                logger.warning("Could not repaint after bringing %s to front: %s", group, exc)
         self._move_legend_item_to_top("group", group)
         # Keep the plot and the legend in step: the list order is the source of
         # truth for stacking, so re-apply it after the row moved to the top.
         self._apply_legend_z_order()
+
+    def _raise_group_in(self, panel, group) -> None:
+        """Raise one group's artist inside one panel, using that panel's own map."""
+        artist = (panel.get("group_to_scatter") or {}).get(group)
+        if artist is None:
+            return
+        try:
+            highest = 2
+            for collection in panel.get("collections") or []:
+                highest = max(highest, collection.get_zorder())
+            artist.set_zorder(highest + 1)
+        except Exception as exc:
+            logger.warning("Failed to bring %s to front in a panel: %s", group, exc)
+
+    def _panel_figures(self):
+        """Every panel's figure, so a change is shown in all of them."""
+        figures = []
+        for state in list(getattr(app_state, "plot_panel_states", []) or []):
+            figure = getattr(state.get("ax"), "figure", None)
+            if figure is not None and figure not in figures:
+                figures.append(figure)
+        if not figures and app_state.fig is not None:
+            figures.append(app_state.fig)
+        return figures

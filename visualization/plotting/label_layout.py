@@ -255,6 +255,37 @@ def position_curve_label(
         text_artist.set_text(f" {age:.0f} Ma")
 
 
+def _points_of_axes(ax: Any) -> dict[int, tuple[float, float]]:
+    """The points drawn on *ax*, so a label avoids the points of the plot it belongs to.
+
+    The single-figure coordinates in the state belong to one figure: with several panels, laying a
+    label out against them placed it by another panel's points, and it stayed where it was put when
+    this panel was dragged - the reported label that ends up outside the view.
+    """
+    points: dict[int, tuple[float, float]] = {}
+    try:
+        for collection in getattr(ax, "collections", []) or []:
+            try:
+                offsets = collection.get_offsets()
+            except Exception as err:
+                logger.debug("Could not read a collection's offsets: %s", err)
+                continue
+            for index in range(len(offsets if offsets is not None else [])):
+                try:
+                    x, y = float(offsets[index][0]), float(offsets[index][1])
+                except (TypeError, ValueError, IndexError):
+                    continue
+                if np.isfinite(x) and np.isfinite(y):
+                    points[index] = (x, y)
+    except Exception as err:
+        logger.warning("Could not read the points of an axes: %s", err)
+    if points:
+        return points
+    # Nothing drawn on this axes yet: the state's coordinates are better than nothing.
+    stored = getattr(app_state, "sample_coordinates", None) or {}
+    return dict(stored) if isinstance(stored, dict) else {}
+
+
 def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None:
     """Apply adjustText globally for all visible overlay labels."""
     adjust_text = _lazy_import_adjust_text()
@@ -288,7 +319,7 @@ def apply_adjust_text_to_labels(ax: Any, text_artists: list[Any] | None) -> None
         return
 
     static_points = []
-    sample_coords = app_state.sample_coordinates or {}
+    sample_coords = _points_of_axes(ax)
     if isinstance(sample_coords, dict):
         # Only include points that are inside the current viewport so
         # adjustText avoids visible data rather than wasting budget on

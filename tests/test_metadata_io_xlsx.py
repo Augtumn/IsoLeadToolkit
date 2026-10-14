@@ -1,4 +1,5 @@
-"""`data/metadata_profile/io_xlsx.py` 的工作簿读写、备份与原子落盘测试。
+"""`adapters/xlsx_io.py` 的工作簿读写、备份与原子落盘测试（文件从 `data/metadata_profile/`
+移出：`data/` 是 domain，不依赖 openpyxl）。
 
 工作簿用 openpyxl 手工搭建（只依赖 `layout`），因此不依赖生成器脚本，也不依赖 markdown 解析。
 """
@@ -11,7 +12,7 @@ import openpyxl
 import pytest
 from openpyxl import Workbook
 
-from data.metadata_profile.io_xlsx import (
+from adapters.xlsx_io import (
     CHECK_HEADERS,
     FIRST_DATA_ROW,
     backup_file,

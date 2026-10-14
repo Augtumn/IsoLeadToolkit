@@ -47,6 +47,7 @@ def read_json_isolated(path: Path) -> dict[str, Any] | None:
         try:
             path.replace(corrupt)
             logger.warning("Isolated corrupt file as %s", corrupt)
-        except OSError:
-            pass
+        except OSError as err:
+            # The payload is already unreadable; failing to isolate it must still be visible.
+            logger.warning("Could not isolate corrupt file %s: %s", path, err)
         return None

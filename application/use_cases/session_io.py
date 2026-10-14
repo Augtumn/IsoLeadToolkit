@@ -98,7 +98,7 @@ def import_session(path: str) -> tuple[bool, str | None]:
             try:
                 from .load_dataset import hydrate_state_from_dataframe
 
-                data_ok = hydrate_state_from_dataframe(
+                hydrate_state_from_dataframe(
                     df,
                     file_path=session_payload.get("file_path") or "",
                     sheet_name=session_payload.get("sheet_name"),

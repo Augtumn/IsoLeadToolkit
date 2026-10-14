@@ -59,7 +59,7 @@
 
 ```
 Excel/CSV 文件
-  → data/loader.py (加载 + 列类型检测)
+  → adapters/loader.py (加载 + 列类型检测)
   → core/state/ (app_state.df_global，经 StateStore/Gateway)
   → visualization/plotting/ (嵌入计算 + 渲染)
   → matplotlib Figure (app_state.fig / app_state.ax)
@@ -128,8 +128,8 @@ IsotopesAnalyse/
 │   ├── session/            # 会话持久化 + 版本迁移
 │   ├── localization.py     # 双语
 │   └── cache.py            # LRU 嵌入缓存
+├── adapters/               # 文件 IO：数据集读取 / 方铅矿工作簿 / 录入工作簿读写
 ├── data/
-│   ├── loader.py           # Excel/CSV 读取 + 列类型推断
 │   └── geochemistry/       # 地球化学计算 (engine, age, source, delta, isochron)
 ├── plugins/                # 插件系统（api / manager / registry / builtins / examples）
 ├── ui/

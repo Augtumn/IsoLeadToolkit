@@ -41,8 +41,14 @@ def _solve_simplex_weights(endmember_matrix: np.ndarray, target: np.ndarray) -> 
             weights = res.x
             residual = float(np.sqrt(obj(weights)))
             return weights, residual
-    except Exception:
-        pass
+        logger.warning(
+            "Constrained mixing solve did not converge (%s); falling back to least squares.",
+            res.message,
+        )
+    except Exception as err:
+        logger.warning(
+            "Constrained mixing solve failed (%s); falling back to least squares.", err
+        )
 
     # Fallback: unconstrained least squares + clip + normalize
     try:

@@ -1,7 +1,7 @@
 """`application/use_cases/entry_workbook.py` 的用例层测试：生成 / 校验 / 导入。
 
 工作簿按 `synthetic_layout` 用 openpyxl 手工搭建（本文件自带的 `_build_workbook` 是
-`tests/test_metadata_io_xlsx.py` 那份局部 helper 的等价副本 —— 不跨文件引用，避免用例层测试
+`tests/test_metadata_xlsx_io.py` 那份局部 helper 的等价副本 —— 不跨文件引用，避免用例层测试
 随 IO 层测试一起改动），用例层的注册表用 `synthetic_profile` 夹具钉住，因此除最后一条真实
 档案端到端冒烟外，测试不依赖 `reference/metadata` 的内容与版本。
 """
@@ -18,7 +18,8 @@ import pytest
 from openpyxl import Workbook
 
 from application.use_cases import entry_workbook
-from data.metadata_profile import io_xlsx, spec, validate
+from adapters import xlsx_io
+from data.metadata_profile import spec, validate
 from data.metadata_profile.layout import SHEET_CHECK
 
 # 合成注册表里的表头机器键名（读取记录即以它们为键）。
@@ -82,13 +83,13 @@ def _build_workbook(path: Path, layout) -> Path:
         for column, label in enumerate(sheet_spec.all_header_labels, start=1):
             worksheet.cell(row=2, column=column, value=label)
         if sheet_spec.name == SHEET_CHECK:
-            for column, header in enumerate(io_xlsx.CHECK_HEADERS, start=1):
+            for column, header in enumerate(xlsx_io.CHECK_HEADERS, start=1):
                 worksheet.cell(row=1, column=column, value=header)
     workbook.save(path)
     return path
 
 
-def _put(layout, path: Path, sheet_name: str, values: dict, row: int = io_xlsx.FIRST_DATA_ROW) -> None:
+def _put(layout, path: Path, sheet_name: str, values: dict, row: int = xlsx_io.FIRST_DATA_ROW) -> None:
     """把一行写进某张表（键为表头机器键名）。"""
     workbook = openpyxl.load_workbook(path)
     worksheet = workbook[sheet_name]
@@ -100,7 +101,7 @@ def _put(layout, path: Path, sheet_name: str, values: dict, row: int = io_xlsx.F
 
 def _rows(layout, path: Path, sheet_name: str) -> list[dict]:
     """读回某张表的数据行。"""
-    result = io_xlsx.read_sheets(layout, path, sheets=[sheet_name])
+    result = xlsx_io.read_sheets(layout, path, sheets=[sheet_name])
     return list(result[sheet_name].records)
 
 
@@ -117,7 +118,7 @@ def _put_primary_ratios(layout, path: Path, *, owner_id="A-1", ratio_host="A14",
         }
         if index == 0 and relative_on_first is not None:
             values[RATIO_RELATIVE] = relative_on_first
-        _put(layout, path, RATIO_SHEET, values, row=io_xlsx.FIRST_DATA_ROW + index)
+        _put(layout, path, RATIO_SHEET, values, row=xlsx_io.FIRST_DATA_ROW + index)
 
 
 def _put_analysis_row(layout, path: Path, *, record_id="A-1", with_date=True) -> None:
@@ -332,7 +333,7 @@ def test_import_converts_absolute_uncertainty_to_relative(use_case, template, sy
                 RATIO_VALUE: value,
                 RATIO_ABSOLUTE: 0.0185,
             },
-            row=io_xlsx.FIRST_DATA_ROW + index,
+            row=xlsx_io.FIRST_DATA_ROW + index,
         )
 
     report = use_case.import_entry_workbook(template, write_check=False)
@@ -463,7 +464,7 @@ def test_import_writes_age_model_parameters(use_case, template, synthetic_layout
     # 写回时日期还原成 date，而不是把 `YYYY-MM-DD` 写成文本。
     keys = list(synthetic_layout.sheet(ANALYSIS_SHEET).all_header_keys)
     cell = openpyxl.load_workbook(template)[ANALYSIS_SHEET].cell(
-        row=io_xlsx.FIRST_DATA_ROW, column=keys.index(ANALYSIS_DATE) + 1
+        row=xlsx_io.FIRST_DATA_ROW, column=keys.index(ANALYSIS_DATE) + 1
     )
     assert isinstance(cell.value, (date, datetime))
     assert str(cell.value)[:10] == "2024-02-24"

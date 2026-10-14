@@ -18,19 +18,16 @@ class ExportPanelOriginExportMixin:
     @staticmethod
     def _is_origin_available() -> bool:
         """Check if originpro can be imported (single source of truth)."""
-        try:
-            from application.use_cases.export_origin import is_origin_available
+        from application.use_cases.export_origin import is_origin_available
 
-            return bool(is_origin_available())
-        except Exception:
-            return False
+        return bool(is_origin_available())
 
     def _on_export_origin_clicked(self):
         """Handle Export to Origin button click."""
         if app_state.df_global is None or len(app_state.df_global) == 0:
             QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
             return
-        if app_state.fig is None:
+        if app_state.fig is None or app_state.ax is None:
             QMessageBox.warning(
                 self, translate("Warning"), translate("Plot figure is not initialized.")
             )
@@ -70,11 +67,15 @@ class ExportPanelOriginExportMixin:
         notes: list[str] = []
         try:
             from application.use_cases.export_origin import export_to_origin_detailed
+            from visualization.plotting.origin_export_data import collect_origin_export_data
+
+            # Reading the axes is the presentation half; the use case builds the project.
+            data = collect_origin_export_data(app_state.ax)
 
             # Origin COM automation can take seconds; show a wait cursor.
             QApplication.setOverrideCursor(Qt.WaitCursor)
             try:
-                ok, reason, notes = export_to_origin_detailed(file_path)
+                ok, reason, notes = export_to_origin_detailed(data, file_path)
             finally:
                 QApplication.restoreOverrideCursor()
         except Exception as export_err:
@@ -110,7 +111,7 @@ class ExportPanelOriginExportMixin:
         if app_state.df_global is None or len(app_state.df_global) == 0:
             QMessageBox.warning(self, translate("Warning"), translate("No data loaded."))
             return
-        if app_state.fig is None:
+        if app_state.fig is None or app_state.ax is None:
             QMessageBox.warning(
                 self, translate("Warning"), translate("Plot figure is not initialized.")
             )
@@ -131,10 +132,13 @@ class ExportPanelOriginExportMixin:
 
         try:
             from application.use_cases.export_origin import export_origin_ready_data
+            from visualization.plotting.origin_export_data import collect_origin_export_data
+
+            data = collect_origin_export_data(app_state.ax)
 
             QApplication.setOverrideCursor(Qt.WaitCursor)
             try:
-                ok = export_origin_ready_data(file_path)
+                ok = export_origin_ready_data(data, file_path)
             finally:
                 QApplication.restoreOverrideCursor()
         except Exception as export_err:

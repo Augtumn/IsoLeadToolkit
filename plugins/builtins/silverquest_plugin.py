@@ -1,7 +1,7 @@
 """Builtin SilverQuest provenance plugin — Pb-isotope ore-distance search.
 
 Hosts the port of the R reference implementation ``SilverQuest_R_v1.R``; the
-algorithm itself lives in :mod:`data.silverquest`, which carries the full
+algorithm itself lives in :mod:`adapters.silverquest`, which carries the full
 provenance, attribution and licence note.  This module is the extension-point
 adapter: metadata, environment validation, defaults, the *integration* glue that
 turns the application's loaded data into the R script's two inputs, and the
@@ -19,8 +19,13 @@ loaded dataframe with a chosen grouping column, so the primary path here is:
 
 and the R package's galena workbook is one *additional, optional* source of
 references (:func:`resolve_references`), not the interface.  Both paths produce
-the same :class:`data.silverquest.SilverQuestDatabase`, so the numeric core is
+the same :class:`adapters.silverquest.SilverQuestDatabase`, so the numeric core is
 untouched and cannot tell them apart.
+
+Throughout the application the two sides are called **Sample** and
+**Reference**; the R port and :mod:`adapters.silverquest` call them the artefact
+file and the ore database, so "artefact" in this module's parameters, helpers
+and docstrings means "sample", and "reference" means one ore-database row.
 
 Registered like every other builtin: the file stem ``silverquest_plugin`` is the
 PluginManager key, ``meta.name`` (``silverquest``) is the fallback lookup, and
@@ -29,6 +34,9 @@ PluginManager key, ``meta.name`` (``silverquest``) is the fallback lookup, and
 from __future__ import annotations
 
 import logging
+import os
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterable
 
 from plugins.api import BasePlugin, PluginMeta
@@ -36,23 +44,100 @@ from plugins.api import BasePlugin, PluginMeta
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    # 角色标签（写回数据的分组列取值）
+    "ROLE_OTHER",
+    "ROLE_REFERENCE_MATCHED_PREFIX",
+    "ROLE_REFERENCE_UNMATCHED_PREFIX",
+    "ROLE_SAMPLE_MATCHED_PREFIX",
+    "ROLE_SAMPLE_UNMATCHED_PREFIX",
+    # 数据源探询（Qt 层只经这里，不直接 import adapters.silverquest）
+    "SilverQuestDatabaseStatus",
+    "silverquest_database_path",
+    "silverquest_database_status",
+    "silverquest_normalizations",
+    # 插件与入口
     "SilverQuestPlugin",
     "resolve_references",
     "run_silverquest_on_groups",
     "run_silverquest_search",
 ]
 
+
+@dataclass(frozen=True)
+class SilverQuestDatabaseStatus:
+    """What the galena workbook is worth right now.
+
+    The numeric core stays behind this plugin surface: a Qt panel asks here instead of
+    importing :mod:`adapters.silverquest` itself (docs/dev_conventions.md §18.1: the UI reaches
+    the domain through the orchestration layer, here the plugin's own public API).
+
+    ``missing`` and ``error`` are reported as they are - a file that is not there, or cannot
+    be parsed, is an answer, never something to paper over with a substitute.
+    """
+
+    path: str
+    readable: bool = False
+    missing: bool = False
+    rows: int = 0
+    error: str = ""
+
+
+def silverquest_normalizations() -> tuple[str, ...]:
+    """The normalisations the numeric core accepts (R: "Select Normalization:")."""
+    from adapters.silverquest import NORMALIZATIONS
+
+    return tuple(NORMALIZATIONS)
+
+
+def silverquest_database_path(path: str | os.PathLike[str] | None = None) -> Path:
+    """Resolve the galena workbook path (explicit → env override → repository default)."""
+    from adapters.silverquest import resolve_database_path
+
+    return resolve_database_path(path)
+
+
+def silverquest_database_status(
+    path: str | os.PathLike[str] | None = None,
+) -> SilverQuestDatabaseStatus:
+    """Report whether the galena workbook can be read, and how many ores it holds."""
+    from adapters.silverquest import load_silverquest_database, resolve_database_path
+
+    resolved = resolve_database_path(path)
+    if not resolved.is_file():
+        return SilverQuestDatabaseStatus(path=str(resolved), missing=True)
+    try:
+        database = load_silverquest_database(resolved)
+    except Exception as error:  # a corrupt workbook is a real answer, reported to the caller
+        logger.warning("SilverQuest workbook unreadable: %s", error)
+        return SilverQuestDatabaseStatus(path=str(resolved), error=str(error))
+    return SilverQuestDatabaseStatus(path=str(resolved), readable=True, rows=database.n_rows)
+
 #: Prefixes of the grouping values the plugin writes back into the dataframe
 #: when the user applies a run.  They are ordinary group labels for the rest of
 #: the application: the plot colours them, the legend lists them and the legend
 #: checkboxes hide them, exactly like any other group column.
-ROLE_ARTEFACT_PREFIX = "[Artefact] "
-ROLE_REFERENCE_PREFIX = "[Reference] "
-#: A reference that at least one artefact was matched to.
-ROLE_REFERENCE_MATCH_PREFIX = "[Reference Match] "
-ROLE_MATCH_PREFIX = "[Match] "
-#: A sample that entered the matching but hit nothing in the database.
-ROLE_NO_MATCH_PREFIX = "[No Match] "
+#:
+#: The two sides of the search each get the same matched/unmatched pair, so the
+#: legend reads symmetrically (``[Sample Matched]`` next to
+#: ``[Reference Matched]``), and a row that never entered the matching is neither
+#: of them:
+#:
+#: * :data:`ROLE_SAMPLE_MATCHED_PREFIX` — a sample that hit at least one reference;
+#: * :data:`ROLE_SAMPLE_UNMATCHED_PREFIX` — a sample that entered and hit nothing;
+#: * :data:`ROLE_REFERENCE_MATCHED_PREFIX` — a reference that was hit;
+#: * :data:`ROLE_REFERENCE_UNMATCHED_PREFIX` — a reference that entered and was hit
+#:   by nothing;
+#: * :data:`ROLE_OTHER` — a row that never entered the matching (unusable ratios,
+#:   or simply not selected for either side).
+#:
+#: "Sample" and "Reference" are the application's words for the two sides.  The R
+#: port calls them the artefact file and the ore database, and the numeric core in
+#: :mod:`adapters.silverquest` keeps those names; the mapping is Sample == artefact,
+#: Reference == ore database row.
+ROLE_SAMPLE_MATCHED_PREFIX = "[Sample Matched] "
+ROLE_SAMPLE_UNMATCHED_PREFIX = "[Sample Unmatched] "
+ROLE_REFERENCE_MATCHED_PREFIX = "[Reference Matched] "
+ROLE_REFERENCE_UNMATCHED_PREFIX = "[Reference Unmatched] "
 ROLE_OTHER = "[Other Data]"
 
 
@@ -80,7 +165,7 @@ def resolve_references(
         or ``"missing"`` — the label the dialog shows, so the user can tell
         which set of references a hit table came from.
     """
-    from data.silverquest import database_from_records, load_silverquest_database
+    from adapters.silverquest import database_from_records, load_silverquest_database
 
     rows = list(references or [])
     if rows:
@@ -135,7 +220,7 @@ def run_silverquest_search(
             names the expected location of the R package's database.
         ValueError: no usable artefact or reference row.
     """
-    from data.silverquest import (
+    from adapters.silverquest import (
         SilverQuestConfig,
         artifacts_from_records,
         run_silverquest,
@@ -144,7 +229,7 @@ def run_silverquest_search(
     database, source = resolve_references(references, database_path=database_path)
     if database is None:
         # Re-run without the guard so the loader raises its descriptive error.
-        from data.silverquest import load_silverquest_database
+        from adapters.silverquest import load_silverquest_database
 
         load_silverquest_database(database_path)
 
@@ -178,16 +263,22 @@ def run_silverquest_on_groups(
     jitter_radius: float = 0.01,
     seed: int | None = None,
 ) -> dict[str, Any]:
-    """Select artefacts and references *by grouping column value* and run.
+    """Select samples and references *by grouping column value* and run.
 
     This is the integration entry point the dialog calls, and the one the tests
     drive: the dataframe and the grouping column are the application's own, and
     the two group selections decide which rows play which role.  Rows whose
     group is in neither selection stay out of the search.
 
-    The returned ``roles`` maps dataframe row positions back to what they were
-    used as, which is what the dialog writes into the applied group column, and
-    ``matches`` records each artefact's nearest reference (within *dmax*) so the
+    The returned ``roles`` maps dataframe row positions back to what the row *was
+    for this run* — one of the role prefixes documented above (``[Sample Matched]``,
+    ``[Sample Unmatched]``, ``[Reference Matched]``, ``[Reference Unmatched]``,
+    ``[Other Data]``).  Each row is decided on its own, so a grouping value holding
+    both a matched and an unmatched row yields both labels; a row whose ratios are
+    unusable carries ``[Other Data]`` because it never entered the matching.
+    ``role_counts`` reports the same split numerically (selected / entered /
+    matched / unmatched / excluded, per side) for the dialog's result line, and
+    ``matches`` records each sample's nearest reference (within *dmax*) so the
     outcome is visible away from the hit table.
 
     Raises:
@@ -196,7 +287,7 @@ def run_silverquest_on_groups(
         FileNotFoundError: no reference group was selected and the galena
             workbook is not present.
     """
-    from data.silverquest import (
+    from adapters.silverquest import (
         artefact_record_columns,
         records_from_frame,
         resolve_database_path,
@@ -271,52 +362,86 @@ def run_silverquest_on_groups(
 
     result = payload["result"]
 
-    # Map the artefacts back onto the dataframe: the records builder can skip a
-    # row (a text ratio, a blank), so the *no* the core reports is matched to the
-    # group labels we recorded rather than to a position.
-    artefact_labels = labels.iloc[artefact_indices].tolist()
-    artefact_names = [
-        str(record.get("no", "")) for record in artefact_records
-    ]
-    roles: dict[int, str] = {}
-    for position in artefact_indices:
-        roles[position] = ROLE_ARTEFACT_PREFIX + str(labels.iloc[position])
-    for position in reference_indices:
-        roles[position] = ROLE_REFERENCE_PREFIX + str(labels.iloc[position])
+    # ── outcome per row, per side ───────────────────────────────────────
+    #
+    # The direction is sample -> database: the sample is the query point and every
+    # reference is a candidate source, tested one reference at a time by the
+    # perpendicular distance from the sample to that reference's mass-fractionation
+    # line.  Both sides get the same matched/unmatched pair, and the role is decided
+    # one *row* at a time — one grouping value can hold both a matched and an
+    # unmatched row, so a per-group decision would mark a whole group matched as soon
+    # as a single sample hit something:
+    #
+    #   [Sample Matched]      a sample that hit at least one reference
+    #   [Sample Unmatched]    a sample that entered the search and hit nothing
+    #   [Reference Matched]   a reference that was hit
+    #   [Reference Unmatched] a reference that entered and was hit by nothing
+    #   [Other Data]          a row that never entered the matching
+    #
+    # ``role_by_group`` stays a group-level summary and no shape is attached to any
+    # role, so one grouping column is drawn with a single marker throughout.
 
-    matched_artefacts = {
-        str(artifact.no) for artifact in result.artifacts if artifact.n_hits > 0
-    }
-    #: Group names holding at least one artefact with a hit inside *dmax*.
-    matched_groups = {
-        artefact_labels[index]
-        for index, name in enumerate(artefact_names)
-        if name in matched_artefacts and index < len(artefact_labels)
-    }
-    # The direction is sample -> database: the sample is the query point and every database ore is a
-    # candidate source, tested one ore at a time by the perpendicular distance from the sample to
-    # that ore's mass-fractionation line. The roles are therefore decided per row:
-    #   [Other Data]      data that never entered the matching
-    #   [Match]           a sample that hit at least one ore
-    #   [No Match]        a sample that hit nothing
-    #   [Reference Match] an ore that was hit
-    #   [Reference]       an ore that was not hit
-    # ``role_by_group`` stays a group-level summary, and no shape is attached to any role, so one
-    # grouping column is drawn with a single marker throughout.
-    group_has_hit = {
-        str(label): str(label) in matched_groups
-        for label in dict.fromkeys(artefact_labels)
-    }
-    role_by_group: dict[str, str] = {}
-    for label, has_hit in group_has_hit.items():
-        role_by_group[str(label)] = ROLE_MATCH_PREFIX if has_hit else ROLE_NO_MATCH_PREFIX
-    for label in dict.fromkeys(labels.iloc[reference_indices].tolist()):
-        role_by_group[str(label)] = ROLE_REFERENCE_PREFIX
-    for position in artefact_indices:
-        group_label = str(labels.iloc[position])
-        roles[int(position)] = (
-            ROLE_MATCH_PREFIX if group_has_hit.get(group_label, False) else ROLE_NO_MATCH_PREFIX
-        ) + group_label
+    def _entered_positions(records, selected_positions) -> dict[int, dict]:
+        """Map every usable record back to the frame position it was built from.
+
+        ``records_from_frame`` withholds a row whose ratios are unusable and stamps
+        each record it keeps with the row position it came from, so a row that never
+        entered the matching simply has no entry here.
+        """
+        mapping: dict[int, dict] = {}
+        for record in records:
+            local = int(record.get("source_position", -1))
+            if 0 <= local < len(selected_positions):
+                mapping[int(selected_positions[local])] = record
+        return mapping
+
+    roles: dict[int, str] = {}
+    entered_samples = _entered_positions(artefact_records, artefact_indices)
+    entered_references = _entered_positions(reference_records, reference_indices)
+
+    # ``run_silverquest`` returns one result per input artefact, in the input order,
+    # so record i belongs to result i; going through the position each record was
+    # built from keeps that right even when a row in between was skipped.
+    matched_samples: set[int] = set()
+    if len(result.artifacts) != len(artefact_records):
+        logger.warning(
+            "SilverQuest: %d result(s) for %d usable sample record(s) - matched rows "
+            "may be misreported",
+            len(result.artifacts),
+            len(artefact_records),
+        )
+    for record, artifact in zip(artefact_records, result.artifacts):
+        local = int(record.get("source_position", -1))
+        if artifact.n_hits > 0 and 0 <= local < len(artefact_indices):
+            matched_samples.add(int(artefact_indices[local]))
+
+    # Trace every hit back to the row of its own reference set, rather than
+    # re-identifying rows by their values afterwards.  The in-session table is built
+    # from ``reference_records`` in order and a hit carries ``no`` = its 1-based row
+    # (R: no = 1:m0); the workbook loader instead stamps each hit with the workbook
+    # row it came from.  If the record count and the table size ever disagree the
+    # assumption is reported, not silently absorbed.
+    reference_source = payload["reference_source"]
+    matched_references: set[int] = set()
+    matched_workbook_rows: set[int] = set()
+    for artifact in result.artifacts:
+        for hit in artifact.hits:
+            if reference_source == "workbook":
+                carried = int(hit.get("source_position", -1))
+                matched_workbook_rows.add(
+                    carried if carried >= 0 else int(hit.get("no", 0))
+                )
+                continue
+            local = int(hit.get("no", 0)) - 1
+            if 0 <= local < len(reference_indices):
+                matched_references.add(int(reference_indices[local]))
+    if entered_references and len(entered_references) != int(payload["reference_rows"]):
+        logger.warning(
+            "SilverQuest: %d usable reference record(s) for a %d-row reference table "
+            "- hit rows cannot be traced back to the frame",
+            len(entered_references),
+            int(payload["reference_rows"]),
+        )
 
     matches: list[dict[str, Any]] = []
     for artifact in result.artifacts:
@@ -340,48 +465,95 @@ def run_silverquest_on_groups(
             }
         )
 
-    # Trace every hit back to the frame row it came from, rather than re-identifying rows by their
-    # values afterwards. A hit carries "no" = its 1-based index into the database (R: no = 1:m0); the
-    # database was built from reference_records in order, and records_from_frame already withholds
-    # non-finite rows, so that index addresses the same record - and each record carries the frame
-    # position it was built from. If the two lengths ever disagree the assumption is reported, not
-    # silently absorbed.
-    reference_source_rows = [int(record["source_position"]) for record in reference_records]
-    # The builder numbers rows within the frame it was handed - here the reference subset - so the
-    # positions are rewritten to the rows they occupy in the caller's frame. The caller knows exactly
-    # which rows it selected, so this is bookkeeping, not inference.
-    for index, position in enumerate(reference_indices):
-        if index < len(reference_records):
-            reference_records[index]["source_position"] = int(position)
-            reference_source_rows[index] = int(position)
-    if len(reference_source_rows) != len(reference_indices):
-        import logging
-
-        logging.getLogger(__name__).warning(
-            "SilverQuest: %d reference record(s) for %d selected row(s) - hit rows cannot be traced",
-            len(reference_source_rows),
-            len(reference_indices),
-        )
-    hit_rows: set[int] = set()
-    for artifact in result.artifacts:
-        for hit in artifact.hits:
-            carried = int(hit.get("source_position", -1))
-            if carried >= 0:
-                # Carried end to end by the core - also the only route for the workbook source,
-                # whose rows the plugin never sees.
-                hit_rows.add(carried)
-                continue
-            index = int(hit.get("no", 0)) - 1
-            if 0 <= index < len(reference_source_rows):
-                hit_rows.add(reference_source_rows[index])
+    # The role of a row is its own outcome, never its grouping value's: a sample
+    # that hit nothing next to a sample that hit something is exactly the case the
+    # two labels exist for.  A row that never entered the matching keeps
+    # ``[Other Data]`` instead of being reported as an unmatched one.
+    for position in artefact_indices:
+        position = int(position)
+        if position not in entered_samples:
+            roles[position] = ROLE_OTHER
+        elif position in matched_samples:
+            roles[position] = ROLE_SAMPLE_MATCHED_PREFIX + str(labels.iloc[position])
+        else:
+            roles[position] = ROLE_SAMPLE_UNMATCHED_PREFIX + str(labels.iloc[position])
     for position in reference_indices:
-        group_label = str(labels.iloc[position])
-        if int(position) in hit_rows:
-            roles[int(position)] = ROLE_REFERENCE_MATCH_PREFIX + group_label
-            role_by_group[group_label] = ROLE_REFERENCE_MATCH_PREFIX
+        position = int(position)
+        if position not in entered_references:
+            roles[position] = ROLE_OTHER
+        elif position in matched_references:
+            roles[position] = ROLE_REFERENCE_MATCHED_PREFIX + str(labels.iloc[position])
+        else:
+            roles[position] = ROLE_REFERENCE_UNMATCHED_PREFIX + str(labels.iloc[position])
 
-    # Every row carries a role. "other" is the data that never entered the matching - not the
-    # sample rows that entered and found nothing, and not a catch-all that swallows the whole frame.
+    def _group_outcomes(positions, entered, matched) -> dict[str, tuple[bool, bool]]:
+        """Per grouping value: did any row enter the search, and did any row match?"""
+        outcomes: dict[str, list[bool]] = {}
+        for position in positions:
+            position = int(position)
+            flags = outcomes.setdefault(str(labels.iloc[position]), [False, False])
+            if position in entered:
+                flags[0] = True
+            if position in matched:
+                flags[1] = True
+        return {
+            label: (bool(flags[0]), bool(flags[1])) for label, flags in outcomes.items()
+        }
+
+    role_by_group: dict[str, str] = {}
+    for label, (entered_any, matched_any) in _group_outcomes(
+        artefact_indices, entered_samples, matched_samples
+    ).items():
+        if matched_any:
+            role_by_group[label] = ROLE_SAMPLE_MATCHED_PREFIX
+        elif entered_any:
+            role_by_group[label] = ROLE_SAMPLE_UNMATCHED_PREFIX
+        else:
+            role_by_group[label] = ROLE_OTHER
+    for label, (entered_any, matched_any) in _group_outcomes(
+        reference_indices, entered_references, matched_references
+    ).items():
+        if matched_any:
+            role_by_group[label] = ROLE_REFERENCE_MATCHED_PREFIX
+        elif entered_any:
+            role_by_group[label] = ROLE_REFERENCE_UNMATCHED_PREFIX
+        else:
+            role_by_group[label] = ROLE_OTHER
+
+    # The counts the dialog shows next to the hit table, so the two sides and their
+    # two outcomes are readable without reading the legend.
+    if reference_source == "workbook":
+        reference_counts = {
+            "selected": 0,
+            "entered": int(payload["reference_rows"]),
+            "matched": len(matched_workbook_rows),
+        }
+    else:
+        reference_counts = {
+            "selected": len(reference_indices),
+            "entered": len(entered_references),
+            "matched": len(matched_references),
+        }
+    reference_counts["unmatched"] = max(
+        0, reference_counts["entered"] - reference_counts["matched"]
+    )
+    reference_counts["excluded"] = max(
+        0, reference_counts["selected"] - reference_counts["entered"]
+    )
+    role_counts = {
+        "samples": {
+            "selected": len(artefact_indices),
+            "entered": len(entered_samples),
+            "matched": len(matched_samples),
+            "unmatched": len(entered_samples) - len(matched_samples),
+            "excluded": len(artefact_indices) - len(entered_samples),
+        },
+        "references": reference_counts,
+    }
+
+    # Every row carries a role. "other" is the data that never entered the matching -
+    # not the sample rows that entered and found nothing, and not a catch-all that
+    # swallows the whole frame.
     applied = [ROLE_OTHER] * len(frame)
     for position, role in roles.items():
         applied[int(position)] = role
@@ -389,7 +561,7 @@ def run_silverquest_on_groups(
     return {
         "result": result,
         "summary": payload["summary"],
-        "reference_source": payload["reference_source"],
+        "reference_source": reference_source,
         "reference_rows": payload["reference_rows"],
         "artefact_groups": artefact_values,
         "reference_groups": reference_values,
@@ -397,6 +569,7 @@ def run_silverquest_on_groups(
         "reference_indices": reference_indices,
         "roles": roles,
         "role_by_group": role_by_group,
+        "role_counts": role_counts,
         "matches": matches,
         "applied_column": applied,
         "reference_only": not reference_values,
@@ -414,7 +587,7 @@ class SilverQuestPlugin(BasePlugin):
         author="IsotopesAnalyse",
         description=(
             "SilverQuest (Albarède et al. 2024): Pb-isotope provenance search by "
-            "weighted distance from selected artefact groups to selected "
+            "weighted distance from selected sample groups to selected "
             "reference groups, or to the galena reference database"
         ),
         source="builtin",
@@ -465,7 +638,7 @@ class SilverQuestPlugin(BasePlugin):
         The R package's workbook is an optional extra reference set, so the
         dialog reports this instead of requiring it.
         """
-        from data.silverquest import (
+        from adapters.silverquest import (
             SILVERQUEST_DB_ENV_VAR,
             resolve_database_path,
         )
@@ -492,16 +665,14 @@ class SilverQuestPlugin(BasePlugin):
 
         hint = QLabel(
             translate(
-                "Search Pb-isotope analyses against reference groups selected "
-                "from your own grouping column, optionally extended with the "
-                "galena reference database (Albarède et al. 2024)."
+                "Search Pb-isotope samples against reference groups of your "
+                "grouping column."
             )
         )
         hint.setProperty(
             'translate_key',
-            "Search Pb-isotope analyses against reference groups selected "
-            "from your own grouping column, optionally extended with the "
-            "galena reference database (Albarède et al. 2024).",
+            "Search Pb-isotope samples against reference groups of your "
+            "grouping column.",
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)

@@ -153,7 +153,7 @@ class AnalysisPanelBuildMixin:
         self.confidence_99_radio = QRadioButton(translate("99% (3σ)"))
         self.confidence_99_radio.setProperty('translate_key', '99% (3σ)')
 
-        current_level = getattr(app_state, 'confidence_level', _CONFIDENCE_LEVEL_2SIGMA)
+        current_level = app_state.confidence_level
         if abs(current_level - _CONFIDENCE_LEVEL_1SIGMA) < _CONFIDENCE_EPSILON:
             self.confidence_68_radio.setChecked(True)
         elif abs(current_level - _CONFIDENCE_LEVEL_3SIGMA) < _CONFIDENCE_EPSILON:

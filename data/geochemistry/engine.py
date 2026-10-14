@@ -286,10 +286,14 @@ class GeochemistryEngine:
                     if k in ('age_model', 'v1v2_formula'):
                         self.params[k] = str(v)
                     else:
+                        # An unusable value is a caller error, not something to ignore:
+                        # silently keeping the old value looked like the update worked.
                         try:
                             self.params[k] = float(v)
-                        except (ValueError, TypeError):
-                            pass # 忽略无效输入
+                        except (ValueError, TypeError) as err:
+                            raise ValueError(
+                                f"parameter {k!r} is not numeric: {v!r}"
+                            ) from err
             self._update_derived_params()
 
     def get_parameters(self) -> dict[str, float | str]:

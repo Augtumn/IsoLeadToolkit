@@ -156,10 +156,12 @@ results = calculate_all_parameters(pb206, pb207, pb208)          # 3 个位置�
 | `ratios.py` | 8 个比值的因子链推导、一阶误差传播、绝对↔相对换算、格式化 |
 | `validate.py` | 字段级/条件联动/主外键校验 → `ValidationIssue` 清单 |
 | `validate_sheets.py` | 工作表辅助列与块表归属校验（单向依赖 `validate.py`） |
-| `io_xlsx.py` | 工作簿读写：原子写 + 覆盖前备份 + 只写布局内的表与列 |
+
+> 工作簿读写不在本包：`adapters/xlsx_io.py`（原子写 + 覆盖前备份 + 只写布局内的表与列）。
+> `data/` 是 domain，不依赖 openpyxl——这条由 `scripts/check_layer_dependencies.py` 强制。
 
 `__init__.py` 按 PEP 562 惰性导出（照 `data/__init__.py` 的既有做法）：只 `import data.metadata_profile`
-不会拉入 `openpyxl` 或 930 条词表数据。
+不会拉入 930 条词表数据。
 
 外围：
 
@@ -312,7 +314,7 @@ print(report.derived_ratios, report.backup)
    归档时回填 `B6.7 Source`：录入者提供的行写 `original`，工具推导的行写 `calculated`；
    **用户显式填过的值一律保留**（那是他的声明）。
    `report.derived_ratios` 的语义是**实际写回的条数**（被 ERROR 阻断时为 0，算出多少条另记日志）。
-3. 写盘前由 `io_xlsx` 自动生成带时间戳的备份 `<name>.bak-<YYYYMMDD-HHMMSS>.xlsx`，
+3. 写盘前由 `adapters/xlsx_io.py` 自动生成带时间戳的备份 `<name>.bak-<YYYYMMDD-HHMMSS>.xlsx`，
    并以"临时文件 + 原子替换"落盘，中途失败不会留下半截文件。
 4. 永远只写布局内的表与列；用户在布局外自己加的备注列会被忽略而不是清掉。
 5. **只写被改动的表**（`17_LIA-Ratio` 与 A15 的目标表），不把"读出来又原样写回"的表交给写入器；

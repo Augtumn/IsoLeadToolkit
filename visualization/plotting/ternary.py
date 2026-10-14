@@ -543,7 +543,7 @@ def _last_ternary_components():
 
 def _stored_ternary_label_range() -> tuple[float, ...] | None:
     """The window the last render reported, from app_state.ternary_ranges."""
-    ranges = getattr(app_state, "ternary_ranges", None) or {}
+    ranges = app_state.ternary_ranges or {}
     window: list[float] = []
     try:
         for key in ("t", "l", "r"):
@@ -658,7 +658,7 @@ def apply_ternary_axis_style(ax: Any, style: dict | None = None) -> None:
 def resolve_ternary_value_display(mode: Any = None) -> str:
     """'raw' labels the axes with the original ratios, 'normalized' with the fractions."""
     if mode is None:
-        mode = getattr(app_state, "ternary_value_display", "raw")
+        mode = app_state.ternary_value_display
     name = str(mode or "raw").strip().lower()
     return name if name in ("raw", "normalized") else "raw"
 

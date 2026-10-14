@@ -170,18 +170,36 @@ R 参考实现（`reference/r_packages/SilverQuest_v1/SilverQuest_R_v1.R`）从*
 | 参考（reference） | 分组列中被指派为参考的那几个取值对应的行 | 同上 |
 | 附加参考（可选） | R 包的 `Pb_DB_20240310AllGalenas.xlsx`（未 vendor，按路径读取） | `resolve_references` |
 
-- 两边最终都构造成 `data.silverquest.SilverQuestDatabase`，数值内核完全不知情
-  （`data/silverquest.py::database_from_records` 是工作簿加载器的内存对偶）。
+- 两边最终都构造成 `adapters.silverquest.SilverQuestDatabase`，数值内核完全不知情
+  （`adapters/silverquest.py::database_from_records` 是工作簿加载器的内存对偶）。
 - 对话框（`ui/panels/analysis/dialogs/silverquest_dialog.py`）第一步选**分组列**
   （候选来自 `app_state.group_cols`），第二步把该列的不同取值分别勾进
   "样品分组"/"参考分组"两个列表；两边都勾中的取值按参考处理。
-- 结果回写为普通分组列 `_SilverQuest_Role`（`[Match] …` / `[Artefact] …` /
-  `[Reference] …` / `[Other Data]`）并经 `state_gateway.set_last_group_col` 设为当前分组：
-  绘图配色、图例条目与图例复选框全部复用既有分组机制，不新建绘图通道；
-  角色形状写在 `group_marker_map`。
+- 结果回写为普通分组列 `_SilverQuest_Role`，两侧同构，各分「命中 / 未命中」两类，第五类是
+  未参与匹配的行：
+
+  | 标签 | 含义 |
+  |------|------|
+  | `[Sample Matched] <分组>` | 命中了至少一个参考的样品 |
+  | `[Sample Unmatched] <分组>` | 进入检索但一个参考都没命中的样品 |
+  | `[Reference Matched] <分组>` | 被至少一个样品命中的参考 |
+  | `[Reference Unmatched] <分组>` | 进入检索但没被任何样品命中的参考 |
+  | `[Other Data]` | 没有进入检索的行（比率不可用，或两侧都未选中） |
+
+- **角色逐行判定**：同一个分组取值里可能既有命中的样品也有未命中的样品（样品往往同属一个
+  遗址/一批器物），按分组判定会把整组标成命中、样品侧就看不出两类；因此每个样品行各算各的
+  结果。比率不可用而未进入检索的行留作 `[Other Data]`，既不算命中也不算未命中。
+- 该列经 `state_gateway.set_last_group_col` 设为当前分组：绘图配色、图例条目与图例复选框
+  全部复用既有分组机制，不新建绘图通道；角色不写 `group_marker_map`，一个分组列仍只用一个点形。
+- `run_silverquest_on_groups` 同时返回 `role_counts`（两侧各自的 选中 / 进入 / 命中 / 未命中 /
+  被排除 计数）；对话框把它显示在命中表旁——表里只有命中的配对，两侧的分类由这行计数体现。
 - 对话框选择通过 `state_gateway.set_silverquest_params()` 持久化
   （字段 `silverquest_params`，声明在 `core/state/fields.py`，列入
   `core/persistence/schema.py::SESSION_FIELDS`）。
 
+命名口径：应用界面统一用 **Sample / Reference**，R 移植与 `adapters/silverquest.py` 保留
+**artefact（样品）/ ore database（参考）** 的叫法，二者一一对应。
+
 `tests/test_silverquest_plugin.py` 用一份带分组列的合成数据把样品匹配到参考，
-并断言具体距离；`tests/test_silverquest_dialog.py` 覆盖对话框到回写的整条链路。
+并断言具体距离、两侧逐行的命中/未命中分类与 `role_counts`；`tests/test_silverquest_dialog.py`
+覆盖对话框到回写的整条链路。

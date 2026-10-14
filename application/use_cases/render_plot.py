@@ -61,8 +61,8 @@ class RenderPlotUseCase:
             return
 
         render_mode = self._state.render_mode
-        selected_columns_3d = list(getattr(self._state, "selected_3d_cols", []))
-        selected_columns_2d = list(getattr(self._state, "selected_2d_cols", []))
+        selected_columns_3d = list(self._state.selected_3d_cols)
+        selected_columns_2d = list(self._state.selected_2d_cols)
 
         self._sync_visible_groups(group_col)
 
@@ -73,11 +73,20 @@ class RenderPlotUseCase:
         )
         self._sync_render_mode(render_mode)
 
-        rendered_ok, pending_async = self._dispatch_render(
-            group_col,
-            selected_columns_2d,
-            selected_columns_3d,
-        )
+        panels = [str(panel) for panel in list(getattr(self._state, "plot_panels", []) or [])]
+        if len(panels) <= 1:
+            rendered_ok, pending_async = self._dispatch_render(
+                group_col,
+                selected_columns_2d,
+                selected_columns_3d,
+            )
+        else:
+            rendered_ok, pending_async = self._render_panels(
+                panels,
+                group_col,
+                selected_columns_2d,
+                selected_columns_3d,
+            )
 
         if pending_async:
             logger.debug("Render deferred to async embedding task")
@@ -98,8 +107,103 @@ class RenderPlotUseCase:
 
         self._state_write.set_initial_render_done(True)
 
+    def _render_panels(
+        self,
+        panels: list[str],
+        group_col: str,
+        selected_columns_2d: list[str],
+        selected_columns_3d: list[str],
+    ) -> tuple[bool, bool]:
+        """Draw one figure per panel, each in its own mode, into its own axes.
+
+        Each panel keeps the artists that belong to it and both directions of the sample map,
+        which is what lets a hover in any panel find the same sample in the others. The first
+        panel stays the active axes afterwards, so everything that reads ``app_state.ax`` keeps
+        addressing the figure the user works in.
+        """
+        from core import state_gateway
+
+        # One figure and one canvas per panel, built by the window; this layer only draws into
+        # them, so the figures arrive through a runtime list rather than an import.
+        windows = list(getattr(self._state, "plot_panel_windows", []) or [])
+        if len(windows) != len(panels):
+            logger.warning(
+                "No window for %d of %d panel(s); cannot draw them", len(panels) - len(windows), len(panels)
+            )
+            return False, False
+
+        states: list[dict] = []
+        rendered_ok = False
+        pending_async = False
+        for mode, record in zip(panels, windows):
+            figure = record.get("figure")
+            ax = record.get("axes")
+            if figure is not None:
+                # The plotters draw into the active figure; this window's figure is the panel's.
+                state_gateway.set_figure(figure)
+            state_gateway.set_axis(ax)
+            self._state.scatter_collections.clear()
+            self._state.artist_to_sample.clear()
+            ok, pending = self._dispatch_render(
+                group_col, selected_columns_2d, selected_columns_3d, mode=mode
+            )
+            rendered_ok = rendered_ok or ok
+            pending_async = pending_async or pending
+            sample_to_artist: dict[int, tuple[int, int]] = {}
+            for (artist_id, index), sample in self._state.artist_to_sample.items():
+                sample_to_artist.setdefault(int(sample), (int(artist_id), int(index)))
+            states.append(
+                {
+                    "mode": mode,
+                    "ax": ax,
+                    "collections": list(self._state.scatter_collections),
+                    "artist_to_sample": dict(self._state.artist_to_sample),
+                    "sample_to_artist": sample_to_artist,
+                    # Per panel, like everything else in the record: the single-figure map is
+                    # overwritten by every panel's render, so anything that edits a group's artist
+                    # - colour, stacking - must use this panel's own map, or it edits the last
+                    # panel's artist and the other panels keep the old look.
+                    "group_to_scatter": dict(getattr(self._state, "group_to_scatter", None) or {}),
+                }
+            )
+
+        self._state.plot_panel_states = states
+        # The panels are equals, so none of them owns the state: the active one is mirrored into
+        # the single-figure references for the code that still reads them, and a tool acts on that
+        # panel. Mirroring the first panel instead is what made every tool act on the first one.
+        active = next((record for record in windows if record.get("active")), windows[0])
+        if active.get("figure") is not None:
+            state_gateway.set_figure(active["figure"])
+        state_gateway.set_axis(active["axes"])
+        # What each panel ended up showing: a panel that renders blank can then be told from one
+        # whose view was set to something empty.
+        for record in windows:
+            axis = record.get("axes")
+            drawn = next(
+                (len(state.get("collections") or []) for state in states if state.get("ax") is axis),
+                0,
+            )
+            try:
+                xlim = axis.get_xlim()
+                ylim = axis.get_ylim()
+                logger.info(
+                    "Panel %s: xlim=(%.4g, %.4g) ylim=(%.4g, %.4g) artists=%d",
+                    record.get("mode"),
+                    xlim[0],
+                    xlim[1],
+                    ylim[0],
+                    ylim[1],
+                    drawn,
+                )
+            except Exception as err:
+                logger.warning("Could not read a panel's view after the render: %s", err)
+        self._state.scatter_collections[:] = list(states[0]["collections"])
+        self._state.artist_to_sample.clear()
+        self._state.artist_to_sample.update(states[0]["artist_to_sample"])
+        return rendered_ok, pending_async
+
     def _resolve_group_col(self) -> str | None:
-        group_col = getattr(self._state, "last_group_col", None)
+        group_col = self._state.last_group_col
         group_cols = self._group_cols()
         if not group_col or group_col not in group_cols:
             if group_cols:
@@ -167,10 +271,10 @@ class RenderPlotUseCase:
                 logger.warning("Not enough numeric columns for Ternary view; falling back to UMAP")
                 render_mode = "UMAP"
             else:
-                preselected = getattr(self._state, "selected_ternary_cols", [])
+                preselected = self._state.selected_ternary_cols
                 valid_preselected = [c for c in preselected if c in available_cols_ternary]
                 if len(valid_preselected) == 3:
-                    if not getattr(self._state, "selected_ternary_confirmed", False):
+                    if not self._state.selected_ternary_confirmed:
                         self._state_write.set_selected_ternary_columns(
                             valid_preselected,
                             confirmed=False,
@@ -188,9 +292,13 @@ class RenderPlotUseCase:
         group_col: str,
         selected_columns_2d: list[str],
         selected_columns_3d: list[str],
+        mode: str | None = None,
     ) -> tuple[bool, bool]:
-        if self._state.render_mode == "3D":
-            if getattr(self._state, "selection_mode", False):
+        # The mode is a parameter so one render cycle can draw several panels, each in its own
+        # mode. Without it the active mode is used, which is the ordinary single-figure window.
+        mode = str(mode or self._state.render_mode)
+        if mode == "3D":
+            if self._state.selection_mode:
                 self._state_write.disable_selection_mode()
                 self._disable_rectangle_selector()
                 self._refresh_selection_overlay()
@@ -202,13 +310,13 @@ class RenderPlotUseCase:
             logger.debug("Rendering 3D plot with columns=%s", selected_columns_3d)
             return self._plot_3d_data(group_col, selected_columns_3d, size=self._state.point_size), False
 
-        if self._state.render_mode == "2D":
+        if mode == "2D":
             if len(selected_columns_2d) != 2:
                 logger.warning("Invalid 2D column selection; skipping plot")
                 return False, False
             self._cancel_embedding_task("switch_to_2d")
             logger.debug("Rendering 2D plot with columns=%s", selected_columns_2d)
-            is_kde = bool(getattr(self._state, "show_kde", False) or getattr(self._state, "show_2d_kde", False))
+            is_kde = bool(self._state.show_kde or getattr(self._state, "show_2d_kde", False))
             return self._plot_2d_data(
                 group_col,
                 selected_columns_2d,
@@ -216,7 +324,7 @@ class RenderPlotUseCase:
                 show_kde=is_kde,
             ), False
 
-        algorithm = self._state.render_mode
+        algorithm = mode
         if algorithm in _ASYNC_EMBEDDING_ALGORITHMS:
             # Returns (rendered_ok, pending_async): a cache hit renders
             # synchronously (pending=False); otherwise a worker is started.

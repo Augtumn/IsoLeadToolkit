@@ -1,13 +1,12 @@
 """Localization utilities for handling multi-language support."""
 import json
-from pathlib import Path
 from typing import Any, Dict
 
-from .config import CONFIG
+from .config import CONFIG, LOCALES_DIR
 
 _TRANSLATIONS: Dict[str, Dict[str, str]] = {}
 _FALLBACK_LANGUAGE = CONFIG.get('default_language', 'en')
-_LOCALES_DIR = Path(CONFIG.get('locales_dir', 'locales'))
+_LOCALES_DIR = LOCALES_DIR
 
 
 def available_languages() -> Dict[str, str]:
@@ -16,28 +15,20 @@ def available_languages() -> Dict[str, str]:
 
 
 def _load_language(language: str) -> None:
-    """Load translation file for the given language into cache."""
+    """Load translation file for the given language into cache.
+
+    Raises:
+        FileNotFoundError: the locale file is missing - a broken installation is reported,
+            never papered over with an empty translation table.
+        json.JSONDecodeError: the locale file is corrupt.
+    """
     if language in _TRANSLATIONS:
         return
 
     locale_path = _LOCALES_DIR / f"{language}.json"
-    
-    if not locale_path.exists():
-        _TRANSLATIONS[language] = {}
-        return
-
-    try:
-        # Try utf-8-sig first (handles BOM), then utf-8
-        try:
-            with open(locale_path, 'r', encoding='utf-8-sig') as handle:
-                data = json.load(handle)
-        except UnicodeDecodeError:
-            with open(locale_path, 'r', encoding='utf-8') as handle:
-                data = json.load(handle)
-    except Exception:
-        data = {}
-    
-    _TRANSLATIONS[language] = data or {}
+    # utf-8-sig decodes both plain UTF-8 and a BOM-prefixed file, so one read is enough.
+    with open(locale_path, 'r', encoding='utf-8-sig') as handle:
+        _TRANSLATIONS[language] = json.load(handle)
 
 
 def ensure_language(language: str) -> None:
@@ -66,7 +57,7 @@ def translate(text: str, language: str = None, **kwargs: Any) -> str:
         except Exception:
             app_state = None
         if app_state is not None:
-            language = getattr(app_state, 'language', _FALLBACK_LANGUAGE)
+            language = app_state.language
         else:
             language = _FALLBACK_LANGUAGE
 
@@ -81,10 +72,10 @@ def translate(text: str, language: str = None, **kwargs: Any) -> str:
         translation = text
 
     if kwargs:
-        try:
-            translation = translation.format(**kwargs)
-        except Exception:
-            pass
+        # No fallback: a placeholder that does not match its arguments is a bug in the call
+        # site (or in the locale file), and hiding it shipped messages with literal ``{name}``
+        # in them. Every placeholder key in the code is formatted at its call site.
+        translation = translation.format(**kwargs)
 
     return translation
 

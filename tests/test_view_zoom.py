@@ -109,6 +109,7 @@ def test_wheel_zooms_a_cartesian_plot_about_the_cursor() -> None:
 
 def test_wheel_down_zooms_back_out() -> None:
     canvas, axes = _canvas_with(None)
+    _toolbar_for(canvas).mode = "zoom rect"  # the wheel is bound to the magnifier
     _wheel(canvas, _pixel(canvas, axes, 0.5, 0.5), notches=1)
     zoomed = axes.get_xlim()
 
@@ -143,6 +144,7 @@ def test_wheel_zooms_the_ternary_view_further_with_a_second_notch() -> None:
     """Repeated notches compose: the next one is measured on what is drawn."""
     canvas, axes = _canvas_with("ternary")
     point = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
+    _toolbar_for(canvas).mode = "zoom rect"  # the wheel is bound to the magnifier
 
     _wheel(canvas, point, notches=1)
     first = get_ternary_label_range(axes)
@@ -200,15 +202,67 @@ def test_wheel_outside_the_canvas_changes_nothing() -> None:
     assert axes.get_xlim() == before
 
 
-def test_wheel_does_nothing_while_the_magnifier_is_off() -> None:
-    canvas, axes = _canvas_with(None)
+def test_the_wheel_zooms_only_while_the_magnifier_is_on() -> None:
+    """Bound to the magnifier, as asked: with no tool selected the wheel leaves the view alone.
+
+    This used to assert the opposite - that the wheel zoomed with no tool at all - which is what it
+    did before the magnifier was tied to it. The test states the requirement that replaced it.
+    """
+    from PyQt5.QtCore import QPoint, QPointF, Qt
+    from PyQt5.QtGui import QWheelEvent
+    from PyQt5.QtWidgets import QApplication
+
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
+    from matplotlib.figure import Figure
+
+    from ui.main_window_parts.canvas import TernaryZoomEventFilter
+
+    app = QApplication.instance() or QApplication([])
+    figure = Figure(figsize=(4, 3))
+    canvas = FigureCanvas(figure)
+    axes = figure.add_subplot(111)
+    axes.scatter([0.0, 10.0], [0.0, 10.0])
+    canvas.resize(400, 300)
+    canvas.show()
+    figure.canvas.draw()
     before = axes.get_xlim()
-    _toolbar_for(canvas).mode = ""
+    toolbar = NavigationToolbar2QT(canvas, None)
+    event_filter = TernaryZoomEventFilter(canvas, toolbar)
+    local = QPoint(200, 150)
+    wheel = QWheelEvent(
+        QPointF(local),
+        QPointF(canvas.mapToGlobal(local)),
+        QPoint(0, 0),
+        QPoint(0, 120),
+        Qt.NoButton,
+        Qt.NoModifier,
+        Qt.NoScrollPhase,
+        False,
+    )
 
-    _wheel(canvas, _pixel(canvas, axes, 0.5, 0.5), notches=1)
+    event_filter.eventFilter(canvas, wheel)
 
-    assert axes.get_xlim() == before
+    assert axes.get_xlim() == before, "the wheel must not zoom with no tool selected"
 
+    event_filter._toolbar.zoom()  # the magnifier, on the panel the wheel is over
+
+    # A fresh event, as the window manager delivers: the same object reaching a second filter is
+    # what the deduplication is for, so re-sending it would rightly be ignored.
+    second_wheel = QWheelEvent(
+        QPointF(local),
+        QPointF(canvas.mapToGlobal(local)),
+        QPoint(0, 0),
+        QPoint(0, 120),
+        Qt.NoButton,
+        Qt.NoModifier,
+        Qt.NoScrollPhase,
+        False,
+    )
+
+    event_filter.eventFilter(canvas, second_wheel)
+
+    assert axes.get_xlim() != before, "the wheel zooms while the magnifier is on"
 
 def test_middle_drag_does_nothing_while_the_magnifier_is_off() -> None:
     canvas, axes = _canvas_with(None)

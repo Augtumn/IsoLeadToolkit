@@ -33,6 +33,8 @@ SESSION_FIELDS: frozenset[str] = frozenset({
     "tooltip_columns",
     "ui_theme",
     "parent_groups",
+    "group_decomposition",
+    "plot_panels",
     "parent_shape_map",
 })
 

@@ -258,8 +258,10 @@ def train_ovr_xgboost(
                 cv_metrics['auc_ovr'] = float(
                     cross_val_score(model, x, y_bin, cv=cv, scoring=make_scorer(roc_auc_score)).mean()
                 )
-        except Exception:
-            pass  # CV is best-effort; skip if folds too small
+        except Exception as err:
+            # CV is best-effort (folds can be too small); say so instead of reporting no
+            # metrics without a reason.
+            logger.warning("Cross-validation metrics skipped for %s: %s", label, err)
 
         models[label] = model
         model_info[label] = {

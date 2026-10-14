@@ -33,6 +33,17 @@ def _send(canvas, kind, point, buttons, button):
     APP.processEvents()
 
 
+def _ensure_zoom_tool(canvas) -> None:
+    """Put the magnifier on, whatever a previous test left behind.
+
+    The drag is bound to the tool, so a test that drags states that itself instead of depending on
+    the order the suite runs in - which is why these passed alone and failed in the full run.
+    """
+    toolbar = canvas._ternary_zoom_filter._toolbar
+    if str(getattr(toolbar, "mode", "")) != "zoom rect":
+        toolbar.zoom()
+
+
 def _pixel(canvas, axes, x, y):
     display_x, display_y = axes.transData.transform((x, y))
     ratio = canvas.devicePixelRatioF()
@@ -51,6 +62,11 @@ def qt_ternary():
     canvas.draw()
     APP.processEvents()
     state_gateway.set_figure_axes(figure, axes)
+    # The stored view window lives with the axes, so a zoom from the previous test is still there:
+    # the sibling geometry module resets it for the same reason.
+    from visualization.plotting.ternary import reset_ternary_view
+
+    reset_ternary_view(axes)
     state_gateway.set_ternary_manual_limits({})
     state_gateway.set_ternary_manual_limits_enabled(False)
     state_gateway.set_ternary_auto_zoom(True)
@@ -135,6 +151,7 @@ def test_release_seen_twice_still_applies_the_zoom(qt_ternary) -> None:
     from PyQt5.QtWidgets import QWidget
 
     canvas, axes = qt_ternary
+    _ensure_zoom_tool(canvas)  # the gesture needs the magnifier, whatever ran before
     start = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
     end = _pixel(canvas, axes, 0.0, 2.0 / 3.0)
 
@@ -157,7 +174,8 @@ def test_drag_without_the_zoom_tool_does_nothing(qt_ternary) -> None:
     """Without the magnifier selected a drag must stay a selection gesture."""
     canvas, axes = qt_ternary
     toolbar = canvas._ternary_zoom_filter._toolbar
-    toolbar.zoom()  # toggles the zoom tool off
+    if toolbar.mode == "zoom rect":  # set the state, do not toggle it: the tool may already be off
+        toolbar.zoom()
     assert toolbar.mode != "zoom rect"
 
     start = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
@@ -172,6 +190,7 @@ def test_drag_without_the_zoom_tool_does_nothing(qt_ternary) -> None:
 def test_qt_drag_magnifies_the_view_and_the_labels(qt_ternary) -> None:
     """The magnifier drag really magnifies: what is drawn becomes the drag window, labels included."""
     canvas, axes = qt_ternary
+    _ensure_zoom_tool(canvas)  # the gesture needs the magnifier, whatever ran before
     start = _pixel(canvas, axes, 0.0, 1.0 / 3.0)
     end = _pixel(canvas, axes, 0.0, 2.0 / 3.0)
 

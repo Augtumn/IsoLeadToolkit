@@ -751,7 +751,7 @@ result = numerator / (denominator + 1e-50)
 
 ### 9.2 懒加载模式
 
-大型依赖（sklearn / umap / seaborn / xgboost）必须懒加载。使用模块级全局变量 + 守卫函数：
+大型**可选**依赖（sklearn / umap / seaborn / xgboost）必须懒加载。使用模块级全局变量 + 守卫函数：
 
 ```python
 # 模块级全局变量
@@ -769,7 +769,7 @@ def _lazy_import_ml():
         TSNE = _TSNE
 ```
 
-对于可选依赖，使用 try/except + `_checked` 标志避免重复尝试：
+对于**可选依赖**，使用 try/except + `_checked` 标志避免重复尝试，并且必须留痕（`logger.warning`）：
 
 ```python
 _geochemistry = None
@@ -788,6 +788,9 @@ def _lazy_import_geochemistry():
         _geochemistry = None
     return _geochemistry
 ```
+
+**硬依赖不得伪装成可选**：`pandas` / `numpy` / `openpyxl` / `PyQt5` 缺失就是安装坏了，
+直接让它抛 `ImportError`（见 §18.6）；只有 `pyproject.toml` 里列为 optional 的包才走上面的探测路径。
 
 ### 9.3 循环导入规避
 
@@ -874,17 +877,28 @@ def calculate_single_stage_age(
 
 ### 11.2 安全属性访问
 
-使用 `getattr()` 带默认值，避免 `AttributeError`：
+**状态字段直接读，不用 `getattr` 默认值。** 声明式注册表（`core/state/fields.py`）与
+`AppState.__init__` / `core/state/bootstrap.py` 保证的字段在构造时就存在，`getattr(app_state, "x", default)`
+只会掩盖拼写错误；默认值还会把"字段名写错了"变成"拿了个静默默认值"。
 
 ```python
-# ✅ 正确
-panel = getattr(app_state, 'overlay_artists', None)
+# ✅ 正确：注册表/构造期字段直接访问，缺失即 AttributeError
+panel = app_state.overlay_artists
 if panel is None:
     return
 
-# ❌ 禁止
-panel = app_state.overlay_artists  # 字段始终存在，直接读取
+# ✅ 允许：真正"可能尚未创建"的运行时句柄（首次渲染前的 ax/canvas、可选回调），
+#    探测后必须显式判空，不得用另一个值顶替
+update_fn = getattr(panel, "update_selection_controls", None)
+if not callable(update_fn):
+    return
+
+# ❌ 禁止：状态字段带默认值
+panel = getattr(app_state, "overlay_artists", None)
 ```
+
+`scripts/check_state_mutations.py` / `check_layer_dependencies.py` / `check_silent_exceptions.py` 与本节配套；
+新代码按本节写，旧代码按 §18.6 的清理顺序迁移。
 
 ### 11.3 安全回调执行
 
@@ -1121,7 +1135,10 @@ tests/
    - `check_state_mutations.py` / `check_state_dict_mutations.py` / `check_gateway_*`：状态直写与网关通用写入；
    - `check_panel_self_resolution.py`：面板/mixin 中每个 `self.<名字>()` 必须能在其所属面板的 MRO 中解析，
      且**实参数量必须与签名匹配**（静态方法不额外计入实例参数）。专防「mixin 迁移到别的段后仍调用原段助手」
-     与「抽方法时丢了 `self`」这类只有用户点击时才暴露的崩溃（离屏构建测试覆盖不到）。
+     与「抽方法时丢了 `self`」这类只有用户点击时才暴露的崩溃（离屏构建测试覆盖不到）；
+   - `check_layer_dependencies.py`：分层依赖方向（§18.1 的仓库映射）。**无白名单**：UI 直连 `data/`、
+     use case 打开对话框或读 matplotlib 坐标轴、domain 引入 pandas/Qt、core/utils 反向依赖表现层
+     都会命中。修法是挪代码或反转调用，不是登记例外。
 4. 重组/精简测试时，用 `pytest --collect-only` 的用例集合（或 AST 提取的测试函数名集合）
    做前后比对，确保**用例零丢失**后再提交。
 5. **离屏测试的边界**：面板构建类测试（`panel.build()`）在 `QT_QPA_PLATFORM=offscreen` 下可靠；
@@ -1159,14 +1176,15 @@ CONFIG = {
 
 ### 14.3 兼容性管理
 
-1. 兼容性 shim 必须显式标注，并在 **2 个版本内**移除。
-2. 废弃函数使用注释标记：
+**不保留兼容层。** 老代码路径、旧签名、旧字段名一律**直接改掉并同步所有调用点**，
+不留 shim、不留"两者都支持"的分支：
 
-```python
-# DEPRECATED: 使用 calculate_two_stage_age() 替代，将在 v0.4 移除
-def calculate_model_age(Pb206_204_S, Pb207_204_S, two_stage=False):
-    ...
-```
+1. 改签名/改名时，用 `grep`（或 IDE 的引用查找）改完所有调用点，测试跟着改；
+2. 禁止 `if hasattr(...)` / `try: 新路径 except: 旧路径` 式的双轨；
+3. 唯一例外：**外部数据格式**（会话文件、录入工作簿）的读取兼容——那是对外契约，
+   升级路径写在解析处并注明版本，不算 shim。
+
+历史遗留的 `# DEPRECATED` 标记只作为清理线索，不作为保留理由；见到即改。
 
 ---
 
@@ -1311,6 +1329,19 @@ domain -> (不得依赖外层)
 3. `infrastructure` 可依赖第三方库，但不得反向依赖 `ui/`。
 4. 跨层新增依赖必须在 PR 描述中写明原因与退出计划。
 
+**本仓库的层映射**（由 `scripts/check_layer_dependencies.py` 强制，无白名单）：
+
+| 层 | 目录 |
+|----|------|
+| presentation | `ui/`、`visualization/` |
+| application | `application/` |
+| domain | `data/` 全包：`geochemistry/`、`metadata_profile/` 注册表（spec/parse/profile/vocab/labels/ratios/validate/validate_sheets/layout）、`plumbotectonics_data.py`；**不含任何 IO** |
+| infrastructure | `core/`、`utils/`、`adapters/`（文件 IO：数据集读取 `loader.py`、方铅矿工作簿 `silverquest.py`、录入工作簿读写 `xlsx_io.py`） |
+
+允许的依赖：presentation → application/domain/infrastructure；application → domain/infrastructure；
+infrastructure → domain。**反向即违规**（`ui → data`、`application → ui/visualization`、
+`visualization → ui`、`core/utils → 外层`、domain → 任何外层或 pandas/Qt）。
+
 ### 18.2 状态治理约束（StateStore 迁移期）
 
 1. 新增功能禁止直接新增 `app_state.xxx` 可变字段，优先放入分层状态对象。
@@ -1328,8 +1359,30 @@ domain -> (不得依赖外层)
 ### 18.4 适配器与第三方依赖规则
 
 1. 渲染、文件导入导出、会话持久化通过适配器封装，不在 UI 直接调用第三方 API。
-2. 可选依赖必须提供“探测 + 回退”路径，禁止因包缺失导致主流程不可用。
+2. **只有真可选依赖**（`pyproject.toml` 里 optional 的 umap/sklearn/xgboost/seaborn 等）提供
+   "探测 + 回退"，且回退必须留痕（`logger.warning`）；硬依赖（pandas/numpy/openpyxl/PyQt5）
+   缺失直接报错，不得伪造可用。
 3. 外部能力的异常必须转换为项目内部可识别错误类型并统一日志。
+4. 不保留兼容层：老签名/老字段/老分支一律改掉并同步调用点（§14.3、§18.6）。
+
+### 18.6 不静默兜底（2026Q4 起执行）
+
+**准则：错误要报出来，不许用默认值、空集合或旧值把它盖住。**
+
+1. **静默处理器禁止**：`except: pass`、只写 `logger.debug/info` 的处理器一律不允许
+   （`scripts/check_silent_exceptions.py` 扫描全部生产包，基线为空）。要么 `logger.warning`
+   并说明降级内容，要么把异常抛给调用方。
+2. **不用兜底值顶替失败**：读不到就用空表、解析失败就当 0、写盘失败就静默返回 —— 都算违规。
+   调用方需要"没有"这个语义时，用显式的 `None`/空值返回 + 日志，而不是假装成功。
+3. **错误在边界处变成消息**：domain/用例层抛异常；UI 层按 §11.1 捕获并向用户报告
+   （对话框/状态栏 + `logger.exception`）。禁止在用例层把异常转成 `False`。
+4. **状态字段不用 `getattr` 默认值**（§11.2）；只有"可能尚未创建的运行时句柄"允许探测，
+   且探测后必须显式判空。
+5. **允许保留的"默认值"只有语义默认**：可选 `dict` 字段的 `.get(key, default)`、`CONFIG.get(...)`、
+   `pyproject.toml` 声明为 optional 的依赖探测。判断标准：这个默认值是在表达业务语义，
+   还是在掩盖一个错误？
+6. **清理顺序**（存量迁移）：静默异常 → 硬依赖回退 → 状态 `getattr` 默认值 →
+   用例层 `return False` 式错误吞没；每完成一批跑全量测试与全部守卫。
 
 ### 18.5 架构重构分支与合并策略
 

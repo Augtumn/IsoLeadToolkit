@@ -110,12 +110,18 @@ DPI 低于 72 会被钳制；`pad_inches` 仅在 `tight bbox` 开启时传入。
 
 ## Origin 导出
 
-两条路径共享同一套数据提取（`collect_origin_export_data()`，纯 matplotlib/app_state，不依赖 Origin）：
+两条路径共享同一套数据提取，**提取在表现层**（`visualization/plotting/origin_export_data.py`
+的 `collect_origin_export_data()`，纯 matplotlib/app_state，不依赖 Origin），**写文件在用例层**
+（`application/use_cases/export_origin.py` 接收该 dict；用例不再 import visualization，
+见 `docs/dev_conventions.md` §18.1）：
 
 | 路径 | 入口 | 前提 | 产物 |
 |---|---|---|---|
-| Origin 工程自动化 | `export_to_origin()` / `export_to_origin_detailed()` | 安装 `originpro` 且 Origin 可被 COM 调用 | `.opju` 工程（每个分组一张工作表 + 多图层图形 + 图例 + 轴标题）与同名 PNG |
-| Origin 数据工作簿 | `export_origin_ready_data()` | 无（仅需 openpyxl） | `.xlsx`：每个系列一张工作表（列头取当前轴标签）+ `Info` 说明表，Origin 可直接 File → Import → Excel |
+| Origin 工程自动化 | `export_to_origin_detailed(data, file_path)` / `export_to_origin(data, file_path)` | 安装 `originpro` 且 Origin 可被 COM 调用 | `.opju` 工程（每个分组一张工作表 + 多图层图形 + 图例 + 轴标题）与同名 PNG |
+| Origin 数据工作簿 | `export_origin_ready_data(data, file_path)` | 无（仅需 openpyxl） | `.xlsx`：每个系列一张工作表（列头取当前轴标签）+ `Info` 说明表，Origin 可直接 File → Import → Excel |
+
+UI（`ui/panels/export/origin_export.py`）先提取再调用用例：无坐标轴时提取器直接抛
+`ValueError`，不静默回退。
 
 - 覆盖模式：UMAP/tSNE/PCA/RobustPCA/V1V2/2D、3D、TERNARY、PB_EVOL_76/86（模型曲线 + 古等时线 + 等时线 + 方程叠加）、PLUMBOTECTONICS_76/86、PB_MU_AGE/PB_KAPPA_AGE。
 - **三元图兼容**（mpltern → Origin）：Origin 三元模板按 **0–100** 刻度工作，因此三个分量在写出时

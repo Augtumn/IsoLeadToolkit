@@ -189,6 +189,10 @@ def _snapshot_state() -> dict[str, Any]:
         "parent_shape_map": {
             str(k): str(v) for k, v in (getattr(app_state, "parent_shape_map", {}) or {}).items()
         },
+        "group_decomposition": {
+            str(k): str(v) for k, v in (getattr(app_state, "group_decomposition", {}) or {}).items()
+        },
+        "plot_panels": list(getattr(app_state, "plot_panels", []) or []),
         "param_presets": {
             str(k): dict(v or {}) for k, v in (getattr(app_state, "param_presets", {}) or {}).items()
         },
@@ -403,6 +407,8 @@ def _restore_state(snapshot: dict[str, Any]) -> None:
     state_gateway.set_legend_item_order(snapshot["legend_item_order"])
     state_gateway.set_parent_groups(snapshot["parent_groups"])
     state_gateway.set_parent_shape_map(snapshot["parent_shape_map"])
+    state_gateway.set_group_decomposition(snapshot["group_decomposition"])
+    state_gateway.set_plot_panels(snapshot["plot_panels"])
     state_gateway.set_param_presets(snapshot["param_presets"])
     state_gateway.set_mixing_endmembers(snapshot["mixing_endmembers"])
     state_gateway.set_mixing_mixtures(snapshot["mixing_mixtures"])
@@ -1580,6 +1586,13 @@ def test_state_store_available_visible_groups_sync() -> None:
         state_gateway.sync_available_and_visible_groups(["B", "C"])
         assert app_state.available_groups == ["B", "C"]
         assert app_state.visible_groups == ["C"]
+
+        # Unticking every group is a real selection, not a request for "all visible": an
+        # empty list must survive the state round-trip and the available-group sync.
+        state_gateway.set_visible_groups([])
+        assert app_state.visible_groups == []
+        state_gateway.sync_available_and_visible_groups(["A", "B", "C"])
+        assert app_state.visible_groups == []
 
         state_gateway.set_visible_groups(None)
         assert app_state.visible_groups is None

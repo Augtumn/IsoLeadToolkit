@@ -9,8 +9,8 @@
 
 - `scripts/entry_workbook_info.py` 负责 README / 0_SCHEMA / 0_VOCAB / 99_CHECK 四张信息表
   （只读它的常量与写入函数，方向单向往外）。
-- `data/metadata_profile/io_xlsx.py` 负责**读已填工作簿**与回写校验结果，本脚本只做**生成模板**；
-  两者共用 `io_xlsx` 的表头约定（`FIRST_DATA_ROW` / `CHECK_HEADERS`），避免两侧漂移。
+- `adapters/xlsx_io.py` 负责**读已填工作簿**与回写校验结果，本脚本只做**生成模板**；
+  两者共用 `xlsx_io` 的表头约定（`FIRST_DATA_ROW` / `CHECK_HEADERS`），避免两侧漂移。
 - 公开 API 只依赖传入的 `Profile`：不做文件系统搜索、不解析 markdown、不导入 PyQt5；只有
   `main()` 才调 `profile.load_profile()`，因此测试可用 `spec.py` 手工构造的注册表独立验证。
 
@@ -48,7 +48,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from data.metadata_profile.io_xlsx import FIRST_DATA_ROW  # noqa: E402
+from adapters.xlsx_io import FIRST_DATA_ROW  # noqa: E402
 from data.metadata_profile.layout import (  # noqa: E402
     DEFAULT_COLUMN_WIDTH,
     GROUP_COLUMN,

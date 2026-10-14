@@ -295,7 +295,7 @@ def _render_legend(
         # The legend panel list is the model for ordering; the inline legend is a
         # projection of it (UI review item C). Ordering is applied to the parallel
         # lists together so legend patch -> scatter stays aligned.
-        order_keys = list(getattr(app_state, "legend_item_order", None) or [])
+        order_keys = list(app_state.legend_item_order or [])
         if order_keys:
             permutation = legend_order_permutation(legend_labels, order_keys)
             legend_handles = apply_permutation(legend_handles, permutation)

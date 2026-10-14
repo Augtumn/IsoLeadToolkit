@@ -42,21 +42,11 @@ class DataPanelRenderBuildMixin:
         render_layout = QVBoxLayout()
 
         self.render_combo = QComboBox()
+        # One list, shared with the multi-panel window, so the two cannot drift apart.
+        from ui.render_modes import RENDER_MODE_CHOICES
+
         render_modes = [
-            (translate("UMAP"), "UMAP"),
-            (translate("t-SNE"), "tSNE"),
-            (translate("PCA"), "PCA"),
-            (translate("RobustPCA"), "RobustPCA"),
-            (translate("2D"), "2D"),
-            (translate("3D"), "3D"),
-            (translate("Ternary"), "Ternary"),
-            (translate("V1-V2 Diagram"), "V1V2"),
-            (translate("PB_EVOL_76"), "PB_EVOL_76"),
-            (translate("PB_EVOL_86"), "PB_EVOL_86"),
-            (translate("PLUMBOTECTONICS_76"), "PLUMBOTECTONICS_76"),
-            (translate("PLUMBOTECTONICS_86"), "PLUMBOTECTONICS_86"),
-            (translate("PB_MU_AGE"), "PB_MU_AGE"),
-            (translate("PB_KAPPA_AGE"), "PB_KAPPA_AGE"),
+            (translate(label), value) for label, value in RENDER_MODE_CHOICES
         ]
         for label, value in render_modes:
             self.render_combo.addItem(label, value)

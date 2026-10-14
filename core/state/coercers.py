@@ -7,18 +7,9 @@ re-exports them for the dispatch handlers and the store.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 import logging
-
-import math
+from collections.abc import Iterable
 from typing import Any
-
-try:  # numpy is a hard dependency of the plotting stack, but the coercers must not
-    import numpy as np  # pragma: no cover - import guard
-except Exception:  # pragma: no cover
-    np = None  # type: ignore[assignment]
-
 
 logger = logging.getLogger(__name__)
 DEFAULT_EXPORT_IMAGE_OPTIONS = {
@@ -84,11 +75,17 @@ def _normalize_export_options(options: Any) -> dict[str, Any]:
 
 
 def _normalize_visible_groups(groups: Any) -> list[str] | None:
+    """Normalise the legend's visible-group selection.
+
+    ``None`` means "no filter: every group is visible".  A list is the exact selection, and
+    an empty list is therefore a real state too - *nothing* is visible.  Unticking every
+    checkbox in the legend reaches it, and the renderers answer with an empty frame instead
+    of quietly showing everything again.
+    """
     if groups is None:
         return None
     if isinstance(groups, Iterable) and not isinstance(groups, (str, bytes)):
-        out = [str(group) for group in groups]
-        return out if out else None
+        return [str(group) for group in groups]
     return [str(groups)]
 
 
@@ -364,16 +361,21 @@ def _normalize_locked_axis_limits(limits: Any) -> dict[str, Any]:
                 "xlim": [float(pair["xlim"][0]), float(pair["xlim"][1])],
                 "ylim": [float(pair["ylim"][0]), float(pair["ylim"][1])],
             }
-        except (KeyError, IndexError, TypeError, ValueError):
-            pass
+        except (KeyError, IndexError, TypeError, ValueError) as err:
+            # A recorded lock with the wrong shape is dropped (see the docstring) but the
+            # reason has to be visible, or a session file silently loses its axis lock.
+            logger.warning("Dropping malformed '2d' axis lock %r: %s", pair, err)
     window = limits.get("ternary")
     if window is not None:
         try:
             values = [float(value) for value in window]
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as err:
+            logger.warning("Dropping malformed ternary view window %r: %s", window, err)
             values = []
         if len(values) == 6:
             recorded["ternary"] = values
+        elif values:
+            logger.warning("Dropping ternary view window %r: expected 6 values", window)
     return recorded
 
 

@@ -7,8 +7,8 @@ import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QListWidgetItem, QMessageBox, QTableWidgetItem
 
+from application.use_cases.load_dataset import read_dataset_frame
 from core import app_state, state_gateway, translate
-from data.loader import read_data_frame
 
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
@@ -130,7 +130,7 @@ class DataImportWorkflowMixin:
 
         sheet_name = self.selected_sheet if self.sheet_list.isEnabled() else None
         try:
-            self.df = read_data_frame(self.selected_file, sheet_name)
+            self.df = read_dataset_frame(self.selected_file, sheet_name)
         except Exception as exc:
             QMessageBox.warning(
                 self,

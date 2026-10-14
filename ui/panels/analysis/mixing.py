@@ -39,7 +39,7 @@ class AnalysisPanelMixingMixin:
             return
 
         selected_list = list(app_state.selected_indices)
-        updated_endmembers = dict(getattr(app_state, 'mixing_endmembers', {}) or {})
+        updated_endmembers = dict(app_state.mixing_endmembers or {})
         updated_endmembers[group_name] = selected_list
         state_gateway.set_mixing_endmembers(updated_endmembers)
         self._update_mixing_status()
@@ -73,7 +73,7 @@ class AnalysisPanelMixingMixin:
             return
 
         selected_list = list(app_state.selected_indices)
-        updated_mixtures = dict(getattr(app_state, 'mixing_mixtures', {}) or {})
+        updated_mixtures = dict(app_state.mixing_mixtures or {})
         updated_mixtures[group_name] = selected_list
         state_gateway.set_mixing_mixtures(updated_mixtures)
         self._update_mixing_status()
@@ -174,8 +174,8 @@ class AnalysisPanelMixingMixin:
 
     def _update_mixing_status(self):
         """Refresh mixing status text."""
-        endmembers = getattr(app_state, 'mixing_endmembers', {})
-        mixtures = getattr(app_state, 'mixing_mixtures', {})
+        endmembers = app_state.mixing_endmembers
+        mixtures = app_state.mixing_mixtures
 
         if not endmembers and not mixtures:
             self.mixing_status_label.setText(translate("No mixing groups defined"))

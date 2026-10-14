@@ -1,249 +1,136 @@
-"""Application use case for dataset loading and state hydration."""
+"""Application use case for dataset loading and state hydration.
+
+Qt-free by contract (docs/dev_conventions.md §18.1): the UI collects the file, the sheet and
+the column choices in its dialogs and hands them over as a :class:`DatasetImport`; this module
+validates, cleans and hydrates the session state.  Failures raise - the caller decides what to
+tell the user, so nothing is silently reported as loaded when it is not.
+"""
 
 from __future__ import annotations
 
 import logging
 import os
-import traceback
+from dataclasses import dataclass
 
 import pandas as pd
 
-from core import CONFIG, app_state, state_gateway
-from data.loader import read_data_frame
+from core import app_state, state_gateway
+from adapters.loader import read_data_frame
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    "DatasetImport",
+    "hydrate_state_from_dataframe",
+    "load_dataset",
+    "read_dataset_frame",
+]
+
+
+@dataclass(frozen=True)
+class DatasetImport:
+    """The dataset the user chose, ready to be loaded.
+
+    Attributes:
+        file_path: source file, recorded in the session.
+        sheet_name: Excel sheet, when the source is a workbook.
+        frame: the parsed frame when the import wizard already read it; ``None`` makes
+            :func:`load_dataset` read the file itself.
+        group_cols: the grouping columns the user selected.
+        data_cols: the numeric columns the user selected.
+        render_mode: render mode picked in the wizard; ``None`` keeps the current one.
+    """
+
+    file_path: str
+    sheet_name: str | None = None
+    frame: pd.DataFrame | None = None
+    group_cols: tuple[str, ...] = ()
+    data_cols: tuple[str, ...] = ()
+    render_mode: str | None = None
+
+
+def read_dataset_frame(file_path: str, sheet_name: str | None = None) -> pd.DataFrame:
+    """Read a dataset file; the import wizard's preview and the import flow share this reader."""
+    return read_data_frame(file_path, sheet_name)
 
 
 def hydrate_state_from_dataframe(
     df: pd.DataFrame,
     file_path: str,
     sheet_name: str | None = None,
-) -> bool:
-    """Validate, clean, and hydrate global state from a DataFrame.
-
-    Pure data processing — no UI dependencies. Can be called from any context
-    (UI dialog, CLI, test, API) once a DataFrame is available.
+) -> None:
+    """Validate, clean and hydrate global state from a DataFrame.
 
     Args:
-        df: The loaded DataFrame.
-        file_path: Path to the source file.
-        sheet_name: Optional sheet name for Excel files.
+        df: the loaded DataFrame.
+        file_path: path to the source file.
+        sheet_name: optional sheet name for Excel files.
 
-    Returns:
-        True when state is hydrated successfully, False on validation failure.
+    Raises:
+        ValueError: a selected data column is missing from *df* or is not numeric, or a
+            selected grouping column is missing from *df*.  The selection is validated
+            before any state is mutated, so a rejected frame leaves the session untouched.
     """
-    try:
-        # Validate BEFORE mutating any state: a failed load used to leave the
-        # column selection pointing at the previous dataset.
-        for col in app_state.data_cols:
-            if col not in df.columns:
-                logger.error("Missing data column: %s", col)
-                return False
-            if not pd.api.types.is_numeric_dtype(df[col]):
-                logger.error("Data column '%s' is not numeric", col)
-                return False
-            logger.debug("Data column '%s' is numeric: OK", col)
+    for col in app_state.data_cols:
+        if col not in df.columns:
+            raise ValueError(f"Data column {col!r} is not in the loaded data")
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            raise ValueError(f"Data column {col!r} is not numeric")
 
-        if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
-            state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
-
-        state_gateway.reset_column_selection()
-
-        valid_group_cols: list[str] = []
-        for col in app_state.group_cols:
-            if col not in df.columns:
-                logger.warning("Skipping missing group column: %s", col)
-            else:
-                valid_group_cols.append(col)
-        state_gateway.set_group_data_columns(valid_group_cols, app_state.data_cols)
-
-        logger.info("Before cleanup: %s rows", len(df))
-        df = df.dropna(subset=app_state.data_cols).copy()
-
-        for col in app_state.group_cols:
-            if col in df.columns:
-                df[col] = df[col].replace(["——", "", "—", "null", "nan"], "Unknown")
-                df[col] = df[col].fillna("Unknown")
-
-        state_gateway.set_dataframe_and_source(
-            df.reset_index(drop=True),
-            file_path=file_path,
-            sheet_name=sheet_name,
+    missing_groups = [col for col in app_state.group_cols if col not in df.columns]
+    if missing_groups:
+        raise ValueError(
+            "Grouping column(s) not in the loaded data: " + ", ".join(missing_groups)
         )
-        state_gateway.bump_data_version()
-        state_gateway.clear_selection()
-        logger.info("Loaded %s valid samples", len(app_state.df_global))
 
-        return True
+    if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
+        state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
 
-    except Exception as exc:
-        logger.error("State hydration from DataFrame failed: %s", exc)
-        traceback.print_exc()
-        return False
+    state_gateway.reset_column_selection()
+    state_gateway.set_group_data_columns(list(app_state.group_cols), app_state.data_cols)
+
+    logger.info("Before cleanup: %s rows", len(df))
+    df = df.dropna(subset=app_state.data_cols).copy()
+
+    for col in app_state.group_cols:
+        df[col] = df[col].replace(["——", "", "—", "null", "nan"], "Unknown")
+        df[col] = df[col].fillna("Unknown")
+
+    state_gateway.set_dataframe_and_source(
+        df.reset_index(drop=True),
+        file_path=file_path,
+        sheet_name=sheet_name,
+    )
+    state_gateway.bump_data_version()
+    state_gateway.clear_selection()
+    logger.info("Loaded %s valid samples", len(app_state.df_global))
 
 
-def load_dataset(
-    *,
-    show_file_dialog: bool = True,
-    show_config_dialog: bool = True,
-) -> bool:
-    """Load dataset and hydrate global state for plotting workflow.
+def load_dataset(request: DatasetImport) -> None:
+    """Validate, clean and hydrate the session state from *request*.
 
     Args:
-        show_file_dialog: Whether to show file/sheet selection dialogs.
-        show_config_dialog: Whether to show column configuration dialog.
+        request: everything the UI collected, including the chosen columns.
 
-    Returns:
-        True when dataset is loaded successfully, otherwise False.
+    Raises:
+        FileNotFoundError: the file is not there.
+        ValueError: a selected column cannot be used with the loaded frame.
+        Exception: whatever the reader raises for an unreadable workbook.
     """
-    progress = None
-    df_loaded = None
-    config_from_dialog = False
+    if not os.path.exists(request.file_path):
+        raise FileNotFoundError(f"Data file not found: {request.file_path}")
 
-    try:
-        if show_file_dialog and show_config_dialog:
-            logger.info("Showing unified data import dialog...")
-            from ui.panels.data.dialogs.data_import_dialog import get_data_import_configuration
+    state_gateway.set_group_data_columns(list(request.group_cols), list(request.data_cols))
+    if request.render_mode:
+        state_gateway.set_render_mode(request.render_mode)
+        state_gateway.set_preserve_import_render_mode(True)
+    else:
+        state_gateway.set_preserve_import_render_mode(False)
 
-            dialog_result = get_data_import_configuration(
-                default_file=app_state.file_path,
-                default_sheet=app_state.sheet_name,
-                default_group_cols=app_state.group_cols,
-                default_data_cols=app_state.data_cols,
-                default_render_mode=app_state.render_mode,
-            )
-
-            if dialog_result is None:
-                logger.error("Data import cancelled by user")
-                return False
-
-            excel_file = dialog_result["file"]
-            sheet_name = dialog_result.get("sheet")
-            df_loaded = dialog_result.get("df")
-            state_gateway.set_group_data_columns(
-                dialog_result.get("group_cols", []),
-                dialog_result.get("data_cols", []),
-            )
-
-            selected_render_mode = dialog_result.get("render_mode")
-            if selected_render_mode:
-                state_gateway.set_render_mode(selected_render_mode)
-                state_gateway.set_preserve_import_render_mode(True)
-            else:
-                state_gateway.set_preserve_import_render_mode(False)
-            config_from_dialog = True
-
-        elif show_file_dialog:
-            logger.info("Showing file selection dialog...")
-            from ui.panels.data.dialogs.file_dialog import get_file_sheet_selection
-
-            file_result = get_file_sheet_selection(default_file=app_state.file_path)
-            if file_result is None:
-                logger.error("File selection cancelled by user")
-                return False
-
-            excel_file = file_result["file"]
-            sheet_name = None
-
-            if excel_file.lower().endswith((".xlsx", ".xls")):
-                logger.info("Excel file detected, showing sheet selection...")
-                from ui.panels.data.dialogs.sheet_dialog import get_sheet_selection
-
-                selected_sheet = get_sheet_selection(excel_file, default_sheet=app_state.sheet_name)
-                if selected_sheet is None:
-                    logger.error("Sheet selection cancelled by user")
-                    return False
-
-                sheet_name = selected_sheet
-                logger.info("Selected sheet: %s", sheet_name)
-        else:
-            excel_file = CONFIG.get("excel_file")
-            sheet_name = CONFIG.get("sheet_name", "Sheet1")
-            if not excel_file:
-                logger.error(
-                    "No file dialog requested and no 'excel_file' configured; "
-                    "cannot load a dataset."
-                )
-                return False
-
-        if not os.path.exists(excel_file):
-            logger.error("Data file not found: %s", excel_file)
-            return False
-
-        logger.info("Loading file: %s", excel_file)
-        try:
-            from ui.dialogs.progress_dialog import ProgressDialog
-
-            progress = ProgressDialog("Loading Data", "Reading file...")
-        except Exception:
-            progress = None
-
-        if df_loaded is None:
-            if sheet_name:
-                logger.info("Using sheet: %s", sheet_name)
-            df = read_data_frame(excel_file, sheet_name)
-        else:
-            df = df_loaded
-
-        if progress:
-            progress.update_message("Parsing columns...")
-
-        logger.info("Columns: %s", df.columns.tolist())
-
-        if show_config_dialog and not config_from_dialog:
-            if progress:
-                progress.close()
-                progress = None
-
-            logger.info("Showing data configuration dialog...")
-            from ui.panels.data.dialogs.data_config import get_data_configuration
-
-            config_result = get_data_configuration(
-                df,
-                default_group_cols=app_state.group_cols,
-                default_data_cols=app_state.data_cols,
-            )
-            if config_result is None:
-                logger.error("Configuration cancelled by user")
-                return False
-
-            selected_groups = config_result["group_cols"]
-            missing_groups = [col for col in selected_groups if col not in df.columns]
-            if missing_groups:
-                logger.warning("Dropping missing group columns: %s", missing_groups)
-
-            state_gateway.set_group_data_columns(
-                [col for col in selected_groups if col in df.columns],
-                config_result["data_cols"],
-            )
-
-            logger.info("Selected group columns: %s", app_state.group_cols)
-            logger.info("Selected data columns: %s", app_state.data_cols)
-        elif not config_from_dialog:
-            logger.warning("No configuration dialog shown, using empty defaults")
-            state_gateway.set_group_data_columns([], [])
-            state_gateway.set_preserve_import_render_mode(False)
-
-        if progress:
-            progress.update_message("Cleaning data...")
-
-        if not hydrate_state_from_dataframe(df, excel_file, sheet_name if sheet_name else None):
-            if progress:
-                progress.close()
-            return False
-
-        if progress:
-            progress.close()
-
-        return True
-
-    except Exception as exc:
-        try:
-            if progress:
-                progress.close()
-        except Exception as err:
-            logger.warning("load_dataset failed: %s", err)
-
-        logger.error("Data loading failed: %s", exc)
-        traceback.print_exc()
-        return False
+    frame = (
+        request.frame
+        if request.frame is not None
+        else read_dataset_frame(request.file_path, request.sheet_name)
+    )
+    logger.info("Loading dataset %s", request.file_path)
+    hydrate_state_from_dataframe(frame, request.file_path, request.sheet_name)

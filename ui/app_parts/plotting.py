@@ -77,15 +77,27 @@ class Qt5AppPlottingMixin:
         plt.ion()
 
 
-    def _connect_event_handlers(self):
-        """Connect interactive matplotlib handlers."""
+    def _connect_event_handlers(self, canvas=None):
+        """Connect interactive matplotlib handlers.
+
+        Defaults to the active figure's canvas, which is what a single-figure window wants.
+        A window that shows several figures - each with its own canvas - passes each one in,
+        because a handler connected to one canvas never sees another's events.
+        """
         from visualization.events import on_click, on_hover, on_legend_click
 
+        target = canvas
+        if target is None:
+            target = app_state.fig.canvas if app_state.fig is not None else None
+        if target is None:
+            logger.warning("No canvas to connect the event handlers to.")
+            return False
         logger.info("Connecting event handlers...")
-        app_state.fig.canvas.mpl_connect("motion_notify_event", on_hover)
-        app_state.fig.canvas.mpl_connect("button_press_event", on_click)
-        app_state.fig.canvas.mpl_connect("button_press_event", on_legend_click)
+        target.mpl_connect("motion_notify_event", on_hover)
+        target.mpl_connect("button_press_event", on_click)
+        target.mpl_connect("button_press_event", on_legend_click)
         logger.info("Event handlers connected.")
+        return True
 
     def _render_initial_plot(self):
         """Render the initial plot after data and UI are ready."""

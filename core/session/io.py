@@ -45,6 +45,8 @@ def save_session_params(
     ui_theme: str | None = None,
     parent_groups: dict[str, list[str]] | None = None,
     parent_shape_map: dict[str, str] | None = None,
+    group_decomposition: dict[str, str] | None = None,
+    plot_panels: list[str] | None = None,
 ) -> bool:
     """
     Save current session parameters to temporary file
@@ -73,6 +75,10 @@ def save_session_params(
             'parent_shape_map': {
                 str(k): str(v) for k, v in (parent_shape_map or {}).items()
             },
+            'group_decomposition': {
+                str(k): str(v) for k, v in (group_decomposition or {}).items()
+            },
+            'plot_panels': [str(panel) for panel in list(plot_panels or [])],
         }
         
         logger.debug("Saving session params. Tooltip columns: %s", tooltip_columns)

@@ -14,7 +14,7 @@
    再统一跑条件联动与外键（否则 ``group=A15`` 的行会被要求填 A9 组的必填字段）。
 
 依赖方向：`application/` → `data/`（不得反向）；不导入 PyQt5，也不用 openpyxl —— 所有 Excel
-细节经 `data.metadata_profile.io_xlsx`。
+细节经 `adapters/xlsx_io.py`。
 """
 from __future__ import annotations
 
@@ -25,7 +25,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from data.metadata_profile import io_xlsx, ratios, spec, validate, validate_sheets
+from adapters import xlsx_io
+from data.metadata_profile import ratios, spec, validate, validate_sheets
 from data.metadata_profile.layout import (
     GROUP_COLUMN,
     OWNER_ID_COLUMN,
@@ -43,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 #: 缺省模板文件名；目录沿用生成器的 `DEFAULT_OUTPUT_DIR`（`数据/`），不在这里复写路径。
 TEMPLATE_FILENAME = "entry_template_TerraLID_v{version}.xlsx"
-#: `io_xlsx` 写进记录里的 Excel 行号键（写回时显式剔除）。
+#: `xlsx_io` 写进记录里的 Excel 行号键（写回时显式剔除）。
 _ROW_NUMBER_KEY = "__row__"
 #: ERROR 的字符串口径（DTO 存字符串，便于 Qt 渲染与写 Excel）。
 _SEVERITY_ERROR = validate.Severity.ERROR.value
@@ -150,6 +151,19 @@ class _RatioColumns:
     source: str | None
 
 
+def suggested_template_path() -> Path:
+    """``generate_template()`` 的缺省落盘路径（含档案版本号）。
+
+    UI 只需要一个"另存为"的初值，因此这里给出与生成器同一个口径，避免界面自己拼名字、
+    与 `scripts/build_entry_workbook.py` 的缺省名分叉。
+
+    Raises:
+        FileNotFoundError / OSError: 档案根不可读（不静默退回不带版本号的名字）。
+    """
+    output_dir, _ = _load_generator()
+    return output_dir / TEMPLATE_FILENAME.format(version=load_profile().version)
+
+
 def generate_template(output: str | Path | None = None, *, force: bool = False) -> Path:
     """生成 TerraLID 录入工作簿模板（生成逻辑只在 `scripts/build_entry_workbook.py` 里）。
 
@@ -214,7 +228,7 @@ def import_entry_workbook(
     派生比值（``source="calculated"``）、把 B6.5 绝对 ↔ B6.6 相对不确定度互相换算，并给未填
     B6.7 来源的录入行补 ``original``（用户显式填了别的值则保留）；分析行的 A14 主比值齐全时用
     `calculate_all_parameters()` 反演 Tmod / μ / κ / ω 写入 A15.* 列（失败只记 warning）。
-    ``write_check=True`` 时把问题回写 `99_CHECK`（`io_xlsx` 先备份，路径填进 ``backup``）。
+    ``write_check=True`` 时把问题回写 `99_CHECK`（`xlsx_io` 先备份，路径填进 ``backup``）。
     **只有 0 个 ERROR 时才把被改动的表写回**；有 ERROR 时只写报告并在日志里说明原因。
 
     Args:
@@ -261,7 +275,7 @@ def _scan_workbook(path: str | Path) -> _Scan:
     target = Path(path)
     profile = load_profile()
     layout = build_layout(profile)
-    read = io_xlsx.read_sheets(layout, target)  # sheets=None → 只读 entry_sheets（26 张）
+    read = xlsx_io.read_sheets(layout, target)  # sheets=None → 只读 entry_sheets（26 张）
     records_by_sheet = {
         name: [dict(record) for record in result.records] for name, result in read.items()
     }
@@ -685,12 +699,12 @@ def _resolve_age_model_name(model_name: object) -> str | None:
 
 
 def _rewrite_check_report(scan: _Scan) -> Path | None:
-    """把问题回写 `99_CHECK`（`io_xlsx` 覆盖前自动备份），返回备份路径。"""
-    keys = io_xlsx.CHECK_HEADERS
+    """把问题回写 `99_CHECK`（`xlsx_io` 覆盖前自动备份），返回备份路径。"""
+    keys = xlsx_io.CHECK_HEADERS
     rows = [dict(zip(keys, (issue.severity, issue.sheet, issue.record_id, issue.column,
                             issue.message, issue.value))) for issue in scan.issues]
     try:
-        _, backup = io_xlsx.write_check_report(scan.layout, scan.target, rows)
+        _, backup = xlsx_io.write_check_report(scan.layout, scan.target, rows)
     except (OSError, ValueError) as err:
         logger.error("Failed to write the check report into %s: %s", scan.target, err)
         raise
@@ -725,7 +739,7 @@ def _write_back(scan: _Scan, changed: set[str], backup: Path | None) -> Path | N
     if not payload:
         logger.info("Entry workbook %s: no supplemented record to write back", scan.target)
         return backup
-    _, data_backup = io_xlsx.write_records(scan.layout, scan.target, payload)
+    _, data_backup = xlsx_io.write_records(scan.layout, scan.target, payload)
     logger.info("Wrote %d sheet(s) back to %s: %s (backup=%s)",
                 len(payload), scan.target, ", ".join(sorted(payload)), data_backup)
     return backup or data_backup
@@ -792,5 +806,6 @@ def _as_int(value: object) -> int | None:
 
 __all__ = [
     "EntryIssue", "EntryWorkbookReport", "TEMPLATE_FILENAME",
-    "generate_template", "import_entry_workbook", "validate_entry_workbook",
+    "generate_template", "import_entry_workbook", "suggested_template_path",
+    "validate_entry_workbook",
 ]

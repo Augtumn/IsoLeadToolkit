@@ -1,7 +1,5 @@
 """Embedding computation and algorithm-helper tests."""
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 
@@ -111,19 +109,8 @@ def test_prepare_plot_dataframe_filters_to_visible_groups(monkeypatch) -> None:
     df = pd.DataFrame({"group": ["A", "B"], "value": [1.0, 2.0]})
     embedding = np.array([[0.0, 0.1], [1.0, 1.1]], dtype=float)
 
-    captured: dict[str, object] = {"set_visible_calls": []}
     monkeypatch.setattr(dataframe_helpers, "_df_global", lambda: df)
     monkeypatch.setattr(dataframe_helpers, "_active_subset_indices", lambda: None)
-    monkeypatch.setattr(
-        dataframe_helpers.state_gateway,
-        "sync_available_and_visible_groups",
-        lambda groups: captured.update({"synced_groups": list(groups)}),
-    )
-    monkeypatch.setattr(
-        dataframe_helpers.state_gateway,
-        "set_visible_groups",
-        lambda value: cast(list[object], captured["set_visible_calls"]).append(value),
-    )
 
     original_visible_groups = getattr(app_state, "visible_groups", None)
     try:
@@ -135,36 +122,38 @@ def test_prepare_plot_dataframe_filters_to_visible_groups(monkeypatch) -> None:
         df_plot, unique_cats = result
         assert list(df_plot["group"]) == ["A"]
         assert unique_cats == ["A"]
-        assert captured["synced_groups"] == ["A", "B"]
-        assert captured["set_visible_calls"] == []
+        # The renderer filters; it never writes state. The module holds no gateway at all,
+        # which is what keeps a render from rewriting the legend's visibility selection.
+        assert not hasattr(dataframe_helpers, "state_gateway")
     finally:
         setattr(app_state, "visible_groups", original_visible_groups)
 
 
-def test_prepare_plot_dataframe_resets_invalid_visible_filter(monkeypatch) -> None:
+def test_prepare_plot_dataframe_keeps_a_selection_the_projection_cannot_draw(monkeypatch) -> None:
+    """Reported as "切换渲染模式后，不应该刷新图例可见性".
+
+    ``visible_groups`` used to be reset to None ("everything visible") whenever the filter
+    matched no row, and the available-group sync pruned the selection against the
+    *projection's* groups - so switching to a mode that drops rows silently re-ticked the
+    legend. The selection now survives the render untouched; an empty frame is the
+    renderer's answer, not a state rewrite.
+    """
     df = pd.DataFrame({"group": ["A", "B"], "value": [1.0, 2.0]})
     embedding = np.array([[0.0, 0.1], [1.0, 1.1]], dtype=float)
 
-    captured: dict[str, object] = {"set_visible_calls": []}
     monkeypatch.setattr(dataframe_helpers, "_df_global", lambda: df)
     monkeypatch.setattr(dataframe_helpers, "_active_subset_indices", lambda: None)
-    monkeypatch.setattr(dataframe_helpers.state_gateway, "sync_available_and_visible_groups", lambda _groups: None)
-    monkeypatch.setattr(
-        dataframe_helpers.state_gateway,
-        "set_visible_groups",
-        lambda value: cast(list[object], captured["set_visible_calls"]).append(value),
-    )
 
     original_visible_groups = getattr(app_state, "visible_groups", None)
     try:
-        setattr(app_state, "visible_groups", {"Z"})
+        setattr(app_state, "visible_groups", ["Z"])
 
         result = dataframe_helpers.prepare_plot_dataframe("group", "UMAP", embedding)
 
         assert result is not None
         df_plot, unique_cats = result
-        assert sorted(list(df_plot["group"])) == ["A", "B"]
-        assert unique_cats == ["A", "B"]
-        assert captured["set_visible_calls"] == [None]
+        assert df_plot.empty
+        assert unique_cats == []
+        assert getattr(app_state, "visible_groups") == ["Z"]
     finally:
         setattr(app_state, "visible_groups", original_visible_groups)

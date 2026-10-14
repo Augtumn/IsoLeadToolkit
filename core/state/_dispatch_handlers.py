@@ -872,6 +872,14 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
             for k, vs in (action.get("mapping") or {}).items()
         }
 
+    elif action_type == "SET_GROUP_DECOMPOSITION":
+        store._snapshot["group_decomposition"] = {
+            str(k): str(v) for k, v in (action.get("mapping") or {}).items()
+        }
+
+    elif action_type == "SET_PLOT_PANELS":
+        store._snapshot["plot_panels"] = [str(p) for p in list(action.get("panels") or [])]
+
     elif action_type == "SET_PARENT_SHAPE_MAP":
         store._snapshot["parent_shape_map"] = {
             str(k): str(v) for k, v in (action.get("mapping") or {}).items()

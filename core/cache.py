@@ -19,18 +19,18 @@ def _normalize_params(params: Any) -> str:
 
 
 def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
-    df = getattr(app_state, 'df_global', None)
+    df = app_state.df_global
     shape = (len(df), len(df.columns)) if df is not None else (0, 0)
-    data_version = int(getattr(app_state, 'data_version', 0) or 0)
+    data_version = int(app_state.data_version or 0)
     cache_key = (id(df), data_version, int(shape[0]))
     cached = _SIGNATURE_CACHE.get(cache_key)
     if cached is not None:
         return cached
 
-    file_path = getattr(app_state, 'file_path', '') or ''
-    sheet_name = getattr(app_state, 'sheet_name', '') or ''
-    data_cols = tuple(getattr(app_state, 'data_cols', []) or [])
-    group_cols = tuple(getattr(app_state, 'group_cols', []) or [])
+    file_path = app_state.file_path or ''
+    sheet_name = app_state.sheet_name or ''
+    data_cols = tuple(app_state.data_cols or [])
+    group_cols = tuple(app_state.group_cols or [])
     # Lightweight content probe: column names plus per-column means. This
     # catches same-shape files whose values changed without a version bump.
     content_probe: Tuple[Any, ...] = ()

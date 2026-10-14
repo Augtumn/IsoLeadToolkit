@@ -152,6 +152,7 @@ class _RecordContext:
 
     table: str
     record_id: str
+    #: 只有词表规则需要它（`validate_sheet_helpers` 构造的上下文不带词表）。
     vocab: ModuleType | None = None
 
     def issue(self, severity: Severity, oid: str, key: str, message_key: str,
@@ -520,16 +521,10 @@ _ORCID_PATTERN = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dXx]$")
 _DOI_PATTERN = re.compile(r"^10\.\d{4,9}/\S+$")
 
 
-def _load_vocab_module() -> ModuleType | None:
-    """延迟导入受控词表模块；不可用时返回 ``None``（按 open_ended=True 回退）。"""
-    try:
-        from . import vocab as vocab_module
-    except ImportError as err:
-        logger.debug("Controlled vocabulary module unavailable (%s); membership not enforced", err)
-        return None
-    except Exception as err:  # noqa: BLE001 — 词表模块损坏只降级，不让整本工作簿校验崩掉
-        logger.warning("Controlled vocabulary module failed to import (%s); not enforced", err)
-        return None
+def _load_vocab_module() -> ModuleType:
+    """延迟导入受控词表模块（同包模块，导入失败即报错，不做降级）。"""
+    from . import vocab as vocab_module
+
     return vocab_module
 
 
@@ -586,8 +581,9 @@ def _check_vocabulary(column: FieldSpec | ColumnSpec, text: str, raw: object,
     词表不存在或尚无词条时**不报问题** —— 空词表会把所有值都判成"词表外"，那是假阳性。
     """
     if ctx.vocab is None:
-        logger.debug("Vocabulary for %s is not checked: no vocabulary module", column.oid)
-        return []
+        raise RuntimeError(
+            "vocabulary checks need a vocabulary module; build _RecordContext with vocab=..."
+        )
     vocab_id = getattr(column, "vocab_id", None)
     if not vocab_id:
         resolved = _vocab_call(ctx.vocab, "vocab_id_for", column)
@@ -599,29 +595,19 @@ def _check_vocabulary(column: FieldSpec | ColumnSpec, text: str, raw: object,
         logger.debug("Controlled vocabulary %r has no terms; %r for %s is not checked",
                      vocab_id, text, column.oid)
         return []
-    contained = _vocab_call(ctx.vocab, "contains", vocab_id, text)
-    if contained is None:
-        return []  # 词表查询不可用（``_vocab_call`` 已记日志）：降级为不检查
-    if contained:
+    if _vocab_call(ctx.vocab, "contains", vocab_id, text):
         return []
     open_ended = _vocab_call(ctx.vocab, "open_ended", vocab_id)
-    if open_ended is None or open_ended:
+    if open_ended:
         return [ctx.warning(column, MSG_VOCAB_UNKNOWN_OPEN,
                             {**_base_params(column), "value": text}, raw)]
     return [ctx.error(column, MSG_VOCAB_UNKNOWN, {**_base_params(column), "value": text}, raw)]
 
 
-def _vocab_call(vocab_module: ModuleType, name: str, *args) -> object | None:
-    """调用 vocab 模块的可选函数：缺失/异常时记日志并返回 ``None``（降级不中断）。"""
-    function = getattr(vocab_module, name, None)
-    if not callable(function):
-        logger.debug("vocab.%s() is unavailable; skipping that vocabulary step", name)
-        return None
-    try:
-        return function(*args)
-    except Exception as err:  # noqa: BLE001 — 并行模块的失败只降级，不中断整次校验
-        logger.warning("vocab.%s%r failed: %s", name, args, err)
-        return None
+def _vocab_call(vocab_module: ModuleType, name: str, *args) -> object:
+    """调用 vocab 模块的函数（模块与函数都是本包的组成部分，缺失即报错）。"""
+    function = getattr(vocab_module, name)
+    return function(*args)
 
 
 def _is_valid_date(value: object) -> bool:

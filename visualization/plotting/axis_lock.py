@@ -55,7 +55,7 @@ def is_ternary_axes(axes: Any) -> bool:
 
 def current_axes() -> Any:
     """The axes the lock applies to: the live one, or None before the first render."""
-    return getattr(app_state, "ax", None)
+    return app_state.ax
 
 
 def axes_kind(axes: Any) -> str:
@@ -143,7 +143,7 @@ def apply_axis_limits(limits: dict | None = None, axes: Any = None) -> bool:
     recorded = dict(
         limits
         if limits is not None
-        else (getattr(app_state, "locked_axis_limits", None) or {})
+        else (app_state.locked_axis_limits or {})
     )
     if not recorded:
         return False
@@ -180,13 +180,13 @@ def apply_locked_axis_limits(axes: Any = None) -> bool:
     is written. The first draw of a kind with no record yet records what it draws instead of
     correcting it.
     """
-    if not bool(getattr(app_state, "axis_scale_locked", False)):
+    if not bool(app_state.axis_scale_locked):
         return False
     axes = axes if axes is not None else current_axes()
     if axes is None:
         return False
 
-    recorded = dict(getattr(app_state, "locked_axis_limits", None) or {})
+    recorded = dict(app_state.locked_axis_limits or {})
     key = axes_kind(axes)
     if key not in recorded:
         fresh = read_axis_limits(axes)

@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
         "check_gateway_direct_state_assignments.py",
         "check_state_dict_mutations.py",
         "check_panel_self_resolution.py",
+        "check_layer_dependencies.py",
     ],
 )
 def test_guard_script_reports_zero_hits(script_name: str) -> None:
@@ -113,6 +114,31 @@ def test_gateway_generic_guard_covers_plugins_and_utils() -> None:
         assert probe.name in result.stdout
     finally:
         probe.unlink(missing_ok=True)
+
+
+def test_layer_guard_detects_planted_violations() -> None:
+    """The layer guard must catch each forbidden direction, not just report zero."""
+    probes = {
+        REPO_ROOT / "ui" / f"_guard_probe_{uuid.uuid4().hex}.py": (
+            "from data.loader import read_data_frame\n"
+        ),
+        REPO_ROOT / "application" / "use_cases" / f"_guard_probe_{uuid.uuid4().hex}.py": (
+            "from ui.dialogs import entry_workbook\n"
+        ),
+        REPO_ROOT / "data" / "geochemistry" / f"_guard_probe_{uuid.uuid4().hex}.py": (
+            "import pandas\n"
+        ),
+    }
+    try:
+        for probe, content in probes.items():
+            probe.write_text(content, encoding="utf-8")
+        result = run_guard_script("check_layer_dependencies.py")
+        assert result.returncode == 1, result.stdout + result.stderr
+        for probe in probes:
+            assert probe.name in result.stdout, result.stdout
+    finally:
+        for probe in probes:
+            probe.unlink(missing_ok=True)
 
 
 def test_scan_pattern_hits_honors_allowlist(tmp_path: Path) -> None:

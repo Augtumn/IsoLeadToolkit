@@ -1,12 +1,11 @@
-"""Data module - Data loading and geochemistry calculations.
+"""Data module - the domain: geochemistry calculations and the metadata registry.
 
-Geochemistry symbols are resolved lazily (PEP 562) so importing the loader
-does not pull in pandas/scipy-heavy modules.
+File IO lives in ``adapters/`` (docs/dev_conventions.md §18.1: this package must not
+depend on pandas/openpyxl); the geochemistry symbols here are resolved lazily
+(PEP 562) so importing the package stays cheap.
 """
-from .loader import read_data_frame
 
 __all__ = [
-    'read_data_frame',
     'geochemistry',
     'calculate_deltas',
     'calculate_v1v2_coordinates',
@@ -18,7 +17,7 @@ __all__ = [
     'PRESET_MODELS',
 ]
 
-_GEOCHEM_ATTRS = frozenset(name for name in __all__ if name != 'read_data_frame')
+_GEOCHEM_ATTRS = frozenset(__all__)
 
 
 def __getattr__(name: str):

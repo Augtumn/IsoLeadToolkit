@@ -74,7 +74,7 @@
 | `last_pca_variance` / `last_pca_components` | PCA 诊断数据 | plotting/core.py, plotting/analysis_qt.py |
 | `scatter_collections` | 主散点集合 | plotting/render.py |
 | `artist_to_sample` / `sample_coordinates` | 事件索引映射 | plotting/render.py, events.py |
-| `visible_groups` | 图例过滤组 | plotting/render.py, events.py |
+| `visible_groups` | 图例过滤组（渲染只读，切换渲染模式不得改写；`None`=全部可见，`[]`=一个都不显示） | plotting/render.py, events.py |
 | `current_palette` / `group_marker_map` | 当前调色板与标记映射 | plotting/render.py |
 | `selection_mode` / `selection_tool` | 选择工具状态 | events.py |
 | `selected_indices` / `selected_isochron_data` | 选择结果 | events.py |
@@ -141,7 +141,7 @@ on_slider_change() [events.py]
   ↓
 构建调色板 + 准备数据:
   ├─ _build_group_palette() → 稳定颜色映射
-  ├─ 按 visible_groups 过滤
+  ├─ 按 visible_groups 过滤（渲染器只读该状态、绝不回写；可见组在该投影里没有数据就画空图，且不改渲染模式）
   └─ 添加嵌入列到 DataFrame
   ↓
 渲染散点:
@@ -913,3 +913,29 @@ plotting/__init__.py ← 导出所有公共 API
 
 回归测试见 `tests/test_ternary_zoom_qt.py`（真实 Qt 组件 + 真实鼠标事件）；拖拽几何与像素测量的回归见
 `tests/test_ternary_rendered_geometry.py`。手势只有 Qt 层这一份实现，没有基于 `mpl_connect` 的并行版本。
+
+
+## 多面板与联动悬停
+
+一个窗口可以同时显示多张图，以便用不同方式判定同一批数据；鼠标悬停在任一面板的数据点上时，
+所有面板中同一个样品都会突出显示。
+
+- **状态**：`app_state.plot_panels`（每个面板的渲染模式；空或一个元素表示普通单图窗口），随会话保存/恢复。
+- **子窗口**：每个面板是一个**独立子窗口**（`QMdiArea` + `QMdiSubWindow`，见 `ui/main_window_parts/mdi_panels.py`），
+  各自持有自己的 `Figure` 与 `FigureCanvas`，因此可单独拖动、缩放、最大化、关闭与平铺，绘制其中一张不影响另一张。
+  投影随模式而定（2D / 3D / ternary）：模式变化时该窗口保留自己的 figure，只重建 axes。
+- **接线**：`ui/main_window_parts/canvas.py::_build_panel_windows` 建窗口并**逐个连接 canvas 的事件**
+  （matplotlib 的处理器属于单个 canvas，连一个收不到另一个的事件），随后把记录发布到运行期列表
+  `app_state.plot_panel_windows`；选择面板数/模式后会重建并重绘。
+- **渲染**：`application/use_cases/render_plot.py::_render_panels` 逐面板把活动 figure 切到该面板的 figure、
+  活动 axes 切到它的 axes 后渲染，并记录每个面板的散点集合与「样品 ↔ artist」双向映射
+  （`app_state.plot_panel_states`，运行期数据，不持久化）。结束后第一个面板置为活动，使既有单图代码继续可用。
+- **悬停**：`visualization/event_handlers/pointer_events.py::on_hover` 先在**光标所在面板**解析样品，
+  再让每个面板放大同一个样品（`HoverHighlighter.highlight_sample`）。3D 面板没有命中测试，按模式跳过而不是整窗跳过。
+- **选择**：`visualization/selection_overlay.py` 在每个面板的 axes 上绘制选择高亮；第一个面板的 artist 仍写入注册字段
+  （兼容既有读取者），其余放在运行期列表 `selection_overlay_extras` 中，每次刷新开头一律清除。
+- **界面**：工具栏「多面板…」（`ui/main_window_parts/multi_panel_dialog.py`）选择面板数与各自模式。
+- **分层约束**：`application/` 不得 import `visualization/`；面板的 figure/axes 通过运行期列表传入，
+  该约束由守卫 `check_layer_dependencies.py` 强制；状态一律经 `state_gateway` 写入（`check_state_mutations.py`），
+  自身属性须在类上声明（`check_self_attribute_probes.py`）。
+- **易错点**：绘图函数内部都会调用 `_ensure_axes`；它复用当前 axes 而不清图，因此面板渲染不会误清自己的窗口。

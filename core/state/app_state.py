@@ -4,6 +4,7 @@ Centralized global state to avoid variable chaos
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Callable
 
 from ..config import CONFIG
@@ -13,6 +14,8 @@ from ..legend_state import LegendState
 from .bootstrap import init_runtime_defaults, sync_overlay_kde_styles
 from .store import StateStore
 from ._views import DataState, AlgorithmState, VisualState, GeochemState, StyleState, InteractionState
+
+logger = logging.getLogger(__name__)
 
 
 class AppState:
@@ -50,6 +53,20 @@ class AppState:
         # Parent-group overlay: parent name -> ordered child group names.
         # Children of one parent share a marker shape and keep distinct colors.
         self.parent_groups: dict[str, list[str]] = {}
+        # Legend-group decomposition: value of the active grouping column -> the column that
+        # splits it. The children it produces are registered through parent_groups.
+        self.group_decomposition: dict[str, str] = {}
+        # Render mode per panel; empty or one entry is the ordinary single-figure window.
+        # Several entries put that many figures side by side, so the same data can be judged
+        # by different means at once.
+        self.plot_panels: list[str] = []
+        #: Runtime, not state: what each panel drew last time (its axes, its scatter
+        #: collections and both directions of the sample map). Rebuilt on every render and
+        #: used by hover and click to find the same sample in the other panels.
+        self.plot_panel_states: list[Any] = []
+        #: Runtime, not state: the child windows the panels are drawn into, each with its own
+        #: figure, canvas and axes. Built by the window, read by the render cycle.
+        self.plot_panel_windows: list[Any] = []
         # Manual per-parent shape overrides; empty = auto-assign by order.
         self.parent_shape_map: dict[str, str] = {}
         # Named algorithm-parameter presets (UMAP/tSNE/PCA/RobustPCA/ml/V1V2).
@@ -93,8 +110,9 @@ class AppState:
         if self.selection_overlay is not None:
             try:
                 self.selection_overlay.remove()
-            except Exception:
-                pass
+            except Exception as err:
+                # Qt objects can already be gone; say so instead of swallowing it.
+                logger.warning("Could not remove the selection overlay: %s", err)
         self.selection_overlay = None
 
     def register_language_listener(self, callback: Callable[[], None]) -> None:
@@ -108,12 +126,15 @@ class AppState:
             self.language_listeners.remove(callback)
 
     def notify_language_change(self) -> None:
-        """Notify registered listeners about language changes."""
+        """Notify registered listeners about language changes.
+
+        One broken listener must not stop the others, but it must not be silent either.
+        """
         for callback in list(self.language_listeners):
             try:
                 callback()
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("Language listener %r failed: %s", callback, err)
 
     def register_render_mode_listener(self, callback: Callable[[str], None]) -> None:
         """Register a callback invoked (with the new mode) when render mode changes."""
@@ -126,12 +147,15 @@ class AppState:
             self.render_mode_listeners.remove(callback)
 
     def notify_render_mode_change(self, mode: str) -> None:
-        """Notify registered listeners about render-mode changes."""
+        """Notify registered listeners about render-mode changes.
+
+        One broken listener must not stop the others, but it must not be silent either.
+        """
         for callback in list(self.render_mode_listeners):
             try:
                 callback(mode)
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning("Render-mode listener %r failed: %s", callback, err)
 
     # ------------------------------------------------------------------ #
     # Flat-name access to OverlayState (persistence schema + gateway actions)

@@ -10,8 +10,9 @@ from source_scan_guard import repo_root
 
 EXCLUDED_PARTS = {".venv", "reference", ".git"}
 # Production roots that must not use the generic gateway writers. plugins/
-# and utils/ were previously unscanned, leaving the rule unenforced there.
-TARGET_ROOTS = {"application", "core", "data", "ui", "visualization", "plugins", "utils"}
+# and utils/ were previously unscanned, leaving the rule unenforced there;
+# adapters/ joined the production set with the IO split.
+TARGET_ROOTS = {"adapters", "application", "core", "data", "ui", "visualization", "plugins", "utils"}
 # Standalone entry-point scripts are covered by their own root check.
 TARGET_FILES = {"main.py"}
 

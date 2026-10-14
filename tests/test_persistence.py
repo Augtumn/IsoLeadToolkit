@@ -47,6 +47,27 @@ def test_save_all_writes_both_files(tmp_path: Path, monkeypatch) -> None:
     assert ui["hidden_groups"] == ["Group A"]
 
 
+def test_an_empty_visibility_selection_persists_as_empty(tmp_path: Path, monkeypatch) -> None:
+    """Unticking every group must not come back as "all visible" after a restart.
+
+    ``visible_groups: null`` means "no filter: every group is visible", so an empty
+    selection has to be written as an empty list rather than normalised away.
+    """
+    monkeypatch.setattr(persistence, "SESSION_FILE", tmp_path / "params.json")
+    monkeypatch.setattr(persistence, "UI_STATE_FILE", tmp_path / "ui_state.json")
+
+    original = getattr(app_state, "visible_groups", None)
+    try:
+        state_gateway.set_visible_groups([])
+
+        assert persistence.save_all(state_gateway) is True
+
+        ui = json.loads((tmp_path / "ui_state.json").read_text(encoding="utf-8"))
+        assert ui["visible_groups"] == []
+    finally:
+        state_gateway.set_visible_groups(original)
+
+
 def test_load_ui_state_and_restore_snapshot(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(persistence, "SESSION_FILE", tmp_path / "params.json")
     monkeypatch.setattr(persistence, "UI_STATE_FILE", tmp_path / "ui_state.json")

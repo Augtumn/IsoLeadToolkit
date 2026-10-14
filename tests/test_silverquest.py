@@ -1,4 +1,4 @@
-"""Tests for the SilverQuest port (:mod:`data.silverquest`).
+"""Tests for the SilverQuest port (:mod:`adapters.silverquest`).
 
 Three kinds of evidence are used, and none of them is the implementation's own
 arithmetic:
@@ -6,7 +6,7 @@ arithmetic:
 1. **An independent scalar transcription of R lines 297-342**
    (``_reference_profile`` below).  It is written as plain Python floating-point
    operations with an explicit 2x2 inverse — no numpy linear algebra and no
-   helper imported from :mod:`data.silverquest` — so it is what a second person
+   helper imported from :mod:`adapters.silverquest` — so it is what a second person
    reading the R script would type.  A wrong formula in the module cannot satisfy
    it.
 2. **Geometric invariants with exact answers.**  With 204Pb normalisation the
@@ -26,7 +26,7 @@ arithmetic:
    Johnson 5A.2"), so the off-diagonal terms must not be dropped.
 
 The R source (``reference/r_packages/SilverQuest_v1/SilverQuest_R_v1.R``) is
-named line by line in :mod:`data.silverquest`.  The R package folder ships no
+named line by line in :mod:`adapters.silverquest`.  The R package folder ships no
 reference output to diff against, and R is not installed on the porting machine
 (``Get-Command Rscript`` finds nothing), so no R-vs-Python comparison was run —
 the expectations here are the hand-derived ones above.
@@ -39,7 +39,7 @@ import math
 import numpy as np
 import pytest
 
-from data.silverquest import (
+from adapters.silverquest import (
     COLOUR_RAMP,
     CORRELATION_MATRIX,
     DEFAULT_DMAX,
@@ -128,7 +128,7 @@ def _reference_profile(
     """Independent scalar transcription of R lines 297-342.
 
     Plain floats and tuple algebra only; the 2x2 weighted system is inverted by
-    hand.  Imports nothing from :mod:`data.silverquest`.
+    hand.  Imports nothing from :mod:`adapters.silverquest`.
     """
     x, y, z = artifact
     x0, y0, z0 = ore
@@ -935,7 +935,7 @@ def test_database_path_prefers_the_env_override_when_default_is_absent(
     target = tmp_path / "from_env.xlsx"
     monkeypatch.setenv(SILVERQUEST_DB_ENV_VAR, str(target))
     monkeypatch.setattr(
-        "data.silverquest.default_database_path", lambda: tmp_path / "absent.xlsx"
+        "adapters.silverquest.default_database_path", lambda: tmp_path / "absent.xlsx"
     )
     assert resolve_database_path(None) == target
 

@@ -1189,6 +1189,25 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         holder=None,
     ),
     StateField(
+        # Render mode per panel. Empty or one entry is the ordinary one-figure window; more
+        # than one shows several figures at once.
+        "plot_panels",
+        [],
+        normalize=list,
+        copy=list,
+        holder=None,
+    ),
+    StateField(
+        # Value of the active grouping column -> the column that splits it. The children the
+        # split produces are registered through parent_groups, so the plot, the legend, the
+        # colours, the per-parent marker shape and the visibility checkboxes are unchanged.
+        "group_decomposition",
+        {},
+        normalize=coercers._normalize_str_str_map,
+        copy=coercers._normalize_str_str_map,
+        holder=None,
+    ),
+    StateField(
         "parent_shape_map",
         {},
         normalize=coercers._normalize_str_str_map,

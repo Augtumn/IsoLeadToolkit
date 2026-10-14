@@ -105,8 +105,8 @@ class MixingCalculatorDialog(QDialog):
         if app_state.df_global is None:
             return
 
-        endmembers = getattr(app_state, 'mixing_endmembers', {})
-        mixtures = getattr(app_state, 'mixing_mixtures', {})
+        endmembers = app_state.mixing_endmembers
+        mixtures = app_state.mixing_mixtures
 
         if not endmembers or not mixtures:
             return

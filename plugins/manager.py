@@ -116,7 +116,9 @@ class PluginManager:
         if plugin is None:
             raise PluginLoadError(f"No plugin class found in module '{name}'")
 
-        # Override meta.source based on resolved directory
+        # Override meta.source based on resolved directory. A plugin whose meta is not the
+        # declared PluginMeta dataclass breaks the plugin contract; it is reported instead of
+        # being loaded with a half-set metadata block.
         try:
             plugin.meta = PluginMeta(
                 name=plugin.meta.name,
@@ -129,8 +131,11 @@ class PluginManager:
                 signature=plugin.meta.signature,
                 restricted=plugin.meta.restricted,
             )
-        except Exception:
-            pass  # If meta is not a PluginMeta dataclass, keep as-is
+        except Exception as exc:
+            self._failed[name] = str(exc)
+            raise PluginLoadError(
+                f"Plugin '{name}' has an invalid meta block (expected PluginMeta): {exc}"
+            ) from exc
 
         try:
             ok, msg = plugin.validate_environment()

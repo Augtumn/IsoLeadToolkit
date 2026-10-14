@@ -49,6 +49,17 @@ def _ensure_axes(dimensions: int | str = 2) -> Any | None:
 
     current_name = getattr(app_state.ax, 'name', '') if app_state.ax is not None else ''
 
+    # When the window shows several panels, the render loop has already given each one its
+    # axes with the right projection. Clearing the figure here would wipe the other panels, so
+    # an axes that already fits is reused as it is.
+    if len(getattr(app_state, "plot_panels", []) or []) > 1 and app_state.ax is not None:
+        wanted = '3d' if dimensions == 3 else ('ternary' if dimensions == 'ternary' else None)
+        if wanted is None:
+            if current_name not in ('3d', 'ternary'):
+                return app_state.ax
+        elif current_name == wanted:
+            return app_state.ax
+
     if dimensions == 3:
         _lazy_import_mplot3d()
         if app_state.ax is None or current_name != '3d':
@@ -75,6 +86,20 @@ def _ensure_axes(dimensions: int | str = 2) -> Any | None:
     state_gateway.set_legend_ax(None)
 
     return app_state.ax
+
+
+def _add_axes(fig: Any, mode: str, position: Any) -> Any:
+    """One axes at *position*, with the projection *mode* needs."""
+    from .panels import projection_for
+
+    projection = projection_for(mode)
+    if projection == '3d':
+        _lazy_import_mplot3d()
+        return fig.add_subplot(position, projection='3d')
+    if projection == 'ternary':
+        _lazy_import_mpltern()
+        return fig.add_subplot(position, projection='ternary')
+    return fig.add_subplot(position)
 
 
 def get_umap_embedding(params: dict) -> np.ndarray | None:

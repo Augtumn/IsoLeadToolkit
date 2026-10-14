@@ -13,7 +13,11 @@ from ...core import _build_group_palette, _ensure_axes
 from ...geochem.equation_overlays import _draw_equation_overlays
 from ...grouping import resolve_group_marker
 from ...style import _apply_axis_text_style, _apply_current_style, _enforce_plot_style
-from ..common.legend import _merge_parent_groups_for_inline, _place_inline_legend
+from ..common.legend import (
+    _merge_parent_groups_for_inline,
+    _notify_legend_panel,
+    _place_inline_legend,
+)
 from ..common.state_access import _active_subset_indices, _df_global
 from ..kde import _resolve_kde_style, kde_compute_kwargs
 from visualization.plotting.tooltip import raise_tooltip_above_data
@@ -70,10 +74,12 @@ def _prepare_2d_dataframe(
     group_col: str,
     data_columns: list[str],
     df_global: pd.DataFrame,
-) -> tuple[pd.DataFrame, list[str]] | None:
+) -> pd.DataFrame | None:
     """Apply subsetting, numeric conversion and group visibility filtering.
 
-    Returns ``(df_plot, all_groups)`` or ``None`` when no plottable rows exist.
+    Returns the frame to plot, or ``None`` when no plottable rows exist.  The frame may be
+    empty when the legend's visibility selection has no row in this projection; that is a
+    result, not a failure, and the caller draws the empty frame.
     """
     subset_indices = _active_subset_indices()
     if subset_indices is not None:
@@ -105,29 +111,23 @@ def _prepare_2d_dataframe(
 
     df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
 
-    all_groups = sorted(df_plot[group_col].unique())
-    state_gateway.sync_available_and_visible_groups(all_groups)
-
+    # The legend's visibility filter is applied here but never rewritten: which groups the
+    # user shows is theirs, and a render - including the one a render-mode switch triggers -
+    # has no business changing it.  ``available_groups`` is synced from the loaded data by
+    # the render use case, not from this projection, so a mode that drops rows (a 2D column
+    # full of blanks, a subset selection) cannot prune the selection either.
     visible_groups = app_state.visible_groups
     if visible_groups is not None:
-        allowed = set(visible_groups)
-        mask = df_plot[group_col].isin(allowed)
-        if not allowed:
-            df_plot = df_plot[mask].copy()
-        elif not mask.any():
-            logger.info('No 2D data matches the selected legend filter; reverting to all groups.')
-            state_gateway.set_visible_groups(None)
-        else:
-            df_plot = df_plot[mask].copy()
-            if df_plot.empty:
-                logger.info('Filtered 2D data is empty; reverting to all groups.')
-                df_plot = df_global.dropna(subset=data_columns).copy()
-                df_plot[group_col] = df_plot[group_col].fillna('Unknown').astype(str)
-                state_gateway.set_visible_groups(None)
-                all_groups = sorted(df_plot[group_col].unique())
-                state_gateway.sync_available_and_visible_groups(all_groups)
+        allowed = {str(group) for group in visible_groups}
+        df_plot = df_plot[df_plot[group_col].isin(allowed)].copy()
+        if df_plot.empty:
+            logger.warning(
+                'No 2D row belongs to a visible group (%s); the plot stays empty until a '
+                'group is ticked in the legend.',
+                ', '.join(sorted(allowed)) or 'none',
+            )
 
-    return df_plot, all_groups
+    return df_plot
 
 
 def _render_2d_kde(
@@ -363,10 +363,9 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
             logger.error('Failed to configure 2D axes')
             return False
 
-        prepared = _prepare_2d_dataframe(group_col, data_columns, df_global)
-        if prepared is None:
+        df_plot = _prepare_2d_dataframe(group_col, data_columns, df_global)
+        if df_plot is None:
             return False
-        df_plot, _ = prepared
 
         _apply_current_style()
 
@@ -391,6 +390,27 @@ def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_k
         scatters = [] if show_kde else _render_2d_scatter_groups(df_plot, group_col, data_columns, unique_cats, size)
 
         if not scatters and not show_kde:
+            if df_plot.empty:
+                # Every group the user keeps visible is absent from this projection.  Draw
+                # the empty frame and keep both the render mode and the legend selection:
+                # the UMAP fallback below would change the mode behind the user's back,
+                # which is exactly what a render-mode switch must not do.
+                subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
+                _render_2d_title_and_axes(
+                    group_col,
+                    data_columns,
+                    prev_ax,
+                    prev_xlim,
+                    prev_ylim,
+                    prev_2d_cols,
+                    subset_info,
+                )
+                _attach_annotation()
+                # Tell the legend panel anyway: its checkboxes have to match the selection
+                # that produced this empty frame (an empty selection used to leave them
+                # all ticked, since this path never reached the legend renderer).
+                _notify_legend_panel(group_col, [], [])
+                return True
             logger.error('No points were plotted in 2D')
             try:
                 app_state.fig.canvas.draw_idle()

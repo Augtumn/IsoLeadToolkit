@@ -118,6 +118,13 @@ def _draw_paleoisochrons(
                     position_mode=label_opts.get('label_position', 'auto'),
                 )
         state_gateway.set_paleoisochron_label_data(paleo_labels)
+        # The same list, kept with the axes it belongs to. The state holds one list and every
+        # panel's render overwrites it, so only the panel rendered last could have its labels laid
+        # out again - the reported "only one panel's labels behave".
+        try:
+            ax._paleoisochron_label_data = list(paleo_labels)
+        except Exception as err:
+            logger.warning("Could not keep a panel's labels with its axes: %s", err)
     except Exception as err:
         logger.warning("Failed to draw paleoisochrons: %s", err)
 

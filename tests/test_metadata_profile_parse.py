@@ -637,50 +637,26 @@ def test_empty_archive_warns_instead_of_raising(tmp_path: Path) -> None:
     assert any("区域标记" in warning for warning in built.warnings)
 
 
-def test_optional_vocab_and_labels_are_filled_or_fall_back(loaded: Profile) -> None:
+def test_vocab_and_label_lookups_are_always_available(loaded: Profile) -> None:
+    """`vocab`/`labels` 是同包模块：查询函数永远拿得到，不做"缺席就降级"。"""
     vocab_lookup = profile_mod._load_vocab_lookup()
     label_lookup = profile_mod._load_label_lookup()
+    assert callable(vocab_lookup)
+    assert callable(label_lookup)
     for spec in loaded.fields:
         assert spec.label_zh  # 永远非空：有 labels 就是译文，没有就回退 label_en
-        if label_lookup is None:
-            assert spec.label_zh == spec.label_en
-        if vocab_lookup is None:
-            assert spec.vocab_id is None
-        else:
-            assert spec.vocab_id is None or isinstance(spec.vocab_id, str)
+        assert spec.vocab_id is None or isinstance(spec.vocab_id, str)
 
 
-def test_absent_optional_modules_fall_back(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(profile_mod, "_load_vocab_lookup", lambda: None)
-    monkeypatch.setattr(profile_mod, "_load_label_lookup", lambda: None)
-    built = profile_mod.build_profile(ARCHIVE_ROOT)
-    assert len(built.fields) == EXPECTED_OWN_TOTAL + 250
-    assert all(spec.vocab_id is None for spec in built.fields)
-    assert all(spec.label_zh == spec.label_en for spec in built.fields)
-    # 回退路径不得改写解析层的 value_kind：A15.1 仍是 FREE_TEXT，精确类型原样保留
-    age_model = built.field("A15.1")
-    assert age_model is not None
-    assert age_model.value_kind is ValueKind.FREE_TEXT
-    ratio_name = built.field("B6.1")
-    assert ratio_name is not None
-    assert ratio_name.value_kind is ValueKind.RATIO_NAME
-    description = built.field("A13")
-    assert description is not None
-    assert description.value_kind is ValueKind.FREE_TEXT
+def test_vocab_lookup_failure_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """查询抛错不再被吞掉：坏掉的词表登记要暴露出来，而不是静默丢掉 vocab_id。"""
 
-
-def test_optional_module_failure_does_not_break_the_registry(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
     def _boom(spec: object) -> str:
-        raise RuntimeError("optional module is broken")
+        raise RuntimeError("vocab lookup is broken")
 
     monkeypatch.setattr(profile_mod, "_load_vocab_lookup", lambda: _boom)
-    monkeypatch.setattr(profile_mod, "_load_label_lookup", lambda: _boom)
-    built = profile_mod.build_profile(ARCHIVE_ROOT)
-    assert len(built.tables) == 11
-    assert all(spec.vocab_id is None for spec in built.fields)
-    assert all(spec.label_zh == spec.label_en for spec in built.fields)
+    with pytest.raises(RuntimeError, match="vocab lookup is broken"):
+        profile_mod.build_profile(ARCHIVE_ROOT)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

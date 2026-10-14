@@ -20,7 +20,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
 import scripts.build_entry_workbook as build_entry_workbook
-from data.metadata_profile.io_xlsx import CHECK_HEADERS, FIRST_DATA_ROW
+from adapters.xlsx_io import CHECK_HEADERS, FIRST_DATA_ROW
 from data.metadata_profile.layout import (
     OWNER_SHEET_COLUMN,
     RATIO_HOST_COLUMN,
@@ -548,7 +548,7 @@ def test_vocab_sheet_lists_columns_and_system_lists(synthetic_profile, synthetic
 
 
 def test_check_sheet_header_comes_from_io_xlsx(synthetic_profile):
-    """`99_CHECK` 表头与 `io_xlsx.CHECK_HEADERS` 一致（只有一层表头）。"""
+    """`99_CHECK` 表头与 `xlsx_io.CHECK_HEADERS` 一致（只有一层表头）。"""
     workbook = _workbook(synthetic_profile)
     worksheet = workbook[SHEET_CHECK]
     assert [cell.value for cell in worksheet[1]] == list(CHECK_HEADERS)

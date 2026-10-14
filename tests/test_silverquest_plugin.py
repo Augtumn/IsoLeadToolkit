@@ -13,14 +13,14 @@ Two things are pinned down here:
    package's galena workbook as an optional extra reference set.
 
 The synthetic dataset below is built so the expected numbers are hand-derivable
-from the R transcription (see :mod:`data.silverquest`): the 204Pb normalisation
+from the R transcription (see :mod:`adapters.silverquest`): the 204Pb normalisation
 has ``smatrix = diag(f * (2*18.7, 3*15.65, 4*39.0))`` with ``f = 0.001``, so a
 common-mode offset of ``d`` on all three ratios costs
 ``d**2 / (2*(2*0.0187)**2) + d**2 / (2*(3*0.01565)**2) + d**2 / (2*(4*0.039)**2)``
 plus the small correlation cross-terms (r = 0.96 / 0.94 / 0.96).
 
 The R reference for the algorithm itself is ``SilverQuest_R_v1.R`` and is
-documented in :mod:`data.silverquest`; the numeric expectations live in
+documented in :mod:`adapters.silverquest`; the numeric expectations live in
 ``tests/test_silverquest.py``.
 """
 
@@ -31,11 +31,11 @@ import pytest
 
 from plugins.api import BasePlugin, PluginMeta
 from plugins.builtins.silverquest_plugin import (
-    ROLE_NO_MATCH_PREFIX,
-    ROLE_REFERENCE_MATCH_PREFIX,
-    ROLE_MATCH_PREFIX,
     ROLE_OTHER,
-    ROLE_REFERENCE_PREFIX,
+    ROLE_REFERENCE_MATCHED_PREFIX,
+    ROLE_REFERENCE_UNMATCHED_PREFIX,
+    ROLE_SAMPLE_MATCHED_PREFIX,
+    ROLE_SAMPLE_UNMATCHED_PREFIX,
     SilverQuestPlugin,
     resolve_references,
     run_silverquest_on_groups,
@@ -320,7 +320,12 @@ def test_grouped_search_ranks_the_selected_references_by_weighted_distance() -> 
 
 
 def test_grouped_search_roles_label_every_selected_row() -> None:
-    """The applied column is what the plot colours, so every row gets a role."""
+    """The applied column is what the plot colours, so every row gets a role.
+
+    Both sides carry the same matched/unmatched pair, and each row's label is its
+    own outcome: ``SiteA`` holds two hits and ``SiteB`` none, while of the two
+    ``OreX`` rows only the exact one was hit.
+    """
     frame = _synthetic_grouped_frame()
 
     payload = run_silverquest_on_groups(
@@ -328,18 +333,120 @@ def test_grouped_search_roles_label_every_selected_row() -> None:
     )
 
     assert payload["applied_column"] == [
-        ROLE_MATCH_PREFIX + "SiteA",
-        ROLE_MATCH_PREFIX + "SiteA",
-        ROLE_NO_MATCH_PREFIX + "SiteB",
-        ROLE_REFERENCE_MATCH_PREFIX + "OreX",
-        ROLE_REFERENCE_PREFIX + "OreX",
-        ROLE_REFERENCE_PREFIX + "OreY",
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+        ROLE_SAMPLE_UNMATCHED_PREFIX + "SiteB",
+        ROLE_REFERENCE_MATCHED_PREFIX + "OreX",
+        ROLE_REFERENCE_UNMATCHED_PREFIX + "OreX",
+        ROLE_REFERENCE_UNMATCHED_PREFIX + "OreY",
     ]
-    # SiteA holds a hit, SiteB does not: the labels come from the search result.
-    assert payload["role_by_group"]["SiteA"] == ROLE_MATCH_PREFIX
-    assert payload["role_by_group"]["SiteB"] == ROLE_NO_MATCH_PREFIX
-    assert payload["role_by_group"]["OreX"] == ROLE_REFERENCE_MATCH_PREFIX
-    assert payload["role_by_group"]["OreY"] == ROLE_REFERENCE_PREFIX
+    # The grouping values themselves are ordinary data; a shape per role is not
+    # involved, so one grouping column is drawn with a single marker.
+    assert set(payload["roles"].values()) == {
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+        ROLE_SAMPLE_UNMATCHED_PREFIX + "SiteB",
+        ROLE_REFERENCE_MATCHED_PREFIX + "OreX",
+        ROLE_REFERENCE_UNMATCHED_PREFIX + "OreX",
+        ROLE_REFERENCE_UNMATCHED_PREFIX + "OreY",
+    }
+    # SiteA holds a hit, SiteB does not: the group-level summary follows the rows.
+    assert payload["role_by_group"]["SiteA"] == ROLE_SAMPLE_MATCHED_PREFIX
+    assert payload["role_by_group"]["SiteB"] == ROLE_SAMPLE_UNMATCHED_PREFIX
+    assert payload["role_by_group"]["OreX"] == ROLE_REFERENCE_MATCHED_PREFIX
+    assert payload["role_by_group"]["OreY"] == ROLE_REFERENCE_UNMATCHED_PREFIX
+
+
+def test_each_side_is_counted_by_outcome() -> None:
+    """``role_counts`` reports the split the role column draws, per side."""
+    frame = _synthetic_grouped_frame()
+
+    payload = run_silverquest_on_groups(
+        frame, "Group", ["SiteA", "SiteB"], ["OreX", "OreY"], dmax=1.0, jittered=False
+    )
+
+    assert payload["role_counts"]["samples"] == {
+        "selected": 3,
+        "entered": 3,
+        "matched": 2,
+        "unmatched": 1,
+        "excluded": 0,
+    }
+    assert payload["role_counts"]["references"] == {
+        "selected": 3,
+        "entered": 3,
+        "matched": 1,
+        "unmatched": 2,
+        "excluded": 0,
+    }
+
+
+def test_one_group_holding_both_outcomes_is_split_per_sample() -> None:
+    """Reported as "reference data is split into match and unmatch, the samples are not".
+
+    The role used to be decided per *grouping value*, so one hit anywhere in a group
+    marked every sample of that group matched - and when all samples share one group
+    (the usual case: one site, or one artefact set) the two outcomes never appeared on
+    the sample side at all.  The sample that hit and the sample that did not must be
+    distinguishable even though they carry the same grouping value.
+    """
+    frame = pd.DataFrame(
+        {
+            "Sample": ["HIT", "MISS", "R1"],
+            "Site": ["Tarim", "Tarim", "OreX"],
+            "Pb206_204": [18.5764, 17.0000, 18.5764],
+            "Pb207_204": [15.6597, 15.0000, 15.6597],
+            "Pb208_204": [38.5890, 36.0000, 38.5890],
+        }
+    )
+
+    payload = run_silverquest_on_groups(
+        frame, "Site", ["Tarim"], ["OreX"], dmax=1.0, jittered=False
+    )
+
+    assert payload["applied_column"][:2] == [
+        ROLE_SAMPLE_MATCHED_PREFIX + "Tarim",
+        ROLE_SAMPLE_UNMATCHED_PREFIX + "Tarim",
+    ]
+    assert payload["role_counts"]["samples"]["matched"] == 1
+    assert payload["role_counts"]["samples"]["unmatched"] == 1
+    # The grouping value "Tarim" now yields both sample labels; the summary has to
+    # pick one, and "matched" wins because that is the stronger outcome.
+    assert payload["role_by_group"]["Tarim"] == ROLE_SAMPLE_MATCHED_PREFIX
+
+
+def test_rows_that_never_entered_the_search_stay_other_data() -> None:
+    """A row with unusable ratios is not a sample that was searched and missed.
+
+    ``records_from_frame`` withholds it, so it never becomes an artefact; labelling
+    it ``[Sample Unmatched]`` would claim a search that never happened, and counting
+    it as unmatched would inflate the miss count.
+    """
+    frame = pd.DataFrame(
+        {
+            "Sample": ["A1", "A2", "R1"],
+            "Site": ["SiteA", "SiteA", "OreX"],
+            "Pb206_204": [18.5764, "n/a", 18.5764],
+            "Pb207_204": [15.6597, 15.7000, 15.6597],
+            "Pb208_204": [38.5890, 38.6000, 38.5890],
+        }
+    )
+
+    payload = run_silverquest_on_groups(
+        frame, "Site", ["SiteA"], ["OreX"], dmax=1.0, jittered=False
+    )
+
+    assert payload["applied_column"] == [
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+        ROLE_OTHER,
+        ROLE_REFERENCE_MATCHED_PREFIX + "OreX",
+    ]
+    assert payload["role_counts"]["samples"] == {
+        "selected": 2,
+        "entered": 1,
+        "matched": 1,
+        "unmatched": 0,
+        "excluded": 1,
+    }
 
 
 def test_grouped_search_handles_a_grouping_column_that_is_not_a_rangeindex() -> None:
@@ -354,11 +461,11 @@ def test_grouped_search_handles_a_grouping_column_that_is_not_a_rangeindex() -> 
     assert payload["artefact_indices"] == [0, 1]
     assert payload["reference_indices"] == [3, 4]
     assert payload["applied_column"] == [
-        ROLE_MATCH_PREFIX + "SiteA",
-        ROLE_MATCH_PREFIX + "SiteA",
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
         ROLE_OTHER,
-        ROLE_REFERENCE_MATCH_PREFIX + "OreX",
-        ROLE_REFERENCE_PREFIX + "OreX",
+        ROLE_REFERENCE_MATCHED_PREFIX + "OreX",
+        ROLE_REFERENCE_UNMATCHED_PREFIX + "OreX",
         ROLE_OTHER,
     ]
 
@@ -396,13 +503,19 @@ def test_grouped_search_accepts_the_galena_workbook_as_extra_references() -> Non
     assert payload["reference_rows"] > 1000  # the R package's galena database
     assert payload["reference_only"] is True
     assert payload["applied_column"] == [
-        ROLE_MATCH_PREFIX + "SiteA",
-        ROLE_MATCH_PREFIX + "SiteA",
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
+        ROLE_SAMPLE_MATCHED_PREFIX + "SiteA",
         ROLE_OTHER,
         ROLE_OTHER,
         ROLE_OTHER,
         ROLE_OTHER,
     ]
+    # The workbook rows are not frame rows, so the reference side is counted from
+    # the table the search actually used.
+    references = payload["role_counts"]["references"]
+    assert references["entered"] == payload["reference_rows"]
+    assert references["matched"] >= 1
+    assert references["unmatched"] == references["entered"] - references["matched"]
     matches = {entry["artefact"]: entry for entry in payload["matches"]}
     assert matches["A1"]["nearest"], "the workbook must produce a nearest reference"
     assert matches["A1"]["distance"] is not None
@@ -420,7 +533,7 @@ def test_grouped_search_rejects_an_empty_role_selection(tmp_path, monkeypatch) -
     with pytest.raises(ValueError, match="no artefact group selected"):
         run_silverquest_on_groups(frame, "Group", [], ["OreX"])
 
-    import data.silverquest as silverquest_core
+    import adapters.silverquest as silverquest_core
 
     monkeypatch.setattr(
         silverquest_core,
@@ -525,12 +638,15 @@ def test_database_available_accepts_a_present_workbook(tmp_path) -> None:
 
 
 def test_a_match_names_the_reference_it_matched() -> None:
-    """The applied role must say which reference a sample matched, not only that it matched.
+    """Both sides of a match are labelled, and both sides also carry their misses.
 
     Reported as "red copper and Tarim are both original data - where do I see what matched what?":
-    the role alone left the partner to the dialog table, so the data itself could not answer it.
+    a role alone left the partner to the dialog table, so the data itself could not answer it.  The
+    answer is the same column read row by row: the sample that hit a reference is
+    ``[Sample Matched]`` and the reference it hit is ``[Reference Matched]``, while the sample that
+    hit nothing is ``[Sample Unmatched]`` and the references nobody hit are
+    ``[Reference Unmatched]``.
     """
-    import numpy as np
     import pandas as pd
 
     from plugins.builtins.silverquest_plugin import run_silverquest_on_groups
@@ -539,11 +655,34 @@ def test_a_match_names_the_reference_it_matched() -> None:
     rows = [dict(ore, Sample=f"R{i}", Site="Tarim") for i in range(90)]
     rows.append(dict(ore, Sample="A1", Site="Red Copper"))
     rows.append({"Sample": "B1", "Site": "Bronze", "Pb206_204": 17.0, "Pb207_204": 15.0, "Pb208_204": 36.0})
+    # One reference nobody can hit, so both reference labels are present.
+    rows.append(
+        {"Sample": "F1", "Site": "Faraway", "Pb206_204": 21.0, "Pb207_204": 15.8, "Pb208_204": 40.0}
+    )
     frame = pd.DataFrame(rows)
 
-    out = run_silverquest_on_groups(frame, "Site", ["Red Copper", "Bronze"], ["Tarim"], dmax=1.0)
+    out = run_silverquest_on_groups(
+        frame, "Site", ["Red Copper", "Bronze"], ["Tarim", "Faraway"], dmax=1.0
+    )
 
-    labels = set(out["roles"].values())
-    # One column, four roles: the hit artefact is "match", the reference it hit is
-    # "reference_match", and an artefact that matched nothing is "other".
-    assert labels == {"[Match] Red Copper", "[Reference Match] Tarim", "[No Match] Bronze"}, labels
+    roles = [str(role) for role in out["applied_column"]]
+    assert sorted(set(roles)) == [
+        ROLE_REFERENCE_MATCHED_PREFIX + "Tarim",
+        ROLE_REFERENCE_UNMATCHED_PREFIX + "Faraway",
+        ROLE_SAMPLE_MATCHED_PREFIX + "Red Copper",
+        ROLE_SAMPLE_UNMATCHED_PREFIX + "Bronze",
+    ], sorted(set(roles))
+    # Exactly one sample matched; every reference row is labelled on its own outcome.
+    assert roles.count(ROLE_SAMPLE_MATCHED_PREFIX + "Red Copper") == 1
+    assert roles.count(ROLE_REFERENCE_MATCHED_PREFIX + "Tarim") == 90
+    assert roles.count(ROLE_REFERENCE_UNMATCHED_PREFIX + "Faraway") == 1
+    counts = out["role_counts"]
+    assert counts["samples"] == {
+        "selected": 2,
+        "entered": 2,
+        "matched": 1,
+        "unmatched": 1,
+        "excluded": 0,
+    }
+    assert counts["references"]["matched"] == 90
+    assert counts["references"]["unmatched"] == 1

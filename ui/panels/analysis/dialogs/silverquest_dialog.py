@@ -13,14 +13,14 @@ What the user picks
 1. the **grouping column** — the dialog lists the columns the data panel has
    already declared as grouping columns (``app_state.group_cols``), so the
    vocabulary is the application's own;
-2. the column's distinct values twice: once as **artefact groups** (the samples
+2. the column's distinct values twice: once as **sample groups** (the samples
    whose provenance is in question) and once as **reference groups** (the ores
    they are compared against).  "Both sides of the search come from
    ``df_global``" is the primary path;
 3. optionally, the R package's galena workbook as *extra* references when no
    reference group is selected (or when the groups alone are not enough).
 
-The algorithm itself is :mod:`data.silverquest`; the search entry point is
+The algorithm itself is :mod:`adapters.silverquest`; the search entry point is
 :func:`plugins.builtins.silverquest_plugin.run_silverquest_on_groups`, and
 nothing numeric lives here.
 """
@@ -58,9 +58,9 @@ from PyQt5.QtWidgets import (
 
 from core import app_state, state_gateway, translate
 from plugins.builtins.silverquest_plugin import (
-    ROLE_MATCH_PREFIX,
-    ROLE_OTHER,
-    ROLE_REFERENCE_PREFIX,
+    silverquest_database_path,
+    silverquest_database_status,
+    silverquest_normalizations,
 )
 from ui.dialogs.geometry import remember_geometry
 
@@ -122,7 +122,7 @@ def resolve_artefact_columns(columns) -> dict[str, str]:
 
 
 def build_artefact_records(frame, columns: dict[str, str] | None = None) -> list[dict]:
-    """Turn a DataFrame into the record dicts ``data.silverquest`` expects.
+    """Turn a DataFrame into the record dicts ``adapters.silverquest`` expects.
 
     Rows with a non-numeric or missing ratio are skipped rather than passed on:
     the R script reads a whole workbook and fails on the first such row
@@ -171,12 +171,68 @@ def candidate_group_columns(frame, declared: list[str] | None = None) -> list[st
         name = str(column)
         if name in available and name not in candidates:
             candidates.append(name)
-    last = getattr(app_state, "last_group_col", None)
+    last = app_state.last_group_col
     if isinstance(last, str) and last in available and last not in candidates:
         candidates.insert(0, last)
     if not candidates:
         candidates = available
     return candidates
+
+
+def role_counts_text(payload: dict | None) -> str:
+    """Summarise the two sides' outcomes, one line each.
+
+    The hit table lists only the pairs that *did* match, so the split the role
+    column draws — ``[Sample Matched]`` / ``[Sample Unmatched]`` on one side,
+    ``[Reference Matched]`` / ``[Reference Unmatched]`` on the other — is counted
+    here instead: how many rows of each side entered the search, how many of those
+    matched, and how many rows were left out because their Pb ratios are unusable.
+
+    Returns an empty string when *payload* carries no counts (an older payload).
+
+    Args:
+        payload: the dict returned by
+            :func:`plugins.builtins.silverquest_plugin.run_silverquest_on_groups`.
+
+    Returns:
+        One line per side, newline-separated; ``""`` when there is nothing to say.
+    """
+    counts = (payload or {}).get("role_counts")
+    if not counts:
+        return ""
+    samples = counts.get("samples") or {}
+    references = counts.get("references") or {}
+    lines = [
+        translate(
+            "Samples: {entered} in the search, {matched} matched, {unmatched} unmatched."
+        ).format(
+            entered=int(samples.get("entered", 0)),
+            matched=int(samples.get("matched", 0)),
+            unmatched=int(samples.get("unmatched", 0)),
+        ),
+        translate(
+            "References: {entered} in the search, {matched} matched, {unmatched} unmatched."
+        ).format(
+            entered=int(references.get("entered", 0)),
+            matched=int(references.get("matched", 0)),
+            unmatched=int(references.get("unmatched", 0)),
+        ),
+    ]
+    excluded_samples = int(samples.get("excluded", 0))
+    if excluded_samples:
+        lines.append(
+            translate("Samples: {excluded} row(s) left out (unusable Pb ratios).").format(
+                excluded=excluded_samples
+            )
+        )
+    excluded_references = int(references.get("excluded", 0))
+    if excluded_references:
+        lines.append(
+            translate(
+                "References: {excluded} row(s) left out (unusable Pb ratios)."
+            ).format(excluded=excluded_references)
+        )
+    return "\n".join(lines)
 
 
 class SilverQuestDialog(QDialog):
@@ -219,20 +275,14 @@ class SilverQuestDialog(QDialog):
 
         hint = QLabel(
             translate(
-                "Weighted distance from each artefact to the mass-dependent "
-                "fractionation line of every reference. Pick a grouping column, "
-                "then assign its groups to the artefact and reference roles; the "
-                "galena database (Albarède et al. 2024) can be added as an extra "
-                "reference set."
+                "Pick a grouping column, then assign its values to the sample "
+                "and reference roles."
             )
         )
         hint.setProperty(
             'translate_key',
-            "Weighted distance from each artefact to the mass-dependent "
-            "fractionation line of every reference. Pick a grouping column, "
-            "then assign its groups to the artefact and reference roles; the "
-            "galena database (Albarède et al. 2024) can be added as an extra "
-            "reference set.",
+            "Pick a grouping column, then assign its values to the sample "
+            "and reference roles.",
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -253,10 +303,7 @@ class SilverQuestDialog(QDialog):
         self.apply_button = QPushButton(translate("Apply to Data"))
         self.apply_button.setProperty('translate_key', 'Apply to Data')
         self.apply_button.setToolTip(
-            translate(
-                "Add the artefact/reference roles as a group column so the plot "
-                "and the legend show them, and make it the active grouping."
-            )
+            translate("Write the roles back as a group column and make it active.")
         )
         self.apply_button.setEnabled(False)
         self.apply_button.clicked.connect(self._apply_to_data)
@@ -309,7 +356,7 @@ class SilverQuestDialog(QDialog):
         self.grouping_combo.setMinimumWidth(240)
         self.grouping_combo.setToolTip(
             translate(
-                "Column whose distinct values are assigned to the artefact and "
+                "Column whose distinct values are assigned to the sample and "
                 "reference roles."
             )
         )
@@ -332,22 +379,22 @@ class SilverQuestDialog(QDialog):
         return group
 
     def _build_selection_group(self) -> QGroupBox:
-        """Artefact groups and reference groups, side by side."""
-        group = QGroupBox(translate("Artefact and Reference Groups"))
-        group.setProperty('translate_key', 'Artefact and Reference Groups')
+        """Sample groups and reference groups, side by side."""
+        group = QGroupBox(translate("Sample and Reference Groups"))
+        group.setProperty('translate_key', 'Sample and Reference Groups')
         layout = QVBoxLayout(group)
 
         splitter = QSplitter(Qt.Horizontal)
 
-        artefact_box = QGroupBox(translate("Artefact Groups"))
-        artefact_box.setProperty('translate_key', 'Artefact Groups')
+        artefact_box = QGroupBox(translate("Sample Groups"))
+        artefact_box.setProperty('translate_key', 'Sample Groups')
         artefact_layout = QVBoxLayout(artefact_box)
         self.artefact_list = QListWidget()
         self.artefact_list.setSelectionMode(
             QAbstractItemView.ExtendedSelection
         )
         self.artefact_list.setToolTip(
-            translate("Samples to look up (R: the artefact input file).")
+            translate("Samples to look up.")
         )
         artefact_layout.addWidget(self.artefact_list)
         artefact_buttons = QHBoxLayout()
@@ -369,9 +416,7 @@ class SilverQuestDialog(QDialog):
             QAbstractItemView.ExtendedSelection
         )
         self.reference_list.setToolTip(
-            translate(
-                "Ores the artefacts are compared against (R: the galena database)."
-            )
+            translate("Ores the samples are compared against.")
         )
         reference_layout.addWidget(self.reference_list)
         reference_buttons = QHBoxLayout()
@@ -402,10 +447,10 @@ class SilverQuestDialog(QDialog):
         layout = QVBoxLayout(group)
 
         self.use_database_check = QCheckBox(
-            translate("Add the galena reference database as extra references")
+            translate("Add the galena reference database")
         )
         self.use_database_check.setProperty(
-            'translate_key', 'Add the galena reference database as extra references'
+            'translate_key', 'Add the galena reference database'
         )
         self.use_database_check.setToolTip(
             translate(
@@ -418,9 +463,7 @@ class SilverQuestDialog(QDialog):
 
         row = QHBoxLayout()
         self.database_edit = QLineEdit()
-        from data.silverquest import resolve_database_path
-
-        self.database_edit.setText(str(resolve_database_path(None)))
+        self.database_edit.setText(str(silverquest_database_path(None)))
         self.database_edit.setToolTip(
             translate("Path to Pb_DB_20240310AllGalenas.xlsx.")
         )
@@ -435,34 +478,16 @@ class SilverQuestDialog(QDialog):
         self.database_status.setWordWrap(True)
         self.database_status.setProperty("keepStyle", True)
         layout.addWidget(self.database_status)
-
-        hint = QLabel(
-            translate(
-                "The galena database ships with the R package and is not copied "
-                "into this repository; it is optional, and the groups you select "
-                "above are the primary reference set."
-            )
-        )
-        hint.setProperty(
-            'translate_key',
-            "The galena database ships with the R package and is not copied "
-            "into this repository; it is optional, and the groups you select "
-            "above are the primary reference set.",
-        )
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
         return group
 
     def _build_parameters_group(self) -> QGroupBox:
         """Mirrors the numeric Shiny inputs of R lines 80-87."""
-        from data.silverquest import NORMALIZATIONS
-
         group = QGroupBox(translate("Analysis Parameters"))
         group.setProperty('translate_key', 'Analysis Parameters')
         form = QFormLayout(group)
 
         self.normalization_combo = QComboBox()
-        for choice in NORMALIZATIONS:
+        for choice in silverquest_normalizations():
             self.normalization_combo.addItem(choice, choice)
         self.normalization_combo.setToolTip(
             translate("Normalise the ratios to 204Pb or to 206Pb.")
@@ -508,7 +533,7 @@ class SilverQuestDialog(QDialog):
         """Fill the grouping-column combo from the data panel's declarations."""
         frame = app_state.df_global
         candidates = candidate_group_columns(
-            frame, list(getattr(app_state, "group_cols", None) or [])
+            frame, list(app_state.group_cols or [])
         )
         self.grouping_combo.blockSignals(True)
         try:
@@ -533,7 +558,7 @@ class SilverQuestDialog(QDialog):
             return []
         values_series = frame[column].fillna("Unknown").astype(str)
         groups = sorted(set(values_series.tolist()), key=str)
-        visible = getattr(app_state, "visible_groups", None)
+        visible = app_state.visible_groups
         if self.visible_only_check.isChecked() and visible:
             allowed = {str(group) for group in visible}
             groups = [group for group in groups if group in allowed]
@@ -621,7 +646,7 @@ class SilverQuestDialog(QDialog):
         )
         counts = self._group_counts()
         parts = [
-            translate("Artefacts: {groups} group(s), {rows} row(s)").format(
+            translate("Samples: {groups} group(s), {rows} row(s)").format(
                 groups=len(artefacts),
                 rows=sum(counts.get(group, 0) for group in artefacts),
             ),
@@ -709,30 +734,22 @@ class SilverQuestDialog(QDialog):
 
     def _check_database(self) -> None:
         """Report whether the workbook can be read, before any click."""
-        from data.silverquest import resolve_database_path
-
-        path = resolve_database_path(self.database_edit.text() or None)
-        if not path.is_file():
+        status = silverquest_database_status(self.database_edit.text() or None)
+        if status.missing:
             self._database_ok = False
             self.database_status.setText(
-                translate("Database not found: {path}").format(path=str(path))
+                translate("Database not found: {path}").format(path=status.path)
             )
             return
-        try:
-            from data.silverquest import load_silverquest_database
-
-            database = load_silverquest_database(path)
-        except Exception as error:  # a corrupt workbook is a real answer
+        if not status.readable:
             self._database_ok = False
             self.database_status.setText(
-                translate("Database could not be read: {error}").format(error=str(error))
+                translate("Database could not be read: {error}").format(error=status.error)
             )
             return
         self._database_ok = True
         self.database_status.setText(
-            translate("Database loaded: {count} ore analyses.").format(
-                count=database.n_rows
-            )
+            translate("Database loaded: {count} ore analyses.").format(count=status.rows)
         )
 
     # ── search ─────────────────────────────────────────────────────────
@@ -774,7 +791,7 @@ class SilverQuestDialog(QDialog):
             QMessageBox.warning(
                 self,
                 translate("Warning"),
-                translate("Please select at least one artefact group."),
+                translate("Please select at least one sample group."),
             )
             return None
         database_path = self._database_path_for_run()
@@ -791,15 +808,12 @@ class SilverQuestDialog(QDialog):
         if not reference_groups and database_path:
             # The workbook is the only reference set: verify it before the run so
             # the user gets the message here instead of an exception later.
-            from data.silverquest import resolve_database_path
-
-            if not resolve_database_path(database_path).is_file():
+            resolved = silverquest_database_path(database_path)
+            if not resolved.is_file():
                 QMessageBox.warning(
                     self,
                     translate("Warning"),
-                    translate("Database not found: {path}").format(
-                        path=str(resolve_database_path(database_path))
-                    ),
+                    translate("Database not found: {path}").format(path=str(resolved)),
                 )
                 return None
 
@@ -996,6 +1010,10 @@ class SilverQuestDialog(QDialog):
                     summary=summary, source=source_text, total=total_rows
                 )
             )
+        counts_text = role_counts_text(payload)
+        if counts_text:
+            # The table shows the matches; this line shows the split behind them.
+            self.info_label.setText(self.info_label.text() + "\n" + counts_text)
         if any(artifact.colour_index_clamped for artifact in result.artifacts):
             # R-QUIRK made visible rather than silent: nocol is scaled by the
             # dmax parameter, so it can run past the colour ramp.
@@ -1003,8 +1021,8 @@ class SilverQuestDialog(QDialog):
                 self.info_label.text()
                 + " "
                 + translate(
-                    "Some colour indices exceeded the ramp and were clamped; "
-                    "lower the maximum distance for a full gradient."
+                    "Colour indices exceeded the ramp and were clamped; lower the "
+                    "maximum distance."
                 )
             )
         logger.info(
@@ -1021,8 +1039,11 @@ class SilverQuestDialog(QDialog):
 
         This is how the outcome reaches the plot: the application colours points
         by the grouping column, lists its values in the legend and lets the
-        legend checkboxes hide them, so ``[Match]``/``[Artefact]``/
-        ``[Reference]``/``[Other Data]`` need no separate drawing path.
+        legend checkboxes hide them, so ``[Sample Matched]``/
+        ``[Sample Unmatched]``/``[Reference Matched]``/``[Reference Unmatched]``/
+        ``[Other Data]`` need no separate drawing path.  A row's role is its own
+        outcome, so one grouping value can contribute both a matched and an
+        unmatched label.
         """
         if self._payload is None or app_state.df_global is None:
             QMessageBox.warning(
@@ -1071,10 +1092,9 @@ class SilverQuestDialog(QDialog):
         QMessageBox.information(
             self,
             translate("Done"),
-            translate(
-                "SilverQuest roles added as group column {column}; the plot now "
-                "colours artefacts, references and matches."
-            ).format(column=ROLE_COLUMN),
+            translate("Roles added as group column {column}.").format(
+                column=ROLE_COLUMN
+            ),
         )
 
     def _export_hits(self) -> None:

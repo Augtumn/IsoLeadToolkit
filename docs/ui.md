@@ -53,7 +53,7 @@ class Qt5Application:
 3. `_configure_native_style()` — 应用原生 Qt 样式 (WindowsVista/Fusion)
 4. `_install_debug_handlers()` — 捕获 Qt/Python 错误
 5. `_load_session()` — 加载会话参数
-6. `load_dataset()` — 显示数据导入对话框并注入状态
+6. `load_dataset_via_dialogs()` — 显示数据导入对话框并调用用例注入状态
 7. `_restore_session_state()` — 恢复算法、参数、渲染模式
 8. `Qt5MainWindow` 创建并显示
 9. `_create_plot_figure()` — 创建 matplotlib Figure (constrained_layout)
@@ -205,6 +205,12 @@ def closeEvent(self, event)
 补充：
 - 图内 legend (`on_legend_click`) 的点击行为是**切换可见性**，不负责置顶。
 - 外部 legend 的置顶与重排由 `Qt5MainWindow` 维护 `legend_item_order` 后统一重建。
+- **可见性是用户的，渲染不改写**：`available_groups` 只由整份数据同步（渲染用例），渲染器只按
+  `visible_groups` 过滤，绝不回写该状态，也不因"可见组在当前投影没有数据"而改回"全部可见"；
+  此时画空图并保持原渲染模式。切换渲染模式（含 3D）因此不会刷新/重置图例可见性。
+- **允许一个都不勾**：`None`＝全部可见，`[]`＝一个都不显示（合法状态，不再被归一化成 `None`）。
+  取消最后一个勾选、或对"全选"执行反选，都会进入空选择，画布画空图；勾回任意一项即恢复。
+  空的可见选择不会让图例勾选框被自动打回全选。
 
 ### 选择工具
 
@@ -558,14 +564,14 @@ lang_combo.currentIndexChanged
 ```
 app.py
   ├→ main_window.py
-  ├→ data.loader
+  ├→ adapters.loader
   ├→ core (app_state, CONFIG, session, localization)
   └→ visualization.events
 
 main_window.py
   ├→ sections.py (create_section_dialog)
   ├→ visualization.events
-  └→ data.loader
+  └→ adapters.loader
 
 sections.py
   ├→ core (app_state, translate)
@@ -575,12 +581,12 @@ sections.py
 panels/*
   ├→ core (app_state, CONFIG, translate)
   ├→ visualization.events / plotting/style.py
-  ├→ data.loader / data.endmember
+  ├→ adapters.loader / data.endmember
   └→ dialogs/*
 
 dialogs/*
   ├→ core (app_state, translate)
-  └→ data.loader
+  └→ adapters.loader
 ```
 
 ---

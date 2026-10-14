@@ -7,7 +7,7 @@
 设计要点：
 
 1. 校验是**只读**的，导入才写盘；导入前有确认，且写盘前由用例层自动备份原文件
-   （见 `data/metadata_profile/io_xlsx.py`），所以用户填了很久的工作簿不会被静默覆盖。
+   （见 `adapters/xlsx_io.py`），所以用户填了很久的工作簿不会被静默覆盖。
 2. 报告里的每条问题都带 `message_key` + `params`，用 `translate()` 渲染成当前语言；
    渲染失败（占位符对不上）时回退到用例层给的英文原文，而不是抛异常把报告吞掉。
    这些 key 是**运行时**取值的，静态扫描看不到，故在 `locales/runtime_keys.py` 登记。
@@ -41,9 +41,8 @@ logger = logging.getLogger(__name__)
 #: 打开/保存对话框的文件类型过滤（本身不是用户可见文案，故不进 locales）。
 _XLSX_FILTER = "Excel Workbook (*.xlsx)"
 
-#: 生成模板时的建议目录与文件名。
+#: 生成模板时默认打开的目录（文件名与版本号由用例层给出）。
 _DEFAULT_DIR = "数据"
-_DEFAULT_STEM = "entry_template_TerraLID"
 
 #: 报告区字体。
 _REPORT_FONT_FAMILY = "Consolas"
@@ -63,21 +62,12 @@ def show_entry_workbook_dialog(parent: Any = None) -> None:
 def _suggested_template_path() -> Path:
     """生成模板时的建议落盘路径（用户可在保存对话框里改）。
 
-    文件名带上档案版本号，与 `scripts/build_entry_workbook.py` 的缺省名保持一致 ——
-    否则同一份模板会出现两个名字，用户第二次生成时会被"是否覆盖"问得莫名其妙。
-    版本号取不到时退回不带版本的名字（只是建议值，不影响生成）。
+    路径口径由用例层给出（`application.use_cases.entry_workbook.suggested_template_path`）：
+    界面不再自己拼名字，也不会与 `scripts/build_entry_workbook.py` 的缺省名分叉。
     """
-    version = ""
-    try:
-        from data.metadata_profile import load_profile
+    from application.use_cases.entry_workbook import suggested_template_path
 
-        version = f"_v{load_profile().version}"
-    except Exception as err:  # noqa: BLE001 — 建议路径不该因版本读取失败而中断
-        # 降级：退回不带版本号的名字（仍能生成，只是与生成器缺省名不再一致）。
-        # 用 warning 而非 debug —— `scripts/check_silent_exceptions.py` 把"仅 logger.debug"
-        # 的处理器视为静默吞异常，而这里确实是一个用户可见的降级。
-        logger.warning("Cannot resolve profile version for the suggested name: %s", err)
-    return Path(_DEFAULT_DIR) / f"{_DEFAULT_STEM}{version}.xlsx"
+    return suggested_template_path()
 
 
 def _render_issue_message(issue: Any) -> str:

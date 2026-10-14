@@ -114,21 +114,21 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
         if '2nd Stage' in model_name:
             return 'two_stage'
 
-    try:
-        tsec = float(params.get('Tsec', 0.0))
-    except Exception:
-        tsec = 0.0
+    # 没有 Tsec 的自定义参数集按"无第二阶段"处理；数值非法则直接报错（不静默当 0）。
+    tsec = float(params.get('Tsec', 0.0))
     if not np.isfinite(tsec) or tsec <= 0:
         return 'single_stage'
 
-    try:
-        a0, b0, c0 = params.get('a0'), params.get('b0'), params.get('c0')
-        a1, b1, c1 = params.get('a1'), params.get('b1'), params.get('c1')
-        if all(np.isfinite([a0, b0, c0, a1, b1, c1])):
-            if max(abs(a1 - a0), abs(b1 - b0), abs(c1 - c0)) < _AGE_MODEL_PARAM_DELTA_FLOOR:
-                return 'single_stage'
-    except Exception:
-        pass
+    # 六个系数齐全才看 a0/a1 等的差值是否小到可视为同一条线；缺任何一个都不判 single-stage。
+    coefficients = (
+        params.get('a0'), params.get('b0'), params.get('c0'),
+        params.get('a1'), params.get('b1'), params.get('c1'),
+    )
+    if all(value is not None and np.isfinite(value) for value in coefficients):
+        a0, b0, c0, a1, b1, c1 = coefficients
+        delta = max(abs(a1 - a0), abs(b1 - b0), abs(c1 - c0))
+        if delta < _AGE_MODEL_PARAM_DELTA_FLOOR:
+            return 'single_stage'
 
     return 'two_stage'
 

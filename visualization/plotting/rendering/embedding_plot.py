@@ -21,7 +21,7 @@ from .embedding.algorithm import (
     resolve_target_dimensions,
 )
 from .embedding.dataframe import prepare_plot_dataframe
-from .common.legend import _render_legend
+from .common.legend import _notify_legend_panel, _render_legend
 from .common.scatter import _render_scatter_groups
 from .common.title import _render_title_labels
 from .geo_layers import _render_geo_overlays
@@ -166,6 +166,25 @@ def plot_embedding(
         )
         show_marginal_kde = app_state.show_marginal_kde
         if scatters is None:
+            if df_plot.empty:
+                # Nothing is visible in this projection: keep the render mode and the
+                # legend selection, and draw the empty frame (see prepare_plot_dataframe).
+                # The legend panel is told anyway, so its checkboxes match the selection
+                # that produced the empty frame.
+                logger.warning(
+                    "No point belongs to a visible group; the plot stays empty until a "
+                    "group is ticked in the legend."
+                )
+                _render_title_labels(
+                    actual_algorithm,
+                    group_col,
+                    umap_params,
+                    tsne_params,
+                    pca_params,
+                    robust_pca_params,
+                )
+                _notify_legend_panel(group_col, [], [])
+                return True
             logger.warning("No scatter groups rendered for %s", algorithm)
             try:
                 app_state.fig.canvas.draw_idle()

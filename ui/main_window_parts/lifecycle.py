@@ -284,9 +284,9 @@ class MainWindowLifecycleMixin:
 
     def _reload_data(self):
         """重新加载数据"""
-        from application.use_cases import load_dataset
+        from ui.panels.data.dialogs.data_import.load_flow import load_dataset_via_dialogs
 
-        if load_dataset(show_file_dialog=True, show_config_dialog=True):
+        if load_dataset_via_dialogs():
             self.statusBar().showMessage(translate("Data reloaded successfully"), 3000)
             self._refresh_status_info()
             if not app_state.last_group_col and app_state.group_cols:
