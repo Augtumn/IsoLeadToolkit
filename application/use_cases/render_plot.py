@@ -147,7 +147,16 @@ class RenderPlotUseCase:
             legend = record.get("legend")
             if legend:
                 try:
-                    state_gateway.set_panel_style_updates(dict(legend))
+                    frames = {
+                        key: value for key, value in legend.items() if key.startswith("legend_frame_")
+                    }
+                    if frames:
+                        state_gateway.set_panel_style_updates(frames)
+                    # The position keys are policy, not style: they go through their own setters.
+                    if "legend_location" in legend:
+                        state_gateway.set_legend_location(legend["legend_location"])
+                    if "legend_position" in legend:
+                        state_gateway.set_legend_position(legend["legend_position"])
                 except Exception as err:
                     logger.warning("Could not apply a panel's legend style: %s", err)
             self._state.scatter_collections.clear()

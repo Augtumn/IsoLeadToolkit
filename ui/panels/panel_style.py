@@ -33,6 +33,20 @@ _PER_PANEL_LEGEND_KEYS = (
     "legend_frame_edgecolor",
 )
 
+
+def record_panel_legend(**values) -> None:
+    """Keep a legend setting with the panel in use, so each panel can carry its own legend.
+
+    The state holds a single legend, which is why a change used to apply to every plot at once.
+    The panel in use keeps its own copy, and the render mirrors it before drawing that panel.
+    """
+    records = list(getattr(app_state, "plot_panel_windows", None) or [])
+    panel = next((record for record in records if record.get("active")), records[0] if records else None)
+    if panel is None:
+        return
+    kept = dict(values)
+    panel["legend"] = {**(panel.get("legend") or {}), **kept}
+
 def _safe_color(widget, default):
     """从 widget 安全提取颜色值。
 
@@ -189,13 +203,7 @@ class PanelStyleMixin:
             key: style_updates[key] for key in _PER_PANEL_LEGEND_KEYS if key in style_updates
         }
         if legend_updates:
-            records = list(getattr(app_state, "plot_panel_windows", None) or [])
-            panel = next(
-                (record for record in records if record.get("active")),
-                records[0] if records else None,
-            )
-            if panel is not None:
-                panel["legend"] = {**(panel.get("legend") or {}), **legend_updates}
+            record_panel_legend(**legend_updates)
 
         # ---- 状态栏短暂消息 ----
         if style_updates:

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from core import app_state, state_gateway
+from ui.panels.panel_style import record_panel_legend
 
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
@@ -73,9 +74,11 @@ class LegendActionsMixin:
         if current == position:
             state_gateway.set_legend_position(None)
             self._set_legend_inside_position_button(None)
+            record_panel_legend(legend_position=None)
         else:
             state_gateway.set_legend_position(position)
             self._set_legend_inside_position_button(position)
+            record_panel_legend(legend_position=position)
         # The inline position and the docked (outside) location coexist: the plot
         # shows the inline legend while the panel keeps the full list.
         self._on_change()
@@ -85,9 +88,11 @@ class LegendActionsMixin:
         if current == position:
             state_gateway.set_legend_location(None)
             self._set_legend_outside_position_button(None)
+            record_panel_legend(legend_location=None)
         else:
             state_gateway.set_legend_location(position)
             self._set_legend_outside_position_button(position)
+            record_panel_legend(legend_location=position)
         # Coexists with the inline position (see _on_legend_inside_position_change).
         self._on_change()
 
