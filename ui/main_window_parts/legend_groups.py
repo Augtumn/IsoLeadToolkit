@@ -177,7 +177,13 @@ class MainWindowLegendGroupMixin:
         spec, base = self._decomposition_spec()
         if base is None:
             base = app_state.last_group_col
-        if base == self.DECOMPOSED_GROUP_COLUMN or base not in (app_state.group_cols or []):
+        # The column a previous split produced is a valid base: refining a group step by step is
+        # what this feature is for, and that column is materialised in the frame like any other.
+        # Only having no grouping column at all leaves nothing to split from.
+        if base is None or base not in [
+            *(app_state.group_cols or []),
+            self.DECOMPOSED_GROUP_COLUMN,
+        ]:
             # No base to split from: the active column is the one a previous split produced.
             QMessageBox.warning(
                 self,
