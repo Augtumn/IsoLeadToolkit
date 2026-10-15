@@ -104,6 +104,9 @@ class MainWindowCanvasMixin:
     _axis_lock_action = None
     #: The area that holds the panel child windows; None until one is needed.
     _panel_mdi_area = None
+    #: The three navigation buttons of the main toolbar, empty until the toolbar is built; the
+    #: button sync reads them, and panel activation can happen first.
+    _navigation_actions: list = []
     #: The single owner of the child windows. It has to outlive every call: a new PanelWindows per
     #: call starts with no records, so each call created another batch of child windows and closed
     #: none of them - the flood of panels, with only the last batch drawing anything.
@@ -330,6 +333,75 @@ class MainWindowCanvasMixin:
                         return icon
         return self._get_selection_icon("panels.svg")
 
+    def _sync_navigation_buttons(self) -> None:
+        """Show the tool the panel in use is actually holding.
+
+        The buttons are checkable, so their highlight has to follow the focused panel: without
+        this, switching from a panel whose magnifier was on left the magnifier highlighted while
+        the panel in use held nothing - the reported state that did not synchronise. Setting the
+        state is done with signals blocked, so syncing can never switch a tool by itself.
+        """
+        mode = ""
+        try:
+            toolbar = self._focused_toolbar()
+            mode = str(getattr(getattr(toolbar, "mode", None), "name", "") or "").upper()
+        except Exception as err:
+            logger.warning("Could not read the panel's tool for the buttons: %s", err)
+        for action, kind in zip(self._navigation_actions or [], ("zoom", "pan", "home")):
+            if not action.isCheckable():
+                continue
+            wanted = kind.upper() in mode
+            if action.isChecked() == wanted:
+                continue
+            was_blocked = action.blockSignals(True)
+            action.setChecked(wanted)
+            action.blockSignals(was_blocked)
+        logger.info("Navigation buttons synced to the panel tool %r", mode or "NONE")
+
+    def _refresh_labels_for(self, axes=None) -> None:
+        """Lay the overlay labels out again for every panel whose view moved.
+
+        Only the labels: a full re-render recomputes the axes from the data and threw the user's
+        zoom away. The label data is one list of text artists belonging to different figures, so
+        the panels to refresh are found from the artists themselves, each laid out on its own axes.
+
+        This belongs to the window, which is what calls it during a fit; having it only on the
+        event filter raised AttributeError there, cut the fit short and left a panel blank.
+        """
+        try:
+            from visualization.plotting import refresh_paleoisochron_labels
+
+            targets = []
+            if axes is not None:
+                targets.append(axes)
+            # Every panel, each laid out from its own labels: the state's list only ever holds the
+            # last panel's, which is why the other panels kept stale label positions.
+            for state in list(getattr(app_state, "plot_panel_states", []) or []):
+                panel_axes = state.get("ax") if isinstance(state, dict) else None
+                if panel_axes is not None and panel_axes not in targets:
+                    targets.append(panel_axes)
+            for entry in list(getattr(app_state, "paleoisochron_label_data", None) or []):
+                text = entry.get("text") if isinstance(entry, dict) else None
+                owner = getattr(text, "axes", None)
+                if owner is not None and owner not in targets:
+                    targets.append(owner)
+            for target in targets:
+                refresh_paleoisochron_labels(ax=target)
+            # Repaint every panel whose labels were just moved: a label that moves without its
+            # canvas being redrawn leaves the panel showing its old buffer, which looks blank until
+            # something else triggers a repaint - the reported "blank until I refresh manually".
+            for target in targets:
+                figure = getattr(target, "figure", None)
+                canvas = getattr(figure, "canvas", None)
+                if canvas is not None:
+                    try:
+                        canvas.draw_idle()
+                    except Exception as err:
+                        logger.warning("Could not repaint a panel after moving its labels: %s", err)
+            logger.info("Labels refreshed for %d panel(s)", len(targets))
+        except Exception as err:
+            logger.warning("Could not refresh the labels for the panel: %s", err)
+
     def _navigation_action(self, kind: str, label: str) -> QAction:
         """A main-toolbar button that drives the toolbar of the panel in use."""
         action = QAction(self._borrowed_navigation_icon(kind), label, self)
@@ -552,6 +624,9 @@ class MainWindowCanvasMixin:
             # connections - reported as the tools losing their state and refusing to turn on or
             # off. The panels are equal, and the interactions that matter per panel (wheel, middle
             # drag, box and lasso selection) are handled by the canvas under the pointer.
+            # The highlight of the three navigation buttons follows the panel in use, so a tool
+            # held in one panel does not stay lit after the focus moves to another.
+            self._sync_navigation_buttons()
             logger.info("Active panel is now %s (index %d)", record.get("mode"), index)
             return
 
@@ -573,6 +648,9 @@ class MainWindowCanvasMixin:
                 except Exception as err:
                     logger.warning("Could not redraw after fitting: %s", err)
         logger.info("Fitted %d of %d panel(s) to the data", fitted, len(axes))
+        # Fitting changes every panel's limits, so their labels are laid out again for the new view;
+        # leaving this to a later render is what left them where the previous view had put them.
+        self._refresh_labels_for()
 
     def _build_panel_windows(self, modes) -> list:
         """Show one independent child window per panel; the records, or [] if impossible."""
