@@ -104,6 +104,12 @@ class MainWindowCanvasMixin:
     _axis_lock_action = None
     #: The area that holds the panel child windows; None until one is needed.
     _panel_mdi_area = None
+    #: The single owner of the child windows. It has to outlive every call: a new PanelWindows per
+    #: call starts with no records, so each call created another batch of child windows and closed
+    #: none of them - the flood of panels, with only the last batch drawing anything.
+    _panel_windows = None
+    #: The section dialogs the window has opened, so a panel inside one can be reached again.
+    _section_dialogs: dict = {}
     #: The actions this application adds to the main toolbar, kept so the toolbar can be rebuilt
     #: around another canvas when the user moves to a different panel.
     _plot_actions = None
@@ -504,6 +510,15 @@ class MainWindowCanvasMixin:
             mode = str(record.get("mode") or "")
             if mode and mode != str(getattr(app_state, "render_mode", "")):
                 state_gateway.set_render_mode(mode)
+            # The render-mode control follows the panel, as the navigation buttons do. Only while
+            # its dialog is open: the mode is per panel, the control is one.
+            try:
+                dialog = self._section_dialogs.get("data")
+            except AttributeError:
+                dialog = None
+            panel = getattr(dialog, "section_panel", None)
+            if panel is not None and hasattr(panel, "sync_render_mode"):
+                panel.sync_render_mode(mode)
             state_gateway.set_figure(record["figure"])
             state_gateway.set_axis(record["axes"])
             state_gateway.set_canvas(record["canvas"])
@@ -551,7 +566,13 @@ class MainWindowCanvasMixin:
                 if self.canvas_layout.indexOf(area) < 0:
                     self.canvas_layout.addWidget(area)
                 area.setVisible(True)
-            panel = PanelWindows(area, on_close=self._on_panel_closed)
+            # One owner, reused for the life of the window: a new PanelWindows per call starts with
+            # no records, so every call created another batch of child windows and none was closed.
+            panel = self._panel_windows
+            if panel is None or getattr(panel, "area", None) is not area:
+                panel = PanelWindows(area, on_close=self._on_panel_closed)
+                self._panel_windows = panel
+            records = panel.sync(modes)
             records = panel.sync(modes)
         except Exception as err:
             logger.warning("Could not build the panel windows: %s", err)

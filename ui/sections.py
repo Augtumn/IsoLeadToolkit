@@ -90,6 +90,9 @@ def create_section_dialog(
 
     panel = panel_cls(callback, parent=dialog)
     panel.reset_state()
+    # Kept on the dialog so the window can reach the panel again: the render mode is per panel, and
+    # the control has to follow the panel in use while this dialog is open.
+    dialog.section_panel = panel
 
     content_widget = panel.build()
     scroll = QScrollArea()

@@ -36,6 +36,26 @@ class DataPanelProjectionMixin:
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
 
+    def sync_render_mode(self, mode) -> None:
+        """Show *mode* in the render mode control without applying it again.
+
+        The mode is per panel, so the control follows the panel in use - the way the navigation
+        buttons follow it. Signals are blocked, or setting the control would count as the user
+        choosing a mode and write it straight back.
+        """
+        combo = self.render_combo
+        if combo is None or mode is None:
+            return
+        index = combo.findData(mode)
+        if index < 0:
+            return
+        blocked = combo.blockSignals(True)
+        try:
+            combo.setCurrentIndex(index)
+        finally:
+            combo.blockSignals(blocked)
+        self._update_algorithm_visibility()
+
     def _on_render_mode_change(self, mode):
         """Handle render mode changes."""
         mode = self._normalize_render_mode(self._combo_value(self.render_combo, mode))
