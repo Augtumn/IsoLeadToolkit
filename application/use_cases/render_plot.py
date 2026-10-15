@@ -142,6 +142,14 @@ class RenderPlotUseCase:
                 # The plotters draw into the active figure; this window's figure is the panel's.
                 state_gateway.set_figure(figure)
             state_gateway.set_axis(ax)
+            # The legend frame belongs to this panel: the control panel keeps it with the panel in
+            # use, and each panel draws with its own rather than with the last one set.
+            legend = record.get("legend")
+            if legend:
+                try:
+                    state_gateway.set_panel_style_updates(dict(legend))
+                except Exception as err:
+                    logger.warning("Could not apply a panel's legend style: %s", err)
             self._state.scatter_collections.clear()
             self._state.artist_to_sample.clear()
             ok, pending = self._dispatch_render(

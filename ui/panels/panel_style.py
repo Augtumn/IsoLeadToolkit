@@ -24,6 +24,15 @@ from .base_panel import _STYLE_WIDGET_MAP
 
 logger = logging.getLogger(__name__)
 
+#: Style keys whose value belongs to the panel it frames rather than to the application: a legend
+#: box is drawn inside one figure, and two panels may want it framed differently.
+_PER_PANEL_LEGEND_KEYS = (
+    "legend_frame_on",
+    "legend_frame_alpha",
+    "legend_frame_facecolor",
+    "legend_frame_edgecolor",
+)
+
 def _safe_color(widget, default):
     """从 widget 安全提取颜色值。
 
@@ -174,6 +183,19 @@ class PanelStyleMixin:
         # ---- 提交到状态网关 ----
         if style_updates:
             state_gateway.set_panel_style_updates(style_updates)
+
+        # ---- 随图样式：图例框属于它所在的那张图 ✓ ----
+        legend_updates = {
+            key: style_updates[key] for key in _PER_PANEL_LEGEND_KEYS if key in style_updates
+        }
+        if legend_updates:
+            records = list(getattr(app_state, "plot_panel_windows", None) or [])
+            panel = next(
+                (record for record in records if record.get("active")),
+                records[0] if records else None,
+            )
+            if panel is not None:
+                panel["legend"] = {**(panel.get("legend") or {}), **legend_updates}
 
         # ---- 状态栏短暂消息 ----
         if style_updates:
