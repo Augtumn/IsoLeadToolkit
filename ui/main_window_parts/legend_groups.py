@@ -55,10 +55,23 @@ class MainWindowLegendGroupMixin:
     BASE_DECOMPOSITION_KEY = "\x1fbase_column"
 
     def _decomposition_spec(self):
-        """Return ``({path key -> splitting column}, base column)`` from the stored map."""
+        """Return ``({path key -> splitting column}, base column)`` from the stored map.
+
+        A map written before the base was recorded - one restored from an older session, say - has
+        no base. The column the chain started from is then the grouping column the data was loaded
+        with, which is the first declared one; falling back to the column in force would name the
+        computed column a previous split produced, which is exactly what must not be split again.
+        """
         spec = dict(app_state.group_decomposition or {})
         base = spec.pop(self.BASE_DECOMPOSITION_KEY, None)
-        return spec, (str(base) if base else None)
+        if base:
+            return spec, str(base)
+        if not spec:
+            return spec, None
+        declared = [str(column) for column in (app_state.group_cols or [])]
+        if declared:
+            return spec, declared[0]
+        return spec, (str(app_state.last_group_col) if app_state.last_group_col else None)
 
     def _path_of_label(self, label):
         """The value path a legend label stands for, e.g. ``Tarim / casting`` -> two values."""
