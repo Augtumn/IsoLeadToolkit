@@ -1018,5 +1018,6 @@
   "Show the sample under the cursor and highlight that point in every panel.": "显示光标下的样品，并在各面板中高亮那一个数据点。",
   "Home": "复位",
   "Pan": "平移",
-  "Zoom to Rectangle": "框选缩放"
+  "Zoom to Rectangle": "框选缩放",
+  "Apply legend changes to all panels": "图例改动应用到所有面板"
 }

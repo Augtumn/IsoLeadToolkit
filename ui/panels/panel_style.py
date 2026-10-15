@@ -34,18 +34,37 @@ _PER_PANEL_LEGEND_KEYS = (
 )
 
 
+#: Where the legend scope choice is remembered between runs.
+_LEGEND_SETTINGS = ("IsotopesAnalyse", "Legend")
+
+
+def legend_applies_to_all_panels() -> bool:
+    """Whether a legend change is meant for every panel, not only the one in use."""
+    return bool(QSettings(*_LEGEND_SETTINGS).value("apply_to_all_panels", False, type=bool))
+
+
+def set_legend_applies_to_all_panels(enabled: bool) -> None:
+    """Remember that choice, so it survives a restart."""
+    QSettings(*_LEGEND_SETTINGS).setValue("apply_to_all_panels", bool(enabled))
+
+
 def record_panel_legend(**values) -> None:
-    """Keep a legend setting with the panel in use, so each panel can carry its own legend.
+    """Keep a legend setting, on the panel in use or on all of them.
 
     The state holds a single legend, which is why a change used to apply to every plot at once.
-    The panel in use keeps its own copy, and the render mirrors it before drawing that panel.
+    A panel keeps its own copy and the render mirrors it before drawing that panel; the scope
+    switch is what makes one change apply to every panel as well.
     """
     records = list(getattr(app_state, "plot_panel_windows", None) or [])
-    panel = next((record for record in records if record.get("active")), records[0] if records else None)
-    if panel is None:
+    if not records:
         return
+    if legend_applies_to_all_panels():
+        targets = records
+    else:
+        targets = [next((record for record in records if record.get("active")), records[0])]
     kept = dict(values)
-    panel["legend"] = {**(panel.get("legend") or {}), **kept}
+    for panel in targets:
+        panel["legend"] = {**(panel.get("legend") or {}), **kept}
 
 def _safe_color(widget, default):
     """从 widget 安全提取颜色值。

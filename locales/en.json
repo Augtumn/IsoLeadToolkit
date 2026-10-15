@@ -1018,5 +1018,6 @@
   "Show the sample under the cursor and highlight that point in every panel.": "Show the sample under the cursor and highlight that point in every panel.",
   "Home": "Home",
   "Pan": "Pan",
-  "Zoom to Rectangle": "Zoom to Rectangle"
+  "Zoom to Rectangle": "Zoom to Rectangle",
+  "Apply legend changes to all panels": "Apply legend changes to all panels"
 }

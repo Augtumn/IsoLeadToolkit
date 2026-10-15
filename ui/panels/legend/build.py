@@ -18,7 +18,13 @@ from PyQt5.QtWidgets import (
 )
 
 from core import app_state, state_gateway, translate
+from PyQt5.QtWidgets import QCheckBox
+
 from ui.panels.base_panel import BasePanel
+from ui.panels.panel_style import (
+    legend_applies_to_all_panels,
+    set_legend_applies_to_all_panels,
+)
 from core.legend_state import wants_docked_legend
 from core.legend_state import wants_inline_legend
 
@@ -178,6 +184,14 @@ class LegendBuildMixin:
         self.legend_step_spin.valueChanged.connect(self._on_nudge_step_change)
         step_row.addWidget(self.legend_step_spin)
         style_layout.addLayout(step_row)
+
+        self.legend_apply_all_check = QCheckBox(translate("Apply legend changes to all panels"))
+        self.legend_apply_all_check.setProperty(
+            'translate_key', 'Apply legend changes to all panels'
+        )
+        self.legend_apply_all_check.setChecked(legend_applies_to_all_panels())
+        self.legend_apply_all_check.toggled.connect(set_legend_applies_to_all_panels)
+        style_layout.addWidget(self.legend_apply_all_check)
 
         nudge_label = QLabel(translate("Nudge Legend"))
         nudge_label.setProperty('translate_key', 'Nudge Legend')
