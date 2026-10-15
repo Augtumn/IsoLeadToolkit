@@ -11,7 +11,6 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QPushButton,
     QSlider,
@@ -20,6 +19,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import app_state, state_gateway, translate
+from core.state.coercers import DEFAULT_TERNARY_MANUAL_LIMITS
 
 
 #: Methods this class expects from the classes it is composed with
@@ -393,14 +393,7 @@ class DataPanelProjectionGroupsBuildMixin:
         ternary_layout.addWidget(self.ternary_manual_limits_check)
 
         manual_limits = app_state.ternary_manual_limits or {}
-        default_limits = {
-            "tmin": 0.0,
-            "tmax": 1.0,
-            "lmin": 0.0,
-            "lmax": 1.0,
-            "rmin": 0.0,
-            "rmax": 1.0,
-        }
+        default_limits = dict(DEFAULT_TERNARY_MANUAL_LIMITS)
         default_limits.update({k: v for k, v in manual_limits.items() if k in default_limits})
 
         manual_grid = QGridLayout()

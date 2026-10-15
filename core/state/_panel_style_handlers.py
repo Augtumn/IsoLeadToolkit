@@ -10,7 +10,6 @@ import logging
 from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
-_UNSET = object()
 
 
 def _converted_handler(
@@ -150,26 +149,18 @@ def build_panel_style_handlers(gateway: Any) -> dict[str, Callable[[Any], None]]
         "color_scheme": "set_color_scheme",
     }
 
-    handlers: dict[str, Callable[[Any], None]] = {
-    }
+    handlers: dict[str, Callable[[Any], None]] = {}
 
     for name, setter_name in direct_map.items():
         handlers[name] = _converted_handler(gateway, setter_name)
+    # The five maps are disjoint; each field belongs to exactly one group.
     for name, setter_name in bool_map.items():
-        if name in handlers:
-            continue
         handlers[name] = _converted_handler(gateway, setter_name, bool)
     for name, setter_name in int_map.items():
-        if name in handlers:
-            continue
         handlers[name] = _converted_handler(gateway, setter_name, int)
     for name, setter_name in float_map.items():
-        if name in handlers:
-            continue
         handlers[name] = _converted_handler(gateway, setter_name, float)
     for name, setter_name in str_map.items():
-        if name in handlers:
-            continue
         handlers[name] = _converted_handler(gateway, setter_name, str)
 
     return handlers

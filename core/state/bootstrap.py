@@ -3,6 +3,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .coercers import (
+    DEFAULT_EXPORT_IMAGE_OPTIONS,
+    DEFAULT_PLOT_FONT_SIZES,
+    DEFAULT_TERNARY_MANUAL_LIMITS,
+)
 
 DEFAULT_ELLIPSE_CONFIDENCE = 0.95
 
@@ -83,14 +88,7 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.ternary_auto_zoom = True
     state.ternary_limit_mode = 'both'
     state.ternary_manual_limits_enabled = False
-    state.ternary_manual_limits = {
-        'tmin': 0.0,
-        'tmax': 1.0,
-        'lmin': 0.0,
-        'lmax': 1.0,
-        'rmin': 0.0,
-        'rmax': 1.0,
-    }
+    state.ternary_manual_limits = dict(DEFAULT_TERNARY_MANUAL_LIMITS)
     state.ternary_limit_anchor = 'min'
     state.ternary_render_margin = 0.002
     state.ui_theme = 'Modern Light'
@@ -154,12 +152,7 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.custom_cjk_font = ''
 
     # Advanced style configuration
-    state.plot_font_sizes = {
-        'title': 14,
-        'label': 12,
-        'tick': 10,
-        'legend': 10
-    }
+    state.plot_font_sizes = dict(DEFAULT_PLOT_FONT_SIZES)
     state.show_plot_title = False
     state.custom_palettes = {}
     state.custom_shape_sets = {}
@@ -174,16 +167,8 @@ def init_runtime_defaults(state: Any, config: dict[str, Any]) -> None:
     state.plot_figsize = config.get('figure_size', (13, 9))
     state.plot_dpi = config.get('figure_dpi', 130)
     state.export_image_options = {
-        'preset_key': 'science_single',
-        'image_ext': 'png',
-        'dpi': config.get('savefig_dpi', 400),
-        'bbox_tight': True,
-        'pad_inches': 0.02,
-        'transparent': False,
-        'point_size': None,
-        'legend_size': None,
-        'embed_fonts': True,
-        'white_background': True,
+        **DEFAULT_EXPORT_IMAGE_OPTIONS,
+        'dpi': config.get('savefig_dpi', DEFAULT_EXPORT_IMAGE_OPTIONS['dpi']),
     }
     state.plot_facecolor = '#ffffff'
     state.axes_facecolor = '#ffffff'

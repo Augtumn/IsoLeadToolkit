@@ -96,7 +96,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "ternary_manual_limits",
-        {'tmin': 0.0, 'tmax': 1.0, 'lmin': 0.0, 'lmax': 1.0, 'rmin': 0.0, 'rmax': 1.0},
+        dict(coercers.DEFAULT_TERNARY_MANUAL_LIMITS),
         normalize=coercers._normalize_ternary_manual_limits,
         copy=coercers._normalize_ternary_manual_limits,
         holder=None,

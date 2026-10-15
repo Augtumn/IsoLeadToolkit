@@ -65,6 +65,16 @@ _BW_ADJUST_MAX: float = 5.0
 _KDE_BW_MIN: float = 0.0
 _KDE_BW_MAX: float = 10.0
 
+#: Default manual ternary limits (the full simplex window).
+DEFAULT_TERNARY_MANUAL_LIMITS: dict[str, float] = {
+    "tmin": 0.0,
+    "tmax": 1.0,
+    "lmin": 0.0,
+    "lmax": 1.0,
+    "rmin": 0.0,
+    "rmax": 1.0,
+}
+
 
 def _normalize_export_options(options: Any) -> dict[str, Any]:
     merged = dict(DEFAULT_EXPORT_IMAGE_OPTIONS)
@@ -313,15 +323,7 @@ def _normalize_ternary_boundary_percent(percent: Any) -> float:
 
 
 def _normalize_ternary_manual_limits(limits: Any) -> dict[str, float]:
-    defaults = {
-        "tmin": 0.0,
-        "tmax": 1.0,
-        "lmin": 0.0,
-        "lmax": 1.0,
-        "rmin": 0.0,
-        "rmax": 1.0,
-    }
-    merged = dict(defaults)
+    merged = dict(DEFAULT_TERNARY_MANUAL_LIMITS)
     if isinstance(limits, dict):
         for key, value in limits.items():
             if key in merged and value is not None:
