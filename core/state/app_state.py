@@ -12,7 +12,7 @@ from ..cache import EmbeddingCache
 from ..overlay_state import OverlayState
 from ..legend_state import LegendState
 from .bootstrap import init_runtime_defaults, sync_overlay_kde_styles
-from .store import StateStore
+from .store import StateStore, dispatch_or_apply
 from ._views import DataState, AlgorithmState, VisualState, GeochemState, StyleState, InteractionState
 
 logger = logging.getLogger(__name__)
@@ -167,11 +167,11 @@ class AppState:
 
     @show_model_curves.setter
     def show_model_curves(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_MODEL_CURVES', 'show': bool(value)})
-            return
-        self.overlay.show_model_curves = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_MODEL_CURVES', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_model_curves', value),
+        )
 
     @property
     def show_paleoisochrons(self) -> bool:
@@ -179,11 +179,11 @@ class AppState:
 
     @show_paleoisochrons.setter
     def show_paleoisochrons(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_PALEOISOCHRONS', 'show': bool(value)})
-            return
-        self.overlay.show_paleoisochrons = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_PALEOISOCHRONS', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_paleoisochrons', value),
+        )
 
     @property
     def show_plumbotectonics_curves(self) -> bool:
@@ -191,11 +191,11 @@ class AppState:
 
     @show_plumbotectonics_curves.setter
     def show_plumbotectonics_curves(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_PLUMBOTECTONICS_CURVES', 'show': bool(value)})
-            return
-        self.overlay.show_plumbotectonics_curves = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_PLUMBOTECTONICS_CURVES', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_plumbotectonics_curves', value),
+        )
 
     @property
     def show_model_age_lines(self) -> bool:
@@ -203,11 +203,11 @@ class AppState:
 
     @show_model_age_lines.setter
     def show_model_age_lines(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_MODEL_AGE_LINES', 'show': bool(value)})
-            return
-        self.overlay.show_model_age_lines = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_MODEL_AGE_LINES', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_model_age_lines', value),
+        )
 
     @property
     def show_isochrons(self) -> bool:
@@ -215,11 +215,11 @@ class AppState:
 
     @show_isochrons.setter
     def show_isochrons(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_ISOCHRONS', 'show': bool(value)})
-            return
-        self.overlay.show_isochrons = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_ISOCHRONS', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_isochrons', value),
+        )
 
     @property
     def show_growth_curves(self) -> bool:
@@ -227,11 +227,11 @@ class AppState:
 
     @show_growth_curves.setter
     def show_growth_curves(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_GROWTH_CURVES', 'show': bool(value)})
-            return
-        self.overlay.show_growth_curves = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_GROWTH_CURVES', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_growth_curves', value),
+        )
 
     @property
     def show_equation_overlays(self) -> bool:
@@ -239,11 +239,11 @@ class AppState:
 
     @show_equation_overlays.setter
     def show_equation_overlays(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SHOW_EQUATION_OVERLAYS', 'show': bool(value)})
-            return
-        self.overlay.show_equation_overlays = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SHOW_EQUATION_OVERLAYS', 'show': bool(value)},
+            lambda: setattr(self.overlay, 'show_equation_overlays', value),
+        )
 
     @property
     def use_real_age_for_mu_kappa(self) -> bool:
@@ -251,11 +251,11 @@ class AppState:
 
     @use_real_age_for_mu_kappa.setter
     def use_real_age_for_mu_kappa(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_USE_REAL_AGE_FOR_MU_KAPPA', 'enabled': bool(value)})
-            return
-        self.overlay.use_real_age_for_mu_kappa = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_USE_REAL_AGE_FOR_MU_KAPPA', 'enabled': bool(value)},
+            lambda: setattr(self.overlay, 'use_real_age_for_mu_kappa', value),
+        )
 
     @property
     def mu_kappa_age_col(self) -> str | None:
@@ -263,11 +263,11 @@ class AppState:
 
     @mu_kappa_age_col.setter
     def mu_kappa_age_col(self, value: str | None) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_MU_KAPPA_AGE_COL', 'column': value})
-            return
-        self.overlay.mu_kappa_age_col = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_MU_KAPPA_AGE_COL', 'column': value},
+            lambda: setattr(self.overlay, 'mu_kappa_age_col', value),
+        )
 
     @property
     def isochron_label_options(self) -> dict[str, Any]:
@@ -275,11 +275,11 @@ class AppState:
 
     @isochron_label_options.setter
     def isochron_label_options(self, value: dict[str, Any]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ISOCHRON_LABEL_OPTIONS', 'options': dict(value or {})})
-            return
-        self.overlay.isochron_label_options = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_ISOCHRON_LABEL_OPTIONS', 'options': dict(value or {})},
+            lambda: setattr(self.overlay, 'isochron_label_options', value),
+        )
 
     @property
     def geo_model_name(self) -> str:
@@ -287,11 +287,11 @@ class AppState:
 
     @geo_model_name.setter
     def geo_model_name(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_GEO_MODEL_NAME', 'model_name': value})
-            return
-        self.overlay.geo_model_name = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_GEO_MODEL_NAME', 'model_name': value},
+            lambda: setattr(self.overlay, 'geo_model_name', value),
+        )
 
     @property
     def equation_overlays(self) -> list[dict[str, Any]]:
@@ -299,11 +299,11 @@ class AppState:
 
     @equation_overlays.setter
     def equation_overlays(self, value: list[dict[str, Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_EQUATION_OVERLAYS', 'overlays': list(value or [])})
-            return
-        self.overlay.equation_overlays = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_EQUATION_OVERLAYS', 'overlays': list(value or [])},
+            lambda: setattr(self.overlay, 'equation_overlays', value),
+        )
 
     @property
     def line_styles(self) -> dict[str, dict[str, Any]]:
@@ -311,11 +311,11 @@ class AppState:
 
     @line_styles.setter
     def line_styles(self, value: dict[str, dict[str, Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LINE_STYLES', 'line_styles': dict(value or {})})
-            return
-        self.overlay.line_styles = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LINE_STYLES', 'line_styles': dict(value or {})},
+            lambda: setattr(self.overlay, 'line_styles', value),
+        )
 
     @property
     def paleoisochron_min_age(self) -> int:
@@ -323,11 +323,11 @@ class AppState:
 
     @paleoisochron_min_age.setter
     def paleoisochron_min_age(self, value: int) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PALEOISOCHRON_MIN_AGE', 'age': int(value)})
-            return
-        self.overlay.paleoisochron_min_age = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PALEOISOCHRON_MIN_AGE', 'age': int(value)},
+            lambda: setattr(self.overlay, 'paleoisochron_min_age', value),
+        )
 
     @property
     def paleoisochron_max_age(self) -> int:
@@ -335,11 +335,11 @@ class AppState:
 
     @paleoisochron_max_age.setter
     def paleoisochron_max_age(self, value: int) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PALEOISOCHRON_MAX_AGE', 'age': int(value)})
-            return
-        self.overlay.paleoisochron_max_age = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PALEOISOCHRON_MAX_AGE', 'age': int(value)},
+            lambda: setattr(self.overlay, 'paleoisochron_max_age', value),
+        )
 
     @property
     def paleoisochron_step(self) -> int:
@@ -347,11 +347,11 @@ class AppState:
 
     @paleoisochron_step.setter
     def paleoisochron_step(self, value: int) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PALEOISOCHRON_STEP', 'step': int(value)})
-            return
-        self.overlay.paleoisochron_step = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PALEOISOCHRON_STEP', 'step': int(value)},
+            lambda: setattr(self.overlay, 'paleoisochron_step', value),
+        )
 
     @property
     def paleoisochron_ages(self) -> list[int]:
@@ -359,11 +359,11 @@ class AppState:
 
     @paleoisochron_ages.setter
     def paleoisochron_ages(self, value: list[int]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PALEOISOCHRON_AGES', 'ages': list(value or [])})
-            return
-        self.overlay.paleoisochron_ages = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PALEOISOCHRON_AGES', 'ages': list(value or [])},
+            lambda: setattr(self.overlay, 'paleoisochron_ages', value),
+        )
 
     @property
     def plumbotectonics_variant(self) -> str:
@@ -371,11 +371,11 @@ class AppState:
 
     @plumbotectonics_variant.setter
     def plumbotectonics_variant(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PLUMBOTECTONICS_VARIANT', 'variant': value})
-            return
-        self.overlay.plumbotectonics_variant = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PLUMBOTECTONICS_VARIANT', 'variant': value},
+            lambda: setattr(self.overlay, 'plumbotectonics_variant', value),
+        )
 
     @property
     def plumbotectonics_group_visibility(self) -> dict[str, bool]:
@@ -383,13 +383,11 @@ class AppState:
 
     @plumbotectonics_group_visibility.setter
     def plumbotectonics_group_visibility(self, value: dict[str, bool]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {'type': 'SET_PLUMBOTECTONICS_GROUP_VISIBILITY', 'visibility': dict(value or {})}
-            )
-            return
-        self.overlay.plumbotectonics_group_visibility = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PLUMBOTECTONICS_GROUP_VISIBILITY', 'visibility': dict(value or {})},
+            lambda: setattr(self.overlay, 'plumbotectonics_group_visibility', value),
+        )
 
     @property
     def model_curve_models(self) -> list[str] | None:
@@ -397,12 +395,14 @@ class AppState:
 
     @model_curve_models.setter
     def model_curve_models(self, value: list[str] | None) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            normalized = list(value or []) if value is not None else None
-            state_store.dispatch({'type': 'SET_MODEL_CURVE_MODELS', 'models': normalized})
-            return
-        self.overlay.model_curve_models = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_MODEL_CURVE_MODELS',
+                'models': list(value or []) if value is not None else None,
+            },
+            lambda: setattr(self.overlay, 'model_curve_models', value),
+        )
 
     @property
     def isochron_error_mode(self) -> str:
@@ -410,29 +410,26 @@ class AppState:
 
     @isochron_error_mode.setter
     def isochron_error_mode(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            mode = str(value or 'fixed').strip().lower()
-            if mode == 'columns':
-                state_store.dispatch(
-                    {
-                        'type': 'SET_ISOCHRON_ERROR_COLUMNS',
-                        'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
-                        'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
-                        'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
-                    }
-                )
-            else:
-                state_store.dispatch(
-                    {
-                        'type': 'SET_ISOCHRON_ERROR_FIXED',
-                        'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
-                        'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
-                        'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
-                    }
-                )
-            return
-        self.overlay.isochron_error_mode = value
+        mode = str(value or 'fixed').strip().lower()
+        if mode == 'columns':
+            action = {
+                'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
+                'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
+                'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
+            }
+        else:
+            action = {
+                'type': 'SET_ISOCHRON_ERROR_FIXED',
+                'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
+                'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
+                'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
+            }
+        dispatch_or_apply(
+            self,
+            action,
+            lambda: setattr(self.overlay, 'isochron_error_mode', value),
+        )
 
     @property
     def isochron_sx_col(self) -> str:
@@ -440,18 +437,16 @@ class AppState:
 
     @isochron_sx_col.setter
     def isochron_sx_col(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_ISOCHRON_ERROR_COLUMNS',
-                    'sx_col': str(value or ''),
-                    'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
-                    'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
-                }
-            )
-            return
-        self.overlay.isochron_sx_col = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                'sx_col': str(value or ''),
+                'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
+                'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
+            },
+            lambda: setattr(self.overlay, 'isochron_sx_col', value),
+        )
 
     @property
     def isochron_sy_col(self) -> str:
@@ -459,18 +454,16 @@ class AppState:
 
     @isochron_sy_col.setter
     def isochron_sy_col(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_ISOCHRON_ERROR_COLUMNS',
-                    'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
-                    'sy_col': str(value or ''),
-                    'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
-                }
-            )
-            return
-        self.overlay.isochron_sy_col = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
+                'sy_col': str(value or ''),
+                'rxy_col': str(getattr(self.overlay, 'isochron_rxy_col', '') or ''),
+            },
+            lambda: setattr(self.overlay, 'isochron_sy_col', value),
+        )
 
     @property
     def isochron_rxy_col(self) -> str:
@@ -478,18 +471,16 @@ class AppState:
 
     @isochron_rxy_col.setter
     def isochron_rxy_col(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_ISOCHRON_ERROR_COLUMNS',
-                    'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
-                    'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
-                    'rxy_col': str(value or ''),
-                }
-            )
-            return
-        self.overlay.isochron_rxy_col = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_ISOCHRON_ERROR_COLUMNS',
+                'sx_col': str(getattr(self.overlay, 'isochron_sx_col', '') or ''),
+                'sy_col': str(getattr(self.overlay, 'isochron_sy_col', '') or ''),
+                'rxy_col': str(value or ''),
+            },
+            lambda: setattr(self.overlay, 'isochron_rxy_col', value),
+        )
 
     @property
     def isochron_sx_value(self) -> float:
@@ -497,18 +488,16 @@ class AppState:
 
     @isochron_sx_value.setter
     def isochron_sx_value(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_ISOCHRON_ERROR_FIXED',
-                    'sx_value': float(value),
-                    'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
-                    'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
-                }
-            )
-            return
-        self.overlay.isochron_sx_value = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_ISOCHRON_ERROR_FIXED',
+                'sx_value': float(value),
+                'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
+                'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
+            },
+            lambda: setattr(self.overlay, 'isochron_sx_value', value),
+        )
 
     @property
     def isochron_sy_value(self) -> float:
@@ -516,18 +505,16 @@ class AppState:
 
     @isochron_sy_value.setter
     def isochron_sy_value(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_ISOCHRON_ERROR_FIXED',
-                    'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
-                    'sy_value': float(value),
-                    'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
-                }
-            )
-            return
-        self.overlay.isochron_sy_value = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_ISOCHRON_ERROR_FIXED',
+                'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
+                'sy_value': float(value),
+                'rxy_value': float(getattr(self.overlay, 'isochron_rxy_value', 0.0) or 0.0),
+            },
+            lambda: setattr(self.overlay, 'isochron_sy_value', value),
+        )
 
     @property
     def isochron_rxy_value(self) -> float:
@@ -535,18 +522,16 @@ class AppState:
 
     @isochron_rxy_value.setter
     def isochron_rxy_value(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_ISOCHRON_ERROR_FIXED',
-                    'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
-                    'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
-                    'rxy_value': float(value),
-                }
-            )
-            return
-        self.overlay.isochron_rxy_value = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_ISOCHRON_ERROR_FIXED',
+                'sx_value': float(getattr(self.overlay, 'isochron_sx_value', 0.001) or 0.001),
+                'sy_value': float(getattr(self.overlay, 'isochron_sy_value', 0.001) or 0.001),
+                'rxy_value': float(value),
+            },
+            lambda: setattr(self.overlay, 'isochron_rxy_value', value),
+        )
 
     @property
     def selected_isochron_data(self) -> Any | None:
@@ -554,11 +539,11 @@ class AppState:
 
     @selected_isochron_data.setter
     def selected_isochron_data(self, value: Any) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SELECTED_ISOCHRON_DATA', 'data': value})
-            return
-        self.overlay.selected_isochron_data = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_SELECTED_ISOCHRON_DATA', 'data': value},
+            lambda: setattr(self.overlay, 'selected_isochron_data', value),
+        )
 
     @property
     def isochron_results(self) -> dict[str, Any]:
@@ -566,11 +551,11 @@ class AppState:
 
     @isochron_results.setter
     def isochron_results(self, value: dict[str, Any]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ISOCHRON_RESULTS', 'results': dict(value or {})})
-            return
-        self.overlay.isochron_results = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_ISOCHRON_RESULTS', 'results': dict(value or {})},
+            lambda: setattr(self.overlay, 'isochron_results', value),
+        )
 
     @property
     def model_curve_width(self) -> float:
@@ -578,11 +563,11 @@ class AppState:
 
     @model_curve_width.setter
     def model_curve_width(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_MODEL_CURVE_WIDTH', 'width': float(value)})
-            return
-        self.overlay.model_curve_width = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_MODEL_CURVE_WIDTH', 'width': float(value)},
+            lambda: setattr(self.overlay, 'model_curve_width', value),
+        )
 
     @property
     def plumbotectonics_curve_width(self) -> float:
@@ -590,11 +575,11 @@ class AppState:
 
     @plumbotectonics_curve_width.setter
     def plumbotectonics_curve_width(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PLUMBOTECTONICS_CURVE_WIDTH', 'width': float(value)})
-            return
-        self.overlay.plumbotectonics_curve_width = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PLUMBOTECTONICS_CURVE_WIDTH', 'width': float(value)},
+            lambda: setattr(self.overlay, 'plumbotectonics_curve_width', value),
+        )
 
     @property
     def paleoisochron_width(self) -> float:
@@ -602,11 +587,11 @@ class AppState:
 
     @paleoisochron_width.setter
     def paleoisochron_width(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PALEOISOCHRON_WIDTH', 'width': float(value)})
-            return
-        self.overlay.paleoisochron_width = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PALEOISOCHRON_WIDTH', 'width': float(value)},
+            lambda: setattr(self.overlay, 'paleoisochron_width', value),
+        )
 
     @property
     def model_age_line_width(self) -> float:
@@ -614,11 +599,11 @@ class AppState:
 
     @model_age_line_width.setter
     def model_age_line_width(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_MODEL_AGE_LINE_WIDTH', 'width': float(value)})
-            return
-        self.overlay.model_age_line_width = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_MODEL_AGE_LINE_WIDTH', 'width': float(value)},
+            lambda: setattr(self.overlay, 'model_age_line_width', value),
+        )
 
     @property
     def isochron_line_width(self) -> float:
@@ -626,11 +611,11 @@ class AppState:
 
     @isochron_line_width.setter
     def isochron_line_width(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ISOCHRON_LINE_WIDTH', 'width': float(value)})
-            return
-        self.overlay.isochron_line_width = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_ISOCHRON_LINE_WIDTH', 'width': float(value)},
+            lambda: setattr(self.overlay, 'isochron_line_width', value),
+        )
 
     @property
     def overlay_artists(self) -> dict[str, list[Any]]:
@@ -638,11 +623,11 @@ class AppState:
 
     @overlay_artists.setter
     def overlay_artists(self, value: dict[str, list[Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_OVERLAY_ARTISTS', 'artists': dict(value or {})})
-            return
-        self.overlay.overlay_artists = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_OVERLAY_ARTISTS', 'artists': dict(value or {})},
+            lambda: setattr(self.overlay, 'overlay_artists', value),
+        )
 
     @property
     def overlay_curve_label_data(self) -> list[dict[str, Any]]:
@@ -650,11 +635,11 @@ class AppState:
 
     @overlay_curve_label_data.setter
     def overlay_curve_label_data(self, value: list[dict[str, Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_OVERLAY_CURVE_LABEL_DATA', 'data': list(value or [])})
-            return
-        self.overlay.overlay_curve_label_data = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_OVERLAY_CURVE_LABEL_DATA', 'data': list(value or [])},
+            lambda: setattr(self.overlay, 'overlay_curve_label_data', value),
+        )
 
     @property
     def paleoisochron_label_data(self) -> list[dict[str, Any]]:
@@ -662,11 +647,11 @@ class AppState:
 
     @paleoisochron_label_data.setter
     def paleoisochron_label_data(self, value: list[dict[str, Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PALEOISOCHRON_LABEL_DATA', 'data': list(value or [])})
-            return
-        self.overlay.paleoisochron_label_data = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PALEOISOCHRON_LABEL_DATA', 'data': list(value or [])},
+            lambda: setattr(self.overlay, 'paleoisochron_label_data', value),
+        )
 
     @property
     def plumbotectonics_label_data(self) -> list[dict[str, Any]]:
@@ -674,11 +659,11 @@ class AppState:
 
     @plumbotectonics_label_data.setter
     def plumbotectonics_label_data(self, value: list[dict[str, Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PLUMBOTECTONICS_LABEL_DATA', 'data': list(value or [])})
-            return
-        self.overlay.plumbotectonics_label_data = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PLUMBOTECTONICS_LABEL_DATA', 'data': list(value or [])},
+            lambda: setattr(self.overlay, 'plumbotectonics_label_data', value),
+        )
 
     @property
     def plumbotectonics_isoage_label_data(self) -> list[dict[str, Any]]:
@@ -686,13 +671,11 @@ class AppState:
 
     @plumbotectonics_isoage_label_data.setter
     def plumbotectonics_isoage_label_data(self, value: list[dict[str, Any]]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {'type': 'SET_PLUMBOTECTONICS_ISOAGE_LABEL_DATA', 'data': list(value or [])}
-            )
-            return
-        self.overlay.plumbotectonics_isoage_label_data = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_PLUMBOTECTONICS_ISOAGE_LABEL_DATA', 'data': list(value or [])},
+            lambda: setattr(self.overlay, 'plumbotectonics_isoage_label_data', value),
+        )
 
     # ------------------------------------------------------------------ #
     # Flat-name access to LegendState (persistence schema + gateway actions)
@@ -704,11 +687,11 @@ class AppState:
 
     @legend_position.setter
     def legend_position(self, value: str | None) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_POSITION', 'position': value})
-            return
-        self.legend.legend_position = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_POSITION', 'position': value},
+            lambda: setattr(self.legend, 'legend_position', value),
+        )
 
     @property
     def legend_columns(self) -> int:
@@ -716,11 +699,11 @@ class AppState:
 
     @legend_columns.setter
     def legend_columns(self, value: int) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_COLUMNS', 'columns': int(value)})
-            return
-        self.legend.legend_columns = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_COLUMNS', 'columns': int(value)},
+            lambda: setattr(self.legend, 'legend_columns', value),
+        )
 
     @property
     def legend_offset(self) -> tuple[float, float]:
@@ -728,11 +711,11 @@ class AppState:
 
     @legend_offset.setter
     def legend_offset(self, value: tuple[float, float]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_OFFSET', 'offset': value})
-            return
-        self.legend.legend_offset = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_OFFSET', 'offset': value},
+            lambda: setattr(self.legend, 'legend_offset', value),
+        )
 
     @property
     def legend_nudge_step(self) -> float:
@@ -740,11 +723,11 @@ class AppState:
 
     @legend_nudge_step.setter
     def legend_nudge_step(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_NUDGE_STEP', 'step': float(value)})
-            return
-        self.legend.legend_nudge_step = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_NUDGE_STEP', 'step': float(value)},
+            lambda: setattr(self.legend, 'legend_nudge_step', value),
+        )
 
     @property
     def legend_location(self) -> str:
@@ -752,11 +735,11 @@ class AppState:
 
     @legend_location.setter
     def legend_location(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_LOCATION', 'location': value})
-            return
-        self.legend.legend_location = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_LOCATION', 'location': value},
+            lambda: setattr(self.legend, 'legend_location', value),
+        )
 
     @property
     def legend_display_mode(self) -> str:
@@ -764,11 +747,11 @@ class AppState:
 
     @legend_display_mode.setter
     def legend_display_mode(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_DISPLAY_MODE', 'mode': str(value)})
-            return
-        self.legend.legend_display_mode = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_DISPLAY_MODE', 'mode': str(value)},
+            lambda: setattr(self.legend, 'legend_display_mode', value),
+        )
 
     @property
     def legend_frame_on(self) -> bool:
@@ -776,11 +759,11 @@ class AppState:
 
     @legend_frame_on.setter
     def legend_frame_on(self, value: bool) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_FRAME_ON', 'enabled': bool(value)})
-            return
-        self.legend.legend_frame_on = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_FRAME_ON', 'enabled': bool(value)},
+            lambda: setattr(self.legend, 'legend_frame_on', value),
+        )
 
     @property
     def legend_frame_alpha(self) -> float:
@@ -788,11 +771,11 @@ class AppState:
 
     @legend_frame_alpha.setter
     def legend_frame_alpha(self, value: float) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_FRAME_ALPHA', 'alpha': float(value)})
-            return
-        self.legend.legend_frame_alpha = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_FRAME_ALPHA', 'alpha': float(value)},
+            lambda: setattr(self.legend, 'legend_frame_alpha', value),
+        )
 
     @property
     def legend_frame_facecolor(self) -> str:
@@ -800,11 +783,11 @@ class AppState:
 
     @legend_frame_facecolor.setter
     def legend_frame_facecolor(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_FRAME_FACECOLOR', 'color': str(value)})
-            return
-        self.legend.legend_frame_facecolor = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_FRAME_FACECOLOR', 'color': str(value)},
+            lambda: setattr(self.legend, 'legend_frame_facecolor', value),
+        )
 
     @property
     def legend_frame_edgecolor(self) -> str:
@@ -812,11 +795,11 @@ class AppState:
 
     @legend_frame_edgecolor.setter
     def legend_frame_edgecolor(self, value: str) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_LEGEND_FRAME_EDGECOLOR', 'color': str(value)})
-            return
-        self.legend.legend_frame_edgecolor = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_LEGEND_FRAME_EDGECOLOR', 'color': str(value)},
+            lambda: setattr(self.legend, 'legend_frame_edgecolor', value),
+        )
 
     @property
     def hidden_groups(self) -> set[str]:
@@ -824,11 +807,11 @@ class AppState:
 
     @hidden_groups.setter
     def hidden_groups(self, value: set[str]) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_HIDDEN_GROUPS', 'groups': set(value or set())})
-            return
-        self.legend.hidden_groups = value
+        dispatch_or_apply(
+            self,
+            {'type': 'SET_HIDDEN_GROUPS', 'groups': set(value or set())},
+            lambda: setattr(self.legend, 'hidden_groups', value),
+        )
 
     @property
     def legend_to_scatter(self) -> dict[Any, Any]:
@@ -852,18 +835,16 @@ class AppState:
 
     @legend_last_title.setter
     def legend_last_title(self, value: Any) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_LEGEND_SNAPSHOT',
-                    'title': value,
-                    'handles': getattr(self.legend, 'legend_last_handles', None),
-                    'labels': getattr(self.legend, 'legend_last_labels', None),
-                }
-            )
-            return
-        self.legend.legend_last_title = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_LEGEND_SNAPSHOT',
+                'title': value,
+                'handles': getattr(self.legend, 'legend_last_handles', None),
+                'labels': getattr(self.legend, 'legend_last_labels', None),
+            },
+            lambda: setattr(self.legend, 'legend_last_title', value),
+        )
 
     @property
     def legend_last_handles(self) -> Any | None:
@@ -871,18 +852,16 @@ class AppState:
 
     @legend_last_handles.setter
     def legend_last_handles(self, value: Any) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_LEGEND_SNAPSHOT',
-                    'title': getattr(self.legend, 'legend_last_title', None),
-                    'handles': value,
-                    'labels': getattr(self.legend, 'legend_last_labels', None),
-                }
-            )
-            return
-        self.legend.legend_last_handles = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_LEGEND_SNAPSHOT',
+                'title': getattr(self.legend, 'legend_last_title', None),
+                'handles': value,
+                'labels': getattr(self.legend, 'legend_last_labels', None),
+            },
+            lambda: setattr(self.legend, 'legend_last_handles', value),
+        )
 
     @property
     def legend_last_labels(self) -> Any | None:
@@ -890,18 +869,16 @@ class AppState:
 
     @legend_last_labels.setter
     def legend_last_labels(self, value: Any) -> None:
-        state_store = getattr(self, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_LEGEND_SNAPSHOT',
-                    'title': getattr(self.legend, 'legend_last_title', None),
-                    'handles': getattr(self.legend, 'legend_last_handles', None),
-                    'labels': value,
-                }
-            )
-            return
-        self.legend.legend_last_labels = value
+        dispatch_or_apply(
+            self,
+            {
+                'type': 'SET_LEGEND_SNAPSHOT',
+                'title': getattr(self.legend, 'legend_last_title', None),
+                'handles': getattr(self.legend, 'legend_last_handles', None),
+                'labels': value,
+            },
+            lambda: setattr(self.legend, 'legend_last_labels', value),
+        )
 
 
 # Global state instance

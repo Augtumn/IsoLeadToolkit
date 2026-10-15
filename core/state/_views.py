@@ -6,7 +6,13 @@ to the underlying AppState, dispatching through StateStore when available.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from .store import dispatch_or_apply
+
+if TYPE_CHECKING:
+    # Annotation only: importing app_state at runtime would be a cycle.
+    from .app_state import AppState
 
 
 @dataclass
@@ -21,18 +27,16 @@ class DataState:
 
     @df_global.setter
     def df_global(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_DATAFRAME_SOURCE',
-                    'df': value,
-                    'file_path': getattr(self.app_state, 'file_path', None),
-                    'sheet_name': getattr(self.app_state, 'sheet_name', None),
-                }
-            )
-            return
-        setattr(self.app_state, 'df_global', value)
+        dispatch_or_apply(
+            self.app_state,
+            {
+                'type': 'SET_DATAFRAME_SOURCE',
+                'df': value,
+                'file_path': getattr(self.app_state, 'file_path', None),
+                'sheet_name': getattr(self.app_state, 'sheet_name', None),
+            },
+            lambda: setattr(self.app_state, 'df_global', value),
+        )
 
     @property
     def data_cols(self) -> Any:
@@ -40,17 +44,15 @@ class DataState:
 
     @data_cols.setter
     def data_cols(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_GROUP_DATA_COLUMNS',
-                    'group_cols': list(getattr(self.app_state, 'group_cols', []) or []),
-                    'data_cols': list(value or []),
-                }
-            )
-            return
-        setattr(self.app_state, 'data_cols', value)
+        dispatch_or_apply(
+            self.app_state,
+            {
+                'type': 'SET_GROUP_DATA_COLUMNS',
+                'group_cols': list(getattr(self.app_state, 'group_cols', []) or []),
+                'data_cols': list(value or []),
+            },
+            lambda: setattr(self.app_state, 'data_cols', value),
+        )
 
     @property
     def group_cols(self) -> Any:
@@ -58,17 +60,15 @@ class DataState:
 
     @group_cols.setter
     def group_cols(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch(
-                {
-                    'type': 'SET_GROUP_DATA_COLUMNS',
-                    'group_cols': list(value or []),
-                    'data_cols': list(getattr(self.app_state, 'data_cols', []) or []),
-                }
-            )
-            return
-        setattr(self.app_state, 'group_cols', value)
+        dispatch_or_apply(
+            self.app_state,
+            {
+                'type': 'SET_GROUP_DATA_COLUMNS',
+                'group_cols': list(value or []),
+                'data_cols': list(getattr(self.app_state, 'data_cols', []) or []),
+            },
+            lambda: setattr(self.app_state, 'group_cols', value),
+        )
 
     @property
     def active_subset_indices(self) -> Any:
@@ -76,11 +76,11 @@ class DataState:
 
     @active_subset_indices.setter
     def active_subset_indices(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ACTIVE_SUBSET_INDICES', 'indices': value})
-            return
-        setattr(self.app_state, 'active_subset_indices', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_ACTIVE_SUBSET_INDICES', 'indices': value},
+            lambda: setattr(self.app_state, 'active_subset_indices', value),
+        )
 
 
 @dataclass
@@ -95,11 +95,11 @@ class AlgorithmState:
 
     @algorithm.setter
     def algorithm(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ALGORITHM', 'algorithm': value})
-            return
-        setattr(self.app_state, 'algorithm', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_ALGORITHM', 'algorithm': value},
+            lambda: setattr(self.app_state, 'algorithm', value),
+        )
 
     @property
     def embedding_cache(self) -> Any:
@@ -111,11 +111,11 @@ class AlgorithmState:
 
     @umap_params.setter
     def umap_params(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_UMAP_PARAMS', 'params': dict(value or {})})
-            return
-        setattr(self.app_state, 'umap_params', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_UMAP_PARAMS', 'params': dict(value or {})},
+            lambda: setattr(self.app_state, 'umap_params', value),
+        )
 
     @property
     def tsne_params(self) -> Any:
@@ -123,11 +123,11 @@ class AlgorithmState:
 
     @tsne_params.setter
     def tsne_params(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_TSNE_PARAMS', 'params': dict(value or {})})
-            return
-        setattr(self.app_state, 'tsne_params', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_TSNE_PARAMS', 'params': dict(value or {})},
+            lambda: setattr(self.app_state, 'tsne_params', value),
+        )
 
     @property
     def pca_params(self) -> Any:
@@ -135,11 +135,11 @@ class AlgorithmState:
 
     @pca_params.setter
     def pca_params(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PCA_PARAMS', 'params': dict(value or {})})
-            return
-        setattr(self.app_state, 'pca_params', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_PCA_PARAMS', 'params': dict(value or {})},
+            lambda: setattr(self.app_state, 'pca_params', value),
+        )
 
     @property
     def robust_pca_params(self) -> Any:
@@ -147,11 +147,11 @@ class AlgorithmState:
 
     @robust_pca_params.setter
     def robust_pca_params(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ROBUST_PCA_PARAMS', 'params': dict(value or {})})
-            return
-        setattr(self.app_state, 'robust_pca_params', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_ROBUST_PCA_PARAMS', 'params': dict(value or {})},
+            lambda: setattr(self.app_state, 'robust_pca_params', value),
+        )
 
     @property
     def ml_params(self) -> Any:
@@ -159,11 +159,11 @@ class AlgorithmState:
 
     @ml_params.setter
     def ml_params(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_ML_PARAMS', 'params': dict(value or {})})
-            return
-        setattr(self.app_state, 'ml_params', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_ML_PARAMS', 'params': dict(value or {})},
+            lambda: setattr(self.app_state, 'ml_params', value),
+        )
 
     @property
     def v1v2_params(self) -> Any:
@@ -171,11 +171,11 @@ class AlgorithmState:
 
     @v1v2_params.setter
     def v1v2_params(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_V1V2_PARAMS', 'params': dict(value or {})})
-            return
-        setattr(self.app_state, 'v1v2_params', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_V1V2_PARAMS', 'params': dict(value or {})},
+            lambda: setattr(self.app_state, 'v1v2_params', value),
+        )
 
 
 @dataclass
@@ -232,11 +232,11 @@ class StyleState:
 
     @current_palette.setter
     def current_palette(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_CURRENT_PALETTE', 'palette': dict(value or {})})
-            return
-        setattr(self.app_state, 'current_palette', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_CURRENT_PALETTE', 'palette': dict(value or {})},
+            lambda: setattr(self.app_state, 'current_palette', value),
+        )
 
     @property
     def color_scheme(self) -> Any:
@@ -244,11 +244,11 @@ class StyleState:
 
     @color_scheme.setter
     def color_scheme(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_COLOR_SCHEME', 'color_scheme': value})
-            return
-        setattr(self.app_state, 'color_scheme', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_COLOR_SCHEME', 'color_scheme': value},
+            lambda: setattr(self.app_state, 'color_scheme', value),
+        )
 
     @property
     def custom_primary_font(self) -> Any:
@@ -256,11 +256,11 @@ class StyleState:
 
     @custom_primary_font.setter
     def custom_primary_font(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_CUSTOM_PRIMARY_FONT', 'font_name': str(value or '')})
-            return
-        setattr(self.app_state, 'custom_primary_font', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_CUSTOM_PRIMARY_FONT', 'font_name': str(value or '')},
+            lambda: setattr(self.app_state, 'custom_primary_font', value),
+        )
 
     @property
     def custom_cjk_font(self) -> Any:
@@ -268,11 +268,11 @@ class StyleState:
 
     @custom_cjk_font.setter
     def custom_cjk_font(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_CUSTOM_CJK_FONT', 'font_name': str(value or '')})
-            return
-        setattr(self.app_state, 'custom_cjk_font', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_CUSTOM_CJK_FONT', 'font_name': str(value or '')},
+            lambda: setattr(self.app_state, 'custom_cjk_font', value),
+        )
 
     @property
     def plot_font_sizes(self) -> Any:
@@ -280,11 +280,11 @@ class StyleState:
 
     @plot_font_sizes.setter
     def plot_font_sizes(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_PLOT_FONT_SIZES', 'sizes': dict(value or {})})
-            return
-        setattr(self.app_state, 'plot_font_sizes', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_PLOT_FONT_SIZES', 'sizes': dict(value or {})},
+            lambda: setattr(self.app_state, 'plot_font_sizes', value),
+        )
 
 
 @dataclass
@@ -299,11 +299,11 @@ class InteractionState:
 
     @selection_tool.setter
     def selection_tool(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SELECTION_TOOL', 'tool': value})
-            return
-        setattr(self.app_state, 'selection_tool', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_SELECTION_TOOL', 'tool': value},
+            lambda: setattr(self.app_state, 'selection_tool', value),
+        )
 
     @property
     def selected_indices(self) -> Any:
@@ -311,11 +311,11 @@ class InteractionState:
 
     @selected_indices.setter
     def selected_indices(self, value: Any) -> None:
-        state_store = getattr(self.app_state, 'state_store', None)
-        if state_store is not None:
-            state_store.dispatch({'type': 'SET_SELECTED_INDICES', 'indices': value})
-            return
-        setattr(self.app_state, 'selected_indices', value)
+        dispatch_or_apply(
+            self.app_state,
+            {'type': 'SET_SELECTED_INDICES', 'indices': value},
+            lambda: setattr(self.app_state, 'selected_indices', value),
+        )
 
     @property
     def artist_to_sample(self) -> Any:

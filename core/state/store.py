@@ -3,41 +3,31 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from ._dispatch_handlers import dispatch_action
 from .fields import snapshot_from_state, snapshot_from_store
 from ._normalizers import (
     _normalize_active_subset_indices,
-    _normalize_adjust_text_iter_lim,
-    _normalize_adjust_text_pair,
-    _normalize_adjust_text_time_lim,
-    _normalize_algorithm_params,
-    _normalize_color,
-    _normalize_export_options,
-    _normalize_font_name,
-    _normalize_grid_linestyle,
-    _normalize_kde_auto_bandwidth_method,
-    _normalize_kde_bandwidth,
-    _normalize_kde_kernel,
-    _normalize_pca_component_indices,
-    _normalize_plot_dpi,
-    _normalize_plot_font_sizes,
-    _normalize_plot_marker_alpha,
-    _normalize_plot_marker_size,
-    _normalize_style_linewidth,
-    _normalize_ternary_limit_anchor,
-    _normalize_ternary_limit_mode,
-    _normalize_text_pad,
-    _normalize_text_weight,
-    _normalize_tick_direction,
-    _normalize_tick_length,
-    _normalize_unit_interval,
     _normalize_visible_groups,
     sync_state_store_to_app,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def dispatch_or_apply(owner: Any, action: dict[str, Any], apply: Callable[[], None]) -> None:
+    """Route a state mutation through *owner*'s StateStore.
+
+    Property setters run both before the store exists (during AppState
+    construction) and after it is attached; before that point the mutation is
+    the plain attribute write in *apply*.
+    """
+    store = getattr(owner, 'state_store', None)
+    if store is not None:
+        store.dispatch(action)
+        return
+    apply()
 
 # Runtime-only snapshot fields that the rendering pipeline legitimately
 # writes directly (rebuilt every render / transient artist state); they are
