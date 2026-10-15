@@ -16,6 +16,11 @@ from core.legend_state import wants_inline_legend
 
 logger = logging.getLogger(__name__)
 
+#: Beyond this many entries an in-plot legend stops being readable, so drawing is skipped and said
+#: so. It is a safety limit for pathological data, well above the thirty that used to hide the
+#: legend of any dataset with more groups than that.
+_MAX_INLINE_LEGEND_ENTRIES = 200
+
 
 def legend_order_permutation(labels: list[Any], order_keys: list[Any]) -> list[int]:
     """Indices that reorder *labels* to follow the legend panel's order.
@@ -204,8 +209,15 @@ def _place_inline_legend(
     merged = inline_handles is not None
 
     n_cats = len(draw_labels)
-    if n_cats > 30:
-        logger.debug('Too many categories for standard legend. Use Control Panel legend.')
+    # A safety limit, not a policy: the legend used to stop at thirty entries, so a dataset with
+    # more groups drew no legend at all even when the user asked for one in the plot. Where the
+    # legend goes, and whether it is drawn inside the axes, is decided by legend_position.
+    if n_cats > _MAX_INLINE_LEGEND_ENTRIES:
+        logger.warning(
+            "Not drawing the in-plot legend: %d entries is beyond the %d this drawing handles",
+            n_cats,
+            _MAX_INLINE_LEGEND_ENTRIES,
+        )
         return
 
     inside_location = app_state.legend_position
