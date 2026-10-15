@@ -3,6 +3,7 @@
 import pytest
 
 from core import app_state, state_gateway
+from core.legend_state import DEFAULT_LEGEND_FRAME_ALPHA
 
 
 @pytest.mark.parametrize(
@@ -101,7 +102,7 @@ def test_panel_style_updates_known_key_and_unknown_key() -> None:
     original_title_weight = str(getattr(app_state, "title_weight", "bold"))
     original_title_pad = float(getattr(app_state, "title_pad", 20.0))
     original_legend_frame_on = bool(getattr(app_state, "legend_frame_on", True))
-    original_legend_frame_alpha = float(getattr(app_state, "legend_frame_alpha", 0.95))
+    original_legend_frame_alpha = float(getattr(app_state, "legend_frame_alpha", DEFAULT_LEGEND_FRAME_ALPHA))
     original_legend_frame_facecolor = str(getattr(app_state, "legend_frame_facecolor", "#ffffff"))
     original_legend_frame_edgecolor = str(getattr(app_state, "legend_frame_edgecolor", "#cbd5f5"))
     original_adjust_text_force_text = tuple(

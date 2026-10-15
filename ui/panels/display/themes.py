@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QMessageBox, QWidget
 
 from core import CONFIG, app_state, atomic_write_json, load_themes, state_gateway, translate
 from visualization.plotting.style import configure_constrained_layout
-from core.legend_state import wants_docked_legend
+from core.legend_state import DEFAULT_LEGEND_FRAME_ALPHA, wants_docked_legend
 
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
@@ -19,8 +19,6 @@ REQUIRES_DisplayThemeMixin = (
 )
 
 logger = logging.getLogger(__name__)
-
-_DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 
 class DisplayThemeMixin:
@@ -308,7 +306,7 @@ class DisplayThemeMixin:
             else:
                 state_gateway.set_legend_frame_on(bool(data.get('legend_frame_on', app_state.legend_frame_on)))
             if self.legend_frame_alpha_spin:
-                self.legend_frame_alpha_spin.setValue(float(data.get('legend_frame_alpha', _DEFAULT_LEGEND_FRAME_ALPHA)))
+                self.legend_frame_alpha_spin.setValue(float(data.get('legend_frame_alpha', DEFAULT_LEGEND_FRAME_ALPHA)))
             else:
                 state_gateway.set_legend_frame_alpha(float(data.get('legend_frame_alpha', app_state.legend_frame_alpha)))
             if self.legend_frame_face_edit:

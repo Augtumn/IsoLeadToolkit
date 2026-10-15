@@ -66,45 +66,6 @@ from .fields import sync_fields  # noqa: F401  (re-export)
 
 logger = logging.getLogger(__name__)
 
-# ── Constants ──────────────────────────────────────────────────────────
-
-DEFAULT_EXPORT_IMAGE_OPTIONS = {
-    "preset_key": "science_single",
-    "image_ext": "png",
-    "dpi": 400,
-    "bbox_tight": True,
-    "pad_inches": 0.02,
-    "transparent": False,
-    "point_size": None,
-    "legend_size": None,
-    "embed_fonts": True,
-    "white_background": True,
-}
-DEFAULT_PLOT_FONT_SIZES = {
-    "title": 14,
-    "label": 12,
-    "tick": 10,
-    "legend": 10,
-}
-MIN_EXPORT_DPI = 72
-DEFAULT_LEGEND_FRAME_ALPHA = 0.95
-DEFAULT_CONFIDENCE_LEVEL = 0.95
-MARGINAL_KDE_DEFAULT_KERNEL = "gaussian"
-MARGINAL_KDE_ALLOWED_KERNELS = (
-    "gaussian",
-    "tophat",
-    "epanechnikov",
-    "exponential",
-    "linear",
-    "cosine",
-)
-_KDE_THRESH_DEFAULT = 0.05
-_KDE_THRESH_MIN = 0.001
-_KDE_THRESH_MAX = 1.0
-
-MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD = "scott"
-MARGINAL_KDE_ALLOWED_AUTO_BANDWIDTH_METHODS = ("scott", "silverman")
-
 # ── Normalizer functions ───────────────────────────────────────────────
 
 

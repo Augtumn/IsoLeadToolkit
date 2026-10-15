@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 _LEGEND_OFFSET_EPSILON = 1e-12
-_DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 
 
 def _is_zero_offset(value: float, floor: float = _LEGEND_OFFSET_EPSILON) -> bool:

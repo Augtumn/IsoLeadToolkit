@@ -2,8 +2,7 @@
 
 This module is extracted from store.py to keep the store class under 800 lines.
 The single entry point is ``dispatch_action(store, action)`` — it receives the
-full StateStore instance so it can access ``store._snapshot``, ``store._state``,
-and ``store.DEFAULT_*`` class attributes.
+full StateStore instance so it can access ``store._snapshot`` and ``store._state``.
 """
 
 from __future__ import annotations
@@ -12,6 +11,7 @@ import logging
 from typing import Any
 
 from ..config import CONFIG
+from ..legend_state import DEFAULT_LEGEND_FRAME_ALPHA
 from ._normalizers import (
     _normalize_active_subset_indices,
     _normalize_adjust_text_iter_lim,
@@ -52,6 +52,7 @@ from ._normalizers import (
     _normalize_visible_groups,
     _to_index_set,
 )
+from .coercers import DEFAULT_CONFIDENCE_LEVEL
 
 logger = logging.getLogger(__name__)
 
@@ -314,8 +315,8 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
 
     elif action_type == "SET_LEGEND_FRAME_ALPHA":
         store._snapshot["legend_frame_alpha"] = _normalize_unit_interval(
-            action.get("alpha", store.DEFAULT_LEGEND_FRAME_ALPHA),
-            default=store.DEFAULT_LEGEND_FRAME_ALPHA,
+            action.get("alpha", DEFAULT_LEGEND_FRAME_ALPHA),
+            default=DEFAULT_LEGEND_FRAME_ALPHA,
         )
 
     elif action_type == "SET_LEGEND_FRAME_FACECOLOR":
@@ -428,7 +429,7 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
 
     elif action_type == "SET_CONFIDENCE_LEVEL":
         store._snapshot["confidence_level"] = float(
-            action.get("level", store.DEFAULT_CONFIDENCE_LEVEL)
+            action.get("level", DEFAULT_CONFIDENCE_LEVEL)
         )
 
     elif action_type == "SET_CURRENT_PALETTE":

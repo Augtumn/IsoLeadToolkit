@@ -3,7 +3,8 @@
 from typing import Any
 
 from core import app_state, state_gateway
-from core.state.store import StateStore
+from core.legend_state import DEFAULT_LEGEND_FRAME_ALPHA
+from core.state.coercers import DEFAULT_CONFIDENCE_LEVEL, MIN_EXPORT_DPI
 from visualization.plotting.core import _build_group_palette
 
 
@@ -470,8 +471,8 @@ def test_state_store_uses_named_default_confidence_constants() -> None:
         store.dispatch({"type": "SET_CONFIDENCE_LEVEL"})
 
         snapshot = store.snapshot()
-        assert snapshot["legend_frame_alpha"] == StateStore.DEFAULT_LEGEND_FRAME_ALPHA
-        assert snapshot["confidence_level"] == StateStore.DEFAULT_CONFIDENCE_LEVEL
+        assert snapshot["legend_frame_alpha"] == DEFAULT_LEGEND_FRAME_ALPHA
+        assert snapshot["confidence_level"] == DEFAULT_CONFIDENCE_LEVEL
     finally:
         state_gateway.set_legend_frame_alpha(original_alpha)
         state_gateway.set_confidence_level(original_level)
@@ -1530,7 +1531,7 @@ def test_state_store_export_image_options_roundtrip() -> None:
 
         assert options["preset_key"] == "ieee_single"
         assert options["image_ext"] == "svg"
-        assert options["dpi"] == StateStore.MIN_EXPORT_DPI
+        assert options["dpi"] == MIN_EXPORT_DPI
         assert options["bbox_tight"] is False
         assert options["pad_inches"] == 0.0
         assert options["transparent"] is True
@@ -1544,8 +1545,8 @@ def test_state_store_export_image_options_roundtrip() -> None:
 def test_state_store_plot_dpi_lower_bound_uses_named_constant() -> None:
     snapshot = _snapshot_state()
     try:
-        state_gateway.set_plot_dpi(StateStore.MIN_EXPORT_DPI - 1)
-        assert app_state.plot_dpi == StateStore.MIN_EXPORT_DPI
+        state_gateway.set_plot_dpi(MIN_EXPORT_DPI - 1)
+        assert app_state.plot_dpi == MIN_EXPORT_DPI
     finally:
         _restore_state(snapshot)
 

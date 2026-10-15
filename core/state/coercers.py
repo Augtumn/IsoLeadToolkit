@@ -35,7 +35,6 @@ MIN_EXPORT_DPI = 72
 #: they did not (the spin box stopped at 500 while its tooltip advertised 2000).
 MIN_PLOT_MARKER_SIZE = 1
 MAX_PLOT_MARKER_SIZE = 2000
-DEFAULT_LEGEND_FRAME_ALPHA = 0.95
 DEFAULT_CONFIDENCE_LEVEL = 0.95
 MARGINAL_KDE_DEFAULT_KERNEL = "gaussian"
 MARGINAL_KDE_ALLOWED_KERNELS = (
@@ -51,6 +50,20 @@ _KDE_THRESH_MIN = 0.001
 _KDE_THRESH_MAX = 1.0
 MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD = "scott"
 MARGINAL_KDE_ALLOWED_AUTO_BANDWIDTH_METHODS = ("scott", "silverman")
+
+#: Numeric clamp bounds for the normalizers below.
+_ADJUST_TEXT_ITER_MIN: int = 10
+_ADJUST_TEXT_ITER_MAX: int = 1000
+_ADJUST_TEXT_TIME_MIN: float = 0.05
+_ADJUST_TEXT_TIME_MAX: float = 2.0
+_MARGINAL_SIZE_MIN: float = 5.0
+_MARGINAL_SIZE_MAX: float = 40.0
+_MAX_POINTS_MIN: int = 200
+_MAX_POINTS_MAX: int = 50000
+_BW_ADJUST_MIN: float = 0.05
+_BW_ADJUST_MAX: float = 5.0
+_KDE_BW_MIN: float = 0.0
+_KDE_BW_MAX: float = 10.0
 
 
 def _normalize_export_options(options: Any) -> dict[str, Any]:
@@ -99,13 +112,10 @@ def _normalize_active_subset_indices(indices: Any) -> set[int] | None:
 
 
 def _normalize_algorithm_params(params: Any) -> dict[str, Any]:
-    if isinstance(params, dict):
-        return dict(params)
-    if params is None:
-        return {}
+    """Shallow-copy a parameter mapping; mapping-like rejects become {}."""
     try:
         return dict(params)
-    except Exception:
+    except (TypeError, ValueError):
         return {}
 
 
@@ -296,30 +306,6 @@ def _normalize_ternary_limit_mode(mode: Any) -> str:
 def _normalize_ternary_limit_anchor(anchor: Any) -> str:
     text = str(anchor or "min").strip().lower()
     return text if text in ("min", "max") else "min"
-
-_ADJUST_TEXT_ITER_MIN: int = 10
-
-_ADJUST_TEXT_ITER_MAX: int = 1000
-
-_ADJUST_TEXT_TIME_MIN: float = 0.05
-
-_ADJUST_TEXT_TIME_MAX: float = 2.0
-
-_MARGINAL_SIZE_MIN: float = 5.0
-
-_MARGINAL_SIZE_MAX: float = 40.0
-
-_MAX_POINTS_MIN: int = 200
-
-_MAX_POINTS_MAX: int = 50000
-
-_BW_ADJUST_MIN: float = 0.05
-
-_BW_ADJUST_MAX: float = 5.0
-
-_KDE_BW_MIN: float = 0.0
-
-_KDE_BW_MAX: float = 10.0
 
 
 def _normalize_ternary_boundary_percent(percent: Any) -> float:

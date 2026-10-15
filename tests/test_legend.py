@@ -1,21 +1,17 @@
 """Legend display-entry, parent-inline and styling tests."""
 
-import os
 from typing import Any
 
-import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import pytest
 
 from core import app_state, state_gateway, translate
+from core.legend_state import DEFAULT_LEGEND_FRAME_ALPHA
 from ui.main_window_parts.legend_actions import build_legend_display_entries
 from visualization.plotting.rendering.common import legend as legend_common
 from visualization.plotting.rendering.raw import plot2d
 from visualization.plotting.styling import legend as legend_helpers
 from visualization.plotting.styling.legend import (
-    _DEFAULT_LEGEND_FRAME_ALPHA,
     _legend_columns_for_layout,
     _legend_layout_config,
     _style_legend,
@@ -259,6 +255,7 @@ def test_remove_nested_parent_from_parent(monkeypatch) -> None:
     from ui.main_window_parts.legend_actions import MainWindowLegendActionsMixin
     from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin
 
+    # Assigned to keep the QApplication instance alive for the test.
     app = QApplication.instance() or QApplication([])
 
     class Stub(MainWindowLegendActionsMixin, MainWindowLegendCoreMixin):
@@ -313,6 +310,7 @@ def test_apply_legend_z_order_nested_subtree_shares_root_slot(monkeypatch) -> No
     from core import state_gateway
     from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin
 
+    # Assigned to keep the QApplication instance alive for the test.
     app = QApplication.instance() or QApplication([])
 
     lst = QListWidget()
@@ -369,6 +367,7 @@ def test_apply_legend_z_order_parent_block_shares_slot(monkeypatch) -> None:
     from core import state_gateway
     from ui.main_window_parts.legend_core import MainWindowLegendCoreMixin
 
+    # Assigned to keep the QApplication instance alive for the test.
     app = QApplication.instance() or QApplication([])
 
     lst = QListWidget()
@@ -680,7 +679,7 @@ def test_style_legend_uses_state_frame_alpha(monkeypatch) -> None:
         legend_position = None
         legend_offset = (0.0, 0.0)
         legend_frame_on = True
-        legend_frame_alpha = _DEFAULT_LEGEND_FRAME_ALPHA
+        legend_frame_alpha = DEFAULT_LEGEND_FRAME_ALPHA
         legend_frame_facecolor = "#ffffff"
         legend_frame_edgecolor = "#cbd5f5"
         plot_font_sizes = {"legend": 10, "label": 12}
@@ -692,7 +691,7 @@ def test_style_legend_uses_state_frame_alpha(monkeypatch) -> None:
 
     _style_legend(legend)
 
-    assert legend.get_frame().alpha == _DEFAULT_LEGEND_FRAME_ALPHA
+    assert legend.get_frame().alpha == DEFAULT_LEGEND_FRAME_ALPHA
 
 
 def test_legend_toggle_uses_available_groups() -> None:

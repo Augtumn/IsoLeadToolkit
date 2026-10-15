@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from core.state.coercers import MIN_EXPORT_DPI
+
 SUPPORTED_IMAGE_FORMATS = {"png", "tiff", "pdf", "svg", "eps"}
 DEFAULT_EXPORT_HEIGHT_RATIO = 0.72
-MIN_EXPORT_DPI = 72
 
 
 _IMAGE_EXPORT_PROFILES: dict[str, dict] = {

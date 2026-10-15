@@ -78,51 +78,6 @@ def _warn_direct_mutations(state: Any, snapshot: dict[str, Any]) -> None:
 class StateStore:
     """Manage selected AppState domains through action dispatch."""
 
-    DEFAULT_EXPORT_IMAGE_OPTIONS = {
-        "preset_key": "science_single",
-        "image_ext": "png",
-        "dpi": 400,
-        "bbox_tight": True,
-        "pad_inches": 0.02,
-        "transparent": False,
-        "point_size": None,
-        "legend_size": None,
-    }
-    DEFAULT_PLOT_FONT_SIZES = {
-        "title": 14,
-        "label": 12,
-        "tick": 10,
-        "legend": 10,
-    }
-    MIN_EXPORT_DPI = 72
-    DEFAULT_LEGEND_FRAME_ALPHA = 0.95
-    DEFAULT_CONFIDENCE_LEVEL = 0.95
-    MARGINAL_KDE_DEFAULT_KERNEL = "gaussian"
-    MARGINAL_KDE_ALLOWED_KERNELS = (
-        "gaussian",
-        "tophat",
-        "epanechnikov",
-        "exponential",
-        "linear",
-        "cosine",
-    )
-    MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD = "scott"
-    MARGINAL_KDE_ALLOWED_AUTO_BANDWIDTH_METHODS = ("scott", "silverman")
-
-    # Normalizer clamp bounds
-    _ADJUST_TEXT_ITER_MIN: int = 10
-    _ADJUST_TEXT_ITER_MAX: int = 1000
-    _ADJUST_TEXT_TIME_MIN: float = 0.05
-    _ADJUST_TEXT_TIME_MAX: float = 2.0
-    _MARGINAL_SIZE_MIN: float = 5.0
-    _MARGINAL_SIZE_MAX: float = 40.0
-    _MAX_POINTS_MIN: int = 200
-    _MAX_POINTS_MAX: int = 50000
-    _BW_ADJUST_MIN: float = 0.05
-    _BW_ADJUST_MAX: float = 5.0
-    _KDE_BW_MIN: float = 0.0
-    _KDE_BW_MAX: float = 10.0
-
     def __init__(self, state: Any) -> None:
         self._state = state
         self._dispatch_hook = None
