@@ -193,7 +193,7 @@ class OverlayState:
         instances (unit tests) work as well.
         """
         # Lazy import to avoid circular dependency at module load time.
-        from core.state.gateway import state_gateway  # noqa: E402
+        from core.state.gateway import state_gateway
 
         state_gateway.set_overlay_artists({})
         state_gateway.set_overlay_curve_label_data([])

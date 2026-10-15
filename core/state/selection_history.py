@@ -6,7 +6,8 @@ minimal: only the selection, only the destructive operations, no general command
 """
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 #: How many previous selections are kept.
 DEFAULT_DEPTH = 20

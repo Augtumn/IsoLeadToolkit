@@ -52,7 +52,6 @@ class StateField:
 
 #: Every field whose plumbing comes from this registry.
 SIMPLE_FIELDS: tuple[StateField, ...] = (
-    # ── migrated earlier ──
     StateField(
         "ternary_auto_zoom",
         True,
