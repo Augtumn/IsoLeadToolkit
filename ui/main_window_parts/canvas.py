@@ -97,6 +97,49 @@ def _scatter_bounds(axis):
     return xs, ys, zs
 
 
+def refresh_panel_labels(axes=None) -> None:
+    """Lay every panel's overlay labels out again for the view it now has.
+
+    Only the labels: a full re-render recomputes the axes from the data and throws the user's zoom
+    away. The label data is one list of text artists belonging to different figures, so the panels
+    to refresh are found from the artists themselves, each laid out on its own axes.
+
+    A module function because both the window (during a fit) and the event filter (after a wheel or
+    a drag) need it, and one implementation is what keeps them in step.
+    """
+    try:
+        from visualization.plotting import refresh_paleoisochron_labels
+
+        targets = []
+        if axes is not None:
+            targets.append(axes)
+        for state in list(getattr(app_state, "plot_panel_states", []) or []):
+            panel_axes = state.get("ax") if isinstance(state, dict) else None
+            if panel_axes is not None and panel_axes not in targets:
+                targets.append(panel_axes)
+        for entry in list(getattr(app_state, "paleoisochron_label_data", None) or []):
+            text = entry.get("text") if isinstance(entry, dict) else None
+            owner = getattr(text, "axes", None)
+            if owner is not None and owner not in targets:
+                targets.append(owner)
+        for target in targets:
+            refresh_paleoisochron_labels(ax=target)
+        # Repaint every panel whose labels were just moved: a label that moves without its canvas
+        # being redrawn leaves the panel showing its old buffer, which looks blank until something
+        # else triggers a repaint.
+        for target in targets:
+            figure = getattr(target, "figure", None)
+            canvas = getattr(figure, "canvas", None)
+            if canvas is not None:
+                try:
+                    canvas.draw_idle()
+                except Exception as err:
+                    logger.warning("Could not repaint a panel after moving its labels: %s", err)
+        logger.info("Labels refreshed for %d panel(s)", len(targets))
+    except Exception as err:
+        logger.warning("Could not refresh the labels for the panel: %s", err)
+
+
 class MainWindowCanvasMixin:
     """Canvas and toolbar behavior for main window."""
     _selection_tool_actions = None
@@ -647,10 +690,10 @@ class MainWindowCanvasMixin:
                     canvas.draw_idle()
                 except Exception as err:
                     logger.warning("Could not redraw after fitting: %s", err)
+        refresh_panel_labels()
         logger.info("Fitted %d of %d panel(s) to the data", fitted, len(axes))
-        # Fitting changes every panel's limits, so their labels are laid out again for the new view;
-        # leaving this to a later render is what left them where the previous view had put them.
-        self._refresh_labels_for()
+        # Fitting changes every panel's limits, so their labels are laid out again for the new view.
+        refresh_panel_labels()
 
     def _build_panel_windows(self, modes) -> list:
         """Show one independent child window per panel; the records, or [] if impossible."""
@@ -921,6 +964,9 @@ class TernaryZoomEventFilter(QObject):
             figure = getattr(axes, "figure", None)
             if figure is not None:
                 figure.canvas.draw_idle()
+            # The labels belong to the view that was just changed, so they are laid out again for
+            # it; a zoom that moves the view but not the labels leaves them behind.
+            refresh_panel_labels(axes)
         except Exception as err:
             logger.warning("Could not zoom the panel: %s", err)
 
@@ -959,8 +1005,14 @@ class TernaryZoomEventFilter(QObject):
                 self._remember_ternary_limits(limits)
             else:
                 zoom_cartesian(axes, factor, coords[0], coords[1])
-            if self._canvas is not None:
-                self._canvas.draw_idle()
+            # The axes can belong to another panel than the canvas this filter was built with, so
+            # the canvas to redraw is the axes' own - redrawing the filter's left a pan in any other
+            # panel invisible, which is the reported "only the first window responds".
+            figure = getattr(axes, "figure", None)
+            own_canvas = getattr(figure, "canvas", None)
+            if own_canvas is not None:
+                own_canvas.draw_idle()
+            refresh_panel_labels(axes)
         except Exception as err:
             logger.warning("Wheel zoom failed: %s", err)
 
@@ -989,8 +1041,14 @@ class TernaryZoomEventFilter(QObject):
                 self._remember_ternary_limits(limits)
             else:
                 pan_cartesian(axes, -dx, -dy)
-            if self._canvas is not None:
-                self._canvas.draw_idle()
+            # The axes can belong to another panel than the canvas this filter was built with, so
+            # the canvas to redraw is the axes' own - redrawing the filter's left a pan in any other
+            # panel invisible, which is the reported "only the first window responds".
+            figure = getattr(axes, "figure", None)
+            own_canvas = getattr(figure, "canvas", None)
+            if own_canvas is not None:
+                own_canvas.draw_idle()
+            refresh_panel_labels(axes)
         except Exception as err:
             logger.warning("Pan failed: %s", err)
         self._pan_from = current
@@ -1274,9 +1332,11 @@ class TernaryZoomEventFilter(QObject):
             logger.warning("Failed to apply ternary zoom (Qt): %s", err)
             return
         # The canvas needs a repaint, not a fresh render: the zoom would survive a render now, but a
-        # repaint is all this gesture asks for.
-        if self._canvas is not None:
-            self._canvas.draw_idle()
+        # repaint is all this gesture asks for. The axes' own canvas, since the gesture can be on
+        # any panel while this filter was built with one.
+        own_canvas = getattr(getattr(axes, "figure", None), "canvas", None)
+        if own_canvas is not None:
+            own_canvas.draw_idle()
 
     def _reset_ternary_view(self, axes) -> None:
         """Undo the zoom: the whole triangle again, labelled with the range the data implies."""
