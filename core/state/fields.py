@@ -236,7 +236,7 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
     ),
     StateField(
         "export_image_options",
-        {'preset_key': 'science_single', 'image_ext': 'png', 'dpi': 400, 'bbox_tight': True, 'pad_inches': 0.02, 'transparent': False, 'point_size': None, 'legend_size': None, 'embed_fonts': True, 'white_background': True},
+        dict(coercers.DEFAULT_EXPORT_IMAGE_OPTIONS),
         normalize=coercers._normalize_export_options,
         copy=dict,
         holder=None,
