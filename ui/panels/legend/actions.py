@@ -109,15 +109,25 @@ class LegendActionsMixin:
         state_gateway.set_legend_nudge_step(step)
 
     def _nudge_legend(self, dx, dy):
-        if app_state.fig is None or app_state.ax is None:
+        """Nudge the legend of the panel in use.
+
+        The offset is kept with that panel: the single-figure references it used to guard on are a
+        mirror of one panel and can be unset while a panel is on screen, which made the nudge
+        report "no plot figure is initialized" and do nothing.
+        """
+        records = list(getattr(app_state, "plot_panel_windows", None) or [])
+        panel = next((record for record in records if record.get("active")), records[0] if records else None)
+        if panel is None and (app_state.fig is None or app_state.ax is None):
             logger.warning("Nudge ignored: no plot figure is initialized")
             return
-        current = app_state.legend_offset
+        current = panel.get("legend", {}).get("legend_offset", app_state.legend_offset) if panel else app_state.legend_offset
         try:
             new_offset = (float(current[0]) + float(dx), float(current[1]) + float(dy))
         except Exception:
             new_offset = (0.0, 0.0)
         state_gateway.set_legend_offset(new_offset)
+        if panel is not None:
+            record_panel_legend(legend_offset=new_offset)
         try:
             from visualization import refresh_plot_style
             refresh_plot_style()

@@ -157,6 +157,9 @@ class RenderPlotUseCase:
                         state_gateway.set_legend_location(legend["legend_location"])
                     if "legend_position" in legend:
                         state_gateway.set_legend_position(legend["legend_position"])
+                    # The nudge is that panel's own too, so a panel keeps the placement it was given.
+                    if "legend_offset" in legend:
+                        state_gateway.set_legend_offset(legend["legend_offset"])
                 except Exception as err:
                     logger.warning("Could not apply a panel's legend style: %s", err)
             self._state.scatter_collections.clear()
