@@ -2,23 +2,30 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections import OrderedDict
-from typing import Any, Hashable, Iterable, Tuple
+from collections.abc import Hashable, Iterable
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 #: Memoized data signatures keyed by (id(df), data_version, row count).
 #: ``build_data_signature`` recomputes per-column means on every call and is
 #: called twice per render; this keeps that off the hot path.
-_SIGNATURE_CACHE: dict[Tuple[int, int, int], Tuple[Any, ...]] = {}
+_SIGNATURE_CACHE: dict[tuple[int, int, int], tuple[Any, ...]] = {}
 
 
 def _normalize_params(params: Any) -> str:
     try:
         return json.dumps(params, sort_keys=True, default=str)
-    except Exception:
+    except Exception as exc:
+        # Circular references are the one thing default=str cannot handle;
+        # the degraded key is honest but worth a trace.
+        logger.warning("Cannot serialize cache-key params, using str(): %s", exc)
         return str(params)
 
 
-def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
+def build_data_signature(app_state: Any) -> tuple[Any, ...]:
     df = app_state.df_global
     shape = (len(df), len(df.columns)) if df is not None else (0, 0)
     data_version = int(app_state.data_version or 0)
@@ -33,7 +40,7 @@ def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
     group_cols = tuple(app_state.group_cols or [])
     # Lightweight content probe: column names plus per-column means. This
     # catches same-shape files whose values changed without a version bump.
-    content_probe: Tuple[Any, ...] = ()
+    content_probe: tuple[Any, ...] = ()
     if df is not None and len(df) > 0:
         try:
             columns = tuple(str(c) for c in df.columns)
@@ -55,7 +62,7 @@ def build_data_signature(app_state: Any) -> Tuple[Any, ...]:
     return signature
 
 
-def build_embedding_cache_key(app_state: Any, algorithm: str, params: Any, subset_key: Hashable) -> Tuple[Any, ...]:
+def build_embedding_cache_key(app_state: Any, algorithm: str, params: Any, subset_key: Hashable) -> tuple[Any, ...]:
     signature = build_data_signature(app_state)
     return (
         'embed',
