@@ -519,6 +519,14 @@ class MainWindowCanvasMixin:
             panel = getattr(dialog, "section_panel", None)
             if panel is not None and hasattr(panel, "sync_render_mode"):
                 panel.sync_render_mode(mode)
+            # The legend panel shows the placement of the panel in use, the same way.
+            try:
+                legend_dialog = self._section_dialogs.get("legend")
+            except AttributeError:
+                legend_dialog = None
+            legend_panel = getattr(legend_dialog, "section_panel", None)
+            if legend_panel is not None and hasattr(legend_panel, "sync_legend_from_panel"):
+                legend_panel.sync_legend_from_panel(record)
             state_gateway.set_figure(record["figure"])
             state_gateway.set_axis(record["axes"])
             state_gateway.set_canvas(record["canvas"])

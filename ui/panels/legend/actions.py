@@ -100,6 +100,18 @@ class LegendActionsMixin:
         state_gateway.set_legend_columns(columns)
         self._on_change()
 
+    def sync_legend_from_panel(self, panel) -> None:
+        """Show the legend placement of the panel in use.
+
+        Display only: the panel keeps what it has, and this stops the controls showing another
+        panel's placement after the focus moves.
+        """
+        legend = (panel or {}).get("legend") or {}
+        inside = legend.get("legend_position", app_state.legend_position)
+        outside = legend.get("legend_location", app_state.legend_location)
+        self._set_legend_inside_position_button(inside)
+        self._set_legend_outside_position_button(outside)
+
     def _on_nudge_step_change(self, value):
         try:
             step = float(value)
