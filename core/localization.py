@@ -1,15 +1,20 @@
 """Localization utilities for handling multi-language support."""
+from __future__ import annotations
+
 import json
-from typing import Any, Dict
+import logging
+from typing import Any
 
 from .config import CONFIG, LOCALES_DIR
 
-_TRANSLATIONS: Dict[str, Dict[str, str]] = {}
+logger = logging.getLogger(__name__)
+
+_TRANSLATIONS: dict[str, dict[str, str]] = {}
 _FALLBACK_LANGUAGE = CONFIG.get('default_language', 'en')
 _LOCALES_DIR = LOCALES_DIR
 
 
-def available_languages() -> Dict[str, str]:
+def available_languages() -> dict[str, str]:
     """Return mapping of language codes to human-readable labels."""
     return CONFIG.get('languages', {})
 
@@ -36,7 +41,7 @@ def ensure_language(language: str) -> None:
     _load_language(language)
 
 
-def translate(text: str, language: str = None, **kwargs: Any) -> str:
+def translate(text: str, language: str | None = None, **kwargs: Any) -> str:
     """Translate the provided text into the requested language.
 
     Args:
@@ -55,6 +60,12 @@ def translate(text: str, language: str = None, **kwargs: Any) -> str:
         try:
             from .state import app_state  # Lazy import to avoid circular import
         except Exception:
+            # Reached only while core.state is still initializing (translate can be
+            # called from module-level code); a broken install raises elsewhere.
+            logger.warning(
+                'core.state unavailable while translating %r, using %s',
+                text, _FALLBACK_LANGUAGE,
+            )
             app_state = None
         if app_state is not None:
             language = app_state.language
@@ -97,6 +108,7 @@ def set_language(language: str) -> bool:
     try:
         from .state import app_state, state_gateway  # Lazy import to avoid circular import
     except Exception:
+        logger.warning('core.state unavailable, language left unchanged (requested %s)', language)
         return False
 
     state_gateway.set_language_code(language)
@@ -106,7 +118,7 @@ def set_language(language: str) -> bool:
     return True
 
 
-def translation_table(language: str) -> Dict[str, str]:
+def translation_table(language: str) -> dict[str, str]:
     """Read-only view of the loaded table for *language*.
 
     The UI layer needs the table itself to translate a widget tree in place by matching the
