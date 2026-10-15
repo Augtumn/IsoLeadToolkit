@@ -81,6 +81,13 @@ class RenderPlotUseCase:
                 selected_columns_3d,
             )
         else:
+            # The columns are validated for every mode a panel actually uses. Doing it once for the
+            # mirrored mode meant a panel set to Ternary never had its columns defaulted, and the
+            # compute reported "Ternary columns not selected" while that panel drew nothing.
+            for panel_mode in dict.fromkeys(panels):
+                self._validate_render_columns(
+                    panel_mode, selected_columns_2d, selected_columns_3d
+                )
             rendered_ok, pending_async = self._render_panels(
                 panels,
                 group_col,
