@@ -11,14 +11,17 @@ Provides:
 """
 
 from __future__ import annotations
-import re
 
 import logging
 import os
+import re
 import sys
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import TextIO
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_LOG_FILENAME = "isotopes_analyse.log"
 ERROR_LOG_FILENAME = "isotopes_analyse.error.log"
@@ -64,6 +67,9 @@ class _ColorFormatter(logging.Formatter):
 
 
 def _stderr_is_tty() -> bool:
+    # Probing must stay silent: this runs inside the log formatter itself, so
+    # any logging here would recurse. "Not a tty" is also the correct answer
+    # when the probe is impossible.
     try:
         return bool(sys.stderr.isatty())
     except Exception:
@@ -143,13 +149,11 @@ def _archive_previous_log(log_path: Path, keep: int = DEFAULT_ARCHIVE_KEEP) -> N
     if not log_path.exists():
         return
     try:
-        import time
-
         stamp = time.strftime("%Y%m%d-%H%M%S")
         archived = log_path.with_name(f"{log_path.stem}.{stamp}{log_path.suffix}")
         log_path.replace(archived)
     except OSError as exc:
-        logging.getLogger(__name__).warning("Failed to archive previous log: %s", exc)
+        logger.warning("Failed to archive previous log: %s", exc)
         return
 
     # Cap archived files (oldest first, lexicographic == chronological).
@@ -158,7 +162,7 @@ def _archive_previous_log(log_path: Path, keep: int = DEFAULT_ARCHIVE_KEEP) -> N
         for old in siblings[:-keep] if keep > 0 else siblings:
             old.unlink(missing_ok=True)
     except OSError as exc:
-        logging.getLogger(__name__).warning("Failed to prune old archives: %s", exc)
+        logger.warning("Failed to prune old archives: %s", exc)
 
 
 def enable_warning_capture() -> None:
@@ -169,7 +173,6 @@ def enable_warning_capture() -> None:
     """
     logging.captureWarnings(True)
     logging.getLogger("py.warnings").setLevel(logging.WARNING)
-
 
 
 def setup_logging(
@@ -251,23 +254,24 @@ def setup_logging(
         logging.getLogger('PIL').setLevel(logging.WARNING)
 
         # ---- stdout/stderr capture ----
-        logger = logging.getLogger('AppLogger')
-        logger.setLevel(logging.DEBUG)
-        logger.propagate = False
-        # AppLogger writes to the same file+console handlers without recursion.
-        logger.handlers = [file_handler, error_handler, console_handler]
+        # AppLogger writes to the same file+console handlers without recursion;
+        # keep it distinct from the module logger so the except path stays safe.
+        app_logger = logging.getLogger('AppLogger')
+        app_logger.setLevel(logging.DEBUG)
+        app_logger.propagate = False
+        app_logger.handlers = [file_handler, error_handler, console_handler]
 
         # Redirect stdout and stderr. Warnings must not be logged as errors, so
         # they are routed into logging before the streams are taken over.
         enable_warning_capture()
-        sys.stdout = LoggerWriter(logger, logging.INFO, sys.__stdout__)
-        sys.stderr = LoggerWriter(logger, logging.ERROR, sys.__stderr__)
+        sys.stdout = LoggerWriter(app_logger, logging.INFO, sys.__stdout__)
+        sys.stderr = LoggerWriter(app_logger, logging.ERROR, sys.__stderr__)
 
-        logging.getLogger(__name__).info(
+        logger.info(
             "Logging initialized. Main log: %s | Error log: %s | Level: %s",
             os.path.abspath(log_path),
             os.path.abspath(error_path),
             logging.getLevelName(log_level),
         )
     except Exception as e:
-        logging.getLogger(__name__).error("Failed to setup logging: %s", e)
+        logger.error("Failed to setup logging: %s", e)
