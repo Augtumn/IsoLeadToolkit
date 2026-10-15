@@ -6,6 +6,64 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
+# The coercion helpers live in core/state/coercers.py (shared with the field
+# registry in core/state/fields.py); re-exported here for the existing
+# importers (store, dispatch handlers).
+from .coercers import (  # noqa: F401  (re-export)
+    _ADJUST_TEXT_ITER_MAX,
+    _ADJUST_TEXT_ITER_MIN,
+    _ADJUST_TEXT_TIME_MAX,
+    _ADJUST_TEXT_TIME_MIN,
+    _BW_ADJUST_MAX,
+    _BW_ADJUST_MIN,
+    _KDE_BW_MAX,
+    _KDE_BW_MIN,
+    _MARGINAL_SIZE_MAX,
+    _MARGINAL_SIZE_MIN,
+    _MAX_POINTS_MAX,
+    _MAX_POINTS_MIN,
+    _normalize_active_subset_indices,
+    _normalize_adjust_text_iter_lim,
+    _normalize_adjust_text_pair,
+    _normalize_adjust_text_time_lim,
+    _normalize_algorithm_params,
+    _normalize_bw_adjust,
+    _normalize_clip_bound,
+    _normalize_color,
+    _normalize_cut,
+    _normalize_export_options,
+    _normalize_font_name,
+    _normalize_grid_linestyle,
+    _normalize_gridsize,
+    _normalize_kde_auto_bandwidth_method,
+    _normalize_kde_bandwidth,
+    _normalize_kde_kernel,
+    _normalize_kde_thresh,
+    _normalize_locked_axis_limits,
+    _normalize_marginal_size,
+    _normalize_max_points,
+    _normalize_pca_component_indices,
+    _normalize_plot_dpi,
+    _normalize_plot_font_sizes,
+    _normalize_plot_marker_alpha,
+    _normalize_plot_marker_size,
+    _normalize_style_linewidth,
+    _normalize_ternary_boundary_percent,
+    _normalize_ternary_limit_anchor,
+    _normalize_ternary_limit_mode,
+    _normalize_ternary_manual_limits,
+    _normalize_ternary_render_margin,
+    _normalize_text_pad,
+    _normalize_text_weight,
+    _normalize_tick_direction,
+    _normalize_tick_length,
+    _normalize_unit_interval,
+    _normalize_visible_groups,
+)
+
+# The field → snapshot write-back loop lives in core/state/fields.py.
+from .fields import sync_fields  # noqa: F401  (re-export)
+
 logger = logging.getLogger(__name__)
 
 # ── Constants ──────────────────────────────────────────────────────────
@@ -47,8 +105,6 @@ _KDE_THRESH_MAX = 1.0
 MARGINAL_KDE_DEFAULT_AUTO_BANDWIDTH_METHOD = "scott"
 MARGINAL_KDE_ALLOWED_AUTO_BANDWIDTH_METHODS = ("scott", "silverman")
 
-# Normalizer clamp bounds
-
 # ── Normalizer functions ───────────────────────────────────────────────
 
 
@@ -60,99 +116,6 @@ def _to_index_set(indices: Any) -> set[int]:
     if isinstance(indices, Iterable) and not isinstance(indices, (str, bytes)):
         return {int(v) for v in indices}
     return {int(indices)}
-
-
-# The ternary coercers live with their declarations in core/state/fields.py;
-# they stay importable from here for the dispatch handlers.
-
-# The coercion helpers live in core/state/coercers.py so the field registry and the
-# normalizers can share them; re-exported here for existing importers.
-from .fields import sync_fields  # noqa: F401  (re-export)
-from .coercers import (  # noqa: F401  (re-export)
-    _normalize_ternary_render_margin,
-    _normalize_ternary_manual_limits,
-    _normalize_ternary_boundary_percent,
-    _ADJUST_TEXT_ITER_MIN,
-    _ADJUST_TEXT_ITER_MAX,
-    _ADJUST_TEXT_TIME_MIN,
-    _ADJUST_TEXT_TIME_MAX,
-    _MARGINAL_SIZE_MIN,
-    _MARGINAL_SIZE_MAX,
-    _MAX_POINTS_MIN,
-    _MAX_POINTS_MAX,
-    _BW_ADJUST_MIN,
-    _BW_ADJUST_MAX,
-    _KDE_BW_MIN,
-    _KDE_BW_MAX,
-    _normalize_active_subset_indices,
-    _normalize_adjust_text_iter_lim,
-    _normalize_adjust_text_pair,
-    _normalize_adjust_text_time_lim,
-    _normalize_algorithm_params,
-    _normalize_bw_adjust,
-    _normalize_clip_bound,
-    _normalize_color,
-    _normalize_cut,
-    _normalize_export_options,
-    _normalize_font_name,
-    _normalize_grid_linestyle,
-    _normalize_gridsize,
-    _normalize_kde_auto_bandwidth_method,
-    _normalize_kde_bandwidth,
-    _normalize_kde_kernel,
-    _normalize_locked_axis_limits,
-    _normalize_kde_thresh,
-    _normalize_marginal_size,
-    _normalize_max_points,
-    _normalize_pca_component_indices,
-    _normalize_plot_dpi,
-    _normalize_plot_font_sizes,
-    _normalize_plot_marker_alpha,
-    _normalize_plot_marker_size,
-    _normalize_style_linewidth,
-    _normalize_ternary_limit_anchor,
-    _normalize_ternary_limit_mode,
-    _normalize_text_pad,
-    _normalize_text_weight,
-    _normalize_tick_direction,
-    _normalize_tick_length,
-    _normalize_unit_interval,
-    _normalize_visible_groups,
-    _normalize_export_options,
-    _normalize_visible_groups,
-    _normalize_active_subset_indices,
-    _normalize_algorithm_params,
-    _normalize_plot_marker_size,
-    _normalize_plot_marker_alpha,
-    _normalize_plot_dpi,
-    _normalize_font_name,
-    _normalize_plot_font_sizes,
-    _normalize_color,
-    _normalize_style_linewidth,
-    _normalize_unit_interval,
-    _normalize_grid_linestyle,
-    _normalize_tick_direction,
-    _normalize_tick_length,
-    _normalize_text_weight,
-    _normalize_text_pad,
-    _normalize_adjust_text_pair,
-    _normalize_adjust_text_iter_lim,
-    _normalize_adjust_text_time_lim,
-    _normalize_marginal_size,
-    _normalize_max_points,
-    _normalize_bw_adjust,
-    _normalize_kde_bandwidth,
-    _normalize_kde_kernel,
-    _normalize_kde_auto_bandwidth_method,
-    _normalize_gridsize,
-    _normalize_kde_thresh,
-    _normalize_clip_bound,
-    _normalize_cut,
-    _normalize_pca_component_indices,
-    _normalize_ternary_limit_mode,
-    _normalize_ternary_limit_anchor,
-)
-
 
 
 # ── Sync logic ─────────────────────────────────────────────────────────
