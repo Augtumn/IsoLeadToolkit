@@ -30,6 +30,25 @@
 - 分组列指定、分组显隐与配色/形状自定义
 - 大表友好：分组数不设上限（图例面板可搜索、可滚动）
 
+### 数据录入（TerraLID 元数据）
+
+按 [TerraLID Metadata Profile](https://terralid.github.io/metadata/)（铅同位素数据的社区报告格式，
+CC-BY-4.0）录入数据 —— **录入面就是 Excel**：
+
+- **生成模板**：`文件 → 数据录入（Excel）...`（`Ctrl+N`）或
+  `python scripts/build_entry_workbook.py` → 30 张表（11 主表 + 6 可复用块表 + 9 明细行表 +
+  4 张信息表），双层表头、冻结窗格、**受控词表下拉**、必填列红底条件格式、每列带定义/允许值/示例批注
+- **字段定义来自档案**：5 个实体模块（Site→Assemblage→Object→Sample→Analysis，247 个自有字段）
+  + 6 个可复用块（B1–B6，61 个字段）+ 5 个材料专属模块（矿石/玻璃/金属/钱币/颜料）；
+  模板由注册表生成，档案升版重跑即可，不会漂移
+- **校验**：必填、受控词表、数值/日期/σ/比值名、值域（经纬度）、字段联动（年代类型 ↔ 文化单元/造山运动）、
+  主外键完整性与块表归属 —— 问题回写到 `99_CHECK` 表并可在应用内按工作表分组查看
+- **自动补齐**：只需录入 3 个主比值（206/204、207/204、208/204），工具按**因子链**推导其余 5 个
+  比值（`source=calculated`）、换算绝对↔相对不确定度（一阶误差传播），并用内置地球化学引擎
+  （SK75 / CR75 / AJ84）反演 `A15` 的 Tmod / μ / κ / ω
+- **安全落盘**：导入先校验，**有错误只写报告不改数据**；写盘前自动生成
+  `<name>.bak-<时间戳>.xlsx` 备份，并以"临时文件 + 原子替换"落盘
+
 ### 可视化类型
 
 | 模式 | 说明 |
@@ -157,6 +176,7 @@ uv run pyinstaller build.spec    # → dist/IsotopesAnalyse/
 | 文档 | 内容 |
 |------|------|
 | [docs/architecture.md](docs/architecture.md) | 分层架构、状态管理、目录结构、质量守卫与工程约定 |
+| [docs/metadata_profile.md](docs/metadata_profile.md) | TerraLID 元数据档案概览、分表规则、三步录入流程、易错点与已知限制 |
 | [docs/dev_conventions.md](docs/dev_conventions.md) | 编码与提交约定、类型注解、输入事件归属 |
 | [docs/visualization.md](docs/visualization.md) | 渲染管线与三元视图细节 |
 | [docs/export.md](docs/export.md) | 图像预设、字体嵌入、Origin 导出路径 |

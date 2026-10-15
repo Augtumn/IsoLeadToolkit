@@ -6,13 +6,13 @@
 
 | 指标 | 数值 |
 |------|------|
-| Python 代码总量 | ~54,400 行 |
-| 模块数 | 9 个主目录（core/data/ui/visualization/application/plugins/utils/scripts/tests） |
-| Python 文件数 | 301 个 |
-| 对话框数 | 15+ 个 |
+| Python 代码总量 | ~62,000 行 |
+| 模块数 | 10 个主目录（core/data/ui/visualization/application/plugins/utils/locales/scripts/tests） |
+| Python 文件数 | 336 个 |
+| 对话框数 | 16+ 个 |
 | 支持算法 | UMAP, t-SNE, PCA, RobustPCA, V1V2 |
 | 图类型 | 8+ 种 |
-| 语言支持 | 中文/英文（1152 键） |
+| 语言支持 | 中文/英文（949 键） |
 
 ---
 
@@ -83,16 +83,18 @@ Excel/CSV 文件
 
 ## 各模块文档索引
 
-| 模块 | 文档路径 | 行数（2026-09 实测，含空行） | 备注 |
+| 模块 | 文档路径 | 行数（实测，含空行） | 备注 |
 |------|----------|------|------|
-| core/ | — | 6,457 | 含 state/ 子包（store 829, gateway 808, app_state 899, _normalizers 537, _views 326, _panel_style_handlers 187, _dispatch_handlers 838, bootstrap 227）、persistence/、session/（io 单一入口） |
-| data/ | [docs/data.md](data.md) | 2,578 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型 |
-| ui/ | [docs/ui.md](ui.md) | 17,803 | 103 文件（每段一个面板包；无 500 行以上的文件） |
-| application/ | [docs/export.md](export.md) | 2,834 | 用例层（13 use cases） |
-| visualization/ | [docs/visualization.md](visualization.md) | 9,113 | 65 文件 |
-| utils/ | [docs/utils.md](utils.md) | 252 | |
-| plugins/ | [docs/plugins.md](plugins.md) | 1,933 | 插件系统（6 内置） |
-| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 10,095 | 31 文件，401 用例（按子系统组织） |
+| core/ | — | 6,445 | 含 state/ 子包（store 829, gateway 808, app_state 899, _normalizers 537, _views 326, _panel_style_handlers 187, _dispatch_handlers 838, bootstrap 227）、persistence/、session/（io 单一入口） |
+| data/ | [docs/data.md](data.md) | 7,506 | 地球化学逻辑已迁入 plugins/builtins/*_plugin.py；含 Albarède & Juteau (1984) T–μ–κ 模型、`metadata_profile/`（TerraLID 元数据注册表与数据录入，见 [docs/metadata_profile.md](metadata_profile.md)） |
+| ui/ | [docs/ui.md](ui.md) | 16,433 | 106 文件（每段一个面板包；无 500 行以上的文件） |
+| application/ | [docs/export.md](export.md) | 3,501 | 用例层（14 use cases，含 `entry_workbook.py`） |
+| visualization/ | [docs/visualization.md](visualization.md) | 8,147 | 68 文件 |
+| utils/ | [docs/utils.md](utils.md) | 234 | |
+| plugins/ | [docs/plugins.md](plugins.md) | 1,624 | 插件系统（6 内置） |
+| scripts/ | — | 2,519 | 守卫脚本 / 发布检查 / 脚手架 / 录入工作簿生成器 |
+| tests/ | [docs/dev_conventions.md](dev_conventions.md) §13 | 15,080 | 66 文件，1665 用例（按子系统组织） |
+| locales/ | — | 477 | `en.json` / `zh.json`（各 949 键）+ `runtime_keys.py`（运行时消息键登记） |
 
 ---
 
@@ -130,7 +132,8 @@ IsotopesAnalyse/
 │   └── cache.py            # LRU 嵌入缓存
 ├── adapters/               # 文件 IO：数据集读取 / 方铅矿工作簿 / 录入工作簿读写
 ├── data/
-│   └── geochemistry/       # 地球化学计算 (engine, age, source, delta, isochron)
+│   ├── geochemistry/       # 地球化学计算 (engine, age, source, delta, isochron)
+│   └── metadata_profile/   # TerraLID 元数据注册表 + 录入工作簿布局/校验/IO
 ├── plugins/                # 插件系统（api / manager / registry / builtins / examples）
 ├── ui/
 │   ├── main_window.py      # 主窗口（组合根由 ui/factory.py 提供）
@@ -143,11 +146,30 @@ IsotopesAnalyse/
 │   ├── embedding_worker.py # QThread 异步嵌入
 │   ├── event_handlers/     # 选择/指针/图例事件
 │   └── plotting/           # 渲染管线 (rendering/geochem/styling)
-├── locales/                # en.json / zh.json
-├── scripts/                # 守卫脚本 / 发布检查 / 脚手架
+├── locales/                # en.json / zh.json + runtime_keys.py（运行时消息键）
+├── scripts/                # 守卫脚本 / 发布检查 / 脚手架 / 录入工作簿生成器
 ├── tests/                  # 测试与真实窗口夹具
 └── docs/                   # 本目录
 ```
+
+## 数据录入（TerraLID 元数据）
+
+铅同位素字段定义来自 `reference/metadata`（TerraLID Metadata Profile，CC-BY-4.0）：
+5 个实体模块（Site→Assemblage→Object→Sample→Analysis，自有 247 字段）+ 6 个可复用块
+（B1–B6，61 字段）+ 5 个材料专属模块。
+
+**录入面是 Excel，Python 作守门人，本应用只做薄启动器**：档案本质是关系型表格（固定字段集 +
+主外键 + 1–n 重复组），而本工程的数据本来就在 xlsx 里；但 Excel 无法硬性阻止缺必填/错词表/
+悬空外键，也无法在单张宽表里表达 1–n，更无法推导比值与反演年龄参数 —— 那部分由
+`data/metadata_profile/` 承担。
+
+| 环节 | 入口 |
+|------|------|
+| 生成录入模板 | `scripts/build_entry_workbook.py`（30 张表；表头/词表/格式全部由注册表生成，档案升版不漂移） |
+| 校验（只读）/ 导入（补齐+回写+备份） | `application/use_cases/entry_workbook.py` |
+| 应用内入口 | 「文件 → 数据录入（Excel）…」（`Ctrl+N`）→ `ui/dialogs/entry_workbook.py` |
+
+细节（分表规则、字段规模、易错点、已知限制）见 [docs/metadata_profile.md](metadata_profile.md)。
 
 ## 质量守卫
 

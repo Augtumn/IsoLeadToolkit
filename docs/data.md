@@ -12,6 +12,7 @@
 |------|------|------|
 | `__init__.py` | 30 | 模块入口，PEP 562 懒加载导出地球化学 API |
 | `geochemistry/` | 1,861 | 铅同位素地球化学计算引擎 (拆分模块) |
+| `metadata_profile/` | 5,204 | TerraLID 元数据注册表：字段/词表/校验/比值推导/工作簿布局与 IO（见 §6） |
 | `plumbotectonics_data.py` | 98 | Plumbotectonics 曲线数据 |
 
 ---
@@ -381,11 +382,70 @@ def _solve_simplex_weights(endmember_matrix, target) -> tuple[np.ndarray, float]
 
 ---
 
+## 6. metadata_profile/ — TerraLID 元数据注册表与数据录入
+
+### 职责
+把 `reference/metadata`（TerraLID Metadata Profile，CC-BY-4.0，v0.3.4）的 markdown 字段定义
+代码化，使字段清单可校验、可生成 Excel 录入工作簿、可与既有扁平列互转。
+
+> **完整说明见 [`docs/metadata_profile.md`](metadata_profile.md)**（档案数据模型、字段规模、
+> 分表规则、三步录入流程、已知易错点与限制）。本节只列模块清单与对外入口。
+
+### 模块拆分
+
+```
+data/metadata_profile/
+├── __init__.py        # PEP 562 惰性导出（只 import 包不会拉入 openpyxl / 词表数据）
+├── spec.py            # 契约层：FieldSpec / TableSpec / Profile + 铅同位素常量（无 IO）
+├── parse.py           # docs/metadata_*.md + includes/metadata_blocks.md → FieldSpec
+├── profile.py         # 组装 Profile；load_profile() 缓存入口；vocab/labels 富化
+├── vocab.py           # 80 张受控词表（930 条术语）
+├── labels.py          # 字段中文标签（307 条）+ 英文标题兜底表
+├── layout.py          # 注册表 → 录入工作簿的工作表/列映射
+├── ratios.py          # 8 个比值的因子链推导 + 一阶误差传播
+├── validate.py        # 字段级/联动/外键校验
+└── validate_sheets.py # 工作表辅助列与块表归属校验（单向依赖 validate.py）
+```
+
+### 公共 API
+
+```python
+from data.metadata_profile import load_profile, build_layout, derive_all_ratios
+
+profile = load_profile()            # 缓存；Profile.version / .tables / .fields / .warnings
+layout = build_layout(profile)      # WorkbookLayout：30 张表（26 张需填写）
+ratios = derive_all_ratios({"206Pb/204Pb": 18.59, "207Pb/204Pb": 15.62,
+                            "208Pb/204Pb": 38.76})
+len(ratios)                         # 8 —— 5 个由主比值推导，source="calculated"
+```
+
+`validate.py` 的 `validate_columns` 是字段级校验核心（`validate_record` 为薄包装），
+消息以 `message_key` + `params` 返回而非直接渲染，因此同一份问题既能写进 Excel 的
+`99_CHECK` 表（英文），也能在 UI 里按当前语言渲染。
+
+### 关键口径
+
+- **块字段身份是 `(table, block_owner, oid)` 三元组**：可复用块 B1–B6 会被多个模块内联
+  （`B5` 在 Analyses 里内联 4 次），内联副本保留原 OID，靠 `block_owner` 区分宿主。
+- **`value_kind` 会被富化提升**：解析层只按文本推断；`vocab.py` 登记了词表的字段，
+  富化时把 `FREE_TEXT`/`MIXED` 提升为 `CONTROLLED_VOCAB` —— "是否有词表"以 `vocab.py` 为唯一真源。
+- **派生比值缺不确定度时为 `None`，不按 0 传播**：把未知当 0 会低估不确定度。
+
+### 外围入口
+
+| 位置 | 职责 |
+|------|------|
+| `scripts/build_entry_workbook.py` | 由注册表生成录入工作簿（CLI：`--output/--profile-root/--emit-json/--force`） |
+| `application/use_cases/entry_workbook.py` | 用例层：生成模板 / 只读校验 / 导入补齐 |
+| `ui/dialogs/entry_workbook.py` | Qt 对话框（「文件 → 数据录入（Excel）...」，`Ctrl+N`） |
+
+---
+
 ## 模块间依赖
 
 ```
 application/use_cases/load_dataset.py
-  → data/loader.py (read_data_frame)
+  → adapters/loader.py (read_data_frame)
   → app_state.df_global (pandas DataFrame)
       ├→ data/geochemistry/ (年龄, Delta, V1V2, 源区参数)
       ├→ plugins/builtins/endmember_plugin.py (PCA + 地球化学过滤)
