@@ -6,25 +6,12 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any
 
 from ..config import CONFIG
+from ..persistence.atomic import atomic_write_json
 
 logger = logging.getLogger(__name__)
-
-
-def _atomic_write_json(path: Any, data: dict[str, Any]) -> None:
-    """Write JSON atomically (temp file + rename) to avoid corrupting the
-    session file when the process dies mid-write."""
-    import os
-
-    tmp_path = Path(str(path) + ".tmp")
-    with open(tmp_path, 'w', encoding='utf-8') as handle:
-        json.dump(data, handle, indent=2, ensure_ascii=False)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(tmp_path, path)
 
 
 def save_session_params(
@@ -80,14 +67,14 @@ def save_session_params(
             },
             'plot_panels': [str(panel) for panel in list(plot_panels or [])],
         }
-        
+
         logger.debug("Saving session params. Tooltip columns: %s", tooltip_columns)
 
-        _atomic_write_json(CONFIG['params_temp_file'], session_data)
+        atomic_write_json(CONFIG['params_temp_file'], session_data)
         logger.info("Session parameters saved to %s", CONFIG['params_temp_file'])
         return True
-    except Exception as e:
-        logger.exception("Failed to save session parameters: %s", e)
+    except Exception as exc:
+        logger.exception("Failed to save session parameters: %s", exc)
         return False
 
 
@@ -123,8 +110,8 @@ def load_session_params() -> dict[str, Any] | None:
         logger.info("Previous algorithm: %s", session_data.get('algorithm', 'UMAP'))
         logger.info("Previous group: %s", session_data.get('group_col', 'Province'))
         return session_data
-    except Exception as e:
-        logger.exception("Failed to load session parameters: %s", e)
+    except Exception as exc:
+        logger.exception("Failed to load session parameters: %s", exc)
         return None
 
 
@@ -136,8 +123,8 @@ def clear_session_params() -> bool:
             params_file.unlink()
             logger.info("Session parameters cleared")
             return True
-    except Exception as e:
-        logger.exception("Failed to clear session parameters: %s", e)
+    except Exception as exc:
+        logger.exception("Failed to clear session parameters: %s", exc)
     return False
 
 
@@ -149,5 +136,6 @@ def get_temp_dir_size() -> float:
             if item.is_file():
                 total_size += item.stat().st_size
         return total_size / (1024 * 1024)  # Convert to MB
-    except Exception:
+    except Exception as exc:
+        logger.warning("Cannot size temp directory, reporting 0 MB: %s", exc)
         return 0

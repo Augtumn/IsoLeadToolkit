@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 import core.persistence as persistence
-import core.persistence.paths as paths
 from core import app_state, state_gateway
 from core.cache import EmbeddingCache, build_data_signature
 from core.persistence.cache import load_cache, save_cache
@@ -214,7 +213,7 @@ def test_clean_exit_marker_roundtrip(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_load_themes_returns_payload(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(paths, "THEMES_FILE", tmp_path / "user_themes.json")
+    monkeypatch.setattr(persistence, "THEMES_FILE", tmp_path / "user_themes.json")
     assert persistence.load_themes() is None
 
     (tmp_path / "user_themes.json").write_text(

@@ -25,9 +25,8 @@ from pathlib import Path
 from typing import Any
 
 from ..config import CONFIG
-from ..session.io import load_session_params
 from .atomic import atomic_write_json, read_json_isolated
-from .paths import EXIT_OK_FILE, SESSION_FILE, UI_STATE_FILE
+from .paths import EXIT_OK_FILE, SESSION_FILE, THEMES_FILE, UI_STATE_FILE
 from .schema import SESSION_FIELDS, UI_STATE_FIELDS, build_payload
 
 logger = logging.getLogger(__name__)
@@ -160,8 +159,6 @@ def load_ui_state() -> dict[str, Any] | None:
 
 def load_themes() -> dict[str, Any] | None:
     """Read the display-theme payload (corruption-isolated)."""
-    from .paths import THEMES_FILE
-
     return read_json_isolated(THEMES_FILE)
 
 
@@ -172,6 +169,10 @@ def load_all() -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     newer files); UI state is a fresh file read with corruption isolation.
     Returns ``(session_payload, ui_payload)``.
     """
+    # Imported here so ``core.session.io`` can reuse ``persistence.atomic``
+    # without importing this package mid-module.
+    from ..session.io import load_session_params
+
     session_payload = load_session_params()
     ui_payload = read_json_isolated(UI_STATE_FILE)
     if ui_payload:

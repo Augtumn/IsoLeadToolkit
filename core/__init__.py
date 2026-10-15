@@ -38,6 +38,7 @@ __all__ = [
     'export_session',
     'import_session',
     'install_autosave',
+    'atomic_write_json',
     'mark_clean_exit',
     'consume_exit_marker',
     'translate',

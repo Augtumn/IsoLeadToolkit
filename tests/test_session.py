@@ -17,7 +17,8 @@ from core.persistence import (
     export_session as export_archive,
     import_session as import_archive,
 )
-from core.session.io import _atomic_write_json, load_session_params, save_session_params
+from core.persistence.atomic import atomic_write_json
+from core.session.io import load_session_params, save_session_params
 
 
 class _FakeStore:
@@ -262,7 +263,7 @@ def test_atomic_write_json_replaces_existing_file(tmp_path: Path) -> None:
     target = tmp_path / "params.json"
     target.write_text('{"old": true}', encoding="utf-8")
 
-    _atomic_write_json(target, {"new": 1})
+    atomic_write_json(target, {"new": 1})
 
     assert json.loads(target.read_text(encoding="utf-8")) == {"new": 1}
     assert not (tmp_path / "params.json.tmp").exists()
