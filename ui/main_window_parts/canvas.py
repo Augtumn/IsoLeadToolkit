@@ -449,7 +449,24 @@ class MainWindowCanvasMixin:
             elif "pan" in held_tool:
                 navigation.pan()
                 logger.info("Restored the pan tool after rebuilding the toolbar")
-            copy_toolbar_actions(navigation, self.toolbar, _MPL_TOOLTIP_TRANSLATIONS)
+            # One set of buttons that act on the panel in use. matplotlib's own set is never copied
+            # here: it is bound to one canvas, so its buttons only ever drove the first panel -
+            # exactly what was reported when the panels stopped following the focus. Each panel
+            # keeps its own hidden toolbar instead, and these buttons call into the one belonging
+            # to the panel the user is working in.
+            self._navigation_actions = [
+                self._navigation_action("zoom", translate("Zoom to Rectangle")),
+                self._navigation_action("pan", translate("Pan")),
+                self._navigation_action("home", translate("Home")),
+            ]
+            self.toolbar.addSeparator()
+            for action in self._navigation_actions:
+                self.toolbar.addAction(action)
+            logger.info(
+                "Added %d navigation button(s): %s",
+                len(self._navigation_actions),
+                [action.text() for action in self._navigation_actions],
+            )
             install_ternary_zoom_filter(canvas, self.toolbar)
             # A selection tool belongs to one canvas: the previous one has to let go of it, or a
             # tool the user cancelled keeps working on the old window, and the new window never
