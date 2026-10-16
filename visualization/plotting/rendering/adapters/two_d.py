@@ -44,7 +44,7 @@ class TwoDAdapter(Adapter):
     def groups(self, context: RenderContext, prepared: Any) -> list[Any]:
         return _categories(context, prepared)
 
-    def configure_axes(self, context: RenderContext) -> None:
+    def configure_axes(self, context: RenderContext, prepared: Any) -> None:
         try:
             context.axes.set_aspect("auto")
             context.axes.set_autoscale_on(True)

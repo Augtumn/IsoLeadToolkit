@@ -37,7 +37,7 @@ class _Adapter:
         self.calls.append("groups")
         return self._groups
 
-    def configure_axes(self, context) -> None:
+    def configure_axes(self, context, prepared) -> None:
         self.calls.append("configure_axes")
 
     def draw(self, context, prepared):

@@ -59,7 +59,7 @@ def run(adapter: ModeAdapter, context: RenderContext) -> bool:
 
         _apply_current_style()
         context.axes.clear()
-        adapter.configure_axes(context)
+        adapter.configure_axes(context, prepared)
         _enforce_plot_style(context.axes)
         app_state.clear_plot_state()
 

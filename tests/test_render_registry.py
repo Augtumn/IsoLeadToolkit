@@ -27,10 +27,10 @@ class _Adapter:
     def prepare(self, context):
         return {}
 
-    def groups(self, prepared):
+    def groups(self, context, prepared):
         return []
 
-    def configure_axes(self, context) -> None:
+    def configure_axes(self, context, prepared) -> None:
         pass
 
     def draw(self, context, prepared):

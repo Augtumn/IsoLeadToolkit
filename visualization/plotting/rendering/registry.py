@@ -65,7 +65,7 @@ class Adapter:
         """The categories to build the palette for."""
         return []
 
-    def configure_axes(self, context: RenderContext) -> None:
+    def configure_axes(self, context: RenderContext, prepared: Any) -> None:
         """What this mode does to its axes right after clearing it."""
 
     def draw(self, context: RenderContext, prepared: Any) -> Any:
@@ -113,7 +113,7 @@ class ModeAdapter(Protocol):
     def groups(self, context: RenderContext, prepared: Any) -> list[Any]:
         """The categories to build the palette for."""
 
-    def configure_axes(self, context: RenderContext) -> None:
+    def configure_axes(self, context: RenderContext, prepared: Any) -> None:
         """What this mode does to its axes right after clearing it."""
 
     def draw(self, context: RenderContext, prepared: Any) -> Any:

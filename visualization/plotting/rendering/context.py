@@ -44,6 +44,15 @@ class RenderContext:
     show_marginal_kde: bool = False
     legend_columns: int = 1
 
+    #: The parameters the embedding algorithms are computed with, and a precomputed embedding when a
+    #: worker has already produced one.
+    umap_params: Any = None
+    tsne_params: Any = None
+    pca_params: Any = None
+    robust_pca_params: Any = None
+    precomputed_embedding: Any = None
+    precomputed_meta: Any = None
+
     #: Set when the user is looking at a subset of the data.
     subset_indices: Any = None
 
@@ -104,6 +113,12 @@ def build_context(
     show_kde: bool = False,
     show_marginal_kde: bool = False,
     legend_columns: int = 1,
+    umap_params: Any = None,
+    tsne_params: Any = None,
+    pca_params: Any = None,
+    robust_pca_params: Any = None,
+    precomputed_embedding: Any = None,
+    precomputed_meta: Any = None,
     subset_indices: Any = None,
 ) -> RenderContext:
     """Assemble the context for one render of *mode*."""
@@ -120,5 +135,11 @@ def build_context(
         show_kde=bool(show_kde),
         show_marginal_kde=bool(show_marginal_kde),
         legend_columns=int(legend_columns),
+        umap_params=umap_params,
+        tsne_params=tsne_params,
+        pca_params=pca_params,
+        robust_pca_params=robust_pca_params,
+        precomputed_embedding=precomputed_embedding,
+        precomputed_meta=precomputed_meta,
         subset_indices=subset_indices,
     )
