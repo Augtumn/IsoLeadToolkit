@@ -284,7 +284,61 @@ def test_the_middle_drag_pans_the_panel_in_use(wired) -> None:
     )
 
 
-def test_the_stacking_order_is_applied_to_every_panel(wired, monkeypatch) -> None:
+def test_three_panels_are_all_marked_by_one_selection(wired) -> None:
+    """Three panels is the case the single-figure mirror was written against, so it is covered.
+
+    The mark belongs to the sample, not to a window: setting it reaches every panel that draws that
+    sample, which is the whole point of comparing projections side by side.
+    """
+    from ui.main_window_parts.mdi_panels import PanelWindows, create_mdi_area
+
+    state, _two = wired
+    area = create_mdi_area(None)
+    windows = PanelWindows(area).sync(["2D", "Ternary", "UMAP"])
+    drawn_cases: list[_Collection] = []
+    case = _use_case(state, windows, drawn_cases)
+    try:
+        case._render_panels(
+            ["2D", "Ternary", "UMAP"], "Site", ["a", "b"], ["a", "b", "c"]
+        )
+
+        assert len(drawn_cases) == 3, "three panels drawn"
+        targets = pe._panel_highlight_targets(0)
+        assert targets, "the sample is drawn in the panels"
+
+        pe._hover_highlighter.highlight_sample(0, targets)
+
+        for index, collection in enumerate(drawn_cases):
+            assert collection.get_sizes()[0] > 10.0, f"marked in panel {index}"
+    finally:
+        import core
+
+        core.app_state.plot_panel_windows = _two
+        area.close()
+
+
+def test_the_export_restore_repaints_through_the_shared_helper(wired, monkeypatch) -> None:
+    """The view restored after an export is repainted through the helper that covers every panel.
+
+    The export path builds a figure of its own and restores the interactive canvas in a finally
+    block, so what is asserted here is the mechanism it calls: the shared helper, which draws every
+    panel - the mirrored figure drew one and left the rest stale.
+    """
+    from visualization import events
+
+    state, windows = wired
+    case = _use_case(state, windows, [])
+    case._render_panels(["2D", "Ternary"], "Site", ["a", "b"], ["a", "b", "c"])
+
+    drawn: list[str] = []
+    for record in windows:
+        record["figure"].canvas.draw_idle = lambda _mode=record["mode"]: drawn.append(_mode)
+
+    events.repaint_panels()
+
+    assert sorted(drawn) == sorted(record["mode"] for record in windows), (
+        f"the restore repaints every panel, got {drawn}"
+    )
     """Re-stacking from the legend order reaches every panel, not the mirrored one."""
     from ui.main_window_parts import legend_core
 
