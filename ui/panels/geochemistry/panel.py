@@ -376,11 +376,20 @@ class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
                 translate("Failed to reset parameters: {error}").format(error=str(e))
             )
 
+    def _on_render_mode_changed(self, _mode=None) -> None:
+        """Show the overlay controls that apply to the mode in force now."""
+        self._update_overlay_visibility()
+
     def build(self) -> QWidget:
         """Build the parameter sections plus the overlay plot controls."""
         widget = self._build_params_section()
         layout = widget.layout()
         self._build_geochem_controls(layout)
         self._update_overlay_visibility()
+        # Which controls apply depends on the render mode, and the mode changes while the panel is
+        # open. The panel listens for that, as the status bar does: without it the controls kept
+        # whatever mode they were built in, so a Plumbotectonics mode reached from another one showed
+        # no controls at all - the reported "the Plumbotectonics panel has them all removed".
+        app_state.register_render_mode_listener(self._on_render_mode_changed)
         self._is_initialized = True
         return widget
