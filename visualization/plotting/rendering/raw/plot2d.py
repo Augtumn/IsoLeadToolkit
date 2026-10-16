@@ -307,27 +307,19 @@ def _render_2d_title_and_axes(
         f'2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n'
         f'Colored by {group_col}'
     )
+    # One rule for every plot type (visualization.plotting.view_state): the view is restored for the
+    # same content on the same axes, and the axes - not a global - remembers what it drew. A brand-new
+    # canvas has drawn nothing, so it keeps its own autoscale below.
+    from visualization.plotting.view_state import mark_drawn, restore_view
+
+    view_token = ("2D", tuple(str(column) for column in data_columns))
+    captured_view = (
+        {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
+    )
     restored = False
-    # A view is only worth restoring on an axes this renderer has already drawn into: a brand-new
-    # canvas reports the default limits, and the "last columns" are a global that belongs to another
-    # figure - restoring those left the new canvas without its own autoscale.
-    if (
-        app_state.ax is prev_ax
-        and prev_xlim
-        and prev_ylim
-        and getattr(app_state.ax, "_isotopes_rendered", False)
-    ):
-        try:
-            if prev_2d_cols and list(prev_2d_cols) == list(data_columns):
-                app_state.ax.set_xlim(prev_xlim)
-                app_state.ax.set_ylim(prev_ylim)
-                restored = True
-        except Exception as err:
-            logger.warning("_render_2d_title_and_axes failed: %s", err)
-    try:
-        app_state.ax._isotopes_rendered = True
-    except Exception as err:
-        logger.warning("Could not mark the axes as rendered: %s", err)
+    if app_state.ax is prev_ax:
+        restored = restore_view(app_state.ax, captured_view, view_token)
+    mark_drawn(app_state.ax, view_token)
 
     state_gateway.set_current_plot_title(title)
     if app_state.show_plot_title:

@@ -73,27 +73,19 @@ def _render_geo_overlays(
             ages = app_state.paleoisochron_ages
             _draw_mu_kappa_paleoisochrons(app_state.ax, ages)
 
-    if app_state.ax is prev_ax and prev_xlim and prev_ylim:
-        if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
-            try:
-                # What this axes drew last, not what the application drew last: with several panels
-                # a global is overwritten by whichever panel rendered before this one, so the panel
-                # that did not change its mode stopped being recognised and its view was not
-                # restored - the reported "ticking a group resets the zoom". The application's
-                # value is only the first-time fallback, for a figure this renderer has not drawn.
-                drawn_last = getattr(
-                    app_state.ax, "_isotopes_embedding", prev_embedding_type
-                )
-                if drawn_last and str(drawn_last).upper() == str(actual_algorithm).upper():
-                    app_state.ax.set_xlim(prev_xlim)
-                    app_state.ax.set_ylim(prev_ylim)
-            except Exception as err:
-                logger.warning("_render_geo_overlays failed: %s", err)
+    # One rule for every plot type (visualization.plotting.view_state): the view is restored when this
+    # axes drew the same algorithm last. Asking the application instead lost the view of whichever
+    # panel had not changed its mode, because a global is overwritten by the panel that drew before it.
+    from visualization.plotting.view_state import mark_drawn, restore_view
 
-    try:
-        app_state.ax._isotopes_embedding = actual_algorithm
-    except Exception as err:
-        logger.warning("Could not record the embedding a panel drew: %s", err)
+    view_token = str(actual_algorithm).upper()
+    captured_view = (
+        {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
+    )
+    if app_state.ax is prev_ax and actual_algorithm != 'TERNARY':
+        if getattr(app_state.ax, 'name', '') != '3d':
+            restore_view(app_state.ax, captured_view, view_token)
+    mark_drawn(app_state.ax, view_token)
 
     if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
         _draw_equation_overlays(app_state.ax)
