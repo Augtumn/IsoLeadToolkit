@@ -56,7 +56,6 @@
   "Adjust Expand Y": "扩展系数 Y",
   "Adjust Iteration Limit": "迭代上限",
   "Adjust Time Limit (s)": "耗时上限（秒）",
-  "Outside Right": "右侧外部",
   "Best": "最佳",
   "Center": "居中",
   "Size": "大小",
@@ -808,8 +807,6 @@
   "Parent shape (shared by subgroups)": "父组形状（所有子组共用）",
   "Auto (by order)": "自动（按顺序）",
   "New Child Parent Group…": "新建子父组…",
-  "Outside Left": "外部左侧",
-  "Legend {position}": "图例 {position}",
   "Nudge legend up": "向上微调图例",
   "Nudge legend down": "向下微调图例",
   "Nudge legend left": "向左微调图例",
@@ -1036,5 +1033,10 @@
   "Line label background": "线条标签背景",
   "Line label background colour": "线条标签背景颜色",
   "Line label background opacity": "线条标签背景透明度",
-  "Line label position": "线条标签位置"
+  "Line label position": "线条标签位置",
+  "Outside left": "图外左侧",
+  "Outside right": "图外右侧",
+  "Place the legend outside the plot area, on the left.": "把图例放在绘图区外的左侧。",
+  "Place the legend outside the plot area, on the right.": "把图例放在绘图区外的右侧。",
+  "Place the legend inside the plot area: {position}.": "把图例放在绘图区内：{position}。"
 }

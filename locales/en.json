@@ -56,7 +56,6 @@
   "Adjust Expand Y": "Adjust Expand Y",
   "Adjust Iteration Limit": "Adjust Iteration Limit",
   "Adjust Time Limit (s)": "Adjust Time Limit (s)",
-  "Outside Right": "Outside Right",
   "Best": "Best",
   "Center": "Center",
   "Size": "Size",
@@ -808,8 +807,6 @@
   "Parent shape (shared by subgroups)": "Parent shape (shared by subgroups)",
   "Auto (by order)": "Auto (by order)",
   "New Child Parent Group…": "New Child Parent Group…",
-  "Outside Left": "Outside Left",
-  "Legend {position}": "Legend {position}",
   "Nudge legend up": "Nudge legend up",
   "Nudge legend down": "Nudge legend down",
   "Nudge legend left": "Nudge legend left",
@@ -1036,5 +1033,10 @@
   "Line label background": "Line label background",
   "Line label background colour": "Line label background colour",
   "Line label background opacity": "Line label background opacity",
-  "Line label position": "Line label position"
+  "Line label position": "Line label position",
+  "Outside left": "Outside left",
+  "Outside right": "Outside right",
+  "Place the legend outside the plot area, on the left.": "Place the legend outside the plot area, on the left.",
+  "Place the legend outside the plot area, on the right.": "Place the legend outside the plot area, on the right.",
+  "Place the legend inside the plot area: {position}.": "Place the legend inside the plot area: {position}."
 }

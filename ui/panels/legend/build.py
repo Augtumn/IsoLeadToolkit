@@ -103,20 +103,30 @@ class LegendBuildMixin:
         for row, col, value, label in grid_positions:
             btn = QToolButton()
             btn.setText(label)
-            btn.setToolTip(translate(value))
+            btn.setToolTip(
+                translate("Place the legend inside the plot area: {position}.").format(
+                    position=translate(value)
+                )
+            )
             btn.setCheckable(True)
             btn.setFixedSize(40, 32)
             btn.clicked.connect(lambda checked=False, loc=value: self._on_legend_inside_position_change(loc))
             self.legend_inside_buttons[value] = btn
             position_grid.addWidget(btn, row, col)
 
-        for key, text, row, col, align in [
-            ('outside_left', translate("Outside Left"), 1, 0, Qt.AlignHCenter),
-            ('outside_right', translate("Outside Right"), 1, 2, Qt.AlignHCenter),
+        for key, text, tooltip_key, row, col, align in [
+            (
+                'outside_left', translate("Outside left"),
+                "Place the legend outside the plot area, on the left.", 1, 0, Qt.AlignHCenter,
+            ),
+            (
+                'outside_right', translate("Outside right"),
+                "Place the legend outside the plot area, on the right.", 1, 2, Qt.AlignHCenter,
+            ),
         ]:
             btn = QToolButton()
             btn.setText(text)
-            btn.setToolTip(translate("Legend {position}").format(position=text))
+            btn.setToolTip(translate(tooltip_key))
             btn.setCheckable(True)
             btn.setFixedSize(56, 32)
             btn.clicked.connect(lambda checked=False, loc=key: self._on_legend_outside_position_change(loc))
