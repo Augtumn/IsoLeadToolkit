@@ -80,6 +80,72 @@ def _install() -> pd.DataFrame:
     return frame
 
 
+def test_the_legend_search_finds_a_child_group(qapp, restore_state) -> None:
+    """A child a decomposition produced is a group, so the search finds it by its own name.
+
+    The legend list was built from the values of the grouping column, which only ever holds the
+    top-level groups: the children were absent from the very list the search filters, so their names
+    matched nothing and the parent-name branch - which looks children up in that list - never fired.
+    """
+    from ui.main_window_parts.legend_actions import filter_legend_groups
+
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+
+    children = list(app_state.parent_groups["Tarim"])
+    parent_map = {
+        parent: set(names) for parent, names in (app_state.parent_groups or {}).items()
+    }
+    universe = ["Tarim", *children]
+    column_values = [str(value) for value in app_state.df_global["Site"].unique()]
+
+    # The reported symptom: over the column's own values the search finds nothing for a child.
+    assert filter_legend_groups(column_values, "casting", parent_map) == []
+    # And the group universe, which is what the legend list is built from now, finds it.
+    assert filter_legend_groups(universe, "casting", parent_map) == ["Tarim / casting"]
+    # Searching the parent's name still lists its children.
+    assert sorted(filter_legend_groups(universe, "tarim", parent_map)) == sorted(
+        ["Tarim", *children]
+    )
+
+
+def test_a_parent_group_shows_and_hides_all_its_children(qapp, restore_state, monkeypatch) -> None:
+    """The parent row is a group of groups: one click shows or hides every child under it."""
+    from PyQt5.QtCore import Qt
+
+    import ui.main_window_parts.legend_interaction as legend_interaction
+    from ui.main_window_parts.legend_interaction import MainWindowLegendInteractionMixin
+
+    class _Host(MainWindowLegendGroupMixin, MainWindowLegendInteractionMixin):
+        def _refresh_plot(self):  # the plot refresh is not what this test is about
+            pass
+
+    written: list[object] = []
+    monkeypatch.setattr(
+        legend_interaction,
+        "state_gateway",
+        type(
+            "G",
+            (),
+            {"set_visible_groups": staticmethod(lambda groups: written.append(groups))},
+        )(),
+    )
+
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+    children = list(app_state.parent_groups["Tarim"])
+
+    host = _Host()
+    host._on_parent_checkbox_change("Tarim", Qt.Unchecked)
+    assert written and written[-1] is not None, "hiding a group is written as a selection"
+    assert not (set(children) & set(written[-1])), "every child hidden at once"
+
+    host._on_parent_checkbox_change("Tarim", Qt.Checked)
+    assert written[-1] is None, "and shown again, which the state spells as 'all visible'"
+
+
 def test_decomposing_writes_labels_children_and_state(qapp, restore_state, monkeypatch) -> None:
     _install()
     warned: list[str] = []
