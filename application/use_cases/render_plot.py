@@ -24,7 +24,7 @@ class RenderPlotUseCase:
         get_group_cols: Callable[[], list[str]],
         sync_render_mode: Callable[[str], None],
         cancel_embedding_task: Callable[[str], None],
-        start_async_embedding_render: Callable[[str], bool],
+        start_async_embedding_render: Callable[[str, str], tuple[bool, bool]],
         plot_embedding: Callable[..., bool],
         plot_2d_data: Callable[..., bool],
         plot_3d_data: Callable[..., bool],
@@ -362,8 +362,10 @@ class RenderPlotUseCase:
         algorithm = mode
         if algorithm in _ASYNC_EMBEDDING_ALGORITHMS:
             # Returns (rendered_ok, pending_async): a cache hit renders
-            # synchronously (pending=False); otherwise a worker is started.
-            return self._start_async_embedding_render(group_col)
+            # synchronously (pending=False); otherwise a worker is started. The mode travels with the
+            # request: with several panels the one being drawn is not the one the state calls current,
+            # and reading the state here rendered another panel's algorithm.
+            return self._start_async_embedding_render(group_col, algorithm)
 
         self._cancel_embedding_task("switch_to_sync_embedding")
         logger.debug("Calling plot_embedding with algorithm=%s, group_col=%s", algorithm, group_col)

@@ -292,8 +292,11 @@ def _on_embedding_task_cancelled(task_token: int) -> None:
     logger.debug('Embedding task cancelled: token=%s', task_token)
 
 
-def _start_async_embedding_render(group_col: str) -> tuple[bool, bool]:
+def _start_async_embedding_render(group_col: str, mode: str) -> tuple[bool, bool]:
     """Start background embedding computation for heavy algorithms.
+
+    *mode* is the mode this render was asked for, which with several panels is not the mode the state
+    calls current: reading the state here started another panel's algorithm and drew its embedding.
 
     Returns ``(rendered_ok, pending_async)``:
     - ``(True, False)`` — a cached embedding was rendered synchronously;
@@ -303,7 +306,7 @@ def _start_async_embedding_render(group_col: str) -> tuple[bool, bool]:
     from .embedding_worker import EmbeddingWorker
     from .plotting.data import _get_analysis_data
 
-    algorithm = app_state.render_mode
+    algorithm = str(mode)
     if algorithm not in _ASYNC_EMBEDDING_ALGORITHMS:
         return False, False
 
