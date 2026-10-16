@@ -266,8 +266,9 @@ class MainWindowLegendCoreMixin:
             [self._legend_order_key(entry_type, entry_key) for entry_type, entry_key in order],
         )
 
-        if app_state.fig is not None and app_state.fig.canvas is not None:
-            app_state.fig.canvas.draw_idle()
+        from visualization.events import repaint_panels
+
+        repaint_panels()
 
     def _on_legend_rows_moved(self, *args):
         QTimer.singleShot(0, self._rebuild_legend_after_reorder)

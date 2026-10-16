@@ -291,8 +291,9 @@ class ExportPanelPrepMixin:
                 # re-render above resets limits, but the captured view must
                 # be reapplied so exports do not silently reset the plot.
                 self._apply_axis_view(original_ax, original_view)
-                if app_state.fig is not None and app_state.fig.canvas is not None:
-                    app_state.fig.canvas.draw_idle()
+                from visualization.events import repaint_panels
+
+                repaint_panels()
             except Exception as restore_err:
                 logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
             # Keep the wait cursor through the restore re-render so the user

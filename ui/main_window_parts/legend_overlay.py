@@ -151,6 +151,7 @@ class MainWindowLegendOverlayMixin:
             except Exception as err:
                 logger.warning("_bring_overlay_to_front failed: %s", err)
 
-        if app_state.fig is not None and app_state.fig.canvas is not None:
-            app_state.fig.canvas.draw_idle()
+        from visualization.events import repaint_panels
+
+        repaint_panels()
         self._move_legend_item_to_top("overlay", style_key)

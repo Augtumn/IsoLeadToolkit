@@ -26,6 +26,39 @@ logger = logging.getLogger(__name__)
 
 _ASYNC_EMBEDDING_ALGORITHMS = {'UMAP', 'tSNE', 'PCA', 'RobustPCA'}
 
+
+def panel_figures() -> list[Any]:
+    """Every panel's figure, so a change is shown in all of them.
+
+    The state's single figure mirrors one panel, so using it repainted that panel and left the
+    others showing their old buffer - the reported "a change appears in one window only".
+    """
+    figures: list[Any] = []
+    for record in list(getattr(app_state, "plot_panel_windows", []) or []):
+        figure = record.get("figure") if isinstance(record, dict) else None
+        if figure is not None and figure not in figures:
+            figures.append(figure)
+    if not figures and app_state.fig is not None:
+        # A single-figure window: the state's figure is the only one there is.
+        figures.append(app_state.fig)
+    return figures
+
+
+def repaint_panels(only: Any = None) -> None:
+    """Repaint every panel, or just *only* when one is named."""
+    figures = [only] if only is not None else []
+    for figure in panel_figures():
+        if figure not in figures:
+            figures.append(figure)
+    for figure in figures:
+        canvas = getattr(figure, "canvas", None)
+        if canvas is None:
+            continue
+        try:
+            canvas.draw_idle()
+        except Exception as err:
+            logger.warning("Could not repaint a panel: %s", err)
+
 # Retired embedding workers kept alive until their threads actually stop.
 # Replacing app_state.embedding_worker drops the only strong reference; a
 # running QThread that gets garbage-collected aborts the process with

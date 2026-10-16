@@ -411,13 +411,16 @@ class DisplayThemeMixin:
             )
 
     def _apply_auto_layout(self):
-        """应用自动布局"""
-        if app_state.fig is None:
+        """应用自动布局到每个面板"""
+        from visualization.events import panel_figures, repaint_panels
+
+        figures = panel_figures()
+        if not figures:
             return
         try:
-            configure_constrained_layout(app_state.fig)
-            if app_state.fig.canvas:
-                app_state.fig.canvas.draw_idle()
+            for figure in figures:
+                configure_constrained_layout(figure)
+            repaint_panels()
         except Exception as err:
             logger.warning("_apply_auto_layout failed: %s", err)
 

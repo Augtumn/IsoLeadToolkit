@@ -387,11 +387,6 @@ class MainWindowLegendInteractionMixin:
 
     def _panel_figures(self):
         """Every panel's figure, so a change is shown in all of them."""
-        figures = []
-        for state in list(getattr(app_state, "plot_panel_states", []) or []):
-            figure = getattr(state.get("ax"), "figure", None)
-            if figure is not None and figure not in figures:
-                figures.append(figure)
-        if not figures and app_state.fig is not None:
-            figures.append(app_state.fig)
-        return figures
+        from visualization.events import panel_figures
+
+        return panel_figures()
