@@ -79,6 +79,73 @@ def test_going_back_to_one_panel_publishes_no_windows(host) -> None:
     assert app_state.plot_panel_windows == []
 
 
+def test_a_new_panel_set_mirrors_the_first_panel(host) -> None:
+    """Building panels puts the state on the first one, render mode included.
+
+    The build wrote the figure, axes and canvas of the first panel but not its mode, so the data
+    panel's control and the state could name a different mode than the panel on screen.
+    """
+    host._build_panel_windows(["2D", "Ternary"])
+
+    records = app_state.plot_panel_windows
+    assert records[0]["active"], "the first panel is the one in use"
+    assert app_state.render_mode == records[0]["mode"], (
+        "the state's render mode is the panel's, not the one set before the panels existed"
+    )
+
+
+def test_arranging_the_panels_gives_each_window_its_own_cell(host) -> None:
+    """The grid arrangement spreads the windows over the area instead of stacking them."""
+    from PyQt5.QtWidgets import QApplication
+
+    host._build_panel_windows(["2D", "Ternary", "UMAP", "2D"])
+    area = host._panel_mdi_area
+    area.resize(1200, 800)
+    area.show()
+    QApplication.processEvents()
+
+    host._arrange_panels("grid")
+    QApplication.processEvents()
+
+    windows = [record["window"] for record in app_state.plot_panel_windows]
+    cells = [(w.geometry().x(), w.geometry().y()) for w in windows]
+    assert len(set(cells)) == len(cells), f"every window has its own cell, got {cells}"
+    assert len(windows) == 4, "and no window was left out of the arrangement"
+
+
+def test_changing_the_mode_applies_to_the_panel_in_use_only(host) -> None:
+    """A mode chosen in the data panel belongs to the panel the user is working in."""
+    host._build_panel_windows(["2D", "Ternary"])
+    records = app_state.plot_panel_windows
+    for index, record in enumerate(records):
+        record["active"] = index == 1
+
+    host.apply_render_mode_to_panel_in_use("UMAP")
+
+    assert [record["mode"] for record in app_state.plot_panel_windows] == ["2D", "UMAP"]
+    assert app_state.render_mode == "UMAP", "and the mirror follows the panel in use"
+
+
+def test_closing_the_panel_in_use_follows_the_survivor(host) -> None:
+    """Closing the panel in use leaves the state describing a panel that still exists.
+
+    Three panels, so two survive: with a single one left the application goes back to the ordinary
+    single-figure window by design, which is a different case.
+    """
+    host._build_panel_windows(["2D", "Ternary", "UMAP"])
+    records = app_state.plot_panel_windows
+    for index, record in enumerate(records):
+        record["active"] = index == 1
+
+    host._on_panel_closed(records[1]["window"])
+
+    left = app_state.plot_panel_windows
+    assert len(left) == 2, "the closed panel is gone and the others remain"
+    assert app_state.render_mode == left[0]["mode"], (
+        "the state follows the panel that takes over"
+    )
+
+
 class _Gateway:
     """Records the state writes set_matplotlib_figure and activation make."""
 
