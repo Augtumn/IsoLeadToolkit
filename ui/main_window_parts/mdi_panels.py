@@ -110,14 +110,19 @@ class PanelWindows:
                     "toolbar": navigation,
                     "window": window,
                     "axes": _add_axes(figure, wanted[index], 111),
+                    # A brand-new window is the one moment the view is framed. The flag is cleared
+                    # once framed, so no later render, switch or rebuild frames it again.
+                    "needs_fit": True,
                 }
             )
         for record, mode in zip(self._records, wanted):
             if record.get("mode") != mode:
-                # The mode changed: the figure is rebuilt with the projection that mode needs.
+                # The mode changed: the figure is rebuilt with the projection that mode needs, which
+                # is a new view - the limits of the old projection cannot apply to it.
                 record["figure"].clf()
                 record["axes"] = _add_axes(record["figure"], mode, 111)
                 record["mode"] = mode
+                record["needs_fit"] = True
         for record in self._records:
             window = record.get("window")
             if window is not None and not window.isVisible():

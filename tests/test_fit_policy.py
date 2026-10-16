@@ -36,33 +36,40 @@ def _ignore_label_refresh(monkeypatch) -> None:
     monkeypatch.setattr(canvas, "refresh_panel_labels", lambda *args, **kwargs: None)
 
 
-def test_the_automatic_fit_leaves_a_view_the_user_set_alone(qapp, monkeypatch) -> None:
-    """Reported as a warning: an automatic fit must not reset the zoom.
+def test_the_automatic_fit_only_frames_a_new_window(qapp, monkeypatch) -> None:
+    """Resetting the zoom is the same as fitting, and it follows a window being created.
 
-    The fit runs when the panels are built and after a reload. A panel records the data version it
-    was framed for, so the same data never frames it twice - while a genuinely new dataset does.
+    Not a data version change: a style, a legend toggle and a decomposition all bump it, and none of
+    them is the user asking for their view to be thrown away.
     """
     _ignore_label_refresh(monkeypatch)
     host = _FitHost()
     app_state.plot_panel_windows[:] = [
-        {"axes": _Axes(index), "mode": "2D"} for index in range(2)
+        {"axes": _Axes(index), "mode": "2D", "needs_fit": True} for index in range(2)
     ]
-    app_state.data_version = 1
     try:
         host._fit_panels_to_data()
-        assert sorted(host.framed) == [0, 1], "the first automatic fit frames the panels"
+        assert sorted(host.framed) == [0, 1], "a newly created window is framed"
 
         host.framed.clear()
         host._fit_panels_to_data()
-        assert host.framed == [], "the same data does not frame them again - the view is the user's"
+        assert host.framed == [], "and never again - the view belongs to the user"
 
-        app_state.data_version = 2
+        app_state.data_version = 99
         host._fit_panels_to_data()
-        assert sorted(host.framed) == [0, 1], "a new dataset is framed again"
+        assert host.framed == [], (
+            "a version change (style, legend, decomposition) does not reset the zoom"
+        )
+
+        app_state.plot_panel_windows.append(
+            {"axes": _Axes(9), "mode": "2D", "needs_fit": True}
+        )
+        host._fit_panels_to_data()
+        assert host.framed == [9], "only the window that was just created"
 
         host.framed.clear()
         host._fit_panels_to_data(force=True)
-        assert sorted(host.framed) == [0, 1], "and the command always frames"
+        assert sorted(host.framed) == [0, 1, 9], "and the command always frames every panel"
     finally:
         app_state.plot_panel_windows[:] = []
 

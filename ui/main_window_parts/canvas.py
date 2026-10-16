@@ -147,10 +147,9 @@ class MainWindowCanvasMixin:
     _axis_lock_action = None
     #: The area that holds the panel child windows; None until one is needed.
     _panel_mdi_area = None
-    #: The data version the single-figure window was framed for, so an automatic fit never overrides
-    #: a view the user set - while a genuinely new dataset is framed again. The panels carry the
-    #: same marker per record.
-    _single_figure_framed_version = None
+    #: A newly built single-figure canvas is framed once; after that the view belongs to the user.
+    #: The panels carry the same marker per record, set where their window is created.
+    _single_figure_needs_fit = True
     #: The three navigation buttons of the main toolbar, empty until the toolbar is built; the
     #: button sync reads them, and panel activation can happen first.
     _navigation_actions: list = []
@@ -196,6 +195,8 @@ class MainWindowCanvasMixin:
                 self._panel_mdi_area.setParent(None)
                 self._panel_mdi_area = None
             canvas = FigureCanvas(fig)
+            # A brand-new canvas is framed once, when the panels ask for it below.
+            self._single_figure_needs_fit = True
         toolbar = NavigationToolbar(canvas, self)
         toolbar.setVisible(False)  # Keep hidden; actions are extracted below
         self._plot_toolbar = toolbar
@@ -762,24 +763,23 @@ class MainWindowCanvasMixin:
         axes = self._panels_for_fit()
         fitted = 0
         framed: list = []
-        version = getattr(app_state, "data_version", None)
         for mode, axis in axes:
             record = self._panel_record_for(axis)
             if not force:
                 if record is not None:
-                    if record.get("framed_version") == version:
-                        # Framed for this very data already: the view belongs to the user now.
+                    if not record.get("needs_fit"):
+                        # This window has already been framed once: the view is the user's now.
                         continue
-                elif self._single_figure_framed_version == version:
+                elif not self._single_figure_needs_fit:
                     continue
             try:
                 if self._fit_one_axes(mode, axis):
                     fitted += 1
                     framed.append(axis)
                     if record is not None:
-                        record["framed_version"] = version
+                        record["needs_fit"] = False
                     else:
-                        self._single_figure_framed_version = version
+                        self._single_figure_needs_fit = False
             except Exception as err:
                 logger.warning("Could not fit a panel to the data: %s", err)
         for axis in framed:
