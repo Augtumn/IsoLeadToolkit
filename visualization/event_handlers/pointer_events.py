@@ -157,11 +157,12 @@ def clear_hover_highlight() -> bool:
             changed = True
     except Exception as err:
         logger.warning("Could not hide the hover annotation: %s", err)
-    if changed and app_state.fig is not None:
-        try:
-            app_state.fig.canvas.draw_idle()
-        except Exception as err:
-            logger.warning("Could not repaint after clearing the hover highlight: %s", err)
+    if changed:
+        # Every panel can carry the mark, while the state's figure mirrors one panel: clearing
+        # through it left the others showing the old mark.
+        from visualization.events import repaint_panels
+
+        repaint_panels()
     return changed
 
 
@@ -220,11 +221,10 @@ def on_hover(event: Any) -> None:
                     annotation.set_visible(False)
                 except Exception as err:
                     logger.warning("on_hover failed: %s", err)
-            if _hover_highlighter.clear() and app_state.fig is not None:
-                try:
-                    app_state.fig.canvas.draw_idle()
-                except Exception as err:
-                    logger.warning("on_hover failed: %s", err)
+            if _hover_highlighter.clear():
+                from visualization.events import repaint_panels
+
+                repaint_panels()
             return
 
         redraw = False
