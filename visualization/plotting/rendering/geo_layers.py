@@ -82,10 +82,15 @@ def _render_geo_overlays(
     captured_view = (
         {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
     )
-    if app_state.ax is prev_ax and actual_algorithm != 'TERNARY':
+    if prev_ax is not None and actual_algorithm != 'TERNARY':
         if getattr(app_state.ax, 'name', '') != '3d':
-            restore_view(app_state.ax, captured_view, view_token)
-    mark_drawn(app_state.ax, view_token)
+            captured = captured_view if app_state.ax is prev_ax else None
+            restore_view(app_state.ax, captured, view_token)
+            # Remembering what this axes drew belongs to whoever manages the view for this render. The
+            # old renderer hands its previous axes in and needs the mark; the render sequence hands
+            # nothing in, owns the view itself, and must not have its token written over - which is
+            # exactly what made a mode drawn through the sequence never restore the user's view.
+            mark_drawn(app_state.ax, view_token)
 
     if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
         _draw_equation_overlays(app_state.ax)
