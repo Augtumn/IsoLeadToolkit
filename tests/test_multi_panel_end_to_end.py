@@ -172,3 +172,76 @@ def test_the_first_figure_is_left_active(wired) -> None:
     assert _Gateway.last_figure is windows[0]["figure"], (
         "single-figure code addresses the first panel"
     )
+
+
+def test_a_repaint_reaches_every_panel(wired) -> None:
+    """The shared repaint helper draws every panel, not the one the state mirrors.
+
+    Four places used to repaint app_state.fig - a legend reorder, an overlay brought to the front,
+    the automatic layout and the view restored after an export - so the change showed in one panel.
+    """
+    from visualization.events import repaint_panels
+
+    state, windows = wired
+    case = _use_case(state, windows, [])
+    case._render_panels(["2D", "Ternary"], "Site", ["a", "b"], ["a", "b", "c"])
+
+    drawn: list[str] = []
+    for record in windows:
+        record["figure"].canvas.draw_idle = (
+            lambda _mode=record["mode"]: drawn.append(_mode)
+        )
+
+    repaint_panels()
+
+    assert sorted(drawn) == sorted(record["mode"] for record in windows), (
+        f"every panel repainted, got {drawn}"
+    )
+
+
+def test_a_style_refresh_reaches_every_panel(wired, monkeypatch) -> None:
+    """A style change restyles every panel's axes, not only the mirrored one.
+
+    The refresh gathered the axes of app_state.fig, so a marker size, a grid or a background change
+    reached one panel and left the others with the old look.
+    """
+    import visualization.plotting.style as style
+
+    state, windows = wired
+    case = _use_case(state, windows, [])
+    case._render_panels(["2D", "Ternary"], "Site", ["a", "b"], ["a", "b", "c"])
+
+    touched: list[object] = []
+    monkeypatch.setattr(style, "_enforce_plot_style", lambda ax: touched.append(ax))
+    monkeypatch.setattr(style, "_apply_axis_text_style", lambda ax: None)
+    monkeypatch.setattr(style, "_style_legend", lambda *args, **kwargs: None)
+
+    style.refresh_plot_style()
+
+    assert touched == [record["axes"] for record in windows], (
+        f"every panel's axes restyled, got {touched}"
+    )
+
+
+def test_the_stacking_order_is_applied_to_every_panel(wired, monkeypatch) -> None:
+    """Re-stacking from the legend order reaches every panel, not the mirrored one."""
+    from ui.main_window_parts import legend_core
+
+    state, windows = wired
+    case = _use_case(state, windows, [])
+    case._render_panels(["2D", "Ternary"], "Site", ["a", "b"], ["a", "b", "c"])
+
+    host = legend_core.MainWindowLegendCoreMixin.__new__(legend_core.MainWindowLegendCoreMixin)
+    host._legend_list = type("L", (), {"count": lambda self: 0})()
+    restacked: list[object] = []
+    monkeypatch.setattr(
+        legend_core.MainWindowLegendCoreMixin,
+        "_apply_legend_z_order_inner",
+        lambda self, axes=None: restacked.append(axes),
+    )
+
+    host._apply_legend_z_order()
+
+    assert restacked == [record["axes"] for record in windows], (
+        f"every panel restacked, got {restacked}"
+    )
