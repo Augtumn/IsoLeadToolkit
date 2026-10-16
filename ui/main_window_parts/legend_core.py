@@ -148,20 +148,28 @@ class MainWindowLegendCoreMixin:
         return unique
 
     def _apply_legend_z_order(self):
-        """Re-stack the plot from the legend order, then the tooltip on top."""
-        self._apply_legend_z_order_inner()
-        raise_tooltip_above_data(app_state.ax, app_state.annotation)
-        try:
-            figure = app_state.fig
-            if figure is not None and figure.canvas is not None:
-                figure.canvas.draw_idle()
-        except Exception as err:
-            logger.warning("Could not redraw after a legend restack: %s", err)
+        """Re-stack every panel from the legend order, then its tooltip on top."""
+        from visualization.events import panel_figures, repaint_panels
 
-    def _apply_legend_z_order_inner(self):
+        records = list(getattr(app_state, "plot_panel_windows", []) or [])
+        from visualization.event_handlers.pointer_events import _annotation_for
+
+        for record in records:
+            axes = record.get("axes") if isinstance(record, dict) else None
+            if axes is None:
+                continue
+            self._apply_legend_z_order_inner(axes)
+            raise_tooltip_above_data(axes, _annotation_for(getattr(axes, "figure", None)))
+        if not records:
+            # A single-figure window: the state's axes are the only ones there are.
+            self._apply_legend_z_order_inner()
+            raise_tooltip_above_data(app_state.ax, app_state.annotation)
+        repaint_panels()
+
+    def _apply_legend_z_order_inner(self, axes=None):
         if not self._legend_list is not None or self._legend_list is None:
             return
-        ax = app_state.ax
+        ax = axes if axes is not None else app_state.ax
         if ax is None:
             return
 
@@ -180,7 +188,11 @@ class MainWindowLegendCoreMixin:
             return
 
         max_z = 2
-        tooltip = app_state.annotation
+        from visualization.event_handlers.pointer_events import _annotation_for
+
+        # This panel's own tooltip: the state's annotation belongs to whichever panel is mirrored,
+        # and raising that one above the data of this panel would move the wrong artist.
+        tooltip = _annotation_for(getattr(ax, "figure", None))
         tooltip_arrow = getattr(tooltip, "arrow_patch", None) if tooltip is not None else None
         try:
             for artist in ax.get_children():
