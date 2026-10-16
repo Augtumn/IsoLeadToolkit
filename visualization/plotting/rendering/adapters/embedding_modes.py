@@ -162,18 +162,21 @@ class EmbeddingAdapter(Adapter):
         if len(df_plot) == 0:
             _notify_legend_panel(context.group_col, [], [])
 
-        if context.show_marginal_kde and self.algorithm != "TERNARY":
-            import visualization.plotting.kde as kde_utils
+        import visualization.plotting.kde as kde_utils
 
-            try:
-                if getattr(context.axes, "name", "") != "3d":
-                    kde_utils.clear_marginal_axes(context.axes)
+        try:
+            if getattr(context.axes, "name", "") != "3d":
+                # Clearing is not conditional. The axes a previous render attached have to go whether or
+                # not this one draws replacements, which is why the checkbox could turn the marginal KDE
+                # on but never off: turning it off skipped the clear along with the draw.
+                kde_utils.clear_marginal_axes(context.axes)
+                if context.show_marginal_kde and self.algorithm != "TERNARY":
                     kde_utils.draw_marginal_kde(
                         context.axes, df_plot, context.group_col,
                         app_state.current_palette, unique_cats,
                     )
-            except Exception as kde_err:
-                logger.warning("Failed to render marginal KDE: %s", kde_err)
+        except Exception as kde_err:
+            logger.warning("Failed to render marginal KDE: %s", kde_err)
 
         # The layer draws the geochemistry overlays; the view is the sequence's business.
         _render_geo_overlays(self.algorithm)
