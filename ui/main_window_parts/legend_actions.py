@@ -91,7 +91,29 @@ class MainWindowLegendActionsMixin(
     """Legend user interaction handlers and UI updates."""
     _legend_list = None
     _legend_panel_payload = None
+    #: Parent groups whose children are folded away from the list. A view preference only - the
+    #: children are still groups, with their own colour, shape and visibility.
+    _collapsed_legend_parents = None
     legend_search_edit = None
+
+    def _toggle_parent_collapsed(self, parent) -> None:
+        """Fold or unfold one parent group's rows, then redraw the list alone.
+
+        The list is rebuilt from the payload already in hand, so folding never re-renders the plot:
+        the children were never removed from it.
+        """
+        folded = set(self._collapsed_legend_parents or set())
+        if parent in folded:
+            folded.discard(parent)
+        else:
+            folded.add(parent)
+        self._collapsed_legend_parents = folded
+        logger.info(
+            "Legend: %s parent group %r", "folded" if parent in folded else "unfolded", parent
+        )
+        payload = self._legend_panel_payload
+        if payload is not None:
+            self._update_legend_panel(*payload)
 
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
@@ -221,12 +243,21 @@ class MainWindowLegendActionsMixin(
                     for child in parent_children(app_state, parent)
                 }
                 entries = build_legend_display_entries(
-                    entries, parents, child_parent, parent_names, order_index
+                    entries,
+                    parents,
+                    child_parent,
+                    parent_names,
+                    order_index,
+                    collapsed=self._collapsed_legend_parents or set(),
                 )
 
             for entry in entries:
                 if entry["type"] == "parent":
-                    self._add_parent_legend_item(entry["parent"], depth=entry.get("depth", 0))
+                    self._add_parent_legend_item(
+                        entry["parent"],
+                        depth=entry.get("depth", 0),
+                        collapsed=bool(entry.get("collapsed")),
+                    )
                 elif entry["type"] == "group":
                     group = entry["group"]
                     in_parent = entry.get("in_parent")

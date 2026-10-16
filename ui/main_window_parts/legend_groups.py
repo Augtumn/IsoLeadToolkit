@@ -32,6 +32,7 @@ REQUIRES_MainWindowLegendGroupMixin = (
     "_reload_legend_panel",
     "_set_legend_item_meta",
     "_show_parent_shape_menu",
+    "_toggle_parent_collapsed",
     "_update_parent_swatch",
 )
 
@@ -396,8 +397,8 @@ class MainWindowLegendGroupMixin:
             state_gateway.set_parent_groups(parents)
             self._reload_legend_panel()
 
-    def _add_parent_legend_item(self, parent, depth: int = 0):
-        """Render a parent-group row: shape swatch, bold header, delete."""
+    def _add_parent_legend_item(self, parent, depth: int = 0, collapsed: bool = False):
+        """Render a parent-group row: fold toggle, shape swatch, header, delete."""
         from visualization.plotting.grouping import parent_children, parent_shape
 
         children = parent_children(app_state, parent)
@@ -406,6 +407,20 @@ class MainWindowLegendGroupMixin:
         # Nested parents are indented by their nesting level.
         item_layout.setContentsMargins(4 + 24 * max(0, depth), 2, 4, 2)
         item_layout.setSpacing(6)
+
+        # Folding hides the children's rows and nothing else: they are still groups, keeping their
+        # colour, shape and visibility, so this is a view preference and never a state change.
+        fold_btn = QPushButton("▸" if collapsed else "▾")
+        fold_btn.setFixedSize(18, 18)
+        fold_btn.setToolTip(
+            translate("Unfold this parent group's rows")
+            if collapsed
+            else translate("Fold this parent group's rows")
+        )
+        fold_btn.clicked.connect(
+            lambda checked=False, p=parent: self._toggle_parent_collapsed(p)
+        )
+        item_layout.addWidget(fold_btn)
 
         # Shape swatch: shows the shape shared by all children of this
         # parent; clicking opens the shape picker (manual override).

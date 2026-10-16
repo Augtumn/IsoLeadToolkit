@@ -1024,5 +1024,7 @@
   "Cascade": "Cascade",
   "Lay the panels out: tiled, cascaded, or on a grid that fills the window.": "Lay the panels out: tiled, cascaded, or on a grid that fills the window.",
   "Tile": "Tile",
-  "Show or hide every group in this parent": "Show or hide every group in this parent"
+  "Show or hide every group in this parent": "Show or hide every group in this parent",
+  "Fold this parent group's rows": "Fold this parent group's rows",
+  "Unfold this parent group's rows": "Unfold this parent group's rows"
 }

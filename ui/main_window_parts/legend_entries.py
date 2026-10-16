@@ -56,6 +56,7 @@ def build_legend_display_entries(
     child_parent: dict[str, str],
     parent_names: set[str],
     order_index: dict[str, int],
+    collapsed: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Build the ordered legend display list with (possibly nested) parent blocks.
 
@@ -72,6 +73,7 @@ def build_legend_display_entries(
         child_parent: direct child name -> direct parent name (all levels).
         parent_names: set of ALL parent names (nested included).
         order_index: legend_item_order lookup.
+        collapsed: parent names whose children are folded away from the list.
     """
     if not top_parents:
         return list(entries)
@@ -81,9 +83,21 @@ def build_legend_display_entries(
         by_parent.setdefault(parent, []).append(child)
 
     def _block(parent: str, depth: int) -> list[dict[str, Any]]:
+        folded = parent in (collapsed or set())
         out: list[dict[str, Any]] = [
-            {"type": "parent", "key": parent, "parent": parent, "depth": depth}
+            {
+                "type": "parent",
+                "key": parent,
+                "parent": parent,
+                "depth": depth,
+                "collapsed": folded,
+            }
         ]
+        if folded:
+            # Folded away: the parent row stays and its children are not listed. They are still
+            # groups - they keep their colour, shape and visibility - so folding changes the list
+            # alone and never the state.
+            return out
         children = sorted(
             by_parent.get(parent, []),
             key=lambda c: order_index.get(f"group:{c}", 10_000),
