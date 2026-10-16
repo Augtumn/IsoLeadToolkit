@@ -76,11 +76,24 @@ def _render_geo_overlays(
     if app_state.ax is prev_ax and prev_xlim and prev_ylim:
         if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
             try:
-                if prev_embedding_type and str(prev_embedding_type).upper() == str(actual_algorithm).upper():
+                # What this axes drew last, not what the application drew last: with several panels
+                # a global is overwritten by whichever panel rendered before this one, so the panel
+                # that did not change its mode stopped being recognised and its view was not
+                # restored - the reported "ticking a group resets the zoom". The application's
+                # value is only the first-time fallback, for a figure this renderer has not drawn.
+                drawn_last = getattr(
+                    app_state.ax, "_isotopes_embedding", prev_embedding_type
+                )
+                if drawn_last and str(drawn_last).upper() == str(actual_algorithm).upper():
                     app_state.ax.set_xlim(prev_xlim)
                     app_state.ax.set_ylim(prev_ylim)
             except Exception as err:
                 logger.warning("_render_geo_overlays failed: %s", err)
+
+    try:
+        app_state.ax._isotopes_embedding = actual_algorithm
+    except Exception as err:
+        logger.warning("Could not record the embedding a panel drew: %s", err)
 
     if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
         _draw_equation_overlays(app_state.ax)
