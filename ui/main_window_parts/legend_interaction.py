@@ -325,6 +325,35 @@ class MainWindowLegendInteractionMixin:
 
         self._refresh_plot()
 
+    def _on_parent_checkbox_change(self, parent, state):
+        """Show or hide every group under *parent* at once.
+
+        A parent group is a group of groups: its children are groups themselves, so ticking the
+        parent ticks them all and unticking it hides them all. The partial state a tristate box can
+        report means "make it whole again", which is the only thing a single click can mean there.
+        """
+        from visualization.plotting.grouping import parent_children
+
+        groups = self._legend_groups()
+        if not groups:
+            return
+        known = set(groups)
+        family = [child for child in parent_children(app_state, parent) if child in known]
+        if not family:
+            return
+        visible = self._visible_groups_now(groups)
+        if state == Qt.Unchecked:
+            visible -= set(family)
+        else:
+            visible |= set(family)
+        logger.info(
+            "Legend: %s shows %d of its %d group(s).",
+            parent,
+            len([child for child in family if child in visible]),
+            len(family),
+        )
+        self._apply_visible_groups(visible, groups)
+
     def _reveal_group_in_legend(self, group):
         """Scroll the legend panel to *group* and select its row.
 

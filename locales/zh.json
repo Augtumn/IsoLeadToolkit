@@ -1023,5 +1023,6 @@
   "Arrange Panels": "Arrange Panels",
   "Cascade": "Cascade",
   "Lay the panels out: tiled, cascaded, or on a grid that fills the window.": "Lay the panels out: tiled, cascaded, or on a grid that fills the window.",
-  "Tile": "Tile"
+  "Tile": "Tile",
+  "Show or hide every group in this parent": "Show or hide every group in this parent"
 }

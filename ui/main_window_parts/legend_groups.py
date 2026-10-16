@@ -28,6 +28,7 @@ from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
 REQUIRES_MainWindowLegendGroupMixin = (
+    "_on_parent_checkbox_change",
     "_reload_legend_panel",
     "_set_legend_item_meta",
     "_show_parent_shape_menu",
@@ -417,6 +418,33 @@ class MainWindowLegendGroupMixin:
             lambda checked=False, p=parent, btn=shape_btn: self._show_parent_shape_menu(p, btn)
         )
         item_layout.addWidget(shape_btn)
+
+        # Visibility of the whole parent group. A parent is a group of groups - its children are
+        # groups, drawn and coloured like any other - so the row carries the same switch they do,
+        # and it reports the three states: all shown, none, or some. The list is rebuilt after a
+        # change, which recomputes this from the state, so the row and its children cannot disagree.
+        from PyQt5.QtWidgets import QCheckBox
+
+        visible_now = (
+            set(app_state.visible_groups)
+            if app_state.visible_groups is not None
+            else set(app_state.available_groups or [])
+        )
+        shown = [child for child in children if child in visible_now]
+        parent_check = QCheckBox()
+        parent_check.setTristate(True)
+        if not children or len(shown) == len(children):
+            parent_check.setCheckState(Qt.Checked)
+        elif shown:
+            parent_check.setCheckState(Qt.PartiallyChecked)
+        else:
+            parent_check.setCheckState(Qt.Unchecked)
+        parent_check.setFixedWidth(18)
+        parent_check.setToolTip(translate("Show or hide every group in this parent"))
+        parent_check.stateChanged.connect(
+            lambda state, p=parent: self._on_parent_checkbox_change(p, state)
+        )
+        item_layout.addWidget(parent_check)
 
         label = QLabel(f"{translate('Parent')}: {parent}")
         label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
