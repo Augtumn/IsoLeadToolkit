@@ -327,6 +327,7 @@ class MainWindowCanvasMixin:
             axis_lock_action,
             panels_action,
             fit_action,
+            arrange_action,
             hover_action,
         ]
         # Freshly built actions start unchecked, so a tool that is still active in the state

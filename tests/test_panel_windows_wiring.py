@@ -146,6 +146,35 @@ def test_closing_the_panel_in_use_follows_the_survivor(host) -> None:
     )
 
 
+def test_the_arrange_button_survives_a_rebuild(host) -> None:
+    """Reported: the Arrange Panels button was there, and then could not be found.
+
+    The toolbar is cleared and rebuilt from the action list every time it is retargeted for another
+    canvas, so an action that is added to the toolbar but not to that list is gone the first time
+    the user switches panel or the mode changes.
+    """
+    from matplotlib.figure import Figure
+
+    from core import translate
+
+    host.set_matplotlib_figure(Figure())
+    wanted = translate("Arrange Panels")
+    assert any(action.text() == wanted for action in host.toolbar.actions()), (
+        "the button is on the freshly built toolbar"
+    )
+
+    records = host._build_panel_windows(["2D", "Ternary"])
+    host._retarget_toolbar(records[0]["canvas"])
+
+    actions = host.toolbar.actions()
+    assert any(action.text() == wanted for action in actions), (
+        "and it survives the rebuild a panel switch performs"
+    )
+    assert any(action.text() == wanted and action.menu() is not None for action in actions), (
+        "with its tiled/cascaded/grid menu"
+    )
+
+
 class _Gateway:
     """Records the state writes set_matplotlib_figure and activation make."""
 
