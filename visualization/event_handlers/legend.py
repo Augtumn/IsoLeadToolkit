@@ -66,7 +66,10 @@ def on_legend_click(event: Any) -> None:
 
                 logger.info('Toggled visibility for: %s to %s', label, new_visible)
                 try:
-                    app_state.fig.canvas.draw_idle()
+                    # Hiding a group hides it in every panel, so every panel is repainted.
+                    from visualization.events import repaint_panels
+
+                    repaint_panels()
                 except Exception as err:
                     logger.warning("on_legend_click failed: %s", err)
                 return

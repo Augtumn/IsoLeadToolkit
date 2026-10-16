@@ -54,8 +54,11 @@ def refresh_overlay_styles() -> None:
                 except Exception as e:
                     logger.warning("refresh_overlay_styles failed: %s", err)
 
-        if app_state.fig.canvas is not None:
-            app_state.fig.canvas.draw_idle()
+        # The overlays live in every panel that draws them, so all of them are repainted; the
+        # state's figure mirrors one panel and a style change showed up in that one only.
+        from visualization.events import repaint_panels
+
+        repaint_panels()
 
     except Exception as e:
         logger.warning("Failed to refresh overlay styles: %s", e)
@@ -119,13 +122,9 @@ def refresh_overlay_visibility() -> None:
         _set_label_visibility(app_state.plumbotectonics_label_data, 'plumbotectonics_curve')
         _set_label_visibility(app_state.plumbotectonics_isoage_label_data, 'paleoisochron')
 
-        canvas = None
-        if app_state.fig is not None and app_state.fig.canvas is not None:
-            canvas = app_state.fig.canvas
-        elif getattr(app_state, 'canvas', None) is not None:
-            canvas = app_state.canvas
-        if canvas is not None:
-            canvas.draw_idle()
+        from visualization.events import repaint_panels
+
+        repaint_panels()
 
     except Exception as e:
         logger.warning("Failed to refresh overlay visibility: %s", e)
