@@ -211,11 +211,18 @@ def _render_embedding_result(group_col: str, algorithm: str, payload: dict) -> b
                 logger.warning('Failed to cache embedding: %s', cache_err)
         refresh_selection_overlay()
         sync_selection_tools()
-        try:
-            app_state.fig.canvas.draw_idle()
-            app_state.fig.canvas.flush_events()
-        except Exception as err:
-            logger.warning("_render_embedding_result failed: %s", err)
+        # An async result is ready, and it belongs to every panel that shows this embedding; the
+        # paint is forced rather than queued, which is what this nudge is for. Drawing the state's
+        # figure showed it in one panel only.
+        repaint_panels()
+        for figure in panel_figures():
+            canvas = getattr(figure, "canvas", None)
+            if canvas is None:
+                continue
+            try:
+                canvas.flush_events()
+            except Exception as err:
+                logger.warning("Could not flush a panel's canvas: %s", err)
         state_gateway.set_initial_render_done(True)
         logger.debug('Embedding render completed for %s', algorithm)
     else:
