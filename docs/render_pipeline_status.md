@@ -32,11 +32,26 @@
 
 ## 三、给下一次接手的最小步骤
 
+### 阶段 3 目前的障碍（本轮新增的证据，别再走回头路）
+
+- **已排除：axes 被重建。** 探针显示起始 axes、第一次渲染后、第二次渲染后三者 `id` 全等，
+  `_ensure_axes(dimensions=2)` 也返回同一对象。
+- **已排除：令牌不一致。** 第二次渲染后 `view_state.drawn_last(ax)` 与
+  `context.token(*adapter.token(ctx))` **相等**。
+- **仍存在的矛盾（必须先解释，别急着改代码）**：在同一次探测里，`restore_view` 收到正确的
+  `captured`（用户的 2.0–4.0）与正确的 token，却**返回 False**；而同一时刻手工比较
+  `drawn_last(ax) == token` 又是 **True**。两者不能同时成立 ⇒ 下一步应逐帧记录
+  `mark_drawn` / `restore_view` 的**入参对象身份与 token 值**（本轮已写过一次这样的探针，直接复用），
+  而不是再猜机制。
+- **试验过并已撤销**：在 `restore_view` 里先 `set_autoscale_on(False)` 再设范围——**未被证实有效**，
+  按"不加无据补丁"的纪律撤回（当时 2D/3D 测试仍全过，说明该改动无害，但也无益）。
+
 1. 先跑 `uv run pytest tests/test_render_modes_baseline.py -q`（14 模式安全网，必须全绿）；
-2. 按 `adapters/two_d.py` 的形态写 `adapters/embedding_modes.py`（**不要**命名 `embedding.py`），
-   `decorate` 用 `resolve_embedding_params` 解析后的参数，`finish` 里的边缘 KDE **必须早于**恢复视图；
-3. 若视图仍未保留，用同一条栈探针（见本文件"栈溯源"）直接打印 `restore_view` 的返回值、
-   `view_state.drawn_last(ax)` 与 token，不要靠推测；
+2. 按 `adapters/two_d.py` 的形态写嵌入适配器（**不要**命名 `embedding.py`，会遮蔽 `rendering/embedding/` 包；
+   放在 `adapters/` 下时相对导入要两个点，指向 `visualization/plotting/` 的要三个点）；
+   `decorate` 用 `resolve_embedding_params` **解析后**的参数（未解析的是 `None`）；
+   `finish` 里的边缘 KDE **必须早于**恢复视图（它会改写主轴范围）；
+3. 先解释上面那条矛盾，再动骨架；
 4. 每步跑全量：`uv run pytest` + `scripts/check_*.py --fail-on-hits`（14 个）+ `locales/check_untranslated.py`。
 
 ## 四、本次大改遵守的纪律
