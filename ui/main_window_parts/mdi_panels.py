@@ -16,7 +16,7 @@ from typing import Any, Sequence
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QMdiArea, QMdiSubWindow
 
 from core import translate
@@ -66,6 +66,8 @@ class PanelWindows:
         self.area = area
         self._on_close = on_close
         self._records = []
+        #: How many times the grid has been deferred waiting for the area to be laid out.
+        self._grid_retries = 0
 
     def count(self) -> int:
         return len(self._records)
@@ -159,13 +161,21 @@ class PanelWindows:
         ]
         if not windows:
             return
+        viewport = self.area.viewport()
+        width = max(1, viewport.width())
+        height = max(1, viewport.height())
+        if (not self.area.isVisible() or width < 200 or height < 200) and self._grid_retries < 3:
+            # The area has not been laid out yet - it was just added to the window - so a grid
+            # computed now would size the children from a placeholder and leave them overlapping.
+            # The arrangement is retried once, after the layout has given the area its real size.
+            self._grid_retries += 1
+            QTimer.singleShot(0, self.grid)
+            return
+        self._grid_retries = 0
         # A maximised child ignores setGeometry, so the windows are un-maximised first.
         for window in windows:
             if window.isMaximized():
                 window.showNormal()
-        viewport = self.area.viewport()
-        width = max(1, viewport.width())
-        height = max(1, viewport.height())
         columns = max(1, int(len(windows) ** 0.5 + 0.999))
         rows = max(1, -(-len(windows) // columns))
         cell_width = max(120, width // columns)
