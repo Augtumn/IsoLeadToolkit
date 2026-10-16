@@ -119,8 +119,8 @@ class DataPanelBuildMixin(
         self._build_coloring_grouping(basics_layout)
 
         projection_widget = self._build_projection_section()
-        section_toolbox.addItem(basics_page, translate("Coloring / Grouping"))
-        section_toolbox.addItem(projection_widget, translate("Render Mode"))
+        section_toolbox.addItem(basics_page, translate("Grouping"))
+        section_toolbox.addItem(projection_widget, translate("Plot type"))
 
         self._restore_toolbox_state(section_toolbox, 'data')
         layout.addWidget(section_toolbox)

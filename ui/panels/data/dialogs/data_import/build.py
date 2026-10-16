@@ -257,7 +257,7 @@ class DataImportBuildMixin:
         return group
 
     def _build_render_section(self):
-        group = QGroupBox(translate("Initial Render Mode"))
+        group = QGroupBox(translate("Initial plot type"))
         self.render_group = group
         group_layout = QHBoxLayout(group)
         group_layout.setContentsMargins(12, 10, 12, 12)
@@ -326,7 +326,7 @@ class DataImportBuildMixin:
         if self.preview_group is not None:
             self.preview_group.setTitle(translate("Data Preview"))
         if self.render_group is not None:
-            self.render_group.setTitle(translate("Initial Render Mode"))
+            self.render_group.setTitle(translate("Initial plot type"))
         if self.render_label is not None:
             self.render_label.setText(
                 translate("Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.")

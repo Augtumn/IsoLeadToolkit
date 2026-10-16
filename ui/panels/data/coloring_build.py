@@ -33,8 +33,8 @@ class DataPanelColoringBuildMixin:
         Args:
             layout: The parent layout to add widgets into.
         """
-        group_group = QGroupBox(translate("Coloring / Grouping"))
-        group_group.setProperty("translate_key", "Coloring / Grouping")
+        group_group = QGroupBox(translate("Grouping"))
+        group_group.setProperty("translate_key", "Grouping")
         group_layout = QVBoxLayout()
 
         self.group_radio_group = QButtonGroup(self)

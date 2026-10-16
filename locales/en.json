@@ -175,7 +175,6 @@
   "Please load data before applying.": "Please load data before applying.",
   "Failed to load data: {error}": "Failed to load data: {error}",
   "Data Preview": "Data Preview",
-  "Initial Render Mode": "Initial Render Mode",
   "Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.": "Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.",
   "Showing first {rows} rows across all columns (scroll horizontally to view more).": "Showing first {rows} rows across all columns (scroll horizontally to view more).",
   "Recent Files": "Recent Files",
@@ -260,7 +259,6 @@
   "Configure Group Columns": "Configure Group Columns",
   "Group Columns Configuration": "Group Columns Configuration",
   "Select columns to use for grouping:": "Select columns to use for grouping:",
-  "Coloring / Grouping": "Coloring / Grouping",
   "n_neighbors": "n_neighbors",
   "min_dist": "min_dist",
   "random_state": "random_state",
@@ -553,7 +551,6 @@
   "t-SNE Computing…": "t-SNE Computing…",
   "PCA Scaling…": "PCA Scaling…",
   "PCA Computing…": "PCA Computing…",
-  "Render Mode": "Render Mode",
   "Results": "Results",
   "RobustPCA": "Robust PCA",
   "RobustPCA Parameters": "Robust PCA parameters",
@@ -1037,5 +1034,7 @@
   "Point size in square points, from {min} to {max}. The same size is used for every group.": "Point size in square points, from {min} to {max}. The same size is used for every group.",
   "metric:": "metric:",
   "Color for {group}": "Color for {group}",
-  "Normalization: {mode}, maximum distance: {dmax:g}": "Normalization: {mode}, maximum distance: {dmax:g}"
+  "Normalization: {mode}, maximum distance: {dmax:g}": "Normalization: {mode}, maximum distance: {dmax:g}",
+  "Plot type": "Plot type",
+  "Initial plot type": "Initial plot type"
 }

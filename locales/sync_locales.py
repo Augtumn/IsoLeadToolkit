@@ -191,7 +191,7 @@ def main() -> int:
         "Primordial (T1/T2):": "原始（T1/T2）：",
         "Ready": "就绪",
         "Recalculate": "重新计算",
-        "Render Mode": "渲染模式",
+        "Plot type": "绘图类型",
         "Results": "结果",
         "RobustPCA": "稳健 PCA",
         "RobustPCA Parameters": "稳健 PCA 参数",

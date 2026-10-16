@@ -39,6 +39,8 @@ tooltip **必须解释控件**，不能复述标签（英文尤其容易犯 ✗�
 
 | 概念 | 英文 | 中文 | 禁用 |
 |---|---|---|---|
+| 绘图类型 | `Plot type` | 绘图类型 | Render Mode（下拉里是图本身，不是渲染管线 ✗） |
+| 分组 | `Grouping` | 分组 | Coloring / Grouping（该页没有着色，配色在图例面板 ✗） |
 | 框选 / 套索 | `Box Select` / `Lasso Select` | 框选 / 套索选择 | Enable Selection · Custom Shape |
 | μ / κ | `μ` `κ` | μ / κ | Mu / Kappa（正文中） |
 | 边缘密度 | `marginal KDE` | 边缘核密度 | 边际核密度 |

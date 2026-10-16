@@ -37,8 +37,8 @@ class DataPanelRenderBuildMixin:
         Args:
             layout: The parent layout to add widgets into.
         """
-        render_group = QGroupBox(translate("Render Mode"))
-        render_group.setProperty("translate_key", "Render Mode")
+        render_group = QGroupBox(translate("Plot type"))
+        render_group.setProperty("translate_key", "Plot type")
         render_layout = QVBoxLayout()
 
         self.render_combo = QComboBox()

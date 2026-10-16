@@ -238,7 +238,6 @@
   "Please load data before applying.": "请先加载数据再应用。",
   "Failed to load data: {error}": "加载数据失败：{error}",
   "Data Preview": "数据预览",
-  "Initial Render Mode": "初始渲染模式",
   "Tip: choose a fast mode (for example 2D Scatter) for first render on large datasets.": "提示：大数据集首次渲染建议选择快速模式（例如二维散点）。",
   "Showing first {rows} rows across all columns (scroll horizontally to view more).": "显示前 {rows} 行（包含所有列，左右滚动可查看更多）。",
   "Recent Files": "最近使用文件",
@@ -322,7 +321,6 @@
   "Select columns to use for grouping:": "选择用于分组的列：",
   "X:": "X轴：",
   "Y:": "Y轴：",
-  "Coloring / Grouping": "着色 / 分组",
   "n_neighbors": "邻点数",
   "min_dist": "最小距离",
   "random_state": "随机种子",
@@ -582,7 +580,6 @@
   "t-SNE Computing…": "t-SNE 计算中…",
   "PCA Scaling…": "PCA 标准化中…",
   "PCA Computing…": "PCA 计算中…",
-  "Render Mode": "渲染模式",
   "Results": "结果",
   "Scree Plot": "碎石图",
   "Select Model:": "选择模型：",
@@ -1037,5 +1034,7 @@
   "Point size in square points, from {min} to {max}. The same size is used for every group.": "数据点大小（平方磅），范围 {min}–{max}。所有分组使用同一大小。",
   "metric:": "度量：",
   "Color for {group}": "{group} 的颜色",
-  "Normalization: {mode}, maximum distance: {dmax:g}": "归一化方式：{mode}，最大距离：{dmax:g}"
+  "Normalization: {mode}, maximum distance: {dmax:g}": "归一化方式：{mode}，最大距离：{dmax:g}",
+  "Plot type": "绘图类型",
+  "Initial plot type": "初始绘图类型"
 }
