@@ -279,7 +279,7 @@ def main() -> int:
         "T1 (1st Stage):": "T1（第一阶段）：",
         "T2 (Earth Age):": "T2（地球年龄）：",
         "Tooltip Settings": "提示设置",
-        "Triangle Down (v)": "倒三角 (v)",
+        "Triangle down (v)": "倒三角 (v)",
         "Triangle Up (^)": "上三角 (^)",
         "Tsec (2nd Stage):": "Tsec（第二阶段）：",
         "U Ratio (235/238):": "U 比值 (235/238)：",

@@ -258,7 +258,7 @@ class LegendBuildMixin:
         auto_shape_row.addWidget(auto_shape_label)
         self.auto_shape_set_combo = QComboBox()
         self.auto_shape_set_combo.addItem(translate("All Shapes"), "all")
-        self.auto_shape_set_combo.addItem(translate("Basic Shapes"), "basic")
+        self.auto_shape_set_combo.addItem(translate("Preset shape set"), "basic")
         self.auto_shape_set_combo.addItem(translate("Custom…"), "__custom__")
         for name, shapes in app_state.custom_shape_sets.items():
             self.auto_shape_set_combo.addItem(name, list(shapes))
@@ -267,7 +267,7 @@ class LegendBuildMixin:
         style_layout.addLayout(auto_shape_row)
 
         base_shape_row = QHBoxLayout()
-        base_shape_label = QLabel(translate("Base Shape"))
+        base_shape_label = QLabel(translate("Base shape"))
         base_shape_label.setProperty('translate_key', 'Base Shape')
         base_shape_row.addWidget(base_shape_label)
         self._ensure_marker_shape_map()

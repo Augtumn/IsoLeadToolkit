@@ -373,7 +373,7 @@ class EndmemberAnalysisDialog(QDialog):
         display_names = {
             'Endmember_A': translate("Endmember A"),
             'Endmember_B': translate("Endmember B"),
-            'Mixing': translate("Mixing"),
+            'Mixing': translate("Mixed"),
         }
 
         self.result_table.setRowCount(len(label_order))
@@ -403,7 +403,7 @@ class EndmemberAnalysisDialog(QDialog):
         display_names = {
             'Endmember_A': translate("Endmember A"),
             'Endmember_B': translate("Endmember B"),
-            'Mixing': translate("Mixing"),
+            'Mixing': translate("Mixed"),
         }
 
         # 初始化全部为 Unknown

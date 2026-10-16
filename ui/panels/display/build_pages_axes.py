@@ -143,7 +143,7 @@ class DisplayBuildAxesMixin:
             self.grid_alpha_spin.setValue(float(app_state.grid_alpha))
             self.grid_alpha_spin.valueChanged.connect(self._on_style_change)
             self.grid_alpha_spin.setToolTip(translate("How see-through the grid lines are: 0 is invisible, 1 is solid."))
-            row = add_row(grid_grid, "Grid Alpha", self.grid_alpha_spin, row)
+            row = add_row(grid_grid, "Grid opacity", self.grid_alpha_spin, row)
 
             grid_style_items = ['-', '--', '-.', ':']
             grid_style_default = app_state.grid_linestyle
@@ -179,7 +179,7 @@ class DisplayBuildAxesMixin:
             self.minor_grid_alpha_spin.setDecimals(2)
             self.minor_grid_alpha_spin.setValue(float(app_state.minor_grid_alpha))
             self.minor_grid_alpha_spin.valueChanged.connect(self._on_style_change)
-            row = add_row(grid_grid, "Minor Grid Alpha", self.minor_grid_alpha_spin, row)
+            row = add_row(grid_grid, "Minor grid opacity", self.minor_grid_alpha_spin, row)
 
             minor_grid_style_items = ['-', '--', '-.', ':']
             minor_grid_style_default = app_state.minor_grid_linestyle

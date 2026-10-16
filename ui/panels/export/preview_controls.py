@@ -95,11 +95,11 @@ class ExportPreviewControlsMixin:
 
         # Row 4: Tight BBox + Padding + Transparent
         row4 = QHBoxLayout()
-        tight_bbox_check = QCheckBox(translate("Tight BBox"))
+        tight_bbox_check = QCheckBox(translate("Trim to content"))
         tight_bbox_check.setChecked(bool(params['tight_bbox']))
         row4.addWidget(tight_bbox_check)
 
-        row4.addWidget(QLabel(translate("Padding")))
+        row4.addWidget(QLabel(translate("Padding (inches)")))
         pad_spin = QDoubleSpinBox()
         pad_spin.setRange(0.0, 1.0)
         pad_spin.setSingleStep(0.01)

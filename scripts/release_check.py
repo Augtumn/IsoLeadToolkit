@@ -121,24 +121,39 @@ def check_file_exists(description: str, *rel_paths: str) -> bool:
     return all_ok
 
 
+def check_guards() -> bool:
+    """Run every source guard under ``scripts/``.
+
+    The set is discovered rather than listed: a guard that has been added but not written down here is
+    a guard that does not run before a release, which is how four of them came to be the only ones.
+    """
+    ok = True
+    for script in sorted((_REPO_ROOT / "scripts").glob("check_*.py")):
+        ok = check_guard(script.name) and ok
+    return ok
+
+
+def check_locales() -> bool:
+    """Run the locale checks: key coverage, and text that never reached ``translate``."""
+    ok = True
+    for relative in ("locales/check_untranslated.py", "locales/check_hardcoded_text.py"):
+        proc = subprocess.run(
+            [sys.executable, str(_REPO_ROOT / relative), "--fail-on-hits"],
+            capture_output=True,
+            text=True,
+            cwd=str(_REPO_ROOT),
+        )
+        ok = _run_check(f"Locale: {relative}", proc) and ok
+    return ok
+
+
 # ---------------------------------------------------------------------------
 # Ordered checks (name, callable)
 # ---------------------------------------------------------------------------
 CHECKS: list[tuple[str, callable]] = [  # type: ignore[type-arg]
     ("pytest", check_tests),
-    ("check_state_mutations.py", lambda: check_guard("check_state_mutations.py")),
-    (
-        "check_gateway_direct_state_assignments.py",
-        lambda: check_guard("check_gateway_direct_state_assignments.py"),
-    ),
-    (
-        "check_gateway_generic_mutations.py",
-        lambda: check_guard("check_gateway_generic_mutations.py"),
-    ),
-    (
-        "check_state_dict_mutations.py",
-        lambda: check_guard("check_state_dict_mutations.py"),
-    ),
+    ("guards", check_guards),
+    ("locales", check_locales),
     (
         "core.state",
         lambda: check_import("core.state", "from core.state import app_state, state_gateway"),

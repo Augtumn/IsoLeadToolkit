@@ -115,20 +115,20 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         layout.addWidget(label_group)
 
     if style_key in app_state.line_styles:
-        label_settings = QGroupBox(translate("Curve Label Settings"))
+        label_settings = QGroupBox(translate("Line label settings"))
         label_layout = QVBoxLayout(label_settings)
         label_layout.setContentsMargins(8, 6, 8, 6)
         label_layout.setSpacing(6)
 
         label_text_row = QHBoxLayout()
-        label_text_row.addWidget(QLabel(translate("Curve Label Text")))
+        label_text_row.addWidget(QLabel(translate("Line label text")))
         label_text_edit = QLineEdit()
         label_text_edit.setText(style.get('label_text', ''))
         label_text_row.addWidget(label_text_edit, 1)
         label_layout.addLayout(label_text_row)
 
         label_size_row = QHBoxLayout()
-        label_size_row.addWidget(QLabel(translate("Curve Label Size")))
+        label_size_row.addWidget(QLabel(translate("Line label size")))
         label_size_spin = QSpinBox()
         label_size_spin.setRange(6, 24)
         default_label_size = 9 if style_key == 'isochron' else 8
@@ -138,14 +138,14 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         label_layout.addLayout(label_size_row)
 
         label_bg_row = QHBoxLayout()
-        label_bg_check = QCheckBox(translate("Curve Label Background"))
+        label_bg_check = QCheckBox(translate("Line label background"))
         label_bg_check.setChecked(bool(style.get('label_background', False)))
         label_bg_row.addWidget(label_bg_check)
         label_bg_row.addStretch()
         label_layout.addLayout(label_bg_row)
 
         label_bg_color_row = QHBoxLayout()
-        label_bg_color_row.addWidget(QLabel(translate("Curve Label Background Color")))
+        label_bg_color_row.addWidget(QLabel(translate("Line label background colour")))
         label_bg_color_swatch = QLabel()
         label_bg_color_swatch.setFixedSize(20, 16)
         bg_color = style.get('label_bg_color', '#ffffff') or '#ffffff'
@@ -154,7 +154,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
 
         def _pick_label_bg_color():
             from PyQt5.QtWidgets import QColorDialog
-            chosen = QColorDialog.getColor(QColor(bg_color), parent, translate("Curve Label Background Color"))
+            chosen = QColorDialog.getColor(QColor(bg_color), parent, translate("Line label background colour"))
             if chosen.isValid():
                 new_color = chosen.name()
                 apply_color_swatch(label_bg_color_swatch, new_color, fallback='#ffffff')
@@ -166,7 +166,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         label_layout.addLayout(label_bg_color_row)
 
         label_bg_alpha_row = QHBoxLayout()
-        label_bg_alpha_row.addWidget(QLabel(translate("Curve Label Background Opacity")))
+        label_bg_alpha_row.addWidget(QLabel(translate("Line label background opacity")))
         label_bg_alpha_spin = QDoubleSpinBox()
         label_bg_alpha_spin.setRange(0.1, 1.0)
         label_bg_alpha_spin.setSingleStep(0.05)
@@ -176,7 +176,7 @@ def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> b
         label_layout.addLayout(label_bg_alpha_row)
 
         label_pos_row = QHBoxLayout()
-        label_pos_row.addWidget(QLabel(translate("Curve Label Position")))
+        label_pos_row.addWidget(QLabel(translate("Line label position")))
         label_pos_combo = QComboBox()
         label_pos_combo.addItem(translate("Auto"), 'auto')
         label_pos_combo.addItem(translate("Start"), 'start')

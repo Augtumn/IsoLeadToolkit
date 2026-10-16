@@ -73,7 +73,7 @@ class MixingCalculatorDialog(QDialog):
             translate("Mixture"),
             translate("Endmember"),
             translate("Proportion"),
-            translate("Residual")
+            translate("RMSE (fit error)")
         ])
         self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         results_layout.addWidget(self.result_table, 1)

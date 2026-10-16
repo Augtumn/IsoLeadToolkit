@@ -356,7 +356,7 @@ class ProvenanceMLWorkflowMixin:
 
         summary = [
             translate("Training samples: {count}").format(count=stats.get('rows_final', 0)),
-            translate("Training labels: {count}").format(count=stats.get('labels_final', 0)),
+            translate("Training regions: {count}").format(count=stats.get('labels_final', 0)),
             translate("Outliers removed: {count}").format(count=stats.get('outliers_removed', 0)),
             translate("Regions dropped: {count}").format(count=len(stats.get('regions_dropped_small', []))),
             translate("Prediction samples: {count}").format(count=pred_count),

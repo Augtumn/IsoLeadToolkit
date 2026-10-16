@@ -170,7 +170,7 @@ class DisplayPanelKdeStyleMixin:
             layout.addLayout(bw_method_row)
 
             kde_bw_row = QHBoxLayout()
-            kde_bw_row.addWidget(QLabel(translate("Bandwidth Adjust")))
+            kde_bw_row.addWidget(QLabel(translate("Bandwidth scale factor")))
             kde_bw_adjust_spin = QDoubleSpinBox()
             kde_bw_adjust_spin.setObjectName('kde_bw_adjust_spin')
             kde_bw_adjust_spin.setRange(0.05, 5.0)
@@ -181,7 +181,7 @@ class DisplayPanelKdeStyleMixin:
             layout.addLayout(kde_bw_row)
 
             grid_row = QHBoxLayout()
-            grid_row.addWidget(QLabel(translate("Grid Size")))
+            grid_row.addWidget(QLabel(translate("Density grid points")))
             kde_gridsize_spin = QSpinBox()
             kde_gridsize_spin.setObjectName('kde_gridsize_spin')
             kde_gridsize_spin.setRange(32, 1024)
@@ -242,7 +242,7 @@ class DisplayPanelKdeStyleMixin:
             kde_common_norm_check.setChecked(bool(app_state.kde_common_norm))
             layout.addWidget(kde_common_norm_check)
 
-            kde_warn_singular_check = QCheckBox(translate("Warn When Singular"))
+            kde_warn_singular_check = QCheckBox(translate("Warn on singular matrices"))
             kde_warn_singular_check.setObjectName('kde_warn_singular_check')
             kde_warn_singular_check.setChecked(bool(app_state.kde_warn_singular))
             layout.addWidget(kde_warn_singular_check)
@@ -292,7 +292,7 @@ class DisplayPanelKdeStyleMixin:
             layout.addLayout(max_points_row)
 
             bw_row = QHBoxLayout()
-            bw_row.addWidget(QLabel(translate("Bandwidth Adjust")))
+            bw_row.addWidget(QLabel(translate("Bandwidth scale factor")))
             bw_adjust_spin = QDoubleSpinBox()
             bw_adjust_spin.setRange(0.05, 5.0)
             bw_adjust_spin.setSingleStep(0.05)
@@ -302,7 +302,7 @@ class DisplayPanelKdeStyleMixin:
             layout.addLayout(bw_row)
 
             bandwidth_row = QHBoxLayout()
-            bandwidth_row.addWidget(QLabel(translate("KDE Bandwidth (0 = Auto)")))
+            bandwidth_row.addWidget(QLabel(translate("Bandwidth (0 = auto)")))
             bandwidth_spin = QDoubleSpinBox()
             bandwidth_spin.setRange(0.0, 10.0)
             bandwidth_spin.setSingleStep(0.05)
@@ -354,7 +354,7 @@ class DisplayPanelKdeStyleMixin:
             layout.addWidget(auto_bw_hint)
 
             cut_row = QHBoxLayout()
-            cut_row.addWidget(QLabel(translate("KDE Cut")))
+            cut_row.addWidget(QLabel(translate("Range extension (× bandwidth)")))
             cut_spin = QDoubleSpinBox()
             cut_spin.setRange(0.0, 5.0)
             cut_spin.setSingleStep(0.1)
