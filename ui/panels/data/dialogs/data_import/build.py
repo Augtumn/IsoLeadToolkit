@@ -282,22 +282,11 @@ class DataImportBuildMixin:
 
         current_value = self.render_mode_combo.currentData()
 
-        options = [
-            (translate("2D"), '2D'),
-            (translate("3D"), '3D'),
-            (translate("Ternary"), 'Ternary'),
-            (translate("V1-V2 Diagram"), 'V1V2'),
-            (translate("PB_EVOL_76"), 'PB_EVOL_76'),
-            (translate("PB_EVOL_86"), 'PB_EVOL_86'),
-            (translate("PB_MU_AGE"), 'PB_MU_AGE'),
-            (translate("PB_KAPPA_AGE"), 'PB_KAPPA_AGE'),
-            (translate("PLUMBOTECTONICS_76"), 'PLUMBOTECTONICS_76'),
-            (translate("PLUMBOTECTONICS_86"), 'PLUMBOTECTONICS_86'),
-            (translate("UMAP"), 'UMAP'),
-            (translate("t-SNE"), 'tSNE'),
-            (translate("PCA"), 'PCA'),
-            (translate("RobustPCA"), 'RobustPCA'),
-        ]
+        # The one list every control is built from, rather than a second copy of it: this copy had
+        # drifted into a different order from the one the control panel shows.
+        from core.render_modes import RENDER_MODE_CHOICES
+
+        options = [(translate(label), value) for label, value in RENDER_MODE_CHOICES]
         self.render_mode_combo.blockSignals(True)
         self.render_mode_combo.clear()
         for label, value in options:

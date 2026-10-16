@@ -13,7 +13,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from core import app_state, state_gateway
-from ui.render_modes import RENDER_MODE_VALUES
+from core.render_modes import RENDER_MODE_VALUES
 
 #: Every mode the application offers, from the one list the controls are built from.
 MODES = tuple(RENDER_MODE_VALUES)

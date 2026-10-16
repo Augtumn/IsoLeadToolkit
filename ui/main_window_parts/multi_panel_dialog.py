@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import translate
-from ui.render_modes import RENDER_MODE_CHOICES, RENDER_MODE_VALUES
+from core.render_modes import RENDER_MODE_CHOICES, RENDER_MODE_VALUES
 from visualization.plotting.panels import MAX_PANELS
 
 

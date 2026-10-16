@@ -43,7 +43,7 @@ class DataPanelRenderBuildMixin:
 
         self.render_combo = QComboBox()
         # One list, shared with the multi-panel window, so the two cannot drift apart.
-        from ui.render_modes import RENDER_MODE_CHOICES
+        from core.render_modes import RENDER_MODE_CHOICES
 
         render_modes = [
             (translate(label), value) for label, value in RENDER_MODE_CHOICES

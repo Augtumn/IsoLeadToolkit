@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from ui.main_window_parts.multi_panel_dialog import MultiPanelDialog
-from ui.render_modes import RENDER_MODE_CHOICES, RENDER_MODE_VALUES
+from core.render_modes import RENDER_MODE_CHOICES, RENDER_MODE_VALUES
 
 
 def test_it_offers_every_mode_the_application_draws(qapp) -> None:
