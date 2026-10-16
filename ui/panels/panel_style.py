@@ -235,18 +235,20 @@ class PanelStyleMixin:
             except Exception as err:
                 logger.warning("_on_style_change failed: %s", err)
 
-        # ---- fig / ax 直接样式更新 ----
-        if app_state.fig is not None:
+        # ---- fig / ax 直接样式更新（每个面板各一次 ✓）----
+        from visualization.events import panel_figures
+
+        for figure in panel_figures():
             try:
-                app_state.fig.set_dpi(app_state.plot_dpi)
-                app_state.fig.patch.set_facecolor(app_state.plot_facecolor)
+                figure.set_dpi(app_state.plot_dpi)
+                figure.patch.set_facecolor(app_state.plot_facecolor)
             except Exception as err:
                 logger.warning("_on_style_change failed: %s", err)
-        if app_state.ax is not None:
-            try:
-                app_state.ax.set_facecolor(app_state.axes_facecolor)
-            except Exception as err:
-                logger.warning("_on_style_change failed: %s", err)
+            for axes in list(getattr(figure, "axes", []) or []):
+                try:
+                    axes.set_facecolor(app_state.axes_facecolor)
+                except Exception as err:
+                    logger.warning("_on_style_change failed: %s", err)
 
         # ---- 判定是否需要完整重绘 ----
         requires_replot = False

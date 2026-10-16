@@ -125,7 +125,21 @@ class MainWindowLegendOverlayMixin:
         self._refresh_plot()
 
     def _bring_overlay_to_front(self, style_key):
-        ax = app_state.ax
+        """Bring the overlay to the front in every panel that draws it.
+
+        The state's axes mirror one panel, so raising the artists there left the overlay behind the
+        data in every other window.
+        """
+        from visualization.events import panel_figures, repaint_panels
+
+        for figure in panel_figures():
+            for axes in list(getattr(figure, "axes", []) or []):
+                self._bring_overlay_to_front_in(axes, style_key)
+        repaint_panels()
+        self._move_legend_item_to_top("overlay", style_key)
+
+    def _bring_overlay_to_front_in(self, ax, style_key):
+        """Raise the overlay's artists above the data on one axes."""
         if ax is None:
             return
         overlay_map = app_state.overlay_artists or {}
@@ -150,8 +164,3 @@ class MainWindowLegendOverlayMixin:
                 artist.set_zorder(z_value)
             except Exception as err:
                 logger.warning("_bring_overlay_to_front failed: %s", err)
-
-        from visualization.events import repaint_panels
-
-        repaint_panels()
-        self._move_legend_item_to_top("overlay", style_key)
