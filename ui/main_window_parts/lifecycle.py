@@ -118,7 +118,7 @@ class MainWindowLifecycleMixin:
         default_path = f"{app_state.file_path or 'session'}.session.zip"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            translate("Export Session..."),
+            translate("Export Session…"),
             default_path,
             self._session_archive_filter(),
         )
@@ -138,7 +138,7 @@ class MainWindowLifecycleMixin:
             else:
                 QMessageBox.warning(
                     self,
-                    translate("Export Session..."),
+                    translate("Export Session…"),
                     translate("Failed to export session: {error}").format(
                         error=translate("Unknown error")
                     ),
@@ -147,7 +147,7 @@ class MainWindowLifecycleMixin:
             logger.exception("Session export failed")
             QMessageBox.warning(
                 self,
-                translate("Export Session..."),
+                translate("Export Session…"),
                 translate("Failed to export session: {error}").format(error=exc),
             )
 
@@ -155,7 +155,7 @@ class MainWindowLifecycleMixin:
         """Import a session archive (config + optional data) into the app."""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            translate("Import Session..."),
+            translate("Import Session…"),
             "",
             self._session_archive_filter(),
         )

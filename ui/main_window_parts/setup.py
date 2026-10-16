@@ -137,7 +137,7 @@ class MainWindowSetupMixin:
         settings_layout = QHBoxLayout(settings_row)
         settings_layout.setContentsMargins(0, 0, 0, 0)
         settings_layout.setSpacing(4)
-        self.legend_settings_btn = QPushButton(translate("Legend Settings..."))
+        self.legend_settings_btn = QPushButton(translate("Legend Settings…"))
         self.legend_settings_btn.setToolTip(translate("Open the full legend settings dialog"))
         self.legend_settings_btn.clicked.connect(self._open_legend_settings)
         settings_layout.addWidget(self.legend_settings_btn, 1)
@@ -149,7 +149,7 @@ class MainWindowSetupMixin:
         search_layout.setSpacing(4)
         self.legend_search_edit = QLineEdit()
         self.legend_search_edit.setProperty('translate_key', 'Search legend...')
-        self.legend_search_edit.setPlaceholderText(translate("Search legend..."))
+        self.legend_search_edit.setPlaceholderText(translate("Search legend…"))
         self.legend_search_edit.setClearButtonEnabled(True)
         self.legend_search_edit.textChanged.connect(self._on_legend_search_changed)
         self.legend_search_edit.returnPressed.connect(self._on_legend_search_return)
@@ -160,7 +160,7 @@ class MainWindowSetupMixin:
         batch_layout = QHBoxLayout(batch_row)
         batch_layout.setContentsMargins(0, 0, 0, 0)
         batch_layout.setSpacing(4)
-        self.legend_select_all_btn = QPushButton(translate("Select All"))
+        self.legend_select_all_btn = QPushButton(translate("Select all"))
         self.legend_select_all_btn.setToolTip(translate("Show every group again"))
         self.legend_select_all_btn.clicked.connect(self._on_legend_select_all)
         batch_layout.addWidget(self.legend_select_all_btn, 1)
@@ -217,24 +217,24 @@ class MainWindowSetupMixin:
         # 文件菜单
         self.file_menu = menubar.addMenu(translate("File"))
 
-        reload_action = QAction(translate("Import data..."), self)
+        reload_action = QAction(translate("Import data…"), self)
         reload_action.setShortcut(QKeySequence("Ctrl+R"))
         reload_action.triggered.connect(self._reload_data)
         self.file_menu.addAction(reload_action)
 
         self.file_menu.addSeparator()
 
-        export_session_action = QAction(translate("Export Session..."), self)
+        export_session_action = QAction(translate("Export Session…"), self)
         export_session_action.triggered.connect(self._export_session)
         self.file_menu.addAction(export_session_action)
 
-        import_session_action = QAction(translate("Import Session..."), self)
+        import_session_action = QAction(translate("Import Session…"), self)
         import_session_action.triggered.connect(self._import_session)
         self.file_menu.addAction(import_session_action)
 
         self.file_menu.addSeparator()
 
-        entry_workbook_action = QAction(translate("Data Entry (Excel)..."), self)
+        entry_workbook_action = QAction(translate("Data Entry (Excel)…"), self)
         entry_workbook_action.setShortcut(QKeySequence("Ctrl+N"))
         entry_workbook_action.setToolTip(
             translate("Generate the TerraLID entry template, validate it, or import it")
@@ -251,7 +251,7 @@ class MainWindowSetupMixin:
 
         self.file_menu.addSeparator()
 
-        log_action = QAction(translate("View Log..."), self)
+        log_action = QAction(translate("View Log…"), self)
         log_action.triggered.connect(self._show_log_viewer)
         self.file_menu.addAction(log_action)
 
@@ -351,16 +351,16 @@ class MainWindowSetupMixin:
                 status_bar.showMessage(translate("Ready"))
                 return
             stage_names = {
-                "prepare": translate("Preparing..."),
-                "umap_init": translate("UMAP Initializing..."),
-                "umap_fit": translate("UMAP Computing..."),
-                "tsne_init": translate("t-SNE Initializing..."),
-                "tsne_fit": translate("t-SNE Computing..."),
-                "pca_scale": translate("PCA Scaling..."),
-                "pca_fit": translate("PCA Computing..."),
-                "robust_scale": translate("Robust PCA scaling..."),
-                "robust_mcd_fit": translate("Robust PCA computing..."),
-                "robust_fallback_pca_fit": translate("Robust PCA computing..."),
+                "prepare": translate("Preparing…"),
+                "umap_init": translate("UMAP Initializing…"),
+                "umap_fit": translate("UMAP Computing…"),
+                "tsne_init": translate("t-SNE Initializing…"),
+                "tsne_fit": translate("t-SNE Computing…"),
+                "pca_scale": translate("PCA Scaling…"),
+                "pca_fit": translate("PCA Computing…"),
+                "robust_scale": translate("Robust PCA scaling…"),
+                "robust_mcd_fit": translate("Robust PCA computing…"),
+                "robust_fallback_pca_fit": translate("Robust PCA computing…"),
             }
             label = stage_names.get(stage, stage)
             bar.setFormat(f"{label}  %p%")
@@ -439,22 +439,22 @@ class MainWindowSetupMixin:
             self.file_menu.setTitle(translate("File"))
         actions = (self._menu_actions or {})
         if "reload" in actions:
-            actions["reload"].setText(translate("Import data..."))
+            actions["reload"].setText(translate("Import data…"))
         if "exit" in actions:
             actions["exit"].setText(translate("Exit"))
         if "log" in actions:
-            actions["log"].setText(translate("View Log..."))
+            actions["log"].setText(translate("View Log…"))
         if "export_session" in actions:
-            actions["export_session"].setText(translate("Export Session..."))
+            actions["export_session"].setText(translate("Export Session…"))
         if "import_session" in actions:
-            actions["import_session"].setText(translate("Import Session..."))
+            actions["import_session"].setText(translate("Import Session…"))
         if "entry_workbook" in actions:
-            actions["entry_workbook"].setText(translate("Data Entry (Excel)..."))
+            actions["entry_workbook"].setText(translate("Data Entry (Excel)…"))
             actions["entry_workbook"].setToolTip(
                 translate("Generate the TerraLID entry template, validate it, or import it")
             )
         if self.legend_settings_btn is not None and self.legend_settings_btn is not None:
-            self.legend_settings_btn.setText(translate("Legend Settings..."))
+            self.legend_settings_btn.setText(translate("Legend Settings…"))
         if "data" in actions:
             actions["data"].setText(translate("Data"))
         if "display" in actions:

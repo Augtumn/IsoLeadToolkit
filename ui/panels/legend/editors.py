@@ -62,7 +62,7 @@ class LegendEditorsMixin:
         custom_icon = self._build_palette_icon([], label="+")
         self.auto_palette_combo.addItem(custom_icon, "", "__custom__")
         index = self.auto_palette_combo.count() - 1
-        self.auto_palette_combo.setItemData(index, translate("Custom..."), Qt.ToolTipRole)
+        self.auto_palette_combo.setItemData(index, translate("Custom…"), Qt.ToolTipRole)
         self.auto_palette_combo.blockSignals(False)
 
     def _build_palette_icon(self, colors, width=120, height=12, label=None):

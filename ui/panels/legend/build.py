@@ -259,7 +259,7 @@ class LegendBuildMixin:
         self.auto_shape_set_combo = QComboBox()
         self.auto_shape_set_combo.addItem(translate("All Shapes"), "all")
         self.auto_shape_set_combo.addItem(translate("Basic Shapes"), "basic")
-        self.auto_shape_set_combo.addItem(translate("Custom..."), "__custom__")
+        self.auto_shape_set_combo.addItem(translate("Custom…"), "__custom__")
         for name, shapes in app_state.custom_shape_sets.items():
             self.auto_shape_set_combo.addItem(name, list(shapes))
         self.auto_shape_set_combo.currentIndexChanged.connect(self._on_shape_set_change)

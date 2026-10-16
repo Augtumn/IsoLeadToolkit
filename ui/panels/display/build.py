@@ -235,7 +235,7 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
         search_layout = QHBoxLayout()
         search_layout.setSpacing(4)
         self._search_edit = QLineEdit()
-        self._search_edit.setPlaceholderText(translate("Search settings..."))
+        self._search_edit.setPlaceholderText(translate("Search settings…"))
         self._search_edit.textChanged.connect(self._on_search_changed)
         search_layout.addWidget(self._search_edit, 1)
 

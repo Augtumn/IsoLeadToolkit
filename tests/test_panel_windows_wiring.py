@@ -260,7 +260,7 @@ def test_the_main_toolbar_is_populated_when_panels_are_shown(host, monkeypatch) 
 
         texts = [action.text() for action in host.toolbar.actions()]
         assert texts, "the main toolbar received the actions"
-        for key in ("Multi-Panel...", "Fit to Data...", "Hover Tooltip"):
+        for key in ("Multi-Panel…", "Fit to Data…", "Hover Tooltip"):
             assert translate(key) in texts, f"{key} is missing from the toolbar"
     finally:
         app_state.plot_panels = previous
@@ -279,8 +279,8 @@ def test_the_toolbar_is_populated_without_panels_too(host, monkeypatch) -> None:
         host.set_matplotlib_figure(Figure())
 
         texts = [action.text() for action in host.toolbar.actions()]
-        assert translate("Multi-Panel...") in texts
-        assert translate("Fit to Data...") in texts
+        assert translate("Multi-Panel…") in texts
+        assert translate("Fit to Data…") in texts
     finally:
         app_state.plot_panels = previous
 
@@ -353,7 +353,7 @@ def test_switching_the_panel_count_does_not_duplicate_the_toolbar(host, monkeypa
         app_state.plot_panels = []
         host.set_matplotlib_figure(Figure())
         texts = [action.text() for action in host.toolbar.actions()]
-        assert texts.count(translate("Multi-Panel...")) == 1, "and no action appears twice"
+        assert texts.count(translate("Multi-Panel…")) == 1, "and no action appears twice"
     finally:
         app_state.plot_panels = previous
 

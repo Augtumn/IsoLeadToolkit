@@ -101,7 +101,7 @@ class Qt5FileDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
 
-        self.browse_btn = QPushButton(translate("Browse..."))
+        self.browse_btn = QPushButton(translate("Browse…"))
         self.browse_btn.clicked.connect(self._browse_file)
         btn_row.addWidget(self.browse_btn)
 
@@ -160,7 +160,7 @@ class Qt5FileDialog(QDialog):
         self.tip_label.setText(translate(
             "Tip: For Excel workbooks, you can pick the sheet in the next step."
         ))
-        self.browse_btn.setText(translate("Browse..."))
+        self.browse_btn.setText(translate("Browse…"))
         self.clear_btn.setText(translate("Clear Selection"))
         self.cancel_btn.setText(translate("Cancel"))
         self.continue_btn.setText(translate("Continue"))

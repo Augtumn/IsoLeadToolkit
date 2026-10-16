@@ -21,7 +21,7 @@ def _update_external_swatch(swatch, color_value: str) -> None:
 
 def open_line_style_dialog(parent, style_key, swatch=None, on_applied=None) -> bool:
     dialog = QDialog(parent)
-    dialog.setWindowTitle(translate("Edit Line Style"))
+    dialog.setWindowTitle(translate("Edit line style"))
     dialog.setModal(True)
 
     layout = QVBoxLayout(dialog)

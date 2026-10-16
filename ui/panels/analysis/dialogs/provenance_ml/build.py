@@ -46,7 +46,7 @@ class ProvenanceMLBuildMixin:
         self.train_file_edit.setReadOnly(True)
         file_row.addWidget(self.train_file_edit, 1)
 
-        browse_btn = QPushButton(translate("Browse..."))
+        browse_btn = QPushButton(translate("Browse…"))
         browse_btn.clicked.connect(self._browse_training_file)
         file_row.addWidget(browse_btn)
         train_layout.addLayout(file_row)

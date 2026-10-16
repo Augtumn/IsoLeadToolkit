@@ -131,15 +131,15 @@ class Qt5EntryWorkbookDialog(QDialog):
         layout.addWidget(hint)
 
         actions = QHBoxLayout()
-        self.generate_btn = QPushButton(translate("Generate Template..."))
+        self.generate_btn = QPushButton(translate("Generate Template…"))
         self.generate_btn.clicked.connect(self._on_generate)
         actions.addWidget(self.generate_btn)
 
-        self.validate_btn = QPushButton(translate("Validate Workbook..."))
+        self.validate_btn = QPushButton(translate("Validate Workbook…"))
         self.validate_btn.clicked.connect(self._on_validate)
         actions.addWidget(self.validate_btn)
 
-        self.import_btn = QPushButton(translate("Import Workbook..."))
+        self.import_btn = QPushButton(translate("Import Workbook…"))
         self.import_btn.clicked.connect(self._on_import)
         actions.addWidget(self.import_btn)
 
@@ -205,7 +205,7 @@ class Qt5EntryWorkbookDialog(QDialog):
         """让用户选一个已存在的工作簿。
 
         Args:
-            title: 已本地化的对话框标题 —— 由调用方传 ``translate("...")`` 字面量，
+            title: 已本地化的对话框标题 —— 由调用方传 ``translate("…")`` 字面量，
                 以便 `locales/check_untranslated.py` 能静态看到该键。
         """
         start_dir = str(self._workbook or Path(_DEFAULT_DIR))

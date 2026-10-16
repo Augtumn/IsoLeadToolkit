@@ -33,7 +33,7 @@ class LegendDecomposeDialog(QDialog):
         group_label: str = "",
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle(translate("Decompose by..."))
+        self.setWindowTitle(translate("Decompose by…"))
         self._used = {str(column) for column in used}
 
         layout = QVBoxLayout(self)

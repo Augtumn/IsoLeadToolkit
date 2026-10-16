@@ -217,7 +217,7 @@ class MainWindowLegendInteractionMixin:
                     lambda checked=False, p=entry_key: self._remove_group_from_parent(p)
                 )
                 menu.addSeparator()
-            child_action = menu.addAction(translate("New Child Parent Group..."))
+            child_action = menu.addAction(translate("New Child Parent Group…"))
             child_action.triggered.connect(
                 lambda checked=False, p=entry_key: self._create_child_parent_group(p)
             )
@@ -233,7 +233,7 @@ class MainWindowLegendInteractionMixin:
             # A window rather than a submenu: every column can be offered, with the ones already
             # in use shown disabled, instead of the short list a submenu would have to be.
             if self._decomposition_columns():
-                decompose_action = menu.addAction(translate("Decompose by..."))
+                decompose_action = menu.addAction(translate("Decompose by…"))
                 decompose_action.triggered.connect(
                     lambda checked=False, g=entry_key: self._choose_decomposition(g)
                 )
@@ -244,7 +244,7 @@ class MainWindowLegendInteractionMixin:
                 )
             menu.addSeparator()
 
-        new_action = menu.addAction(translate("New Parent Group..."))
+        new_action = menu.addAction(translate("New Parent Group…"))
         new_action.triggered.connect(lambda checked=False: self._create_parent_group())
         menu.exec_(self._legend_list.mapToGlobal(pos))
 

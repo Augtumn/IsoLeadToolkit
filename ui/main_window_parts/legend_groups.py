@@ -378,7 +378,7 @@ class MainWindowLegendGroupMixin:
 
         name, ok = QInputDialog.getText(
             self,
-            translate("New Child Parent Group..."),
+            translate("New Child Parent Group…"),
             translate("Parent Group Name"),
         )
         if not ok:

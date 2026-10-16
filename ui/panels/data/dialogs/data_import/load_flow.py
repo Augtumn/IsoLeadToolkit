@@ -57,7 +57,7 @@ def load_dataset_via_dialogs() -> bool:
 
     from ui.dialogs.progress_dialog import ProgressDialog
 
-    progress = ProgressDialog(translate("Loading Data"), translate("Reading file..."))
+    progress = ProgressDialog(translate("Loading Data"), translate("Reading file…"))
     try:
         load_dataset(request)
     except Exception as error:

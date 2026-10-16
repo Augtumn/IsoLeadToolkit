@@ -80,7 +80,7 @@ class MainWindowLegendStyleMixin:
         menu = QMenu(self)
 
         parent = parent_of_group(app_state, group)
-        color_action = QAction(translate("Color..."), self)
+        color_action = QAction(translate("Color…"), self)
         color_action.triggered.connect(lambda checked=False, g=group, btn=swatch: self._pick_color(g, btn))
         menu.addAction(color_action)
 

@@ -179,9 +179,9 @@ def test_menu_action_labels_follow_language(main_window):
     action = main_window._menu_actions["entry_workbook"]
     try:
         set_language("en")
-        assert action.text() == "Data Entry (Excel)..."
+        assert action.text() == "Data Entry (Excel)…"
         set_language("zh")
-        assert action.text() == "数据录入（Excel）..."
+        assert action.text() == "数据录入（Excel）…"
     finally:
         set_language("zh")
 

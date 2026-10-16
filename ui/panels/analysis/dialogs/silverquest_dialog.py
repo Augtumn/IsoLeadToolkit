@@ -468,7 +468,7 @@ class SilverQuestDialog(QDialog):
             translate("Path to Pb_DB_20240310AllGalenas.xlsx.")
         )
         row.addWidget(self.database_edit, 1)
-        browse = QPushButton(translate("Browse..."))
+        browse = QPushButton(translate("Browse…"))
         browse.setProperty('translate_key', 'Browse...')
         browse.clicked.connect(self._browse_database)
         row.addWidget(browse)

@@ -163,7 +163,7 @@ class DataImportBuildMixin:
         button_row = QHBoxLayout()
         button_row.setSpacing(8)
 
-        browse_button = QPushButton(translate("Browse..."))
+        browse_button = QPushButton(translate("Browse…"))
         browse_button.clicked.connect(self._browse_file)
         self.browse_btn = browse_button
         button_row.addWidget(browse_button)
@@ -335,7 +335,7 @@ class DataImportBuildMixin:
         if self.recent_label is not None:
             self.recent_label.setText(translate("Recent Files"))
         if self.browse_btn is not None:
-            self.browse_btn.setText(translate("Browse..."))
+            self.browse_btn.setText(translate("Browse…"))
         if self.clear_btn is not None:
             self.clear_btn.setText(translate("Clear Selection"))
         if self.cancel_btn is not None:

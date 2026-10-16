@@ -249,7 +249,7 @@ class MainWindowCanvasMixin:
         # Several figures in one window, so the same data can be judged by different means at
         # once; hovering a point highlights the same sample in every panel.
         panels_action = QAction(
-            self._get_selection_icon("panels.svg"), translate("Multi-Panel..."), self
+            self._get_selection_icon("panels.svg"), translate("Multi-Panel…"), self
         )
         panels_action.setToolTip(
             translate(
@@ -263,7 +263,7 @@ class MainWindowCanvasMixin:
         # Frame the data so the points fill the window, per panel; the counterpart of a
         # navigation toolbar's home button, which only ever restores the last saved limits.
         fit_action = QAction(
-            self._get_selection_icon("fit_view.svg"), translate("Fit to Data..."), self
+            self._get_selection_icon("fit_view.svg"), translate("Fit to Data…"), self
         )
         fit_action.setToolTip(
             translate("Rescale every panel so all of its data lies inside the view.")
