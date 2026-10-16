@@ -223,6 +223,67 @@ def test_a_style_refresh_reaches_every_panel(wired, monkeypatch) -> None:
     )
 
 
+def test_the_wheel_zooms_the_panel_it_is_over(wired) -> None:
+    """A wheel over a panel zooms that panel and repaints that panel.
+
+    The zoom repainted the canvas the event filter was built with, so a wheel over any other panel
+    changed the view and left the screen showing the old one.
+    """
+    from ui.main_window_parts.canvas import TernaryZoomEventFilter
+
+    state, windows = wired
+    case = _use_case(state, windows, [])
+    case._render_panels(["2D", "Ternary"], "Site", ["a", "b"], ["a", "b", "c"])
+
+    first, second = windows[0]["axes"], windows[1]["axes"]
+    first.set_xlim(0.0, 10.0)
+    second.set_xlim(0.0, 10.0)
+
+    repainted: list[str] = []
+    windows[1]["figure"].canvas.draw_idle = lambda: repainted.append("second")
+    windows[0]["figure"].canvas.draw_idle = lambda: repainted.append("first")
+
+    class _Event:
+        def angleDelta(self):
+            return type("D", (), {"y": lambda self: 120})()
+
+    filter_ = TernaryZoomEventFilter.__new__(TernaryZoomEventFilter)
+    filter_._zoom_cartesian(second, (5.0, 5.0), _Event())
+
+    assert tuple(second.get_xlim()) != (0.0, 10.0), "the panel under the wheel zoomed"
+    assert tuple(first.get_xlim()) == (0.0, 10.0), "and the other panel did not"
+    assert repainted and repainted[0] == "second", (
+        f"the panel it zoomed was repainted first, got {repainted}"
+    )
+
+
+def test_the_middle_drag_pans_the_panel_in_use(wired) -> None:
+    """A middle drag pans the panel in use and repaints that panel's own canvas."""
+    from ui.main_window_parts.canvas import TernaryZoomEventFilter
+
+    state, windows = wired
+    case = _use_case(state, windows, [])
+    case._render_panels(["2D", "Ternary"], "Site", ["a", "b"], ["a", "b", "c"])
+
+    first, second = windows[0]["axes"], windows[1]["axes"]
+    first.set_xlim(0.0, 10.0)
+    second.set_xlim(0.0, 10.0)
+    state.ax = second
+
+    repainted: list[str] = []
+    windows[1]["figure"].canvas.draw_idle = lambda: repainted.append("second")
+    windows[0]["figure"].canvas.draw_idle = lambda: repainted.append("first")
+
+    filter_ = TernaryZoomEventFilter.__new__(TernaryZoomEventFilter)
+    filter_._pan_from = (0.0, 0.0)
+    filter_._pan_view((2.0, 0.0))
+
+    assert tuple(second.get_xlim()) != (0.0, 10.0), "the panel in use panned"
+    assert repainted and repainted[0] == "second", (
+        f"its own canvas was repainted first, got {repainted}"
+    )
+
+
 def test_the_stacking_order_is_applied_to_every_panel(wired, monkeypatch) -> None:
     """Re-stacking from the legend order reaches every panel, not the mirrored one."""
     from ui.main_window_parts import legend_core

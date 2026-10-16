@@ -2,7 +2,7 @@
   "application/use_cases/export_data.py": 1,
   "application/use_cases/render_plot.py": 1,
   "ui/main_window_parts/canvas.py": 7,
-  "ui/main_window_parts/legend_core.py": 6,
+  "ui/main_window_parts/legend_core.py": 4,
   "ui/main_window_parts/legend_interaction.py": 3,
   "ui/main_window_parts/legend_overlay.py": 1,
   "ui/panels/display/kde_style.py": 1,
@@ -14,10 +14,10 @@
   "ui/panels/export/preview_dialog.py": 1,
   "ui/panels/legend/actions.py": 1,
   "ui/panels/panel_style.py": 5,
-  "visualization/event_handlers/legend.py": 4,
-  "visualization/event_handlers/pointer_events.py": 19,
-  "visualization/event_handlers/selection_tools.py": 12,
-  "visualization/events.py": 4,
+  "visualization/event_handlers/legend.py": 3,
+  "visualization/event_handlers/pointer_events.py": 15,
+  "visualization/event_handlers/selection_tools.py": 9,
+  "visualization/events.py": 2,
   "visualization/plotting/axis_lock.py": 2,
   "visualization/plotting/core.py": 15,
   "visualization/plotting/geochem/isochron_labels.py": 2,
@@ -31,6 +31,5 @@
   "visualization/plotting/rendering/raw/plot2d.py": 32,
   "visualization/plotting/rendering/raw/plot3d.py": 18,
   "visualization/plotting/style.py": 3,
-  "visualization/plotting/styling/core.py": 2,
-  "visualization/plotting/styling/overlays.py": 7
+  "visualization/plotting/styling/overlays.py": 3
 }
