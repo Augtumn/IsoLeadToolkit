@@ -124,7 +124,13 @@ class Qt5DataConfigDialog(QDialog):
         list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # 填充列
+        from visualization.plotting.decomposition import DECOMPOSED_GROUP_COLUMN
+
         for col in self.all_columns:
+            if col == DECOMPOSED_GROUP_COLUMN:
+                # The column a decomposition writes its labels into is an implementation detail: the
+                # user never chose it and it must not appear as one of their columns.
+                continue
             is_numeric = pd.api.types.is_numeric_dtype(self.df[col])
 
             if selection_type == 'data' and not is_numeric:

@@ -80,6 +80,41 @@ def _install() -> pd.DataFrame:
     return frame
 
 
+def test_the_columns_the_user_sees_never_include_the_working_column(
+    qapp, restore_state
+) -> None:
+    """Reported: a group name turned into __decomposed_group__.
+
+    The column a decomposition writes its labels into is materialised into the frame, so anything
+    that lists the frame's columns showed it as though the user had chosen it.
+    """
+    from PyQt5.QtCore import Qt
+
+    from ui.panels.data.dialogs.data_config import Qt5DataConfigDialog
+
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+    assert window.DECOMPOSED_GROUP_COLUMN in app_state.df_global.columns, (
+        "the working column is in the frame - the renderer draws from it"
+    )
+
+    dialog = Qt5DataConfigDialog(
+        app_state.df_global,
+        default_group_cols=list(app_state.group_cols),
+        default_data_cols=[],
+    )
+    try:
+        shown = [
+            dialog.group_list.item(index).data(Qt.UserRole)
+            for index in range(dialog.group_list.count())
+        ]
+        assert window.DECOMPOSED_GROUP_COLUMN not in shown, f"not offered to the user, got {shown}"
+        assert "Site" in shown and "Phase" in shown, "their own columns are still there"
+    finally:
+        dialog.close()
+
+
 def test_deleting_a_group_a_decomposition_produced_cancels_that_step(qapp, restore_state) -> None:
     """A group that exists because of a split goes away with it, in both directions.
 

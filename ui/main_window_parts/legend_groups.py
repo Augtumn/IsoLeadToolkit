@@ -23,6 +23,9 @@ from PyQt5.QtWidgets import (
 from core import app_state, state_gateway, translate
 from ui.icons import apply_color_swatch
 from visualization.line_styles import resolve_line_style
+from visualization.plotting.decomposition import (
+    DECOMPOSED_GROUP_COLUMN as _DECOMPOSED_GROUP_COLUMN,
+)
 from visualization.plotting.legend_model import OVERLAY_TOGGLE_MAP
 
 #: Methods this class expects from the classes it is composed with
@@ -47,9 +50,10 @@ class MainWindowLegendGroupMixin:
             str(k): list(v or []) for k, v in (app_state.parent_groups or {}).items()
         }
 
-    #: Grouping column holding the labels a decomposition produces. As far as the rest of
-    #: the application is concerned it is an ordinary grouping column.
-    DECOMPOSED_GROUP_COLUMN = "__decomposed_group__"
+    #: Grouping column holding the labels a decomposition produces. As far as the rest of the
+    #: application is concerned it is an ordinary grouping column; it is not a column of the user's
+    #: data, so it is defined with the decomposition and left out wherever columns are listed for them.
+    DECOMPOSED_GROUP_COLUMN = _DECOMPOSED_GROUP_COLUMN
 
     #: Reserved key in the decomposition map holding the column the chain starts from. It is
     #: prefixed with the path separator so it can never collide with a real path: a real path

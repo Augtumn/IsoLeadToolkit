@@ -29,6 +29,11 @@ import pandas as pd
 #: Separator between the parent value and the child value in an effective label.
 SEPARATOR = " / "
 
+#: Column the decomposition materialises its labels into. To the renderer it is an ordinary grouping
+#: column; to the user it is not one of their columns at all, so the places that list columns for them
+#: leave it out. Defined here with the decomposition itself, so there is one name for it.
+DECOMPOSED_GROUP_COLUMN = "__decomposed_group__"
+
 #: Separator between the values that make up a path key. A unit separator: it cannot
 #: realistically appear inside a data value, so paths never collide with labels.
 PATH_SEPARATOR = "\x1f"
