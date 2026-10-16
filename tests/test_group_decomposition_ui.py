@@ -80,6 +80,33 @@ def _install() -> pd.DataFrame:
     return frame
 
 
+def test_deleting_a_group_a_decomposition_produced_cancels_that_step(qapp, restore_state) -> None:
+    """A group that exists because of a split goes away with it, in both directions.
+
+    The parent map and the decomposition are two pieces of state, and the delete paths used to touch
+    only the map: the step stayed in the spec and the next render brought the group back.
+    """
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+    children = list(app_state.parent_groups["Tarim"])
+
+    window._remove_group_from_parent(children[0])
+
+    assert app_state.group_decomposition == {}, "the step that produced the child is cancelled"
+    assert app_state.parent_groups == {}, "so the parent map goes with it"
+    assert app_state.last_group_col == "Site", "and the grouping column is the original one again"
+
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+
+    window._delete_parent_group("Tarim")
+
+    assert app_state.group_decomposition == {}, "deleting the parent cancels its split too"
+    assert app_state.parent_groups == {}, "and leaves no parent map behind"
+
+
 def test_the_legend_search_finds_a_child_group(qapp, restore_state) -> None:
     """A child a decomposition produced is a group, so the search finds it by its own name.
 
