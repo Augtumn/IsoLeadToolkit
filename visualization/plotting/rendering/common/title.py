@@ -6,12 +6,30 @@ from typing import Any
 
 from matplotlib import font_manager
 
-from core import CONFIG, app_state, state_gateway
+from core import CONFIG, app_state, state_gateway, translate
 
+from ...decomposition import BASE_DECOMPOSITION_KEY, DECOMPOSED_GROUP_COLUMN
 from ...style import _apply_axis_text_style
 from .state_access import _active_subset_indices
 
 logger = logging.getLogger(__name__)
+
+
+def display_group_col(group_col: Any) -> str:
+    """How the grouping column is named to the user.
+
+    A decomposition groups by a column it wrote itself, which the user never chose and cannot
+    recognise; the column the chain started from is the one they picked, so that is what a title
+    says - marked as decomposed, because the colours are the split groups and not its own values.
+    """
+    name = str(group_col)
+    if name != DECOMPOSED_GROUP_COLUMN:
+        return name
+    spec = getattr(app_state, "group_decomposition", None) or {}
+    base = str(spec.get(BASE_DECOMPOSITION_KEY, "") or "").strip()
+    if not base:
+        return translate("Decomposed groups")
+    return "{} ({})".format(base, translate("decomposed"))
 
 
 def _render_title_labels(
@@ -22,6 +40,9 @@ def _render_title_labels(
     pca_params: dict[str, Any],
     robust_pca_params: dict[str, Any],
 ) -> None:
+    # Every title below says "Colored by <the grouping column>"; the working column a decomposition
+    # uses is named for what the user chose instead of by its own internal name.
+    group_col = display_group_col(group_col)
     subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
 
     if actual_algorithm == 'UMAP':

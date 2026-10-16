@@ -34,6 +34,10 @@ SEPARATOR = " / "
 #: leave it out. Defined here with the decomposition itself, so there is one name for it.
 DECOMPOSED_GROUP_COLUMN = "__decomposed_group__"
 
+#: Reserved key in a specification holding the column the chain started from. Prefixed with the path
+#: separator so it can never collide with a real path: a real path never starts with the separator.
+BASE_DECOMPOSITION_KEY = "\x1fbase_column"
+
 #: Separator between the values that make up a path key. A unit separator: it cannot
 #: realistically appear inside a data value, so paths never collide with labels.
 PATH_SEPARATOR = "\x1f"

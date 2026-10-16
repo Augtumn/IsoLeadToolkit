@@ -80,6 +80,29 @@ def _install() -> pd.DataFrame:
     return frame
 
 
+def test_the_title_names_the_column_the_user_chose(qapp, restore_state) -> None:
+    """Reported: a group name turned into __decomposed_group__.
+
+    The titles say "Colored by <the grouping column>", and a decomposition groups by a column it wrote
+    itself - which the user never chose and cannot recognise.
+    """
+    from visualization.plotting.rendering.common.title import display_group_col
+
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+
+    shown = display_group_col(window.DECOMPOSED_GROUP_COLUMN)
+    assert window.DECOMPOSED_GROUP_COLUMN not in shown, f"not the working column, got {shown!r}"
+    assert "Site" in shown, f"the column the user chose, got {shown!r}"
+    assert display_group_col("Site") == "Site", "an ordinary column is named as it is"
+
+    # A session that lost the record of the base column still gets a readable name.
+    state_gateway.set_group_decomposition({"Tarim": "Phase"})
+    fallback = display_group_col(window.DECOMPOSED_GROUP_COLUMN)
+    assert window.DECOMPOSED_GROUP_COLUMN not in fallback, f"got {fallback!r}"
+
+
 def test_the_columns_the_user_sees_never_include_the_working_column(
     qapp, restore_state
 ) -> None:

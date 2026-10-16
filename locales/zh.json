@@ -1026,5 +1026,7 @@
   "Tile": "Tile",
   "Show or hide every group in this parent": "Show or hide every group in this parent",
   "Fold this parent group's rows": "Fold this parent group's rows",
-  "Unfold this parent group's rows": "Unfold this parent group's rows"
+  "Unfold this parent group's rows": "Unfold this parent group's rows",
+  "Decomposed groups": "Decomposed groups",
+  "decomposed": "decomposed"
 }

@@ -303,9 +303,11 @@ def _render_2d_title_and_axes(
     # a 2D render over the same figure takes it back.
     configure_constrained_layout(app_state.fig)
     """Build the 2D title, axis labels and restore prior axis limits."""
+    from ..common.title import display_group_col
+
     title = (
         f'2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n'
-        f'Colored by {group_col}'
+        f'Colored by {display_group_col(group_col)}'
     )
     # One rule for every plot type (visualization.plotting.view_state): the view is restored for the
     # same content on the same axes, and the axes - not a global - remembers what it drew. A brand-new
