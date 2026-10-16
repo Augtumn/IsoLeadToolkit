@@ -76,6 +76,14 @@ class DataPanelProjectionMixin:
 
         self._sync_geochem_model_for_mode(mode)
         self._update_algorithm_visibility()
+        # With several panels the mode belongs to the panel in use, so the choice is applied to
+        # that panel - and only to it - the way the navigation buttons follow the panel in use.
+        # The mode is one per panel; the control is one, and it shows the panel in use.
+        apply_to_panel = getattr(
+            self.window(), "apply_render_mode_to_panel_in_use", None
+        )
+        if callable(apply_to_panel):
+            apply_to_panel(mode)
         self._on_change()
 
     def _on_algorithm_change(self, algorithm):

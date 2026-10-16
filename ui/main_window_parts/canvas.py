@@ -622,6 +622,38 @@ class MainWindowCanvasMixin:
         except Exception as err:
             logger.warning("Could not retarget the toolbar: %s", err)
 
+    def apply_render_mode_to_panel_in_use(self, mode) -> None:
+        """Give the panel in use *mode*, keeping the panel windows and the state in step.
+
+        A panel's render mode is its own - that is what comparing projections side by side means -
+        so choosing a mode in the data panel changes the panel the user is working in. The figure
+        is rebuilt through the same machinery that builds any panel, and the state's single render
+        mode, which mirrors the panel in use, follows.
+        """
+        records = list(app_state.plot_panel_windows or [])
+        if not records or mode is None:
+            # A single-figure window: the chosen mode is the window's own.
+            return
+        active = next(
+            (record for record in records if record.get("active")), records[0]
+        )
+        if str(active.get("mode")) == str(mode):
+            return
+        modes = [str(record.get("mode")) for record in records]
+        index = records.index(active)
+        modes[index] = str(mode)
+        panel = self._panel_windows
+        if panel is None:
+            return
+        try:
+            rebuilt = panel.sync(modes)
+        except Exception as err:
+            logger.warning("Could not switch the panel's mode: %s", err)
+            return
+        app_state.plot_panel_windows[:] = rebuilt
+        state_gateway.set_render_mode(str(mode))
+        logger.info("Panel %d switched to %s", index + 1, mode)
+
     def _on_panel_closed(self, window) -> None:
         """The user closed a child window: drop its panel and rebuild around what is left.
 
@@ -633,12 +665,21 @@ class MainWindowCanvasMixin:
             record for record in list(app_state.plot_panel_windows or [])
             if record.get("window") is not window
         ]
+        closed_was_active = any(
+            record.get("window") is window and record.get("active")
+            for record in list(app_state.plot_panel_windows or [])
+        )
         modes = [str(record.get("mode")) for record in records]
         state_gateway.set_plot_panels(modes if len(modes) > 1 else [])
         figure = records[0].get("figure") if records else app_state.fig
         app_state.plot_panel_windows[:] = records
         logger.info("Panel window closed; %d panel(s) left", len(records))
         self.set_matplotlib_figure(figure)
+        if closed_was_active and records:
+            # The panel in use was the one closed, so the panel that takes over has to be followed:
+            # otherwise the state's render mode and the data panel's control still describe a window
+            # that no longer exists.
+            self._on_panel_activated(records[0].get("window"))
 
     def _on_panel_activated(self, window) -> None:
         """Follow the child window in use: its figure, axes and canvas become the active ones.
