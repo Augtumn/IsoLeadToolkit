@@ -147,9 +147,10 @@ class MainWindowCanvasMixin:
     _axis_lock_action = None
     #: The area that holds the panel child windows; None until one is needed.
     _panel_mdi_area = None
-    #: Whether the single-figure window has been framed once; the panels carry their own flag, so an
-    #: automatic fit never overrides a view the user has zoomed or panned.
-    _single_figure_framed = False
+    #: The data version the single-figure window was framed for, so an automatic fit never overrides
+    #: a view the user set - while a genuinely new dataset is framed again. The panels carry the
+    #: same marker per record.
+    _single_figure_framed_version = None
     #: The three navigation buttons of the main toolbar, empty until the toolbar is built; the
     #: button sync reads them, and panel activation can happen first.
     _navigation_actions: list = []
@@ -761,20 +762,24 @@ class MainWindowCanvasMixin:
         axes = self._panels_for_fit()
         fitted = 0
         framed: list = []
+        version = getattr(app_state, "data_version", None)
         for mode, axis in axes:
             record = self._panel_record_for(axis)
-            if not force and record is not None and record.get("framed"):
-                continue
-            if not force and record is None and self._single_figure_framed:
-                continue
+            if not force:
+                if record is not None:
+                    if record.get("framed_version") == version:
+                        # Framed for this very data already: the view belongs to the user now.
+                        continue
+                elif self._single_figure_framed_version == version:
+                    continue
             try:
                 if self._fit_one_axes(mode, axis):
                     fitted += 1
                     framed.append(axis)
                     if record is not None:
-                        record["framed"] = True
+                        record["framed_version"] = version
                     else:
-                        self._single_figure_framed = True
+                        self._single_figure_framed_version = version
             except Exception as err:
                 logger.warning("Could not fit a panel to the data: %s", err)
         for axis in framed:
