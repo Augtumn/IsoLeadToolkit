@@ -376,7 +376,50 @@ class MainWindowLegendGroupMixin:
         state_gateway.set_parent_groups(parents)
         self._reload_legend_panel()
 
+    def _clear_if_decomposition_product(self, group) -> bool:
+        """Cancel the decomposition step that produced *group*, if one did.
+
+        A group that exists because of a split exists only as long as that step does, so deleting
+        it - or one of its children - has to cancel that step as well. Otherwise the parent map and
+        the decomposition disagree, and the next render brings the group back from the spec.
+        """
+        from visualization.plotting.decomposition import path_key, path_values
+
+        spec, base = self._decomposition_spec()
+        if not spec:
+            return False
+        path = self._path_of_label(group)
+        # Two ways a group can come from a decomposition: the step that split *it*, and - for a
+        # child - the step that produced it, which is recorded at its parent's path.
+        candidates = [path]
+        if len(path) > 1:
+            candidates.append(path[:-1])
+        cancelled = [
+            candidate
+            for candidate in candidates
+            if spec.get(path_key(candidate)) is not None
+            or any(
+                tuple(path_values(key))[: len(candidate)] == candidate for key in spec
+            )
+        ]
+        if not cancelled:
+            return False
+        logger.info(
+            "Legend: %r came from a decomposition; cancelling that step", group
+        )
+        remaining = {
+            key: column
+            for key, column in spec.items()
+            if not any(
+                tuple(path_values(key))[: len(candidate)] == candidate
+                for candidate in cancelled
+            )
+        }
+        return self._write_decomposition(remaining, base)
+
     def _delete_parent_group(self, parent):
+        if self._clear_if_decomposition_product(parent):
+            return
         parents = self._current_parent_groups()
         if parent not in parents:
             return
@@ -409,6 +452,8 @@ class MainWindowLegendGroupMixin:
         state_gateway.set_parent_groups(parents)
 
     def _remove_group_from_parent(self, group):
+        if self._clear_if_decomposition_product(group):
+            return
         parents = self._current_parent_groups()
         changed = False
         for children in parents.values():
