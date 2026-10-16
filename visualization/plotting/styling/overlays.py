@@ -52,7 +52,7 @@ def refresh_overlay_styles() -> None:
                     if hasattr(artist, 'set_alpha'):
                         artist.set_alpha(alpha)
                 except Exception as e:
-                    logger.warning("refresh_overlay_styles failed: %s", err)
+                    logger.warning("refresh_overlay_styles failed: %s", e)
 
         # The overlays live in every panel that draws them, so all of them are repainted; the
         # state's figure mirrors one panel and a style change showed up in that one only.
@@ -98,7 +98,7 @@ def refresh_overlay_visibility() -> None:
             try:
                 artist.set_visible(_resolve_visible(style_key))
             except Exception as exc:
-                logger.warning("_set_artist_visible failed: %s", err)
+                logger.warning("_set_artist_visible failed: %s", exc)
 
         for style_key, payload in overlay_artists.items():
             if isinstance(payload, dict):

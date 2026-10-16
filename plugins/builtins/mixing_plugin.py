@@ -3,9 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import logging
+
 import pandas as pd
 
 from plugins.api import BasePlugin, PluginMeta
+
+logger = logging.getLogger(__name__)
 
 
 def _solve_simplex_weights(endmember_matrix: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, float]:

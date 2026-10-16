@@ -1,6 +1,8 @@
 """Data loading and execution workflow for provenance ML dialog."""
 from __future__ import annotations
 
+from plugins.builtins.provenance_ml_plugin import ProvenanceMLError
+
 import logging
 import os
 
@@ -235,8 +237,7 @@ class ProvenanceMLWorkflowMixin:
             self._ml_worker = None
             try:
                 self._apply_ml_result(*payload)
-            except ProvenanceMLError as exc:
-                QMessageBox.warning(
+            except ProvenanceMLError as exc:                QMessageBox.warning(
                     self,
                     translate("Error"),
                     translate("ML training failed: {error}").format(error=str(exc)),

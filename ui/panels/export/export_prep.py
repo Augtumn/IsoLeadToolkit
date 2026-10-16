@@ -262,7 +262,7 @@ class ExportPanelPrepMixin:
                 try:
                     refresh_paleoisochron_labels()
                 except Exception as label_err:
-                    logger.warning("_create_export_figure failed: %s", err)
+                    logger.warning("_create_export_figure failed: %s", label_err)
 
                 # Keep exported geometry consistent with what user sees currently.
                 self._apply_axis_view(export_ax, original_view)
