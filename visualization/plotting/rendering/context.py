@@ -58,6 +58,18 @@ class RenderContext:
         """Which axes this render needs."""
         return self.capabilities.projection
 
+    def with_axes(self, axes: Any) -> RenderContext:
+        """The same context drawing into *axes*.
+
+        The sequence ensures the axes before it draws, and ensuring them may create one; the render
+        then draws into the axes that exists, not the one that was there when it started.
+        """
+        if axes is self.axes:
+            return self
+        from dataclasses import replace
+
+        return replace(self, axes=axes)
+
     @property
     def is_subset(self) -> bool:
         return self.subset_indices is not None

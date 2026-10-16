@@ -47,6 +47,8 @@ def run(adapter: ModeAdapter, context: RenderContext) -> bool:
 
         captured = capture_view(context.axes)
         _ensure_axes(dimensions=adapter.axes_dimensions(context))
+        # Ensuring the axes may have created one; from here the render draws into what exists.
+        context = context.with_axes(app_state.ax)
         if context.axes is None:
             logger.error("Failed to configure the axes for %s", context.mode)
             return False
@@ -61,7 +63,7 @@ def run(adapter: ModeAdapter, context: RenderContext) -> bool:
         _enforce_plot_style(context.axes)
         app_state.clear_plot_state()
 
-        _build_group_palette(adapter.groups(prepared))
+        _build_group_palette(adapter.groups(context, prepared))
 
         ink = adapter.draw(context, prepared)
 
@@ -83,9 +85,16 @@ def run(adapter: ModeAdapter, context: RenderContext) -> bool:
         adapter.finish(context, prepared)
 
         # A restored view is not autoscaled away: the mode keeps the window the user set for the same
-        # picture, and a mode that already restored it restores the same numbers again.
-        restore_view(context.axes, captured, context.token(*adapter.token(context)))
-        mark_drawn(context.axes, context.token(*adapter.token(context)))
+        # picture, and a mode that already restored it restores the same numbers again. Autoscale is
+        # turned on only when there was nothing to restore - a new picture on a new axes - because
+        # matplotlib's autoscale(enable=True) rescales immediately.
+        token = context.token(*adapter.token(context))
+        if not restore_view(context.axes, captured, token):
+            try:
+                context.axes.autoscale(enable=True, axis="both")
+            except Exception as err:
+                logger.warning("Could not autoscale %s: %s", context.mode, err)
+        mark_drawn(context.axes, token)
         return True
 
     except Exception as err:

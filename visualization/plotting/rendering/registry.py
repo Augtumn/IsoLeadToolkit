@@ -57,7 +57,7 @@ class ModeAdapter(Protocol):
     def prepare(self, context: RenderContext) -> Any:
         """Turn the context into what this mode draws from, or ``False`` to refuse the render."""
 
-    def groups(self, prepared: Any) -> list[Any]:
+    def groups(self, context: RenderContext, prepared: Any) -> list[Any]:
         """The categories to build the palette for."""
 
     def configure_axes(self, context: RenderContext) -> None:

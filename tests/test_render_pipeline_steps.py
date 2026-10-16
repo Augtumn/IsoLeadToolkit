@@ -33,7 +33,7 @@ class _Adapter:
         self.calls.append("prepare")
         return {"rows": 3}
 
-    def groups(self, prepared):
+    def groups(self, context, prepared):
         self.calls.append("groups")
         return self._groups
 
@@ -68,12 +68,16 @@ def _clean_registry():
 
 def _context(mode: str = "2D", figure: Figure | None = None):
     figure = figure or Figure()
+    axes = figure.add_subplot(111)
+    # The application keeps the figure and the axes in use mirrored in the state; a render reads the
+    # axes that is in use, so a test that renders has to mirror both.
     state_gateway.set_figure(figure)
+    state_gateway.set_axis(axes)
     return build_context(
         mode,
         group_col="Site",
         figure=figure,
-        axes=figure.add_subplot(111),
+        axes=axes,
         columns_2d=("x1", "x2"),
     )
 
@@ -108,17 +112,26 @@ def test_the_view_the_user_set_survives_a_render() -> None:
 
 
 def test_another_picture_gets_its_own_view() -> None:
+    """A different picture - other columns - is not given the window of the one before it."""
+    from visualization.plotting import view_state
+
     adapter = _Adapter()
     context = _context()
     assert run(adapter, context) is True
-    context.axes.set_xlim(0.2, 0.4)
+    assert view_state.drawn_last(context.axes) == context.token(*adapter.token(context))
 
-    other = _context()
-    other.axes.set_xlim(0.2, 0.4)
-    assert run(adapter, other) is True
-    assert tuple(round(float(value), 2) for value in other.axes.get_xlim()) != (0.2, 0.4), (
-        "a different axes has drawn nothing yet, so it is not given someone else's window"
+    other = build_context(
+        "2D",
+        group_col="Site",
+        figure=context.figure,
+        axes=context.axes,
+        columns_2d=("x3", "x4"),
     )
+    assert run(adapter, other) is True
+    assert view_state.drawn_last(context.axes) == other.token(*adapter.token(other)), (
+        "the axes remembers the picture it now shows, so the next render is compared with that one"
+    )
+    assert other.token(*adapter.token(other)) != context.token(*adapter.token(context))
 
 
 def test_an_empty_frame_keeps_the_mode_and_is_not_a_failure() -> None:

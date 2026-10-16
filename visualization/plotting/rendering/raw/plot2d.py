@@ -290,39 +290,25 @@ def _render_2d_legend(
         logger.warning('2D legend creation error: %s', legend_err)
 
 
-def _render_2d_title_and_axes(
+def _draw_2d_title_and_labels(
     group_col: str,
     data_columns: list[str],
-    prev_ax: Any | None,
-    prev_xlim: Any | None,
-    prev_ylim: Any | None,
-    prev_2d_cols: list[str] | None,
     subset_info: str,
 ) -> None:
+    """Name the 2D plot and label its axes, and nothing else.
+
+    Restoring the view and turning autoscale on belong to the render sequence, not to the naming: every
+    mode would otherwise have to remember them, and one of them did not.
+    """
     # The ternary render switches the layout engine off (use_ternary_layout);
     # a 2D render over the same figure takes it back.
     configure_constrained_layout(app_state.fig)
-    """Build the 2D title, axis labels and restore prior axis limits."""
     from ..common.title import display_group_col
 
     title = (
         f'2D Scatter Plot{subset_info} ({data_columns[0]} vs {data_columns[1]})\n'
         f'Colored by {display_group_col(group_col)}'
     )
-    # One rule for every plot type (visualization.plotting.view_state): the view is restored for the
-    # same content on the same axes, and the axes - not a global - remembers what it drew. A brand-new
-    # canvas has drawn nothing, so it keeps its own autoscale below.
-    from visualization.plotting.view_state import mark_drawn, restore_view
-
-    view_token = ("2D", tuple(str(column) for column in data_columns))
-    captured_view = (
-        {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
-    )
-    restored = False
-    if app_state.ax is prev_ax:
-        restored = restore_view(app_state.ax, captured_view, view_token)
-    mark_drawn(app_state.ax, view_token)
-
     state_gateway.set_current_plot_title(title)
     if app_state.show_plot_title:
         app_state.ax.set_title(title, pad=app_state.title_pad)
@@ -332,6 +318,33 @@ def _render_2d_title_and_axes(
     app_state.ax.set_xlabel(data_columns[0])
     app_state.ax.set_ylabel(data_columns[1])
     _apply_axis_text_style(app_state.ax)
+
+
+def _render_2d_title_and_axes(
+    group_col: str,
+    data_columns: list[str],
+    prev_ax: Any | None,
+    prev_xlim: Any | None,
+    prev_ylim: Any | None,
+    prev_2d_cols: list[str] | None,
+    subset_info: str,
+) -> None:
+    """Build the 2D title, axis labels and restore prior axis limits."""
+    # One rule for every plot type (visualization.plotting.view_state): the view is restored for the
+    # same content on the same axes, and the axes - not a global - remembers what it drew. A brand-new
+    # canvas has drawn nothing, so it keeps its own autoscale below.
+    from visualization.plotting.view_state import mark_drawn, restore_view
+
+    _draw_2d_title_and_labels(group_col, data_columns, subset_info)
+
+    view_token = ("2D", tuple(str(column) for column in data_columns))
+    captured_view = (
+        {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
+    )
+    restored = False
+    if app_state.ax is prev_ax:
+        restored = restore_view(app_state.ax, captured_view, view_token)
+    mark_drawn(app_state.ax, view_token)
     if not restored:
         # Autoscale is only turned on for a view with no history: matplotlib's autoscale(enable=True)
         # calls autoscale_view() straight away, so doing it after restoring the limits scaled the
@@ -363,100 +376,25 @@ def _attach_annotation() -> None:
 
 def plot_2d_data(group_col: str, data_columns: list[str], size: int = 60, show_kde: bool = False) -> bool:
     """Render a 2D scatter plot using selected raw measurement columns."""
-    try:
-        df_global = _df_global()
-        if _validate_2d_inputs(data_columns, df_global) is None:
-            return False
+    # The sequence every render follows, and the 2D adapter for the parts that are 2D's own. What used
+    # to be spelled out here - ensure the axes, apply the style, clear, enforce, clear the plot state,
+    # build the palette, draw, marginal, legend, title, restore the view, finish - is the pipeline's,
+    # so this mode no longer has its own copy of it to fall out of step.
+    from ..adapters import register_adapters
+    from ..context import build_context
+    from ..pipeline import run
+    from ..registry import adapter_for
 
-        prev_ax, prev_xlim, prev_ylim, prev_2d_cols = _capture_prev_axes()
-
-        _ensure_axes(dimensions=2)
-
-        if app_state.ax is None:
-            logger.error('Failed to configure 2D axes')
-            return False
-
-        df_plot = _prepare_2d_dataframe(group_col, data_columns, df_global)
-        if df_plot is None:
-            return False
-
-        _apply_current_style()
-
-        app_state.ax.clear()
-        try:
-            app_state.ax.set_aspect('auto')
-            app_state.ax.set_autoscale_on(True)
-        except Exception as err:
-            logger.warning("plot_2d_data failed: %s", err)
-        _enforce_plot_style(app_state.ax)
-        app_state.clear_plot_state()
-
-        unique_cats = sorted(df_plot[group_col].unique())
-
-        _build_group_palette(unique_cats)
-
-        show_marginal_kde = app_state.show_marginal_kde
-
-        if show_kde:
-            _render_2d_kde(df_plot, group_col, data_columns)
-
-        scatters = [] if show_kde else _render_2d_scatter_groups(df_plot, group_col, data_columns, unique_cats, size)
-
-        if not scatters and not show_kde:
-            if df_plot.empty:
-                # Every group the user keeps visible is absent from this projection.  Draw
-                # the empty frame and keep both the render mode and the legend selection:
-                # the UMAP fallback below would change the mode behind the user's back,
-                # which is exactly what a render-mode switch must not do.
-                subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
-                _render_2d_title_and_axes(
-                    group_col,
-                    data_columns,
-                    prev_ax,
-                    prev_xlim,
-                    prev_ylim,
-                    prev_2d_cols,
-                    subset_info,
-                )
-                _attach_annotation()
-                # Tell the legend panel anyway: its checkboxes have to match the selection
-                # that produced this empty frame (an empty selection used to leave them
-                # all ticked, since this path never reached the legend renderer).
-                _notify_legend_panel(group_col, [], [])
-                return True
-            logger.error('No points were plotted in 2D')
-            try:
-                app_state.fig.canvas.draw_idle()
-            except Exception as err:
-                logger.warning("plot_2d_data failed: %s", err)
-            return False
-
-        kde_utils.clear_marginal_axes()
-        if show_marginal_kde:
-            _render_2d_marginal_kde(df_plot, group_col, unique_cats, data_columns)
-
-        _render_2d_legend(app_state.ax, group_col, unique_cats, scatters, show_kde, show_marginal_kde)
-
-        subset_info = ' (Subset)' if _active_subset_indices() is not None else ''
-        _render_2d_title_and_axes(
-            group_col,
-            data_columns,
-            prev_ax,
-            prev_xlim,
-            prev_ylim,
-            prev_2d_cols,
-            subset_info,
-        )
-
-        _attach_annotation()
-
-        return True
-
-    except Exception as err:
-        logger.exception('2D plot failed: %s', err)
-        try:
-            if app_state.fig is not None and app_state.fig.canvas is not None:
-                app_state.fig.canvas.draw_idle()
-        except Exception as err:
-            logger.warning("plot_2d_data failed: %s", err)
-        return False
+    register_adapters()
+    context = build_context(
+        "2D",
+        group_col=group_col,
+        figure=app_state.fig,
+        axes=app_state.ax,
+        columns_2d=tuple(data_columns or ()),
+        point_size=size,
+        show_kde=bool(show_kde),
+        show_marginal_kde=bool(app_state.show_marginal_kde),
+        subset_indices=_active_subset_indices(),
+    )
+    return bool(run(adapter_for("2D"), context))
