@@ -97,10 +97,16 @@ class MainWindowLegendGroupMixin:
             )
             return False
         if not spec:
-            # Nothing is decomposed: drop the column and go back to the original grouping.
+            # Nothing is decomposed: drop the column and go back to the original grouping. The
+            # parent/child map is captured before it is cleared, because the selection below has to
+            # know which groups the children came from.
+            family = {
+                str(parent): [str(child) for child in list(children or [])]
+                for parent, children in (app_state.parent_groups or {}).items()
+            }
             parents = {
-                str(k): [c for c in list(v or []) if c in set(app_state.available_groups or [])]
-                for k, v in (app_state.parent_groups or {}).items()
+                parent: [c for c in children if c in set(app_state.available_groups or [])]
+                for parent, children in family.items()
             }
             state_gateway.set_group_decomposition({})
             state_gateway.set_parent_groups(
@@ -117,8 +123,24 @@ class MainWindowLegendGroupMixin:
                 state_gateway.set_group_data_columns(columns, list(app_state.data_cols or []))
             if base in (app_state.group_cols or []):
                 state_gateway.set_last_group_col(base)
-            # Visibility is left as it is: the labels that disappeared with the step are filtered
-            # out when the group list is synced, so ticking everything is never the answer.
+            # The visible selection is narrowed to the groups that still exist. Collapsing the
+            # decomposition took the children it had produced away, and leaving them in the set hid
+            # the group they came from: the plot then showed nothing for a group nobody had hidden.
+            if app_state.visible_groups is not None:
+                live = {str(value) for value in frame[base].unique()}
+                shown_before = set(app_state.visible_groups)
+                kept = {group for group in shown_before if group in live}
+                # A child that was shown keeps its parent shown: the user hid part of a group, not
+                # the group, and undoing the split makes the group whole again. Without this the
+                # parent was left out of the selection and the plot drew nothing for it.
+                for parent_name, child_names in family.items():
+                    if str(parent_name) in live and any(
+                        str(child) in shown_before for child in (child_names or [])
+                    ):
+                        kept.add(str(parent_name))
+                state_gateway.set_visible_groups(None if kept == live else sorted(kept))
+            # Visibility is otherwise left as it is: the labels that disappeared with the step are
+            # filtered out when the group list is synced, so ticking everything is never the answer.
             state_gateway.bump_data_version()
             self._reload_legend_panel()
             self._refresh_after_decomposition(spec)
