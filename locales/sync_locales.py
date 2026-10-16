@@ -145,7 +145,7 @@ def main() -> int:
         "Failed to open KDE style dialog: {error}": "打开 KDE 样式对话框失败：{error}",
         "Failed to open marginal KDE style dialog: {error}": "打开边际 KDE 样式对话框失败：{error}",
         "Failed to open tooltip configuration: {error}": "打开提示配置失败：{error}",
-        "Failed to reload data": "重新加载数据失败",
+        "Nothing was imported.": "没有导入任何数据。",
         "Failed to reset parameters: {error}": "重置参数失败：{error}",
         "Failed to show PCA loadings: {error}": "显示 PCA 载荷失败：{error}",
         "Failed to show axis correlation: {error}": "显示轴相关性失败：{error}",

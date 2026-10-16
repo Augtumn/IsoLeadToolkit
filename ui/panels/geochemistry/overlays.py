@@ -293,9 +293,9 @@ class GeoPanelOverlaysMixin:
         if btn is None:
             return
         if app_state.show_isochrons or app_state.selected_isochron_data:
-            btn.setText(translate("Hide Isochron"))
+            btn.setText(translate("Clear isochron results"))
         else:
-            btn.setText(translate("Calculate Isochron Age"))
+            btn.setText(translate("Calculate isochron age"))
 
     def _ensure_isochron_error_settings(self):
         """Ensure isochron error settings are usable before calculation."""

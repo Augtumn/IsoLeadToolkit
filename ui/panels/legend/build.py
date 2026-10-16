@@ -89,15 +89,15 @@ class LegendBuildMixin:
         self.legend_outside_buttons = {}
 
         grid_positions = [
-            (0, 0, 'upper left', 'NW'),
-            (0, 1, 'upper center', 'N'),
-            (0, 2, 'upper right', 'NE'),
-            (1, 0, 'center left', 'W'),
-            (1, 1, 'center', 'C'),
-            (1, 2, 'center right', 'E'),
-            (2, 0, 'lower left', 'SW'),
-            (2, 1, 'lower center', 'S'),
-            (2, 2, 'lower right', 'SE'),
+            (0, 0, 'Upper left', 'NW'),
+            (0, 1, 'Upper center', 'N'),
+            (0, 2, 'Upper right', 'NE'),
+            (1, 0, 'Center left', 'W'),
+            (1, 1, 'Center', 'C'),
+            (1, 2, 'Center right', 'E'),
+            (2, 0, 'Lower left', 'SW'),
+            (2, 1, 'Lower center', 'S'),
+            (2, 2, 'Lower right', 'SE'),
         ]
 
         for row, col, value, label in grid_positions:

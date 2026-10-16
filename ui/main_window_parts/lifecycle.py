@@ -288,7 +288,7 @@ class MainWindowLifecycleMixin:
         from ui.panels.data.dialogs.data_import.load_flow import load_dataset_via_dialogs
 
         if load_dataset_via_dialogs():
-            self.statusBar().showMessage(translate("Data reloaded successfully"), 3000)
+            self.statusBar().showMessage(translate("Data imported."), 3000)
             self._refresh_status_info()
             if not app_state.last_group_col and app_state.group_cols:
                 state_gateway.set_last_group_col(app_state.group_cols[0])
@@ -306,7 +306,7 @@ class MainWindowLifecycleMixin:
             except Exception as exc:
                 logger.warning("Failed to refresh plot after reload: %s", exc)
         else:
-            self.statusBar().showMessage(translate("Failed to reload data"), 3000)
+            self.statusBar().showMessage(translate("Nothing was imported."), 3000)
 
     def _show_section_dialog(self, section_key):
         """打开指定分区对话框"""

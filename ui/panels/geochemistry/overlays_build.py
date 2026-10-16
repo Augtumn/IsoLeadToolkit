@@ -157,11 +157,11 @@ class GeoPanelOverlaysBuildMixin:
         self._refresh_mu_kappa_age_controls()
 
         isochron_row = QHBoxLayout()
-        self.calc_isochron_btn = QPushButton(translate("Calculate Isochron Age"))
-        self.calc_isochron_btn.setProperty("translate_key", "Calculate Isochron Age")
+        self.calc_isochron_btn = QPushButton(translate("Calculate isochron age"))
+        self.calc_isochron_btn.setProperty("translate_key", "Calculate isochron age")
         self.calc_isochron_btn.clicked.connect(self._on_calculate_isochron)
         if app_state.show_isochrons:
-            self.calc_isochron_btn.setText(translate("Hide Isochron"))
+            self.calc_isochron_btn.setText(translate("Clear isochron results"))
         isochron_row.addWidget(self.calc_isochron_btn)
 
         self.isochron_settings_btn = QPushButton(translate("Isochron Settings"))

@@ -217,7 +217,7 @@ class MainWindowSetupMixin:
         # 文件菜单
         self.file_menu = menubar.addMenu(translate("File"))
 
-        reload_action = QAction(translate("Reload Data"), self)
+        reload_action = QAction(translate("Import data..."), self)
         reload_action.setShortcut(QKeySequence("Ctrl+R"))
         reload_action.triggered.connect(self._reload_data)
         self.file_menu.addAction(reload_action)
@@ -439,7 +439,7 @@ class MainWindowSetupMixin:
             self.file_menu.setTitle(translate("File"))
         actions = (self._menu_actions or {})
         if "reload" in actions:
-            actions["reload"].setText(translate("Reload Data"))
+            actions["reload"].setText(translate("Import data..."))
         if "exit" in actions:
             actions["exit"].setText(translate("Exit"))
         if "log" in actions:
