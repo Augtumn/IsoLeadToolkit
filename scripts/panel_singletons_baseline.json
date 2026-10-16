@@ -26,7 +26,7 @@
   "visualization/plotting/rendering/common/legend.py": 1,
   "visualization/plotting/rendering/common/scatter.py": 8,
   "visualization/plotting/rendering/common/title.py": 18,
-  "visualization/plotting/rendering/embedding_plot.py": 17,
+  "visualization/plotting/rendering/embedding_plot.py": 2,
   "visualization/plotting/rendering/geo_layers.py": 15,
   "visualization/plotting/rendering/kde.py": 2,
   "visualization/plotting/rendering/pipeline.py": 1,

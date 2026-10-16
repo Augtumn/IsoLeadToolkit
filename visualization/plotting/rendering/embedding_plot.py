@@ -1,32 +1,13 @@
-"""Embedding plotting routines extracted from render facade."""
+"""Embedding plotting: the entry point for the embedding family of modes.
+
+The render sequence is the pipeline's and each mode's own parts are its adapter's. What stays here is
+the entry point the rest of the application calls: it gathers one render's context and runs it.
+"""
 from __future__ import annotations
 
 import logging
 
-import numpy as np
-
-from core import app_state, state_gateway
-from .. import kde as kde_utils
-from ..event_bridge import refresh_selection_overlay_safe
-from ..style import _apply_current_style, _enforce_plot_style
-from ..core import (
-    _ensure_axes,
-    _build_group_palette,
-)
-from ..ternary import configure_ternary_axis, prepare_ternary_components
-from .embedding.algorithm import (
-    compute_embedding,
-    normalize_algorithm,
-    resolve_embedding_params,
-    resolve_target_dimensions,
-)
-from .embedding.dataframe import prepare_plot_dataframe
-from .common.legend import _notify_legend_panel, _render_legend
-from .common.scatter import _render_scatter_groups
-from .common.title import _render_title_labels
-from .geo_layers import _render_geo_overlays
-from .kde import _render_kde_overlay
-from visualization.plotting.tooltip import raise_tooltip_above_data
+from core import app_state
 
 logger = logging.getLogger(__name__)
 
@@ -39,199 +20,31 @@ def plot_embedding(
     pca_params: dict | None = None,
     robust_pca_params: dict | None = None,
     size: int = 60,
-    precomputed_embedding: np.ndarray | None = None,
+    precomputed_embedding=None,
     precomputed_meta: dict | None = None,
 ) -> bool:
     """Update plot with specified algorithm and parameters"""
-    try:
-        logger.debug("plot_embedding called: algorithm=%s, group_col=%s, size=%s", algorithm, group_col, size)
+    from .adapters import register_adapters
+    from .common.state_access import _active_subset_indices
+    from .context import build_context
+    from .pipeline import run
+    from .registry import adapter_for
 
-        if app_state.fig is None:
-            logger.error("Plot axes not initialized")
-            return False
-
-        actual_algorithm = normalize_algorithm(algorithm)
-        target_dims = resolve_target_dimensions(actual_algorithm)
-
-        prev_ax = app_state.ax
-        prev_embedding_type = getattr(app_state, 'last_embedding_type', None)
-        prev_xlim = None
-        prev_ylim = None
-        if prev_ax is not None and getattr(prev_ax, 'name', '') != '3d':
-            try:
-                prev_xlim = prev_ax.get_xlim()
-                prev_ylim = prev_ax.get_ylim()
-            except Exception:
-                prev_xlim = None
-                prev_ylim = None
-
-        _ensure_axes(dimensions=target_dims)
-
-        if app_state.ax is None:
-            logger.error("Failed to configure axes")
-            return False
-
-        # Apply style before clearing
-        _apply_current_style()
-
-        umap_params, tsne_params, pca_params, robust_pca_params = resolve_embedding_params(
-            umap_params,
-            tsne_params,
-            pca_params,
-            robust_pca_params,
-        )
-
-        logger.debug(
-            "Using params - UMAP: %s, tSNE: %s, PCA: %s, RobustPCA: %s",
-            umap_params, tsne_params, pca_params, robust_pca_params,
-        )
-
-        logger.debug("Actual algorithm (normalized): %s", actual_algorithm)
-        embedding = compute_embedding(
-            actual_algorithm,
-            precomputed_embedding=precomputed_embedding,
-            precomputed_meta=precomputed_meta,
-            umap_params=umap_params,
-            tsne_params=tsne_params,
-            pca_params=pca_params,
-            robust_pca_params=robust_pca_params,
-        )
-
-        if embedding is None:
-            logger.error("Failed to compute %s embedding", algorithm)
-            return False
-
-        prepared = prepare_plot_dataframe(group_col, actual_algorithm, embedding)
-        if prepared is None:
-            logger.error("Failed to prepare plot dataframe for %s", algorithm)
-            return False
-        df_plot, unique_cats = prepared
-
-        # Clear the axes only once rendering is known to be feasible: if a
-        # later step fails, the previous plot and its interaction state stay
-        # consistent on canvas instead of a cleared axes with dead mappings.
-        try:
-            if actual_algorithm != 'TERNARY':
-                # Reset any prior aspect/scale settings (e.g., ternary plots) for 2D
-                app_state.ax.set_aspect('auto')
-                app_state.ax.set_autoscale_on(True)
-        except Exception as err:
-            logger.warning("plot_embedding failed: %s", err)
-        app_state.ax.clear()
-        _enforce_plot_style(app_state.ax)
-        app_state.clear_plot_state()
-
-        new_palette = _build_group_palette(unique_cats)
-
-        if actual_algorithm == 'TERNARY':
-            t_cols = app_state.selected_ternary_cols
-
-            ts = df_plot['_emb_t'].to_numpy(dtype=float, copy=False)
-            ls = df_plot['_emb_l'].to_numpy(dtype=float, copy=False)
-            rs = df_plot['_emb_r'].to_numpy(dtype=float, copy=False)
-
-            t_norm, l_norm, r_norm = prepare_ternary_components(ts, ls, rs)
-            df_plot['_emb_tn'] = t_norm
-            df_plot['_emb_ln'] = l_norm
-            df_plot['_emb_rn'] = r_norm
-
-            auto_zoom = bool(app_state.ternary_auto_zoom)
-            tmin, tmax, lmin, lmax, rmin, rmax = configure_ternary_axis(
-                app_state.ax,
-                t_norm,
-                l_norm,
-                r_norm,
-                labels=t_cols,
-                auto_zoom=auto_zoom,
-                # The raw ratios label the axes; the geometry keeps using the normalised values.
-                raw_values=(ts, ls, rs),
-            )
-            state_gateway.set_ternary_ranges(
-                {
-                    't': (tmin, tmax),
-                    'l': (lmin, lmax),
-                    'r': (rmin, rmax),
-                },
-            )
-
-        _render_kde_overlay(actual_algorithm, df_plot, group_col, unique_cats, new_palette)
-
-        scatters = _render_scatter_groups(
-            actual_algorithm,
-            df_plot,
-            group_col,
-            unique_cats,
-            size,
-            palette=new_palette,
-        )
-        show_marginal_kde = app_state.show_marginal_kde
-        if scatters is None:
-            if df_plot.empty:
-                # Nothing is visible in this projection: keep the render mode and the
-                # legend selection, and draw the empty frame (see prepare_plot_dataframe).
-                # The legend panel is told anyway, so its checkboxes match the selection
-                # that produced the empty frame.
-                logger.warning(
-                    "No point belongs to a visible group; the plot stays empty until a "
-                    "group is ticked in the legend."
-                )
-                _render_title_labels(
-                    actual_algorithm,
-                    group_col,
-                    umap_params,
-                    tsne_params,
-                    pca_params,
-                    robust_pca_params,
-                )
-                _notify_legend_panel(group_col, [], [])
-                return True
-            logger.warning("No scatter groups rendered for %s", algorithm)
-            try:
-                app_state.fig.canvas.draw_idle()
-            except Exception as err:
-                logger.warning("plot_embedding failed: %s", err)
-            return False
-
-        kde_utils.clear_marginal_axes()
-        if show_marginal_kde and actual_algorithm != 'TERNARY':
-            try:
-                if getattr(app_state.ax, 'name', '') != '3d':
-                    kde_utils.draw_marginal_kde(app_state.ax, df_plot, group_col, app_state.current_palette, unique_cats)
-            except Exception as kde_err:
-                logger.warning("Failed to render marginal KDE: %s", kde_err)
-
-        _render_legend(actual_algorithm, group_col, unique_cats, scatters)
-        _render_title_labels(actual_algorithm, group_col, umap_params, tsne_params, pca_params, robust_pca_params)
-        _render_geo_overlays(actual_algorithm, prev_ax, prev_embedding_type, prev_xlim, prev_ylim)
-
-        app_state.ax.tick_params()
-
-        state_gateway.set_annotation(
-            app_state.ax.annotate(
-            "",
-            xy=(0, 0),
-            xytext=(20, 20),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cbd5e1", alpha=0.95),
-            arrowprops=dict(arrowstyle="->", color="#475569"),
-            ),
-        )
-        app_state.annotation.set_visible(False)
-        raise_tooltip_above_data(app_state.ax, app_state.annotation)
-
-        try:
-            refresh_selection_overlay_safe()
-        except Exception as err:
-            logger.warning("Failed to restore selection overlay: %s", err)
-
-        return True
-
-    except Exception as err:
-        logger.exception("Plot update failed for %s: %s", algorithm, err)
-        # Keep the canvas consistent with current state after a failed render.
-        try:
-            if app_state.fig is not None and app_state.fig.canvas is not None:
-                app_state.fig.canvas.draw_idle()
-        except Exception as err:
-            logger.warning("plot_embedding failed: %s", err)
-        return False
+    register_adapters()
+    context = build_context(
+        str(algorithm),
+        group_col=group_col,
+        figure=app_state.fig,
+        axes=app_state.ax,
+        columns_ternary=tuple(app_state.selected_ternary_cols or ()),
+        point_size=size,
+        show_marginal_kde=bool(app_state.show_marginal_kde),
+        umap_params=umap_params,
+        tsne_params=tsne_params,
+        pca_params=pca_params,
+        robust_pca_params=robust_pca_params,
+        precomputed_embedding=precomputed_embedding,
+        precomputed_meta=precomputed_meta,
+        subset_indices=_active_subset_indices(),
+    )
+    return bool(run(adapter_for(context.mode), context))
