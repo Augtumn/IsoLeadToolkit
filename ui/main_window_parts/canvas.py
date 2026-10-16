@@ -752,7 +752,6 @@ class MainWindowCanvasMixin:
                 panel = PanelWindows(area, on_close=self._on_panel_closed)
                 self._panel_windows = panel
             records = panel.sync(modes)
-            records = panel.sync(modes)
         except Exception as err:
             logger.warning("Could not build the panel windows: %s", err)
             return []
@@ -769,7 +768,12 @@ class MainWindowCanvasMixin:
             if window.width() < 50 or window.height() < 50:
                 window.resize(*DEFAULT_PANEL_SIZE)
             window.show()
-        panel.tile()
+        # A newly built set of panels fills the area: one panel maximises, several share it on a
+        # grid. Opening at a fixed 520x420 left most of the window empty.
+        panel.show_filling_area()
+        # And the data is framed in every panel as soon as they exist, so a freshly loaded window
+        # shows the points rather than whatever limits the figure started with.
+        self._fit_panels_to_data()
         # Each child has its own canvas, and a matplotlib handler connected to one canvas never
         # sees another's events - so every child is connected here, at the moment it is built.
         from visualization.events import on_click, on_hover, on_legend_click
