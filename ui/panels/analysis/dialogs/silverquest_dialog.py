@@ -980,7 +980,9 @@ class SilverQuestDialog(QDialog):
             self.result_table.setUpdatesEnabled(True)
         self.result_table.resizeColumnsToContents()
 
-        summary = f"{result.config.normalization}, dmax={result.config.dmax:g}"
+        summary = translate("Normalization: {mode}, maximum distance: {dmax:g}").format(
+            mode=result.config.normalization, dmax=result.config.dmax
+        )
         source = payload.get("reference_source")
         if source == "groups":
             source_text = translate("references: {count} selected row(s)").format(

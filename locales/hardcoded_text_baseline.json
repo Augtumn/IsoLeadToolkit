@@ -1,0 +1,7 @@
+{
+  "ui/main_window_parts/setup.py::Isotopes Analyse": "the product name; it is the same in every language by design",
+  "ui/panels/analysis/dialogs/mixing_dialog.py:: (*.xlsx *.xls)": "glob pattern appended to a translated description, not prose",
+  "ui/panels/analysis/dialogs/provenance_ml/workflow.py:: (*.xlsx *.xls)": "glob pattern appended to a translated description, not prose",
+  "ui/panels/data/dialogs/data_import/workflow.py:: (*.xlsx *.xls)": "glob pattern appended to a translated description, not prose",
+  "ui/panels/data/dialogs/file_dialog.py:: (*.xlsx *.xls)": "glob pattern appended to a translated description, not prose"
+}

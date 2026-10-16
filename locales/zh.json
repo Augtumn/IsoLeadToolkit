@@ -1035,5 +1035,7 @@
   "Arrange the panel windows so each one is visible at once: tiled, cascaded, or on a grid.": "排列各面板窗口，使它们同时可见：平铺、层叠或按网格排布。",
   "Rescale every panel so all of its data lies inside the view.": "重新缩放每个面板，使其全部数据都落在可见范围内。",
   "Point size in square points, from {min} to {max}. The same size is used for every group.": "数据点大小（平方磅），范围 {min}–{max}。所有分组使用同一大小。",
-  "metric:": "度量："
+  "metric:": "度量：",
+  "Color for {group}": "{group} 的颜色",
+  "Normalization: {mode}, maximum distance: {dmax:g}": "归一化方式：{mode}，最大距离：{dmax:g}"
 }

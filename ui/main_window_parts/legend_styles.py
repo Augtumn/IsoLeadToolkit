@@ -43,7 +43,7 @@ class MainWindowLegendStyleMixin:
 
     def _pick_color(self, group, swatch):
         current_color = app_state.current_palette.get(group, "#cccccc")
-        color = QColorDialog.getColor(QColor(current_color), self, f"Color for {group}")
+        color = QColorDialog.getColor(QColor(current_color), self, translate("Color for {group}").format(group=group))
         if color.isValid():
             new_hex = color.name()
             updated_palette = dict(app_state.current_palette or {})
