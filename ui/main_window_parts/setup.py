@@ -358,9 +358,9 @@ class MainWindowSetupMixin:
                 "tsne_fit": translate("t-SNE Computing..."),
                 "pca_scale": translate("PCA Scaling..."),
                 "pca_fit": translate("PCA Computing..."),
-                "robust_scale": translate("Robust PCA Scaling..."),
-                "robust_mcd_fit": translate("Robust PCA Computing..."),
-                "robust_fallback_pca_fit": translate("Robust PCA Computing..."),
+                "robust_scale": translate("Robust PCA scaling..."),
+                "robust_mcd_fit": translate("Robust PCA computing..."),
+                "robust_fallback_pca_fit": translate("Robust PCA computing..."),
             }
             label = stage_names.get(stage, stage)
             bar.setFormat(f"{label}  %p%")

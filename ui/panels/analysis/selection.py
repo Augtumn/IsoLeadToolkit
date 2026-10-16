@@ -43,7 +43,7 @@ class AnalysisPanelSelectionMixin:
             selection_button.blockSignals(True)
             selection_button.setChecked(tool == 'export')
             selection_button.setText(
-                translate("Disable Selection") if tool == 'export' else translate("Enable Selection")
+                translate("Disable box select") if tool == 'export' else translate("Enable box select")
             )
             selection_button.blockSignals(False)
 
@@ -62,7 +62,7 @@ class AnalysisPanelSelectionMixin:
             lasso_button.blockSignals(True)
             lasso_button.setChecked(tool == 'lasso')
             lasso_button.setText(
-                translate("Disable Custom Shape") if tool == 'lasso' else translate("Custom Shape")
+                translate("Disable lasso select") if tool == 'lasso' else translate("Enable lasso select")
             )
             lasso_button.blockSignals(False)
 

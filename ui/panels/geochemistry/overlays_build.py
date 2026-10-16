@@ -133,7 +133,7 @@ class GeoPanelOverlaysBuildMixin:
         )
 
         self.modeling_use_real_age_check = _add_geochem_toggle(
-            "Use Real Age for Mu/Kappa",
+            "Use real age for μ/κ",
             app_state.use_real_age_for_mu_kappa,
             self._on_mu_kappa_real_age_change,
         )
