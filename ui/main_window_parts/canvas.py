@@ -829,10 +829,11 @@ class MainWindowCanvasMixin:
         # Everything that reads app_state.fig must see the panel being worked in; the first is
         # the natural start and the active one takes over as soon as it is clicked. Written
         # through the gateway, which is the only way this project's guard allows state to move.
-        state_gateway.set_figure(records[0]["figure"])
-        state_gateway.set_axis(records[0]["axes"])
-        state_gateway.set_canvas(records[0]["canvas"])
         app_state.plot_panel_windows[:] = records
+        # The first panel is the one in use, so the state's figure, axes, canvas AND render mode
+        # follow it - along the same path a click on a panel takes, so a new set of panels and a
+        # switch between panels cannot disagree about which mode and which figure are in force.
+        self._on_panel_activated(records[0].get("window"))
         logger.info("Built %d panel window(s): %s", len(records), modes)
         return records
 

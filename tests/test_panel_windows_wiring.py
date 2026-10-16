@@ -86,6 +86,7 @@ class _Gateway:
         self.figure = None
         self.axis = None
         self.canvas = None
+        self.render_mode = None
 
     def set_figure(self, figure) -> None:
         self.figure = figure
@@ -95,6 +96,11 @@ class _Gateway:
 
     def set_canvas(self, canvas) -> None:
         self.canvas = canvas
+
+    def set_render_mode(self, mode) -> None:
+        # Activation mirrors the panel's render mode too, so the state and the data panel's control
+        # describe the panel in use rather than whichever mode was set last.
+        self.render_mode = mode
 
 
 def test_the_panel_area_survives_a_rebuild(host, monkeypatch) -> None:

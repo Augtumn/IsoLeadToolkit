@@ -15,6 +15,7 @@ from core.state.selection_history import SelectionHistory
 #: (explicit interface, UI review item I).
 REQUIRES_MainWindowLifecycleMixin = (
     "_apply_legend_panel_layout",
+    "_fit_panels_to_data",
     "_refresh_status_info",
     "_sync_selection_tool_actions",
 )
@@ -298,6 +299,10 @@ class MainWindowLifecycleMixin:
                 from visualization.events import on_slider_change
 
                 on_slider_change()
+                # The newly loaded data is framed in every panel. A reload used to leave the limits
+                # the previous data had set, so the points could sit outside the window until the
+                # user fitted the view by hand.
+                self._fit_panels_to_data()
             except Exception as exc:
                 logger.warning("Failed to refresh plot after reload: %s", exc)
         else:
