@@ -54,14 +54,29 @@ class ModeAdapter(Protocol):
     def axes_dimensions(self, context: RenderContext) -> Any:
         """The axes this mode draws into, as ``core.ensure_axes`` takes it."""
 
-    def draw(self, context: RenderContext) -> None:
-        """Draw the plot itself."""
+    def prepare(self, context: RenderContext) -> Any:
+        """Turn the context into what this mode draws from, or ``False`` to refuse the render."""
 
-    def legend(self, context: RenderContext) -> None:
+    def groups(self, prepared: Any) -> list[Any]:
+        """The categories to build the palette for."""
+
+    def configure_axes(self, context: RenderContext) -> None:
+        """What this mode does to its axes right after clearing it."""
+
+    def draw(self, context: RenderContext, prepared: Any) -> Any:
+        """Draw the plot itself, and say what it produced (``pipeline.Ink``)."""
+
+    def marginal(self, context: RenderContext, prepared: Any) -> None:
+        """Draw anything that lives beside the plot, such as a marginal KDE."""
+
+    def legend(self, context: RenderContext, prepared: Any) -> None:
         """Draw the legend for this plot."""
 
-    def title(self, context: RenderContext) -> None:
+    def decorate(self, context: RenderContext, prepared: Any) -> None:
         """Name the plot and label its axes."""
+
+    def finish(self, context: RenderContext, prepared: Any) -> None:
+        """Anything else this mode does at the end, such as a tooltip annotation."""
 
 
 #: The adapters, by the mode they draw.

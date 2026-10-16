@@ -24,13 +24,29 @@ class _Adapter:
     def axes_dimensions(self, context):
         return 2
 
-    def draw(self, context) -> None:
-        self.drawn.append(context)
+    def prepare(self, context):
+        return {}
 
-    def legend(self, context) -> None:
+    def groups(self, prepared):
+        return []
+
+    def configure_axes(self, context) -> None:
         pass
 
-    def title(self, context) -> None:
+    def draw(self, context, prepared):
+        self.drawn.append(context)
+        return None
+
+    def marginal(self, context, prepared) -> None:
+        pass
+
+    def legend(self, context, prepared) -> None:
+        pass
+
+    def decorate(self, context, prepared) -> None:
+        pass
+
+    def finish(self, context, prepared) -> None:
         pass
 
 
@@ -87,7 +103,7 @@ def test_an_adapter_is_drawn_with_the_context_it_is_given() -> None:
     context = build_context(
         "2D", group_col="Site", figure=object(), axes=object(), columns_2d=("x1", "x2")
     )
-    registry.adapter_for("2D").draw(context)
+    registry.adapter_for("2D").draw(context, {})
     assert adapter.drawn == [context]
     assert context.capabilities.needs_columns == 2
 
