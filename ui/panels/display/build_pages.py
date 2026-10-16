@@ -176,7 +176,7 @@ class DisplayBuildPagesMixin:
             self.marker_size_spin.setRange(MARKER_SIZE_MIN, MARKER_SIZE_MAX)
             self.marker_size_spin.setValue(int(app_state.plot_marker_size))
             self.marker_size_spin.setToolTip(
-                translate("Marker size ({min}-{max})").format(
+                translate("Point size in square points, from {min} to {max}. The same size is used for every group.").format(
                     min=MARKER_SIZE_MIN, max=MARKER_SIZE_MAX
                 )
             )
@@ -193,7 +193,7 @@ class DisplayBuildPagesMixin:
             self.marker_alpha_spin.setSingleStep(0.02)
             self.marker_alpha_spin.setDecimals(2)
             self.marker_alpha_spin.setValue(float(app_state.plot_marker_alpha))
-            self.marker_alpha_spin.setToolTip(translate("Point transparency (0-1)"))
+            self.marker_alpha_spin.setToolTip(translate("How see-through the points are: 0 is invisible, 1 is solid."))
             self.marker_alpha_spin.valueChanged.connect(self._on_style_change)
             marker_alpha_row.addWidget(self.marker_alpha_spin)
             marker_layout.addLayout(marker_alpha_row)

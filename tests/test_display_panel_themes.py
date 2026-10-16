@@ -454,7 +454,7 @@ def test_marker_size_range_tooltip_and_normalizer_share_one_constant(panel) -> N
 
     spin = panel.marker_size_spin
     assert (spin.minimum(), spin.maximum()) == (MIN_PLOT_MARKER_SIZE, MAX_PLOT_MARKER_SIZE)
-    assert spin.toolTip() == translate("Marker size ({min}-{max})").format(
+    assert spin.toolTip() == translate("Point size in square points, from {min} to {max}. The same size is used for every group.").format(
         min=MIN_PLOT_MARKER_SIZE, max=MAX_PLOT_MARKER_SIZE
     )
     assert _normalize_plot_marker_size(MAX_PLOT_MARKER_SIZE * 10) == MAX_PLOT_MARKER_SIZE

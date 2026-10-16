@@ -50,7 +50,7 @@ class DisplayKdeBuildMixin:
         # to show and was passed to the dialog as None.
         kde_style_btn = QPushButton(translate("KDE Style"))
         kde_style_btn.setProperty('translate_key', 'KDE Style')
-        kde_style_btn.setToolTip(translate("Edit the KDE overlay style"))
+        kde_style_btn.setToolTip(translate("Open the style editor for the density (KDE) overlay: colour, line and labels."))
         kde_style_btn.clicked.connect(
             lambda _checked=False: self._open_kde_style_dialog('kde', None)
         )
@@ -66,7 +66,7 @@ class DisplayKdeBuildMixin:
 
         mkde_style_btn = QPushButton(translate("Marginal KDE Style"))
         mkde_style_btn.setProperty('translate_key', 'Marginal KDE Style')
-        mkde_style_btn.setToolTip(translate("Edit the marginal KDE overlay style"))
+        mkde_style_btn.setToolTip(translate("Open the style editor for the marginal density curves along the axes."))
         mkde_style_btn.clicked.connect(
             lambda _checked=False: self._open_kde_style_dialog('marginal_kde', None)
         )

@@ -266,7 +266,7 @@ class MainWindowCanvasMixin:
             self._get_selection_icon("fit_view.svg"), translate("Fit to Data..."), self
         )
         fit_action.setToolTip(
-            translate("Zoom every panel so the data fills the window.")
+            translate("Rescale every panel so all of its data lies inside the view.")
         )
         fit_action.triggered.connect(lambda _checked=False: self._fit_panels_to_data(force=True))
         self.toolbar.addAction(fit_action)
@@ -278,7 +278,7 @@ class MainWindowCanvasMixin:
             self._get_selection_icon("panels.svg"), translate("Arrange Panels"), self
         )
         arrange_action.setToolTip(
-            translate("Lay the panels out: tiled, cascaded, or on a grid that fills the window.")
+            translate("Arrange the panel windows so each one is visible at once: tiled, cascaded, or on a grid.")
         )
         arrange_menu = QMenu(self)
         for kind, label in (

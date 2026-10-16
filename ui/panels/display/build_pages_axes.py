@@ -103,7 +103,7 @@ class DisplayBuildAxesMixin:
             self.figure_dpi_spin.setValue(int(app_state.plot_dpi))
             self.figure_dpi_spin.valueChanged.connect(self._on_style_change)
             self.figure_dpi_spin.valueChanged.connect(self._resync_figure_dpi_from_state)
-            self.figure_dpi_spin.setToolTip(translate("Figure resolution (DPI)"))
+            self.figure_dpi_spin.setToolTip(translate("Image resolution in dots per inch. A higher value gives a sharper figure and a larger file."))
             row = add_row(figure_grid, "Figure DPI", self.figure_dpi_spin, row)
 
             figure_bg_editor, self.figure_bg_edit = self._create_color_picker(
@@ -142,7 +142,7 @@ class DisplayBuildAxesMixin:
             self.grid_alpha_spin.setDecimals(2)
             self.grid_alpha_spin.setValue(float(app_state.grid_alpha))
             self.grid_alpha_spin.valueChanged.connect(self._on_style_change)
-            self.grid_alpha_spin.setToolTip(translate("Grid line transparency (0-1)"))
+            self.grid_alpha_spin.setToolTip(translate("How see-through the grid lines are: 0 is invisible, 1 is solid."))
             row = add_row(grid_grid, "Grid Alpha", self.grid_alpha_spin, row)
 
             grid_style_items = ['-', '--', '-.', ':']
@@ -151,12 +151,12 @@ class DisplayBuildAxesMixin:
             self.grid_style_combo.addItems(grid_style_items)
             self._initial_combo_index(self.grid_style_combo, grid_style_default)
             self.grid_style_combo.currentTextChanged.connect(self._on_style_change)
-            self.grid_style_combo.setToolTip(translate("Grid line style"))
+            self.grid_style_combo.setToolTip(translate("Line style of the grid: solid, dashed, dash-dot or dotted."))
             row = add_row(grid_grid, "Grid Style", self.grid_style_combo, row)
 
             self.minor_grid_check = QCheckBox()
             self.minor_grid_check.setChecked(app_state.minor_grid)
-            self.minor_grid_check.setToolTip(translate("Show minor grid lines"))
+            self.minor_grid_check.setToolTip(translate("Draw a lighter grid between the labelled ticks."))
             self.minor_grid_check.stateChanged.connect(self._on_style_change)
             row = add_row(grid_grid, "Minor Grid", self.minor_grid_check, row)
 
@@ -322,7 +322,7 @@ class DisplayBuildAxesMixin:
             self.adjust_force_text_x_spin.setDecimals(2)
             self.adjust_force_text_x_spin.setValue(float(force_text[0]))
             self.adjust_force_text_x_spin.valueChanged.connect(self._on_style_change)
-            self.adjust_force_text_x_spin.setToolTip(translate("Label repulsion strength"))
+            self.adjust_force_text_x_spin.setToolTip(translate("How strongly point labels push each other apart, to keep them from overlapping."))
             row = add_row(label_layout_grid, "Adjust Force Text X", self.adjust_force_text_x_spin, row)
 
             self.adjust_force_text_y_spin = QDoubleSpinBox()
@@ -331,7 +331,7 @@ class DisplayBuildAxesMixin:
             self.adjust_force_text_y_spin.setDecimals(2)
             self.adjust_force_text_y_spin.setValue(float(force_text[1]))
             self.adjust_force_text_y_spin.valueChanged.connect(self._on_style_change)
-            self.adjust_force_text_y_spin.setToolTip(translate("Label repulsion strength"))
+            self.adjust_force_text_y_spin.setToolTip(translate("How strongly point labels push each other apart, to keep them from overlapping."))
             row = add_row(label_layout_grid, "Adjust Force Text Y", self.adjust_force_text_y_spin, row)
 
             self.adjust_force_static_x_spin = QDoubleSpinBox()
