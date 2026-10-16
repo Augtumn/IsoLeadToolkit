@@ -300,13 +300,11 @@ class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
                 state_gateway.set_geo_model_name(model_name)
                 logger.info("Loaded Geochemistry Model: %s", model_name)
 
+                from core.render_modes import capabilities_for
+
                 if (
                     trigger_render
-                    and app_state.render_mode
-                    in (
-                        'V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE',
-                        'PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86',
-                    )
+                    and capabilities_for(app_state.render_mode).uses_geochem_params
                 ):
                     self._on_change()
 
@@ -340,11 +338,11 @@ class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
             geochem_usecase.update_parameters(params)
             logger.info("Applied geochemistry parameters")
 
-            # The Plumbotectonics modes draw with these parameters too, so they redraw as well.
-            if app_state.render_mode in (
-                'V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE',
-                'PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86',
-            ):
+            # The modes that draw with these parameters redraw; which ones those are is one record per
+            # mode, not a tuple here that a mode can be left out of.
+            from core.render_modes import capabilities_for
+
+            if capabilities_for(app_state.render_mode).uses_geochem_params:
                 self._on_change()
 
             QMessageBox.information(

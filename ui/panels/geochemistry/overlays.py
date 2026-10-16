@@ -398,22 +398,18 @@ class GeoPanelOverlaysMixin:
 
     def _update_overlay_visibility(self) -> None:
         """Show only the overlay controls that apply to the current render mode."""
-        mode = self._normalize_render_mode(app_state.render_mode)
-        if self.geochem_plot_group is not None:
-            self.geochem_plot_group.setVisible(
-                mode in (
-                    "PB_EVOL_76",
-                    "PB_EVOL_86",
-                    "PB_MU_AGE",
-                    "PB_KAPPA_AGE",
-                    "PLUMBOTECTONICS_76",
-                    "PLUMBOTECTONICS_86",
-                )
-            )
+        from core.render_modes import capabilities_for
 
-        is_pb_evol = mode in ("PB_EVOL_76", "PB_EVOL_86")
-        is_pb_evol_76 = mode == "PB_EVOL_76"
-        is_plumbotectonics = mode in ("PLUMBOTECTONICS_76", "PLUMBOTECTONICS_86")
+        mode = self._normalize_render_mode(app_state.render_mode)
+        # Which sections apply is one record per mode, not a tuple of modes per section: a section that
+        # kept its own tuple could lose a mode silently, and did.
+        capabilities = capabilities_for(mode)
+        if self.geochem_plot_group is not None:
+            self.geochem_plot_group.setVisible(capabilities.shows_overlay_controls)
+
+        is_pb_evol = capabilities.shows_model_curve_controls
+        is_pb_evol_76 = capabilities.shows_isochron_controls
+        is_plumbotectonics = capabilities.shows_plumbotectonics_model
 
         def _toggle(widget, visible):
             if widget is None:

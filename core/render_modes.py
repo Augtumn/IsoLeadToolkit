@@ -31,6 +31,10 @@ class ModeCapabilities:
     uses_geochem_params: bool = False
     #: The mode has sections in the geochemistry panel.
     shows_geochem_controls: bool = False
+    #: ...including the overlay group, which holds the model-curve and Plumbotectonics toggles.
+    shows_overlay_controls: bool = False
+    #: ...including the model-curve controls.
+    shows_model_curve_controls: bool = False
     #: ...including the Plumbotectonics model choice.
     shows_plumbotectonics_model: bool = False
     #: ...including the isochron controls (only the 206-207 evolution plot fits an isochron).
@@ -38,8 +42,8 @@ class ModeCapabilities:
 
 
 #: Every render mode, in the order the controls show them: ``(label, value)``. The label is the
-#: English key the translation layer looks up; the value is what the state stores and what a render
-#: is dispatched by.
+#: English key the translation layer looks up; the value is what the state stores and what a render is
+#: dispatched by.
 RENDER_MODE_CHOICES: Final[tuple[tuple[str, str], ...]] = (
     ("UMAP", "UMAP"),
     ("t-SNE", "tSNE"),
@@ -75,31 +79,51 @@ MODE_CAPABILITIES: Final[dict[str, ModeCapabilities]] = {
     "2D": ModeCapabilities(needs_columns=2),
     "3D": ModeCapabilities(projection="3d", needs_columns=3),
     "Ternary": ModeCapabilities(projection="ternary", needs_columns=3, embedding=True),
-    "V1V2": ModeCapabilities(embedding=True, uses_geochem_params=True, shows_geochem_controls=True),
+    "V1V2": ModeCapabilities(
+        embedding=True,
+        uses_geochem_params=True,
+        shows_geochem_controls=True,
+    ),
     "PB_EVOL_76": ModeCapabilities(
         embedding=True,
         uses_geochem_params=True,
         shows_geochem_controls=True,
+        shows_overlay_controls=True,
+        shows_model_curve_controls=True,
         shows_isochron_controls=True,
     ),
     "PB_EVOL_86": ModeCapabilities(
-        embedding=True, uses_geochem_params=True, shows_geochem_controls=True
+        embedding=True,
+        uses_geochem_params=True,
+        shows_geochem_controls=True,
+        shows_overlay_controls=True,
+        shows_model_curve_controls=True,
     ),
     "PLUMBOTECTONICS_76": ModeCapabilities(
         embedding=True,
         uses_geochem_params=True,
         shows_geochem_controls=True,
+        shows_overlay_controls=True,
         shows_plumbotectonics_model=True,
     ),
     "PLUMBOTECTONICS_86": ModeCapabilities(
         embedding=True,
         uses_geochem_params=True,
         shows_geochem_controls=True,
+        shows_overlay_controls=True,
         shows_plumbotectonics_model=True,
     ),
-    "PB_MU_AGE": ModeCapabilities(embedding=True, uses_geochem_params=True, shows_geochem_controls=True),
+    "PB_MU_AGE": ModeCapabilities(
+        embedding=True,
+        uses_geochem_params=True,
+        shows_geochem_controls=True,
+        shows_overlay_controls=True,
+    ),
     "PB_KAPPA_AGE": ModeCapabilities(
-        embedding=True, uses_geochem_params=True, shows_geochem_controls=True
+        embedding=True,
+        uses_geochem_params=True,
+        shows_geochem_controls=True,
+        shows_overlay_controls=True,
     ),
 }
 
@@ -110,7 +134,10 @@ def capabilities_for(mode: object) -> ModeCapabilities:
 
 
 def modes_using_geochem_params() -> tuple[str, ...]:
-    """The modes that draw from the geochemistry parameters."""
+    """The modes that draw from the geochemistry parameters.
+
+    Editing a model or a parameter is worth a redraw in these modes and in no others.
+    """
     return tuple(mode for mode in RENDER_MODE_VALUES if MODE_CAPABILITIES[mode].uses_geochem_params)
 
 
