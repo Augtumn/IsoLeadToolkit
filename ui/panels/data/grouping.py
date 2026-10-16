@@ -148,7 +148,7 @@ class DataPanelGroupingMixin:
         cancel_btn = QPushButton(translate("Cancel"))
         cancel_btn.clicked.connect(dialog.reject)
         btn_row.addWidget(cancel_btn)
-        apply_btn = QPushButton(translate("Apply"))
+        apply_btn = QPushButton(translate("OK"))
 
         def _apply():
             selected = [item.data(Qt.UserRole) for item in list_widget.selectedItems()]

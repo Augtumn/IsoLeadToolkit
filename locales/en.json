@@ -167,7 +167,6 @@
   "Please select columns for sX and sY.": "Please select columns for sX and sY.",
   "Fixed sX and sY must be greater than 0.": "Fixed sX and sY must be greater than 0.",
   "Failed to open isochron settings: {error}": "Failed to open isochron settings: {error}",
-  "Isochron calculation is only available for Pb evolution plot (PB_EVOL_76)": "Isochron calculation is only available for Pb evolution plot (PB_EVOL_76)",
   "Data Import Wizard": "Data Import Wizard",
   "Select file, worksheet, columns, and initial render mode in one workflow.": "Select file, worksheet, columns, and initial render mode in one workflow.",
   "File": "File",
@@ -1036,5 +1035,7 @@
   "Box Select": "Box Select",
   "Lasso Select": "Lasso Select",
   "Robust PCA computing...": "Robust PCA computing...",
-  "Robust PCA scaling...": "Robust PCA scaling..."
+  "Robust PCA scaling...": "Robust PCA scaling...",
+  "Isochron calculation is only available on the Pb evolution plot (206-207).": "Isochron calculation is only available on the Pb evolution plot (206-207).",
+  "The decomposition cannot be applied to this data.": "The decomposition cannot be applied to this data."
 }

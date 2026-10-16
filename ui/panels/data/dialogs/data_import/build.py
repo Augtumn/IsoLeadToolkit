@@ -137,7 +137,7 @@ class DataImportBuildMixin:
         self.cancel_btn = cancel_button
         footer_layout.addWidget(cancel_button)
 
-        apply_button = QPushButton(translate("Apply"))
+        apply_button = QPushButton(translate("OK"))
         apply_button.clicked.connect(self._ok_clicked)
         apply_button.setDefault(True)
         self.apply_btn = apply_button
@@ -341,7 +341,7 @@ class DataImportBuildMixin:
         if self.cancel_btn is not None:
             self.cancel_btn.setText(translate("Cancel"))
         if self.apply_btn is not None:
-            self.apply_btn.setText(translate("Apply"))
+            self.apply_btn.setText(translate("OK"))
         if self.group_card is not None:
             self.group_card.setTitle(translate("Grouping Columns"))
         if self.data_card is not None:

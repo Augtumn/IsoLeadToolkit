@@ -263,7 +263,7 @@ class GeoPanelOverlaysMixin:
             QMessageBox.information(
                 self,
                 translate("Isochron Age Calculation"),
-                translate("Isochron calculation is only available for Pb evolution plot (PB_EVOL_76)"),
+                translate("Isochron calculation is only available on the Pb evolution plot (206-207)."),
             )
             return
 

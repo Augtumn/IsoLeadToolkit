@@ -168,8 +168,14 @@ class MainWindowLegendGroupMixin:
             validate_spec(frame, base, spec)
             labels, children = decompose(frame, base, spec)
         except (KeyError, ValueError, TypeError) as err:
-            # The repository bans silent fallbacks: say what is wrong instead of skipping it.
-            QMessageBox.warning(self, translate("Warning"), str(err))
+            # The repository bans silent fallbacks, but the detail names internal paths and separators:
+            # it goes to the log, and the user is told what it means for them.
+            logger.warning("Decomposition rejected: %s", err)
+            QMessageBox.warning(
+                self,
+                translate("Warning"),
+                translate("The decomposition cannot be applied to this data."),
+            )
             return False
 
         decomposed = frame.copy()
