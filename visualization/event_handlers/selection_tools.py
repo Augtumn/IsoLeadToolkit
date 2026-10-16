@@ -227,10 +227,18 @@ def toggle_selection_mode(tool_type: str = 'export') -> None:
                 _ensure_rectangle_selector()
 
             try:
-                if app_state.fig.canvas.toolbar.mode == 'zoom rect':
-                    app_state.fig.canvas.toolbar.zoom()
-                elif app_state.fig.canvas.toolbar.mode == 'pan/zoom':
-                    app_state.fig.canvas.toolbar.pan()
+                # The tool held by the toolbar of the axes in use, which is the panel's own. The
+                # held tool is named 'zoom rect'/'pan/zoom' on older matplotlib and ZOOM/PAN on
+                # current ones, so both spellings are read; comparing against the old strings only
+                # meant a selection gesture could start with the magnifier still held.
+                canvas = getattr(getattr(app_state.ax, "figure", None), "canvas", None)
+                toolbar = getattr(canvas, "toolbar", None)
+                held = str(getattr(getattr(toolbar, "mode", None), "name", "") or "")
+                held = held or str(getattr(toolbar, "mode", "") or "")
+                if "ZOOM" in held.upper():
+                    toolbar.zoom()
+                elif "PAN" in held.upper():
+                    toolbar.pan()
             except Exception as err:
                 logger.warning("toggle_selection_mode failed: %s", err)
         else:
