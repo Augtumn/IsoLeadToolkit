@@ -55,13 +55,7 @@ def test_render_geo_overlays_plumbotectonics_dispatch(monkeypatch) -> None:
         monkeypatch.setattr(geo_layers, "_draw_plumbotectonics_curves", lambda _ax, _alg: calls.append("curves"))
         monkeypatch.setattr(geo_layers, "_draw_equation_overlays", lambda _ax: calls.append("equation"))
 
-        geo_layers._render_geo_overlays(
-            actual_algorithm="PLUMBOTECTONICS_76",
-            prev_ax=ax,
-            prev_embedding_type="PLUMBOTECTONICS_76",
-            prev_xlim=ax.get_xlim(),
-            prev_ylim=ax.get_ylim(),
-        )
+        geo_layers._render_geo_overlays(actual_algorithm="PLUMBOTECTONICS_76")
 
         assert calls == ["isoage", "curves", "equation"]
     finally:
@@ -82,13 +76,7 @@ def test_render_geo_overlays_pb_mu_age_dispatch(monkeypatch) -> None:
         monkeypatch.setattr(geo_layers, "_draw_mu_kappa_paleoisochrons", lambda _ax, ages: calls.append(f"mu_kappa:{ages}"))
         monkeypatch.setattr(geo_layers, "_draw_equation_overlays", lambda _ax: calls.append("equation"))
 
-        geo_layers._render_geo_overlays(
-            actual_algorithm="PB_MU_AGE",
-            prev_ax=ax,
-            prev_embedding_type="PB_MU_AGE",
-            prev_xlim=ax.get_xlim(),
-            prev_ylim=ax.get_ylim(),
-        )
+        geo_layers._render_geo_overlays(actual_algorithm="PB_MU_AGE")
 
         assert calls == ["mu_kappa:[100, 200]", "equation"]
     finally:

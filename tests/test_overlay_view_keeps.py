@@ -42,8 +42,8 @@ class _OverlayDrawingMode(Adapter):
     def finish(self, context, prepared):
         from visualization.plotting.rendering.geo_layers import _render_geo_overlays
 
-        # No previous-view argument: the sequence owns the view, so the layer must not touch it.
-        _render_geo_overlays("V1V2", None, None, None, None)
+        # The layer draws overlays; the sequence owns the view.
+        _render_geo_overlays("V1V2")
 
 
 def _context():

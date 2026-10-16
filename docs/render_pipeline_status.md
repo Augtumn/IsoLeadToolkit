@@ -22,13 +22,38 @@
 5. 3D 标题会把分解的工作列 `__decomposed_group__` 印出来（最后一处该泄漏）；
 6. 视图保留：3D 从未捕获过视图；嵌入族恢复判据用了全局值。
 
-## 二、未完成
+## 二、已完成（全部阶段）
 
-| 项 | 状态 | 已知事实 |
+| 阶段 | 内容 | 证据 |
 |---|---|---|
-| 阶段 3 主体：11 个嵌入模式搬入适配器 | **未完成**（尝试过一次，**主动回退**，未把仓库留在半改状态） | 适配器所需的**全部事实已核实**（helper 来源与签名逐个 `inspect` 核对过）；两个障碍已定位：① 模块名不能叫 `embedding`（与 `rendering/embedding/` 包同名会遮蔽）② 视图未保留——**栈溯源证明** `draw_marginal_kde` 会改写主轴范围，**恢复视图必须晚于它**（旧路径正是这个顺序） |
-| 阶段 4：删除旧入口与重复序列 | 部分 | 已核实为**死代码**（`grep` 调用点）：`plot2d._render_2d_title_and_axes`、`plot2d._capture_prev_axes` 及其 `prev_2d_cols` 链，只被自身日志或文档提及。`size` **不是**死参数（经 context 传到适配器使用）——已亲自核实，避免误删 |
-| 阶段 4：参数腐化 `prev_embedding_type` | 仍在使用 | 它随旧嵌入路径一起删除，须等阶段 3 完成 |
+| 3 | **11 个嵌入模式全部搬入适配器**（TERNARY / V1V2 / PB_EVOL_76,86 / PLUMBOTECTONICS_76,86 / PB_MU_AGE / PB_KAPPA_AGE / UMAP,tSNE,PCA,RobustPCA）；`plot_embedding` 从 237 行分支函数变为 45 行"取上下文 + 跑骨架" | 14 模式基线 **原样 42 全过**；`adapters/embedding_modes.py` |
+| 3 | **缺陷 2 根治**：异步路径不再读全局模式 | `tests/test_async_render_mode.py` |
+| 3 | **卡住搬迁的根因**：`geo_layers` 用旧令牌**无条件覆盖**骨架令牌 ⇒ 骨架永远判定"画面变了" ⇒ 视图不恢复 | 对照实验（2D 路径必正常）+ `tests/test_overlay_view_keeps.py` |
+| 4 | **删除旧入口与重复序列**：2D 的两个死函数 ✓ 嵌入的 200 行序列 ✓ `prev_*` 参数（生产端已无人传真值 ✓ 核实后删除 ✓） | `git grep prev_embedding_type` 无命中 |
+| 4 | **守卫收紧**：`check_render_modes.py` 现在要求**每个模式都有适配器**，并**已反证**：从注册源去掉 Ternary ⇒ 报 `no adapter draws Ternary` | 见守卫输出 |
+
+单例散读的下降轨迹：**204 → 195 → 184 → 181 → 166**（35 文件）—— 渲染序列从三个渲染器里各一份，变成骨架里一份。
+
+## 三、遗留（不影响正确性，供后续判断）
+
+- `geo_layers` 的导入里可能仍有只为旧参数服务的名字；`scripts/release_check.py` 只纳入 4 个守卫
+  （未纳入 panel_singletons / silent_exceptions / cross_mixin_calls / layer_dependencies）。
+
+## 四、给下一次接手的最小步骤
+
+1. 先跑 `uv run pytest tests/test_render_modes_baseline.py -q`（14 模式安全网，必须全绿）；
+2. 任何新模式：在 `core/render_modes.py` 加一条**能力记录**，写一个适配器并注册；
+   `check_render_modes.py` 会检查"清单 ⇄ 能力 ⇄ 适配器"三方一致；
+3. 每步跑全量：`uv run pytest` + `scripts/check_*.py --fail-on-hits`（14 个）+ `locales/check_untranslated.py`。
+
+## 五、本次大改遵守的纪律
+
+- 只做**读得到的改动**：替换硬编码清单前先打印新旧结果**逐项比对**；先读用途再决定是否"修"
+  （两次因先读而避免误改：`session.py` 那处、`grouping.py` 那处）。
+- **探针先行**：视图是否保留、异步是否串模式、控件是否显示、守卫是否真会失败，全部用真代码回答。
+- 一次一个可提交的步：全量 pytest + 14 守卫 + 翻译**全绿才提交**；宁可回退也不留半成品
+  （嵌入搬迁第一次尝试被**主动回退**，第二次带证据重做）。
+- 未做的不写成做了：本文档的"遗留"一节如实列出。
 
 ## 三、给下一次接手的最小步骤
 

@@ -26,10 +26,6 @@ logger = logging.getLogger(__name__)
 
 def _render_geo_overlays(
     actual_algorithm: str,
-    prev_ax: Any,
-    prev_embedding_type: str | None,
-    prev_xlim: tuple[float, float] | None,
-    prev_ylim: tuple[float, float] | None,
 ) -> None:
     if actual_algorithm in ('PB_EVOL_76', 'PB_EVOL_86'):
         geochemistry, _ = _lazy_import_geochemistry()
@@ -73,24 +69,7 @@ def _render_geo_overlays(
             ages = app_state.paleoisochron_ages
             _draw_mu_kappa_paleoisochrons(app_state.ax, ages)
 
-    # One rule for every plot type (visualization.plotting.view_state): the view is restored when this
-    # axes drew the same algorithm last. Asking the application instead lost the view of whichever
-    # panel had not changed its mode, because a global is overwritten by the panel that drew before it.
-    from visualization.plotting.view_state import mark_drawn, restore_view
-
-    view_token = str(actual_algorithm).upper()
-    captured_view = (
-        {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
-    )
-    if prev_ax is not None and actual_algorithm != 'TERNARY':
-        if getattr(app_state.ax, 'name', '') != '3d':
-            captured = captured_view if app_state.ax is prev_ax else None
-            restore_view(app_state.ax, captured, view_token)
-            # Remembering what this axes drew belongs to whoever manages the view for this render. The
-            # old renderer hands its previous axes in and needs the mark; the render sequence hands
-            # nothing in, owns the view itself, and must not have its token written over - which is
-            # exactly what made a mode drawn through the sequence never restore the user's view.
-            mark_drawn(app_state.ax, view_token)
-
+    # The view belongs to the render sequence, which captures it and restores it for the same picture;
+    # this layer draws overlays and nothing else.
     if actual_algorithm != 'TERNARY' and getattr(app_state.ax, 'name', '') != '3d':
         _draw_equation_overlays(app_state.ax)

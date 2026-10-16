@@ -25,6 +25,11 @@ from core.render_modes import (  # noqa: E402
     RENDER_MODE_VALUES,
     asynchronous_modes,
 )
+from visualization.plotting.rendering.adapters import register_adapters  # noqa: E402
+from visualization.plotting.rendering.registry import (  # noqa: E402
+    registered_modes,
+    unregistered_modes,
+)
 
 
 def _problems() -> list[str]:
@@ -43,6 +48,19 @@ def _problems() -> list[str]:
         # The two tables already disagree; asking more of them would raise rather than report, and a
         # check reports.
         return problems
+
+    # Every mode the application offers is drawn by an adapter. This is what the migration was for: the
+    # dispatch used to end in an else that handed anything unrecognised to the embedding renderer.
+    try:
+        register_adapters()
+    except Exception as err:  # a broken adapter is a broken build, and it is reported as one
+        problems.append(f"could not register the adapters: {err}")
+        return problems
+    missing = unregistered_modes()
+    if missing:
+        problems.append(
+            "no adapter draws " + ", ".join(missing) + f"; registered: {registered_modes()}"
+        )
 
     # The renderer decides asynchronously by its own set; it must be exactly the recorded one.
     recorded = set(asynchronous_modes())

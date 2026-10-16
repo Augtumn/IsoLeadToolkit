@@ -175,8 +175,8 @@ class EmbeddingAdapter(Adapter):
             except Exception as kde_err:
                 logger.warning("Failed to render marginal KDE: %s", kde_err)
 
-        # No previous-view argument: the sequence owns the view, so the layer must not touch it.
-        _render_geo_overlays(self.algorithm, None, None, None, None)
+        # The layer draws the geochemistry overlays; the view is the sequence's business.
+        _render_geo_overlays(self.algorithm)
         context.axes.tick_params()
         state_gateway.set_annotation(
             context.axes.annotate(
