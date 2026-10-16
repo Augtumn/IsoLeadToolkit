@@ -165,9 +165,15 @@ class MainWindowLegendActionsMixin(
                 and app_state.df_global is not None
                 and app_state.last_group_col in app_state.df_global.columns
             )
+            # The entries are the render's group universe, not the values of the grouping column:
+            # a decomposition splits a group into children, and a child is a group - it is drawn,
+            # coloured and toggled like one. Reading the column left every child out of the list,
+            # so the search box could not find them even though its own parent-name branch was
+            # written to (the children it looked for were not in the list it searched).
             groups = []
             if has_groups:
-                groups = list(app_state.df_global[app_state.last_group_col].unique())
+                universe = [str(name) for name in (app_state.available_groups or [])]
+                groups = universe or list(app_state.df_global[app_state.last_group_col].unique())
             overlay_entries = self._overlay_entries_for_legend()
 
             search_edit = self.legend_search_edit
