@@ -198,7 +198,7 @@ def test_marginal_kde_forwards_clip_and_cumulative(monkeypatch) -> None:
             palette={"A": "#1f77b4"}, unique_cats=["A"],
         )
     finally:
-        plotting_kde.clear_marginal_axes()
+        plotting_kde.clear_marginal_axes(ax)
         plt.close(fig)
 
     assert captured.get("clip_min") == 1.0

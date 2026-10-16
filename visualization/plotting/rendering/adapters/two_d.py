@@ -85,7 +85,7 @@ class TwoDAdapter(Adapter):
         from ... import kde as kde_utils
         from ..raw.plot2d import _render_2d_marginal_kde
 
-        kde_utils.clear_marginal_axes()
+        kde_utils.clear_marginal_axes(context.axes)
         if context.show_marginal_kde:
             _render_2d_marginal_kde(
                 prepared,

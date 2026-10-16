@@ -41,7 +41,7 @@ def test_draw_marginal_kde_creates_and_registers_axes() -> None:
         assert marginal_axes is not None
         assert len(marginal_axes) == 2
     finally:
-        clear_marginal_axes()
+        clear_marginal_axes(ax)
         plt.close(fig)
         _restore_marginal_axes_state(snapshot)
 
@@ -90,12 +90,12 @@ def test_draw_marginal_kde_keeps_constrained_layout_off_while_axes_attached(monk
         finally:
             fig.set_layout_engine = configure_layout
 
-        clear_marginal_axes()
+        clear_marginal_axes(ax)
         # Restored after the divider axes are removed.
         assert len(calls) >= 2
         assert calls[-1][0] == "configure"
     finally:
-        clear_marginal_axes()
+        clear_marginal_axes(ax)
         plt.close(fig)
         _restore_marginal_axes_state(snapshot)
 
@@ -108,7 +108,7 @@ def test_clear_marginal_axes_resets_state() -> None:
         ax_right = fig.add_axes([0.85, 0.1, 0.1, 0.8])
         state_gateway.set_marginal_axes((ax_top, ax_right))
 
-        clear_marginal_axes()
+        clear_marginal_axes(ax)
 
         assert getattr(app_state, "marginal_axes", None) is None
     finally:

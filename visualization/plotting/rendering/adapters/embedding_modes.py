@@ -167,7 +167,7 @@ class EmbeddingAdapter(Adapter):
 
             try:
                 if getattr(context.axes, "name", "") != "3d":
-                    kde_utils.clear_marginal_axes()
+                    kde_utils.clear_marginal_axes(context.axes)
                     kde_utils.draw_marginal_kde(
                         context.axes, df_plot, context.group_col,
                         app_state.current_palette, unique_cats,

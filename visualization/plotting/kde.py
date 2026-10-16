@@ -1,5 +1,6 @@
 """KDE helpers for plotting."""
 import logging
+import weakref
 from typing import Any
 
 import numpy as np
@@ -13,9 +14,12 @@ from .style import configure_constrained_layout
 
 logger = logging.getLogger(__name__)
 
-# constrained_layout cannot coexist with axes_grid1 divider axes; it is
-# disabled while marginal KDE axes are attached and restored on clear.
-_constrained_layout_disabled = False
+# constrained_layout cannot coexist with axes_grid1 divider axes; it is disabled while marginal KDE axes
+# are attached and restored on clear. Both facts belong to a figure, not to the module: two panels are two
+# figures, and one flag plus one list meant the second panel to draw removed the first panel's axes and
+# re-enabled its layout, so only one panel could ever show a marginal KDE.
+_constrained_layout_disabled: "weakref.WeakSet" = weakref.WeakSet()
+_marginal_axes_for_figure: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 
 # Default maximum number of points per group for KDE sampling
 _KDE_MAX_POINTS_DEFAULT = 5000
@@ -297,28 +301,27 @@ def _robust_peak_limit(peaks: list[float]) -> float:
     return max(limit, float(np.max(finite)) * 0.05)
 
 
-def clear_marginal_axes() -> None:
-    global _constrained_layout_disabled
-    axes = app_state.marginal_axes
-    fig = None
-    if axes:
-        for ax in axes:
-            if fig is None:
-                fig = getattr(ax, 'figure', None)
-            try:
-                ax.remove()
-            except Exception as err:
-                logger.warning("clear_marginal_axes failed: %s", err)
+def clear_marginal_axes(ax: Any) -> None:
+    """Remove the marginal axes belonging to *ax*'s figure.
+
+    The caller names the panel it is clearing. It used to take no argument and clear one list held on the
+    application, so the second panel to render deleted the first panel's marginal axes.
+    """
+    fig = getattr(ax, 'figure', None) if ax is not None else None
+    axes = _marginal_axes_for_figure.pop(fig, None) if fig is not None else None
+    for marginal in axes or ():
+        try:
+            marginal.remove()
+        except Exception as err:
+            logger.warning("clear_marginal_axes failed: %s", err)
+    if fig is not None and fig in _constrained_layout_disabled:
+        _constrained_layout_disabled.discard(fig)
+        try:
+            configure_constrained_layout(fig)
+        except Exception as err:
+            logger.warning("clear_marginal_axes failed: %s", err)
+    # The state mirrors the panel in force, which is what the export path snapshots and restores.
     state_gateway.set_marginal_axes(None)
-    # Re-enable constrained layout now that the divider axes are gone
-    # (constrained_layout cannot coexist with axes_grid1 divider axes).
-    if _constrained_layout_disabled:
-        _constrained_layout_disabled = False
-        if fig is not None:
-            try:
-                configure_constrained_layout(fig)
-            except Exception as err:
-                logger.warning("clear_marginal_axes failed: %s", err)
 
 
 def _figure_uses_constrained_layout(fig: Any) -> bool:
@@ -366,7 +369,6 @@ def draw_marginal_kde(
         # attaching Cartesian twins produced wrong or empty axes.
         logger.info("Marginal KDE is not available for ternary plots; skipping.")
         return
-    global _constrained_layout_disabled
     try:
         from mpl_toolkits.axes_grid1 import make_axes_locatable
     except Exception as import_err:
@@ -379,7 +381,7 @@ def draw_marginal_kde(
     fig = getattr(ax, 'figure', None) if ax is not None else None
     if _figure_uses_constrained_layout(fig):
         _set_figure_constrained_layout(fig, False)
-        _constrained_layout_disabled = True
+        _constrained_layout_disabled.add(fig)
 
     max_points = int(app_state.marginal_kde_max_points)
 
@@ -570,6 +572,8 @@ def draw_marginal_kde(
     for spine in ax_right.spines.values():
         spine.set_visible(False)
 
+    if fig is not None:
+        _marginal_axes_for_figure[fig] = (ax_top, ax_right)
     state_gateway.set_marginal_axes((ax_top, ax_right))
     # NOTE: constrained layout stays OFF while the divider axes exist (see
     # the disable block at the top of this function); clear_marginal_axes

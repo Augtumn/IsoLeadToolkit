@@ -380,7 +380,7 @@ def test_the_marginal_bandwidth_rule_reaches_the_estimator(panel, monkeypatch) -
             unique_cats=["A"],
         )
     finally:
-        plotting_kde.clear_marginal_axes()
+        plotting_kde.clear_marginal_axes(ax)
         plt.close(fig)
 
     assert captured, "the marginal curves were never estimated"
