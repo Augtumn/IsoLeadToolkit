@@ -52,12 +52,19 @@ class TwoDAdapter(Adapter):
             logger.warning("Could not configure the 2D axes: %s", err)
 
     def draw(self, context: RenderContext, prepared: Any) -> Ink:
-        from ..raw.plot2d import _render_2d_kde, _render_2d_scatter_groups
+        from ..raw.plot2d import (
+            _draw_equation_overlays,
+            _render_2d_kde,
+            _render_2d_scatter_groups,
+        )
 
         columns = list(context.columns_2d)
         categories = _categories(context, prepared)
         if context.show_kde:
             _render_2d_kde(prepared, context.group_col, columns)
+            # The equation overlays belong to the 2D picture, as they did when this mode drew its own
+            # sequence.
+            _draw_equation_overlays(context.axes)
             return Ink.DRAWN
 
         # The helper registers the collections it creates in the plot state itself.
@@ -71,6 +78,7 @@ class TwoDAdapter(Adapter):
                 return Ink.EMPTY
             logger.error("No points were plotted in 2D")
             return Ink.FAILED
+        _draw_equation_overlays(context.axes)
         return Ink.DRAWN
 
     def marginal(self, context: RenderContext, prepared: Any) -> None:

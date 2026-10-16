@@ -54,22 +54,6 @@ def _validate_2d_inputs(
     return data_columns[0], data_columns[1]
 
 
-def _capture_prev_axes() -> tuple[Any | None, Any | None, Any | None, list[str] | None]:
-    """Snapshot the current axes and its limits before reconfiguring for 2D."""
-    prev_ax = app_state.ax
-    prev_2d_cols = app_state.last_2d_cols
-    prev_xlim = None
-    prev_ylim = None
-    if prev_ax is not None and getattr(prev_ax, 'name', '') != '3d':
-        try:
-            prev_xlim = prev_ax.get_xlim()
-            prev_ylim = prev_ax.get_ylim()
-        except Exception:
-            prev_xlim = None
-            prev_ylim = None
-    return prev_ax, prev_xlim, prev_ylim, prev_2d_cols
-
-
 def _prepare_2d_dataframe(
     group_col: str,
     data_columns: list[str],
@@ -318,44 +302,6 @@ def _draw_2d_title_and_labels(
     app_state.ax.set_xlabel(data_columns[0])
     app_state.ax.set_ylabel(data_columns[1])
     _apply_axis_text_style(app_state.ax)
-
-
-def _render_2d_title_and_axes(
-    group_col: str,
-    data_columns: list[str],
-    prev_ax: Any | None,
-    prev_xlim: Any | None,
-    prev_ylim: Any | None,
-    prev_2d_cols: list[str] | None,
-    subset_info: str,
-) -> None:
-    """Build the 2D title, axis labels and restore prior axis limits."""
-    # One rule for every plot type (visualization.plotting.view_state): the view is restored for the
-    # same content on the same axes, and the axes - not a global - remembers what it drew. A brand-new
-    # canvas has drawn nothing, so it keeps its own autoscale below.
-    from visualization.plotting.view_state import mark_drawn, restore_view
-
-    _draw_2d_title_and_labels(group_col, data_columns, subset_info)
-
-    view_token = ("2D", tuple(str(column) for column in data_columns))
-    captured_view = (
-        {"xlim": prev_xlim, "ylim": prev_ylim} if prev_xlim and prev_ylim else None
-    )
-    restored = False
-    if app_state.ax is prev_ax:
-        restored = restore_view(app_state.ax, captured_view, view_token)
-    mark_drawn(app_state.ax, view_token)
-    if not restored:
-        # Autoscale is only turned on for a view with no history: matplotlib's autoscale(enable=True)
-        # calls autoscale_view() straight away, so doing it after restoring the limits scaled the
-        # view back to the whole dataset - the reported "the zoom is reset whenever something
-        # refreshes the plot".
-        try:
-            app_state.ax.autoscale(enable=True, axis='both')
-        except Exception as err:
-            logger.warning("_render_2d_title_and_axes failed: %s", err)
-
-    _draw_equation_overlays(app_state.ax)
 
 
 def _attach_annotation() -> None:
