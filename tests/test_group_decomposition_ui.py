@@ -110,6 +110,35 @@ def test_the_legend_search_finds_a_child_group(qapp, restore_state) -> None:
     )
 
 
+def test_undoing_a_decomposition_leaves_a_selection_that_exists(qapp, restore_state) -> None:
+    """The children go with the split; the group they came from is not left hidden with them.
+
+    The children stayed in the visible selection and the parent was never in it, so after the split
+    was undone the plot treated the group as hidden - a group nobody had hidden.
+    """
+
+    def visible_after_undoing(keep) -> list | None:
+        _install()
+        window = _Window()
+        assert window.decompose_group_by("Tarim", "Phase") is True
+        children = list(app_state.parent_groups["Tarim"])
+        state_gateway.set_visible_groups(["Bronze", *keep(children)])
+        window.clear_group_decomposition()
+        return app_state.visible_groups
+
+    # A child was shown, so the group it came from is still shown - and the child itself is gone.
+    visible = visible_after_undoing(lambda names: names[:1])
+    assert visible is None or "Tarim" in visible, "the group is not hidden by a vanished child"
+    assert not [
+        name for name in (visible or []) if name in ("Tarim / casting", "Tarim / forging")
+    ], "and no child the split produced is left in the selection"
+
+    # Every child was hidden, so the group the user meant to hide stays hidden.
+    visible = visible_after_undoing(lambda names: [])
+    assert visible is not None and "Tarim" not in visible
+    assert "Bronze" in visible, "while the group the user really hid is still hidden"
+
+
 def test_a_parent_group_shows_and_hides_all_its_children(qapp, restore_state, monkeypatch) -> None:
     """The parent row is a group of groups: one click shows or hides every child under it."""
     from PyQt5.QtCore import Qt
