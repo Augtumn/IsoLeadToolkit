@@ -63,21 +63,35 @@ class MainWindowLegendGroupMixin:
     def _decomposition_spec(self):
         """Return ``({path key -> splitting column}, base column)`` from the stored map.
 
-        A map written before the base was recorded - one restored from an older session, say - has
-        no base. The column the chain started from is then the grouping column the data was loaded
-        with, which is the first declared one; falling back to the column in force would name the
-        computed column a previous split produced, which is exactly what must not be split again.
+        The base must be a column the current data can be grouped by: the map may have been restored
+        from a session whose data does not have that column, and the column in force may have been set
+        by something other than the data panel - a role column chosen by an analysis dialog, say. A
+        split that names a column nobody has cannot be carried out, so the base is the recorded one
+        when it is usable, otherwise the column in force when that is usable, otherwise the first
+        declared grouping column. A map whose base is gone is a map of paths nobody can resolve, so it
+        is dropped rather than carried along.
         """
         spec = dict(app_state.group_decomposition or {})
-        base = spec.pop(self.BASE_DECOMPOSITION_KEY, None)
-        if base:
-            return spec, str(base)
-        if not spec:
-            return spec, None
+        recorded = spec.pop(self.BASE_DECOMPOSITION_KEY, None)
+        usable = [
+            *(str(column) for column in (app_state.group_cols or [])),
+            self.DECOMPOSED_GROUP_COLUMN,
+        ]
+        for candidate in (recorded, app_state.last_group_col):
+            if candidate and str(candidate) in usable:
+                return spec, str(candidate)
         declared = [str(column) for column in (app_state.group_cols or [])]
         if declared:
+            # Neither the recorded base nor the column in force can be grouped by - a role column from
+            # an analysis dialog, say - so the split starts from the data's own first grouping column.
             return spec, declared[0]
-        return spec, (str(app_state.last_group_col) if app_state.last_group_col else None)
+        if recorded:
+            logger.warning(
+                "The decomposition starts from %r, which this data cannot group by; clearing it.",
+                recorded,
+            )
+            return {}, None
+        return spec, None
 
     def _path_of_label(self, label):
         """The value path a legend label stands for, e.g. ``Tarim / casting`` -> two values."""

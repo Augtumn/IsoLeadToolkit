@@ -103,6 +103,44 @@ def test_the_legend_panel_is_told_the_name_the_user_chose(qapp, restore_state) -
     )
 
 
+def test_a_usable_grouping_column_is_found_even_when_the_recorded_one_is_gone(
+    qapp, restore_state
+) -> None:
+    """Reported: "Choose a grouping column before decomposing" although one was chosen.
+
+    Two ways the base a decomposition starts from stops being usable: a map restored from a session
+    whose data does not have that column, and a column in force that something other than the data panel
+    set - a role column from an analysis dialog. Neither means the user has not chosen a grouping column.
+    """
+    _install()
+    window = _Window()
+
+    state_gateway.set_group_decomposition(
+        {window.BASE_DECOMPOSITION_KEY: "OldSheetColumn", "Tarim": "Phase"}
+    )
+    state_gateway.set_last_group_col("Site")
+    _spec, base = window._decomposition_spec()
+    assert base == "Site", f"the recorded base is gone; the data's own column is the base, got {base}"
+
+    state_gateway.set_group_decomposition({})
+    state_gateway.set_last_group_col("ROLE")
+    _spec, base = window._decomposition_spec()
+    assert base == "Site", f"a role column is not a grouping column, got {base}"
+
+    state_gateway.set_last_group_col("Phase")
+    _spec, base = window._decomposition_spec()
+    assert base == "Phase", f"the column in force wins when it is usable, got {base}"
+
+
+def test_a_split_that_produced_the_base_can_still_be_refined(qapp, restore_state) -> None:
+    """The computed column is a valid base: refining a group step by step is the feature."""
+    _install()
+    window = _Window()
+    state_gateway.set_group_decomposition({window.BASE_DECOMPOSITION_KEY: window.DECOMPOSED_GROUP_COLUMN})
+    _spec, base = window._decomposition_spec()
+    assert base == window.DECOMPOSED_GROUP_COLUMN
+
+
 def test_the_title_names_the_column_the_user_chose(qapp, restore_state) -> None:
     """Reported: a group name turned into __decomposed_group__.
 
