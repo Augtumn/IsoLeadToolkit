@@ -108,8 +108,11 @@ def _enforce_plot_style(ax: Any) -> None:
     except Exception as err:
         logger.warning("_enforce_plot_style failed: %s", err)
 
-    if app_state.fig is not None:
-        app_state.fig.patch.set_facecolor(plt.rcParams.get('figure.facecolor', 'white'))
+    # The figure this axes belongs to, not the state's figure: that one mirrors a single panel, so
+    # a background change reached one panel and left the others as they were.
+    figure = getattr(ax, "figure", None)
+    if figure is not None:
+        figure.patch.set_facecolor(plt.rcParams.get('figure.facecolor', 'white'))
 
     ax.set_facecolor(plt.rcParams.get('axes.facecolor', 'white'))
     tick_color = app_state.tick_color

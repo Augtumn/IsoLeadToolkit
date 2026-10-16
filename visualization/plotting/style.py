@@ -62,31 +62,35 @@ def refresh_plot_style() -> None:
     """Refresh plot styling without recomputing embeddings."""
     _apply_current_style()
 
-    ax = app_state.ax
-    fig = app_state.fig
-
     axes = []
-    if fig is not None:
-        axes.extend(list(getattr(fig, 'axes', [])))
-    if ax is not None and ax not in axes:
-        axes.append(ax)
+    for record in list(getattr(app_state, "plot_panel_windows", []) or []):
+        panel_axes = record.get("axes") if isinstance(record, dict) else None
+        if panel_axes is not None and panel_axes not in axes:
+            axes.append(panel_axes)
+    if not axes:
+        # A single-figure window: the state's figure and axes are the only ones there are.
+        ax = app_state.ax
+        fig = app_state.fig
+        if fig is not None:
+            axes.extend(list(getattr(fig, 'axes', [])))
+        if ax is not None and ax not in axes:
+            axes.append(ax)
 
     for target_ax in axes:
         _enforce_plot_style(target_ax)
         _apply_axis_text_style(target_ax)
         _style_legend(target_ax.get_legend(), show_marginal_kde=app_state.show_marginal_kde)
-        # Keep title show/hide responsive via style-only refresh.
-        if target_ax is ax:
-            try:
-                show_title = bool(app_state.show_plot_title)
-                title_pad = float(app_state.title_pad)
-                current_title = getattr(app_state, 'current_plot_title', '') or target_ax.get_title()
-                if show_title:
-                    target_ax.set_title(current_title, pad=title_pad)
-                else:
-                    target_ax.set_title("")
-            except Exception as err:
-                logger.warning("refresh_plot_style failed: %s", err)
+        # Every panel carries its own title, so the title is kept responsive in all of them.
+        try:
+            show_title = bool(app_state.show_plot_title)
+            title_pad = float(app_state.title_pad)
+            current_title = getattr(app_state, 'current_plot_title', '') or target_ax.get_title()
+            if show_title:
+                target_ax.set_title(current_title, pad=title_pad)
+            else:
+                target_ax.set_title("")
+        except Exception as err:
+            logger.warning("refresh_plot_style failed: %s", err)
 
     try:
         base_size = app_state.plot_marker_size
@@ -127,11 +131,11 @@ def refresh_plot_style() -> None:
     except Exception as err:
         logger.warning("refresh_plot_style failed: %s", err)
 
-    if fig is not None and fig.canvas:
-        try:
-            fig.canvas.draw_idle()
-        except Exception as err:
-            logger.warning("refresh_plot_style failed: %s", err)
+    # Every panel is repainted: the state's figure used to be the one drawn, which is a single
+    # panel, so a style change reached that one only.
+    from visualization.events import repaint_panels
+
+    repaint_panels()
 
 
 # refresh_overlay_styles and refresh_overlay_visibility are re-exported from styling.overlays.
