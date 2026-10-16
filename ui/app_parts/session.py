@@ -164,5 +164,9 @@ class Qt5AppSessionMixin:
                         "Stored 2D column selection invalid or incomplete; will prompt user on demand."
                     )
 
-        if app_state.render_mode in ("UMAP", "tSNE"):
+        from core.render_modes import capabilities_for
+
+        # Every mode the user picks an algorithm for restores it, not only the two that used to be
+        # listed here: a PCA or RobustPCA session kept whatever algorithm the combo happened to show.
+        if capabilities_for(app_state.render_mode).has_algorithm:
             state_gateway.set_algorithm("UMAP" if app_state.render_mode == "UMAP" else "tSNE")

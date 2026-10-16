@@ -7,7 +7,8 @@ apply.
 
 This replaces the separate tuples that used to answer those questions - each one a list of modes that
 could fall out of step with this list, and did: a mode left out of one of them quietly lost a feature
-(the Plumbotectonics panel showed no controls, and editing a model did not redraw).
+(the Plumbotectonics panel showed no controls, editing a model did not redraw, and a session did not
+restore the algorithm of a PCA plot).
 """
 from __future__ import annotations
 
@@ -27,6 +28,8 @@ class ModeCapabilities:
     embedding: bool = False
     #: Computed in the background, so a render may come back with work still pending.
     asynchronous: bool = False
+    #: Computed by one of the algorithms the user picks between (UMAP, t-SNE, PCA, RobustPCA).
+    has_algorithm: bool = False
     #: Draws from the geochemistry parameters, so editing them is worth a redraw.
     uses_geochem_params: bool = False
     #: The mode has sections in the geochemistry panel.
@@ -37,6 +40,8 @@ class ModeCapabilities:
     shows_model_curve_controls: bool = False
     #: ...including the Plumbotectonics model choice.
     shows_plumbotectonics_model: bool = False
+    #: ...including the Mu/Kappa age controls.
+    shows_mu_kappa_age_controls: bool = False
     #: ...including the isochron controls (only the 206-207 evolution plot fits an isochron).
     shows_isochron_controls: bool = False
 
@@ -72,10 +77,10 @@ LABEL_FOR_MODE: Final[dict[str, str]] = {
 #: What each mode needs. Keyed by the mode values above, and checked against them by
 #: ``scripts/check_render_modes.py``: a mode without a record, or a record without a mode, fails.
 MODE_CAPABILITIES: Final[dict[str, ModeCapabilities]] = {
-    "UMAP": ModeCapabilities(embedding=True, asynchronous=True),
-    "tSNE": ModeCapabilities(embedding=True, asynchronous=True),
-    "PCA": ModeCapabilities(embedding=True, asynchronous=True),
-    "RobustPCA": ModeCapabilities(embedding=True, asynchronous=True),
+    "UMAP": ModeCapabilities(embedding=True, asynchronous=True, has_algorithm=True),
+    "tSNE": ModeCapabilities(embedding=True, asynchronous=True, has_algorithm=True),
+    "PCA": ModeCapabilities(embedding=True, asynchronous=True, has_algorithm=True),
+    "RobustPCA": ModeCapabilities(embedding=True, asynchronous=True, has_algorithm=True),
     "2D": ModeCapabilities(needs_columns=2),
     "3D": ModeCapabilities(projection="3d", needs_columns=3),
     "Ternary": ModeCapabilities(projection="ternary", needs_columns=3, embedding=True),
@@ -118,12 +123,14 @@ MODE_CAPABILITIES: Final[dict[str, ModeCapabilities]] = {
         uses_geochem_params=True,
         shows_geochem_controls=True,
         shows_overlay_controls=True,
+        shows_mu_kappa_age_controls=True,
     ),
     "PB_KAPPA_AGE": ModeCapabilities(
         embedding=True,
         uses_geochem_params=True,
         shows_geochem_controls=True,
         shows_overlay_controls=True,
+        shows_mu_kappa_age_controls=True,
     ),
 }
 

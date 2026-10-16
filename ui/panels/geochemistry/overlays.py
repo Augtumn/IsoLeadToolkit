@@ -77,7 +77,8 @@ class GeoPanelOverlaysMixin:
             self.modeling_use_real_age_check,
         )
         self._refresh_mu_kappa_age_label()
-        if app_state.render_mode in ("PB_MU_AGE", "PB_KAPPA_AGE"):
+        from core.render_modes import capabilities_for
+        if capabilities_for(app_state.render_mode).shows_mu_kappa_age_controls:
             self._on_change()
 
     def _on_select_mu_kappa_age_column(self):
@@ -140,7 +141,8 @@ class GeoPanelOverlaysMixin:
         )
         self._refresh_mu_kappa_age_label()
         self._refresh_mu_kappa_age_controls()
-        if app_state.render_mode in ("PB_MU_AGE", "PB_KAPPA_AGE"):
+        from core.render_modes import capabilities_for
+        if capabilities_for(app_state.render_mode).shows_mu_kappa_age_controls:
             self._on_change()
 
     def _refresh_mu_kappa_age_label(self):
@@ -188,7 +190,8 @@ class GeoPanelOverlaysMixin:
         if index < 0 or index >= len(self.plumbotectonics_model_keys):
             return
         state_gateway.set_plumbotectonics_variant(self.plumbotectonics_model_keys[index])
-        if app_state.render_mode in ("PLUMBOTECTONICS_76", "PLUMBOTECTONICS_86"):
+        from core.render_modes import capabilities_for
+        if capabilities_for(app_state.render_mode).shows_plumbotectonics_model:
             self._on_change()
 
     def _refresh_mu_kappa_age_controls(self):
