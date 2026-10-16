@@ -133,9 +133,17 @@ class RenderPlotUseCase:
         # One figure and one canvas per panel, built by the window; this layer only draws into
         # them, so the figures arrive through a runtime list rather than an import.
         windows = list(getattr(self._state, "plot_panel_windows", []) or [])
+        if not windows:
+            logger.warning("No panel windows to draw %d panel(s) into", len(panels))
+            return False, False
         if len(windows) != len(panels):
+            # The two lists must agree: the renderer is handed the panel list and looks the windows
+            # up by it. Drawing a subset was rejected before as a half-drawn state, and the caller
+            # that let them drift - switching one panel's mode - keeps them in step now.
             logger.warning(
-                "No window for %d of %d panel(s); cannot draw them", len(panels) - len(windows), len(panels)
+                "No window for %d of %d panel(s); cannot draw them",
+                len(panels) - len(windows),
+                len(panels),
             )
             return False, False
 

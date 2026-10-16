@@ -657,6 +657,10 @@ class MainWindowCanvasMixin:
             logger.warning("Could not switch the panel's mode: %s", err)
             return
         app_state.plot_panel_windows[:] = rebuilt
+        # The renderer is handed the panel list and looks the windows up by it; leaving the state's
+        # list behind made the two disagree, and a render then drew nothing at all - the new panel
+        # stayed empty and the others kept the previous drawing.
+        state_gateway.set_plot_panels(modes)
         state_gateway.set_render_mode(str(mode))
         logger.info("Panel %d switched to %s", index + 1, mode)
 
