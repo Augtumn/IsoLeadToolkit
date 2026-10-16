@@ -129,6 +129,66 @@ class PanelWindows:
         if self._records:
             self.area.tileSubWindows()
 
+    def arrange(self, kind: str = "grid") -> None:
+        """Lay the windows out: beside each other, stacked, or on a grid.
+
+        ``tile`` and ``cascade`` are the area's own arrangements; ``grid`` sizes the windows from
+        the room actually available, which is what makes a handful of panels comparable at once.
+        """
+        if not self._records:
+            return
+        if kind == "tile":
+            self.area.tileSubWindows()
+            return
+        if kind == "cascade":
+            self.area.cascadeSubWindows()
+            return
+        self.grid()
+
+    def grid(self) -> None:
+        """Fill the area with a grid sized from the number of panels."""
+        windows = [
+            record.get("window")
+            for record in self._records
+            if record.get("window") is not None
+        ]
+        if not windows:
+            return
+        # A maximised child ignores setGeometry, so the windows are un-maximised first.
+        for window in windows:
+            if window.isMaximized():
+                window.showNormal()
+        viewport = self.area.viewport()
+        width = max(1, viewport.width())
+        height = max(1, viewport.height())
+        columns = max(1, int(len(windows) ** 0.5 + 0.999))
+        rows = max(1, -(-len(windows) // columns))
+        cell_width = max(120, width // columns)
+        cell_height = max(120, height // rows)
+        for index, window in enumerate(windows):
+            row, column = divmod(index, columns)
+            window.setGeometry(
+                column * cell_width, row * cell_height, cell_width, cell_height
+            )
+
+    def maximize(self) -> None:
+        """Show the windows filled to the area."""
+        for record in self._records:
+            window = record.get("window")
+            if window is not None:
+                window.showMaximized()
+
+    def show_filling_area(self) -> None:
+        """Fill the area: one panel maximises, several share it on a grid."""
+        if self.count() <= 1:
+            self.maximize()
+        else:
+            self.grid()
+        for record in self._records:
+            window = record.get("window")
+            if window is not None and not window.isVisible():
+                window.show()
+
     def close_all(self) -> None:
         """Close every child window and forget it."""
         while self._records:

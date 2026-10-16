@@ -1019,5 +1019,9 @@
   "Home": "Home",
   "Pan": "Pan",
   "Zoom to Rectangle": "Zoom to Rectangle",
-  "Apply legend changes to all panels": "Apply legend changes to all panels"
+  "Apply legend changes to all panels": "Apply legend changes to all panels",
+  "Arrange Panels": "Arrange Panels",
+  "Cascade": "Cascade",
+  "Lay the panels out: tiled, cascaded, or on a grid that fills the window.": "Lay the panels out: tiled, cascaded, or on a grid that fills the window.",
+  "Tile": "Tile"
 }

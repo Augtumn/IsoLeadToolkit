@@ -1019,5 +1019,9 @@
   "Home": "复位",
   "Pan": "平移",
   "Zoom to Rectangle": "框选缩放",
-  "Apply legend changes to all panels": "图例改动应用到所有面板"
+  "Apply legend changes to all panels": "图例改动应用到所有面板",
+  "Arrange Panels": "Arrange Panels",
+  "Cascade": "Cascade",
+  "Lay the panels out: tiled, cascaded, or on a grid that fills the window.": "Lay the panels out: tiled, cascaded, or on a grid that fills the window.",
+  "Tile": "Tile"
 }

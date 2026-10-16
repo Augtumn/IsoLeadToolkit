@@ -9,7 +9,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtGui import QIcon, QWindow
-from PyQt5.QtWidgets import QAction, QApplication, QStyle, QWidget
+from PyQt5.QtWidgets import QAction, QApplication, QMenu, QStyle, QWidget
 
 from core import app_state, state_gateway, translate
 
@@ -265,6 +265,28 @@ class MainWindowCanvasMixin:
         )
         fit_action.triggered.connect(self._fit_panels_to_data)
         self.toolbar.addAction(fit_action)
+
+        # The panels can be moved and resized one by one, which leaves the window in whatever
+        # arrangement the last drag produced. These put them back: beside each other, stacked, or
+        # on a grid that uses the whole area.
+        arrange_action = QAction(
+            self._get_selection_icon("panels.svg"), translate("Arrange Panels"), self
+        )
+        arrange_action.setToolTip(
+            translate("Lay the panels out: tiled, cascaded, or on a grid that fills the window.")
+        )
+        arrange_menu = QMenu(self)
+        for kind, label in (
+            ("tile", translate("Tile")),
+            ("cascade", translate("Cascade")),
+            ("grid", translate("Grid")),
+        ):
+            entry = arrange_menu.addAction(label)
+            entry.triggered.connect(
+                lambda _checked=False, kind=kind: self._arrange_panels(kind)
+            )
+        arrange_action.setMenu(arrange_menu)
+        self.toolbar.addAction(arrange_action)
 
         # One switch for the hover readout: the tooltip and the point it marks. It used to be
         # always on and buried in the data panel, and it enlarged a whole group rather than the
@@ -672,6 +694,17 @@ class MainWindowCanvasMixin:
             self._sync_navigation_buttons()
             logger.info("Active panel is now %s (index %d)", record.get("mode"), index)
             return
+
+    def _arrange_panels(self, kind: str = "grid") -> None:
+        """Lay the panel windows out, on request."""
+        panels = self._panel_windows
+        if panels is None or not panels.count():
+            return
+        try:
+            panels.arrange(kind)
+            logger.info("Arranged %d panel window(s): %s", panels.count(), kind)
+        except Exception as err:
+            logger.warning("Could not arrange the panel windows: %s", err)
 
     def _fit_panels_to_data(self):
         """Zoom every panel so its points fill the window."""
