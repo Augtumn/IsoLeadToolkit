@@ -59,6 +59,14 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
             logger.error('Missing columns for 3D plot: %s', missing)
             return False
 
+        # The view belongs to the user, and this renderer clears the axes before drawing again, so
+        # it is captured first and put back afterwards - the same rule every plot type follows, from
+        # visualization.plotting.view_state.
+        from visualization.plotting.view_state import capture_view, mark_drawn, restore_view
+
+        view_token = ("3D", tuple(data_columns))
+        captured_view = capture_view(app_state.ax)
+
         _ensure_axes(dimensions=3)
 
         if app_state.ax is None:
@@ -148,6 +156,7 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
                 # this empty frame (an empty selection must not leave them all ticked).
                 _apply_frame_labels(data_columns, group_col)
                 _notify_legend_panel(group_col, [], [])
+                mark_drawn(app_state.ax, view_token)
                 state_gateway.set_annotation(None)
                 return True
             logger.error('No points were plotted in 3D')
@@ -170,6 +179,10 @@ def plot_3d_data(group_col: str, data_columns: list[str], size: int = 60) -> boo
 
         _apply_frame_labels(data_columns, group_col)
 
+        # Same content on the same axes: the view the user set comes back. A different column set is
+        # a new view, and the ranges stay as this render set them.
+        restore_view(app_state.ax, captured_view, view_token)
+        mark_drawn(app_state.ax, view_token)
         state_gateway.set_annotation(None)
         return True
 

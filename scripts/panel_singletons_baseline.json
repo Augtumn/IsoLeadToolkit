@@ -27,7 +27,7 @@
   "visualization/plotting/rendering/geo_layers.py": 17,
   "visualization/plotting/rendering/kde.py": 2,
   "visualization/plotting/rendering/raw/plot2d.py": 34,
-  "visualization/plotting/rendering/raw/plot3d.py": 18,
+  "visualization/plotting/rendering/raw/plot3d.py": 22,
   "visualization/plotting/style.py": 3,
   "visualization/plotting/styling/overlays.py": 3
 }
