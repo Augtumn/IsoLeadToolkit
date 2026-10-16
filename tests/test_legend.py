@@ -62,6 +62,38 @@ def test_display_entries_block_follows_parent_order_index() -> None:
     assert result[4]["in_parent"] == "P1"
 
 
+def test_a_folded_parent_keeps_its_row_and_hides_its_children() -> None:
+    """Folding is a view preference: the row stays, its children's rows go, nothing else moves.
+
+    The children are still groups - the plot, their colours and their visibility are untouched - so
+    only the list changes, and an entry outside the block is unaffected.
+    """
+    entries = [_entry("group", "A"), _entry("group", "B"), _entry("overlay", "iso")]
+    parents = ["P1"]
+    child_parent = {"A": "P1", "B": "P1"}
+    parent_names = {"P1"}
+
+    open_rows = build_legend_display_entries(
+        entries, parents, child_parent, parent_names, {}
+    )
+    folded_rows = build_legend_display_entries(
+        entries, parents, child_parent, parent_names, {}, collapsed={"P1"}
+    )
+
+    assert [(row["type"], row["key"]) for row in open_rows] == [
+        ("parent", "P1"),
+        ("group", "A"),
+        ("group", "B"),
+        ("overlay", "iso"),
+    ]
+    assert [(row["type"], row["key"]) for row in folded_rows] == [
+        ("parent", "P1"),
+        ("overlay", "iso"),
+    ], "the parent row and everything outside its block stay"
+    assert folded_rows[0]["collapsed"] is True
+    assert open_rows[0]["collapsed"] is False
+
+
 def test_display_entries_without_parents_passthrough() -> None:
     entries = [_entry("group", "A"), _entry("overlay", "iso")]
     result = _build(entries, [], {}, {})
