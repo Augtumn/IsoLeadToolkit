@@ -69,9 +69,11 @@ def run(adapter: ModeAdapter, context: RenderContext) -> bool:
 
         if ink is Ink.EMPTY:
             # The empty frame is still this mode's frame: name it, keep the mode, and tell the legend
-            # panel, whose checkboxes have to match the selection that produced it.
+            # panel, whose checkboxes have to match the selection that produced it. It is remembered
+            # like any other picture, so the view the user sets on an empty frame is theirs too.
             adapter.decorate(context, prepared)
             adapter.finish(context, prepared)
+            mark_drawn(context.axes, context.token(*adapter.token(context)))
             return True
 
         if ink is not Ink.DRAWN:

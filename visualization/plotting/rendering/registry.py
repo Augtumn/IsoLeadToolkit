@@ -34,12 +34,65 @@ class NotARenderMode(ValueError):
     """Raised when an adapter claims a mode the application does not offer."""
 
 
+class Adapter:
+    """What a mode inherits: the optional steps of the sequence, doing nothing.
+
+    A mode only writes the parts of the sequence it actually has. A 3D scatter has no marginal KDE, so
+    it says nothing about one, rather than writing an empty method to satisfy a protocol.
+
+    The steps a mode must think about - what it draws and how it is named - it implements.
+    """
+
+    #: The mode this adapter draws, one of ``core.render_modes.RENDER_MODE_VALUES``.
+    mode: str = ""
+
+    def validate(self, context: RenderContext) -> None:
+        """Refuse a render this mode cannot do, before anything is cleared."""
+
+    def token(self, context: RenderContext) -> Any:
+        """What identifies the picture, beyond the context's own token."""
+        return ()
+
+    def axes_dimensions(self, context: RenderContext) -> Any:
+        """The axes this mode draws into, as ``core.ensure_axes`` takes it."""
+        return 2
+
+    def prepare(self, context: RenderContext) -> Any:
+        """Turn the context into what this mode draws from, or ``False`` to refuse the render."""
+        return {}
+
+    def groups(self, context: RenderContext, prepared: Any) -> list[Any]:
+        """The categories to build the palette for."""
+        return []
+
+    def configure_axes(self, context: RenderContext) -> None:
+        """What this mode does to its axes right after clearing it."""
+
+    def draw(self, context: RenderContext, prepared: Any) -> Any:
+        """Draw the plot itself, and say what it produced (``pipeline.Ink``)."""
+        raise NotImplementedError
+
+    def marginal(self, context: RenderContext, prepared: Any) -> None:
+        """Draw anything that lives beside the plot, such as a marginal KDE."""
+
+    def legend(self, context: RenderContext, prepared: Any) -> None:
+        """Draw the legend for this plot."""
+
+    def decorate(self, context: RenderContext, prepared: Any) -> None:
+        """Name the plot and label its axes."""
+        raise NotImplementedError
+
+    def finish(self, context: RenderContext, prepared: Any) -> None:
+        """Anything else this mode does at the end, such as a tooltip annotation."""
+
+
 @runtime_checkable
 class ModeAdapter(Protocol):
     """What one plot type contributes to a render.
 
     The pipeline owns the sequence every render shares; an adapter owns the parts that differ - what
-    the plot is made of, what identifies it, what it draws, and how it is named.
+    the plot is made of, what identifies it, what it draws, and how it is named. :class:`Adapter` is the
+    base that provides the optional steps, so a mode writes only what it has.
     """
 
     #: The mode this adapter draws, one of ``core.render_modes.RENDER_MODE_VALUES``.

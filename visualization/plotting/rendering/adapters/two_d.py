@@ -11,12 +11,12 @@ from typing import Any
 
 from ..context import RenderContext
 from ..pipeline import Ink
-from ..registry import register
+from ..registry import Adapter, register
 
 logger = logging.getLogger(__name__)
 
 
-class TwoDAdapter:
+class TwoDAdapter(Adapter):
     """A 2D scatter plot of two selected columns."""
 
     mode = "2D"

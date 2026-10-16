@@ -158,8 +158,12 @@ def test_every_mode_title_names_the_grouping_column(render_ready, mode) -> None:
     assert _render(mode) is True
     assert "Site" in _title_for(mode), f"{mode} names the grouping column"
 
-    # The column a decomposition writes is not a name the user can read.
+    # A decomposition groups by a column it writes itself, which is what the render is then told to
+    # group by - and that name must never reach the user.
     state_gateway.set_group_decomposition({BASE_DECOMPOSITION_KEY: "Site", "A": "206Pb/204Pb"})
+    state_gateway.set_last_group_col(DECOMPOSED_GROUP_COLUMN)
+    state_gateway.set_visible_groups(None)
     assert _render(mode) is True
     title = _title_for(mode)
     assert DECOMPOSED_GROUP_COLUMN not in title, f"{mode} does not print the working column: {title}"
+    assert "Site" in title, f"{mode} names the column the user chose: {title}"

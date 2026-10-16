@@ -6,6 +6,7 @@ left alone.
 """
 from __future__ import annotations
 
+from .three_d import register_three_d
 from .two_d import register_two_d
 
 
@@ -13,7 +14,7 @@ def register_adapters() -> tuple[str, ...]:
     """Register every adapter that exists, and report the modes that now have one."""
     from ..registry import registered_modes
 
-    for mode, register in (("2D", register_two_d),):
+    for mode, register in (("2D", register_two_d), ("3D", register_three_d)):
         if mode not in registered_modes():
             register()
     return registered_modes()
