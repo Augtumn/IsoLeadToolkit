@@ -71,19 +71,50 @@ def hydrate_state_from_dataframe(
             selected grouping column is missing from *df*.  The selection is validated
             before any state is mutated, so a rejected frame leaves the session untouched.
     """
-    for col in app_state.data_cols:
-        if col not in df.columns:
-            raise ValueError(f"Data column {col!r} is not in the loaded data")
-        if not pd.api.types.is_numeric_dtype(df[col]):
-            raise ValueError(f"Data column {col!r} is not numeric")
-
-    missing_groups = [col for col in app_state.group_cols if col not in df.columns]
-    if missing_groups:
-        raise ValueError(
-            "Grouping column(s) not in the loaded data: " + ", ".join(missing_groups)
+    # The stored selection belongs to the source it was chosen for: a file and a sheet. A name this
+    # frame does not have came from another source, so it is dropped and this frame's own defaults
+    # are used - refusing to load the data because an older session named a column that belongs to
+    # another sheet is what made loading fail with "Grouping column(s) not in the loaded data".
+    usable_data_cols = [
+        col
+        for col in app_state.data_cols
+        if col in df.columns and pd.api.types.is_numeric_dtype(df[col])
+    ]
+    if len(usable_data_cols) != len(app_state.data_cols):
+        dropped = [col for col in app_state.data_cols if col not in usable_data_cols]
+        logger.warning(
+            "Dropping %d stored data column(s) this sheet does not have: %s; it has %s",
+            len(dropped),
+            dropped,
+            [str(column) for column in df.columns],
+        )
+    if usable_data_cols:
+        state_gateway.set_group_data_columns(
+            list(app_state.group_cols), usable_data_cols
         )
 
-    if app_state.last_group_col and app_state.last_group_col not in app_state.group_cols:
+    usable_group_cols = [col for col in app_state.group_cols if col in df.columns]
+    if len(usable_group_cols) != len(app_state.group_cols):
+        dropped = [col for col in app_state.group_cols if col not in usable_group_cols]
+        logger.warning(
+            "Dropping %d stored grouping column(s) this sheet does not have: %s; it has %s",
+            len(dropped),
+            dropped,
+            [str(column) for column in df.columns],
+        )
+    if not usable_group_cols:
+        # Nothing of the stored selection applies here, so this sheet supplies its own: the first
+        # column that is not one of its numeric data columns.
+        preferred = [col for col in df.columns if col not in usable_data_cols or not usable_data_cols]
+        if preferred:
+            usable_group_cols = [str(preferred[0])]
+            logger.info("Using %s as the grouping column for this sheet", usable_group_cols[0])
+    if usable_group_cols:
+        state_gateway.set_group_data_columns(list(usable_group_cols), list(usable_data_cols or app_state.data_cols))
+
+    if not app_state.last_group_col or app_state.last_group_col not in app_state.group_cols:
+        # The active grouping column belongs to the same source as the list: when the stored one was
+        # dropped, this sheet's first usable column takes over rather than leaving none in force.
         state_gateway.set_last_group_col(app_state.group_cols[0] if app_state.group_cols else None)
 
     state_gateway.reset_column_selection()
