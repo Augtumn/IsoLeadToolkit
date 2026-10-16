@@ -303,7 +303,10 @@ class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
                 if (
                     trigger_render
                     and app_state.render_mode
-                    in ('V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE')
+                    in (
+                        'V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE',
+                        'PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86',
+                    )
                 ):
                     self._on_change()
 
@@ -337,7 +340,11 @@ class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
             geochem_usecase.update_parameters(params)
             logger.info("Applied geochemistry parameters")
 
-            if app_state.render_mode in ('V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE'):
+            # The Plumbotectonics modes draw with these parameters too, so they redraw as well.
+            if app_state.render_mode in (
+                'V1V2', 'PB_EVOL_76', 'PB_EVOL_86', 'PB_MU_AGE', 'PB_KAPPA_AGE',
+                'PLUMBOTECTONICS_76', 'PLUMBOTECTONICS_86',
+            ):
                 self._on_change()
 
             QMessageBox.information(
