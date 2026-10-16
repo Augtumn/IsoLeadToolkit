@@ -1,106 +1,107 @@
-# -*- coding: utf-8 -*-
-"""核心地球化学算法库 (Geochemistry Core Library)。
+"""Core geochemistry algorithm library.
 
-提供: 模式年龄 (单阶段 / Stacey-Kramers 两阶段)、源区参数 (μ/ω/κ) 反演、
-初始铅比值、Δ 值与 V1-V2 判别投影、等时线参数。
+Provides: model ages (single-stage / Stacey-Kramers two-stage), source-parameter
+inversion (μ/ω/κ), initial lead ratios, Δ values and the V1-V2 discriminant
+projection, and isochron parameters.
 
-来源: Geokit (V1V2 投影)、R 包 PbIso (两阶段参数反演), 以及文献
-Stacey & Kramers (1975)、Jaffey et al. (1971)、Tatsumoto et al. (1973)。
+Sources: Geokit (V1V2 projection), the R package PbIso (two-stage parameter
+inversion), and the literature: Stacey & Kramers (1975), Jaffey et al. (1971),
+Tatsumoto et al. (1973).
 """
 
-from typing import Any
-
 import threading
+from typing import Any
 
 import numpy as np
 
 
 # =============================================================================
-# 1. 物理常数与参考值定义
+# 1. Physical constants and reference values
 # =============================================================================
 
-# 1.1 时间常数 (单位: 年)
-T_EARTH_1ST = 4430e6  # 地球年龄 (Stacey & Kramers 1st stage appx)
-T_EARTH_CANON = 4570e6  # 正则地球年龄 (Canonical Earth Age)
-T_SK_STAGE2 = 3700e6    # Stacey-Kramers 模型第二阶段起始时间
+# 1.1 Time constants (years)
+T_EARTH_1ST = 4430e6  # Earth age (Stacey & Kramers 1st-stage approx.)
+T_EARTH_CANON = 4570e6  # Canonical Earth Age
+T_SK_STAGE2 = 3700e6    # Stacey-Kramers model stage-2 start time
 
-# 1.2 衰变常数 (单位: 1/年)
-# 来源: Jaffey et al. (1971) / Steiger and Jager (1977)
+# 1.2 Decay constants (1/year)
+# Source: Jaffey et al. (1971) / Steiger and Jager (1977)
 LAMBDA_238 = 1.55125e-10
 LAMBDA_235 = 9.8485e-10
 LAMBDA_232 = 4.94752e-11
 
-# 1.3 原始铅同位素比值 (Primordial Lead)
-# 来源: Tatsumoto et al. (1973) / Canyon Diablo Troilite (CDT)
+# 1.3 Primordial lead isotope ratios
+# Source: Tatsumoto et al. (1973) / Canyon Diablo Troilite (CDT)
 A0 = 9.307   # 206Pb/204Pb
 B0 = 10.294  # 207Pb/204Pb
 C0 = 29.476  # 208Pb/204Pb
 
-# 1.4 Stacey-Kramers 两阶段模型参数 (第二阶段起始值)
-# 来源: Stacey & Kramers (1975) EPSL
+# 1.4 Stacey-Kramers two-stage model parameters (stage-2 starting values)
+# Source: Stacey & Kramers (1975) EPSL
 A1_SK = 11.152
 B1_SK = 12.998
 C1_SK = 31.23
 
-# 1.5 地幔参考参数
-# PbIso 默认采用 Stacey & Kramers (1975) 二阶段参数
-MU_M_DEFAULT = 9.74           # 默认地幔 mu 值 (238U/204Pb)
-OMEGA_M_DEFAULT = 36.84       # 默认地幔 omega 值 (232Th/204Pb)
+# 1.5 Mantle reference parameters
+# PbIso defaults to the Stacey & Kramers (1975) two-stage parameters
+MU_M_DEFAULT = 9.74           # Default mantle mu (238U/204Pb)
+OMEGA_M_DEFAULT = 36.84       # Default mantle omega (232Th/204Pb)
 MU_V1V2_DEFAULT = 7.8
 KAPPA_V1V2_DEFAULT = 4.04
 OMEGA_V1V2_DEFAULT = MU_V1V2_DEFAULT * KAPPA_V1V2_DEFAULT
 
-# 1.6 物理比值
-U_RATIO_NATURAL = 1.0 / 137.88  # 天然 235U/238U 比值
+# 1.6 Physical ratios
+U_RATIO_NATURAL = 1.0 / 137.88  # Natural 235U/238U ratio
 EPSILON = 1e-50  # Shared denominator floor for numerical stability
 
-# 1.7 V1-V2 判别图回归平面参数
-# 来源: Zhu (1995, 1998)
+# 1.7 V1-V2 discriminant-diagram regression-plane parameters
+# Source: Zhu (1995, 1998)
 REGRESSION_A = 0.0
 REGRESSION_B = 2.0367
 REGRESSION_C = -6.143
 
-# 1.8 PbIso 模型曲线演化参数 (R: E1/E2)
+# 1.8 PbIso model-curve evolution parameters (R: E1/E2)
 E1_DEFAULT = 0.0
 E2_DEFAULT = 0.0
 E1_CUMMING_RICHARDS = 5e-11
 E2_CUMMING_RICHARDS = 3.7e-11
 
-# 1.9 Albarède & Juteau (1984) T–μ–κ 参考模型参数
-# 来源: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
+# 1.9 Albarède & Juteau (1984) T–μ–κ reference-model parameters
+# Source: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
 #       doi:10.1016/0016-7037(84)90364-8
-# 常数与解法按 ASTR::albarede_juteau_1984() 复核 (转写自 Albarède 的 MATLAB
-# 脚本 v2020-11-06)。2012 年 Archaeometry 那版 T–μ–κ 作者本人不建议使用,
-# 故只实现 AJ84; 与第三方矿石库的比对见 docs/geochemistry.md §16。
-ALBAREDE_T0 = 3.8e9           # T0 = 3.8 Ga (参考锚点, 年)
-ALBAREDE_X_STAR = 18.750      # 现代 common Pb 206Pb/204Pb (x*)
-ALBAREDE_Y_STAR = 15.63       # 现代 common Pb 207Pb/204Pb (y*)
-ALBAREDE_Z_STAR = 38.83       # 现代 common Pb 208Pb/204Pb (z*; ASTR 取 38.86)
-ALBAREDE_MU_STAR = 9.66       # 现代 common Pb 238U/204Pb (μ*)
-ALBAREDE_KAPPA_STAR = 3.90    # 现代 common Pb 232Th/238U (κ*)
+# Constants and solver cross-checked against ASTR::albarede_juteau_1984()
+# (transcribed from Albarède's MATLAB script v2020-11-06). The 2012 Archaeometry
+# T–μ–κ revision is not recommended by the author himself, hence AJ84 only;
+# comparison with third-party ore libraries in docs/geochemistry.md §16.
+ALBAREDE_T0 = 3.8e9           # T0 = 3.8 Ga (reference anchor, years)
+ALBAREDE_X_STAR = 18.750      # modern common Pb 206Pb/204Pb (x*)
+ALBAREDE_Y_STAR = 15.63       # modern common Pb 207Pb/204Pb (y*)
+ALBAREDE_Z_STAR = 38.83       # modern common Pb 208Pb/204Pb (z*; ASTR uses 38.86)
+ALBAREDE_MU_STAR = 9.66       # modern common Pb 238U/204Pb (μ*)
+ALBAREDE_KAPPA_STAR = 3.90    # modern common Pb 232Th/238U (κ*)
 #: ω* = μ*·κ*
 ALBAREDE_OMEGA_STAR = ALBAREDE_MU_STAR * ALBAREDE_KAPPA_STAR
-#: AJ84/ASTR 的 ²³⁸U/²³⁵U (2012 版印刷为 137.88, 对 T 的影响约 0.02 Ma)
+#: ²³⁸U/²³⁵U of AJ84/ASTR (the 2012 edition prints 137.88; ~0.02 Ma effect on T)
 ALBAREDE_U238_235 = 137.79
 U_RATIO_AJ84 = 1.0 / ALBAREDE_U238_235
-#: 由参考组成反推的原始铅锚点, 使模型曲线在 t = 0 通过 x*/y*/z*:
-#: x0 = x* − μ*(e^{λT0} − 1) 等。得 10.993/12.742/31.038, 远离 CDT —— 这是
-#: T0 = 3.8 Ga 锚点的结果, 不是物理原始铅, 勿"修正"为 CDT。
+#: Primordial-lead anchor back-solved from the reference composition so the model
+#: curve passes through x*/y*/z* at t = 0: x0 = x* − μ*(e^{λT0} − 1) etc. Yields
+#: 10.993/12.742/31.038, far from CDT: a consequence of the T0 = 3.8 Ga anchor,
+#: not physical primordial lead - do not "fix" it to CDT.
 ALBAREDE_X0 = ALBAREDE_X_STAR - ALBAREDE_MU_STAR * (np.exp(LAMBDA_238 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Y0 = ALBAREDE_Y_STAR - ALBAREDE_MU_STAR * U_RATIO_AJ84 * (np.exp(LAMBDA_235 * ALBAREDE_T0) - 1.0)
 ALBAREDE_Z0 = ALBAREDE_Z_STAR - ALBAREDE_OMEGA_STAR * (np.exp(LAMBDA_232 * ALBAREDE_T0) - 1.0)
 
 # =============================================================================
-# 2. 预设模型库
+# 2. Preset model library
 # =============================================================================
 
 PRESET_MODELS = {
     "V1V2 (Geokit)": {
-        # Geokit 版本参数（与其他算法保持"年"为单位）
+        # Geokit parameter set (kept in years like the other algorithms)
         'age_model': 'single_stage',
         'T1': T_EARTH_1ST,      # Age01
         'T2': T_EARTH_CANON,      # Age02
-
         'Tsec': T_SK_STAGE2,    # Age1
         'a0': A0, 'b0': B0, 'c0': C0,
         'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
@@ -124,7 +125,7 @@ PRESET_MODELS = {
         'U_ratio': U_RATIO_NATURAL,
         'E1': E1_DEFAULT,
         'E2': E2_DEFAULT,
-        'v1v2_formula': 'zhu1993'
+        'v1v2_formula': 'zhu1993',
     },
     "Stacey & Kramers (2nd Stage)": {
         # PbIso Table 1: T1 = 3700 Ma for SK2
@@ -188,8 +189,10 @@ PRESET_MODELS = {
         'v1v2_formula': 'default',
     },
     "Albarède & Juteau (1984)": {
-        # 常数见 §1.9。初始比值取反推锚点, 故曲线在 t = 0 通过 x*/y*/z*;
-        # 矿床按硫化物处理 (T_i 后不再含 U/Th), T_i/μ_i/κ_i 反演见 age.py、source.py。
+        # Constants in §1.9. Initial ratios use the back-solved anchor, so the
+        # curve passes through x*/y*/z* at t = 0; deposits are treated as
+        # sulfides (no U/Th after T_i); T_i/μ_i/κ_i inversion lives in age.py
+        # and source.py.
         'age_model': 'single_stage',
         'T1': ALBAREDE_T0,
         'T2': ALBAREDE_T0,
@@ -206,64 +209,59 @@ PRESET_MODELS = {
 }
 
 # =============================================================================
-# 3. 参数管理引擎
+# 3. Parameter-management engine
 # =============================================================================
 
 class GeochemistryEngine:
+    """Geochemistry calculation-engine singleton.
+
+    Manages the global parameters required by the current computation (Earth
+    age, initial ratios, decay constants, ...) and supports loading preset
+    models or custom parameters.
     """
-    地球化学计算引擎单例类
-    
-    负责管理当前计算所需的全球参数（如地球年龄、初始比值、衰变常数等）。
-    支持加载预设模型或自定义参数。
-    """
-    
+
     def __init__(self) -> None:
-        # 默认参数初始化 (与 PbIso 文献默认一致: SK 2nd stage)
+        # Default parameters (matching the PbIso literature default: SK stage 2)
         self.params: dict[str, float | str] = {
             'age_model': 'two_stage',
             'T1': T_SK_STAGE2,
             'T2': T_EARTH_CANON,
             'Tsec': T_SK_STAGE2,
-            
             'lambda_238': LAMBDA_238,
             'lambda_235': LAMBDA_235,
             'lambda_232': LAMBDA_232,
-            
             'a0': A0, 'b0': B0, 'c0': C0,
             'a1': A1_SK, 'b1': B1_SK, 'c1': C1_SK,
-            
             'mu_M': MU_M_DEFAULT,
             'omega_M': OMEGA_M_DEFAULT,
             'U_ratio': U_RATIO_NATURAL,
-            
             'a': REGRESSION_A, 'b': REGRESSION_B, 'c': REGRESSION_C,
             'v1v2_formula': 'default',
-            'E1': E1_DEFAULT, 'E2': E2_DEFAULT
+            'E1': E1_DEFAULT, 'E2': E2_DEFAULT,
         }
         self.current_model_name = "Stacey & Kramers (2nd Stage)"
         self._lock = threading.RLock()
         self._update_derived_params()
 
     def _update_derived_params(self) -> None:
-        """更新衍生参数 (内部使用)"""
+        """Update derived parameters (internal)."""
         mu = self.params.get('mu_M', MU_M_DEFAULT)
         u_r = self.params.get('U_ratio', U_RATIO_NATURAL)
         # v = 235U/204Pb = mu * (235U/238U)
         self.params['v_M'] = mu * u_r
 
     def get_available_models(self) -> list[str]:
-        """获取可用预设模型列表"""
+        """Return the names of the available preset models."""
         return list(PRESET_MODELS.keys())
 
     def load_preset(self, model_name: str) -> bool:
-        """
-        加载预设模型参数
-        
+        """Load preset-model parameters.
+
         Args:
-            model_name (str): 模型名称
-            
+            model_name (str): model name
+
         Returns:
-            bool: 加载是否成功
+            bool: whether the load succeeded
         """
         with self._lock:
             if model_name in PRESET_MODELS:
@@ -274,11 +272,10 @@ class GeochemistryEngine:
             return False
 
     def update_parameters(self, new_params: dict[str, Any]) -> None:
-        """
-        更新计算参数
-        
+        """Update calculation parameters.
+
         Args:
-            new_params (dict): 包含参数键值对的字典
+            new_params (dict): mapping of parameter names to values
         """
         with self._lock:
             for k, v in new_params.items():
@@ -297,10 +294,11 @@ class GeochemistryEngine:
             self._update_derived_params()
 
     def get_parameters(self) -> dict[str, float | str]:
-        """获取当前参数副本"""
+        """Return a copy of the current parameters."""
         return self.params.copy()
 
-# 全局单例实例
+
+# Global singleton instance
 engine = GeochemistryEngine()
 
 
@@ -314,18 +312,20 @@ def calculate_model_slope(
     t_years: np.ndarray | float,
     params: dict[str, Any] | None = None,
 ) -> np.ndarray | float:
-    """
-    参考演化曲线斜率 s(T0, T) = (1/U)·(e^{λ'T0} − e^{λ'T}) / (e^{λT0} − e^{λT})
+    """Slope of the reference evolution curve at time T.
 
-    即 207Pb/204Pb — 206Pb/204Pb 生长线在时刻 T 的斜率 (U 取自 params['U_ratio'])。
-    T0 = T (含 T = 0 自比) 时为 0/0, 返回洛必达极限 (1/U)·(λ'/λ)·e^{(λ'−λ)T}。
+    s(T0, T) = (1/U)·(e^{λ'T0} − e^{λ'T}) / (e^{λT0} − e^{λT}), i.e. the slope
+    of the 207Pb/204Pb–206Pb/204Pb growth line at time T (U comes from
+    params['U_ratio']). At T0 = T (including the T = 0 self-ratio) the result
+    is 0/0; the L'Hôpital limit (1/U)·(λ'/λ)·e^{(λ'−λ)T} is returned.
 
     Args:
-        t0_years, t_years: 参考起始时间与求值时间 (年), 标量或数组
-        params: 参数字典 (可选)
+        t0_years, t_years: reference start time and evaluation time (years),
+            scalar or array
+        params: parameter dict (optional)
 
     Returns:
-        np.ndarray or float: 斜率
+        np.ndarray or float: the slope
     """
     if params is None:
         params = engine.params
@@ -340,8 +340,10 @@ def calculate_model_slope(
     with np.errstate(divide='ignore', invalid='ignore'):
         result = u_ratio * numerator / denominator
 
-    # 年龄差极小时闭式解相消 (e^{λT0} − e^{λT} 甚至会下溢为 0), 切线极限才是精确值。
-    # 判据需含指数差: 年差判据在两者都接近 0 时 (如 s(T, 0), T → 0) 相对尺度失效。
+    # For tiny age differences the closed form cancels (e^{λT0} − e^{λT} can even
+    # underflow to 0); the tangent limit is the exact value. The test must include
+    # the exponent difference: the year-gap test loses its relative scale when
+    # both arguments approach 0 (e.g. s(T, 0) with T → 0).
     nearly_equal = (np.abs(t0 - t) < 1e-9 * np.maximum(np.abs(t0), 1.0)) | (
         np.abs(l238 * (t0 - t)) < 1e-9
     )
@@ -355,12 +357,14 @@ def calculate_model_slope(
 
 
 def _exp_evolution_term(lmbda: float, t_years, E: float = 0.0) -> np.ndarray | float:
-    """
-    PbIso 模型曲线的指数演化项（对应 R: exp(lambda*t)*(1 - E*(t - 1/lambda))）
+    """Exponential evolution term of the PbIso model curve.
+
+    Corresponds to R's exp(lambda*t) * (1 - E * (t - 1/lambda)).
     """
     if _is_zero_like(E):
         return np.exp(lmbda * t_years)
     return np.exp(lmbda * t_years) * (1.0 - E * (t_years - (1.0 / lmbda)))
+
 
 def calculate_modelcurve(
     t_Ma: np.ndarray | float,
@@ -378,17 +382,16 @@ def calculate_modelcurve(
     E1: float | None = None,
     E2: float | None = None,
 ) -> dict[str, np.ndarray]:
-    """
-    生成 PbIso 风格的模型曲线（等价 R 的 modelcurve）
+    """Generate a PbIso-style model curve (equivalent to R's modelcurve).
 
     Args:
-        t_Ma: 时间或年龄 (Ma)，标量或数组
-        T1: 模型起始时间 (Ma)，默认使用 params['Tsec'] (年) 转换
-        X1/Y1/Z1: 起始同位素比值
-        Mu1/W1: 238U/204Pb 与 232Th/204Pb 模型值
-        U8U5: 238U/235U 比值（R 中为 137.88）
-        L5/L8/L2: 衰变常数
-        E1/E2: 演化参数（默认 0）
+        t_Ma: time or age (Ma), scalar or array
+        T1: model start time (Ma); defaults to params['Tsec'] (in years)
+        X1/Y1/Z1: starting isotope ratios
+        Mu1/W1: model 238U/204Pb and 232Th/204Pb
+        U8U5: 238U/235U ratio (137.88 in R)
+        L5/L8/L2: decay constants
+        E1/E2: evolution parameters (default 0)
 
     Returns:
         dict: {'t_Ma', 'Pb206_204', 'Pb207_204', 'Pb208_204'}

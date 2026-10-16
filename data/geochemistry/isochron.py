@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Isochron utilities and regression helpers."""
 from __future__ import annotations
 
@@ -6,10 +5,7 @@ import logging
 from typing import Any
 
 import numpy as np
-try:
-    from scipy.stats import chi2
-except Exception:
-    chi2 = None
+from scipy.stats import chi2
 
 from .engine import (
     engine,
@@ -52,13 +48,12 @@ def calculate_paleoisochron_line(
     params: dict[str, Any] | None = None,
     algorithm: str = 'PB_EVOL_76',
 ) -> tuple[float, float] | None:
-    """
-    计算古等时线的斜率与截距。
+    """Compute the paleoisochron slope and intercept.
 
     Args:
-        age_ma (float): 年龄 (Ma)
-        params (dict): 模型参数
-        algorithm (str): 'PB_EVOL_76' 或 'PB_EVOL_86'
+        age_ma (float): age in Ma
+        params (dict): model parameters
+        algorithm (str): 'PB_EVOL_76' or 'PB_EVOL_86'
 
     Returns:
         tuple or None: (slope, intercept)
@@ -103,6 +98,7 @@ def calculate_paleoisochron_line(
 
     return None
 
+
 def calculate_isochron1_growth_curve(
     slope: float,
     intercept: float,
@@ -110,15 +106,14 @@ def calculate_isochron1_growth_curve(
     params: dict[str, Any] | None = None,
     steps: int = 100,
 ) -> dict[str, Any] | None:
-    """
-    计算 207Pb/204Pb-206Pb/204Pb 等时线对应的生长曲线。
+    """Growth curve matching the 207Pb/204Pb-206Pb/204Pb isochron.
 
     Args:
-        slope (float): 等时线斜率 (207/206)
-        intercept (float): 等时线截距
-        age_ma (float): 等时线年龄 (Ma)
-        params (dict): 模型参数
-        steps (int): 曲线采样点数
+        slope (float): isochron slope (207/206)
+        intercept (float): isochron intercept
+        age_ma (float): isochron age in Ma
+        params (dict): model parameters
+        steps (int): number of samples along the curve
 
     Returns:
         dict or None: {'x', 'y', 'mu_source', 't_steps'}
@@ -130,7 +125,6 @@ def calculate_isochron1_growth_curve(
     l235 = params['lambda_235']
     u_ratio = params['U_ratio']
 
-    is_two_stage = params.get('age_model', 'single_stage') == 'two_stage'
     T_start_curve = params.get('T1', T_SK_STAGE2)
     a_start = params.get('a1', A1_SK)
     b_start = params.get('b1', B1_SK)
@@ -158,6 +152,7 @@ def calculate_isochron1_growth_curve(
         't_steps': t_steps
     }
 
+
 def calculate_isochron2_growth_curve(
     slope_208: float,
     slope_207: float,
@@ -166,16 +161,15 @@ def calculate_isochron2_growth_curve(
     params: dict[str, Any] | None = None,
     steps: int = 100,
 ) -> dict[str, Any] | None:
-    """
-    计算 208Pb/204Pb-206Pb/204Pb 等时线对应的生长曲线 (需 207/206 约束)。
+    """Growth curve for the 208Pb/204Pb-206Pb/204Pb isochron (needs the 207/206 constraint).
 
     Args:
-        slope_208 (float): 208/206 等时线斜率
-        slope_207 (float): 207/206 等时线斜率
-        intercept_207 (float): 207/206 等时线截距
-        age_ma (float): 年龄 (Ma)
-        params (dict): 模型参数
-        steps (int): 曲线采样点数
+        slope_208 (float): 208/206 isochron slope
+        slope_207 (float): 207/206 isochron slope
+        intercept_207 (float): 207/206 isochron intercept
+        age_ma (float): age in Ma
+        params (dict): model parameters
+        steps (int): number of samples along the curve
 
     Returns:
         dict or None: {'x', 'y', 'mu_source', 'kappa_source', 't_steps'}
@@ -211,6 +205,7 @@ def calculate_isochron2_growth_curve(
         't_steps': t_steps
     }
 
+
 def york_regression(
     x: np.ndarray,
     sx: np.ndarray,
@@ -238,7 +233,8 @@ def york_regression(
     else:
         rxy = np.asarray(rxy, dtype=float)
 
-    # 先剔除非有限行: 否则 polyfit 与加权和会静默产生 nan 斜率/截距。
+    # Drop non-finite rows first: polyfit and the weighted sums would otherwise
+    # silently produce a nan slope/intercept.
     finite = (
         np.isfinite(x)
         & np.isfinite(y)
@@ -305,7 +301,7 @@ def york_regression(
     chi2_val = np.nansum(W * (y - (b * x + a)) ** 2)
     df = int(x.size - 2)
     mswd = chi2_val / df if df > 0 else np.nan
-    p_value = 1.0 - chi2.cdf(chi2_val, df) if chi2 is not None and df > 0 else np.nan
+    p_value = 1.0 - chi2.cdf(chi2_val, df) if df > 0 else np.nan
 
     return {
         'a': a,
@@ -317,6 +313,7 @@ def york_regression(
         'p_value': p_value,
         'df': df,
     }
+
 
 def calculate_pbpb_age_from_ratio(
     r76: float,
@@ -366,21 +363,22 @@ def calculate_pbpb_age_from_ratio(
     age_err_ma = abs(dt_dR * sr76) / 1e6
     return age_ma, age_err_ma
 
+
 def calculate_isochron_age_from_slope(
     slope: float,
     params: dict[str, Any] | None = None,
 ) -> float:
-    """
-    从 Pb-Pb 等时线斜率计算年龄
+    """Pb-Pb age from the isochron slope.
 
-    对于 207Pb/204Pb vs 206Pb/204Pb 图，等时线斜率为：
+    On the 207Pb/204Pb vs 206Pb/204Pb diagram the isochron slope is:
     Slope = (235U/238U) * (exp(λ235*t) - 1) / (exp(λ238*t) - 1)
           = U_ratio * (exp(λ235*t) - 1) / (exp(λ238*t) - 1)
 
-    其中 U_ratio = 235U/238U ≈ 1/137.88 ≈ 0.00725
+    with U_ratio = 235U/238U ≈ 1/137.88 ≈ 0.00725
     """
     age_ma, _ = calculate_pbpb_age_from_ratio(slope, sr76=None, params=params)
     return age_ma
+
 
 def calculate_source_mu_from_isochron(
     slope: float,
@@ -388,7 +386,7 @@ def calculate_source_mu_from_isochron(
     age_ma: float,
     params: dict[str, Any] | None = None,
 ) -> float:
-    """从等时线参数反演源区 Mu (model-aware: 使用 T1, a1, b1)"""
+    """Invert the source Mu from the isochron (model-aware: uses T1, a1, b1)."""
     if params is None:
         params = engine.params
 
@@ -404,19 +402,20 @@ def calculate_source_mu_from_isochron(
 
     return num / den if abs(den) > _SOURCE_DEN_FLOOR else 0.0
 
+
 def calculate_source_kappa_from_slope(
     slope_208_206: float,
     age_ma: float,
     params: dict[str, Any] | None = None,
 ) -> float:
-    """从 208/204 vs 206/204 斜率反演源区 Kappa (model-aware: 使用 T1)"""
+    """Invert the source Kappa from the 208/204 vs 206/204 slope (model-aware: uses T1)."""
     if params is None:
         params = engine.params
 
     T = params['T1']
     t = age_ma * 1e6
-    
+
     num = np.exp(params['lambda_238'] * T) - np.exp(params['lambda_238'] * t)
     den = np.exp(params['lambda_232'] * T) - np.exp(params['lambda_232'] * t)
-    
+
     return slope_208_206 * (num / den) if abs(den) > _SOURCE_DEN_FLOOR else 0.0

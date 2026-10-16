@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Geochemistry package exports."""
 from __future__ import annotations
 
@@ -6,9 +5,6 @@ import logging
 from typing import Any
 
 import numpy as np
-
-logger = logging.getLogger(__name__)
-_AGE_MODEL_PARAM_DELTA_FLOOR = 1e-6
 
 from .engine import (
     PRESET_MODELS,
@@ -32,10 +28,8 @@ from .engine import (
     OMEGA_M_DEFAULT,
     U_RATIO_NATURAL,
     EPSILON,
-
     E1_DEFAULT,
     E2_DEFAULT,
-
     ALBAREDE_T0,
     ALBAREDE_X_STAR,
     ALBAREDE_Y_STAR,
@@ -87,6 +81,11 @@ from .isochron import (
     calculate_source_kappa_from_slope,
 )
 
+
+logger = logging.getLogger(__name__)
+_AGE_MODEL_PARAM_DELTA_FLOOR = 1e-6
+
+
 def resolve_age_model(params: dict | None = None, model_name: str | None = None) -> str:
     """Resolve age model mode from params and model name."""
     if params is None:
@@ -94,7 +93,7 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
     if model_name is None:
         model_name = getattr(engine, 'current_model_name', '')
 
-    # 优先取显式 age_model 标志
+    # Prefer the explicit age_model flag.
     age_model = params.get('age_model')
     if isinstance(age_model, str):
         mode = age_model.strip().lower().replace('_', '-')
@@ -103,7 +102,7 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
         if mode in ('single-stage', 'single stage', '1-stage', '1st', 'first'):
             return 'single_stage'
 
-    # 自定义参数集可能不带 age_model 标记, 此时按参数特征推断
+    # Custom parameter sets may omit the flag; infer from the parameter shape instead.
     logger.debug("age_model flag not found in params, falling back to heuristics for model '%s'", model_name)
 
     if isinstance(model_name, str):
@@ -114,12 +113,14 @@ def resolve_age_model(params: dict | None = None, model_name: str | None = None)
         if '2nd Stage' in model_name:
             return 'two_stage'
 
-    # 没有 Tsec 的自定义参数集按"无第二阶段"处理；数值非法则直接报错（不静默当 0）。
+    # A custom set without Tsec means "no second stage"; a non-numeric Tsec raises
+    # in float() rather than being silently read as 0.
     tsec = float(params.get('Tsec', 0.0))
     if not np.isfinite(tsec) or tsec <= 0:
         return 'single_stage'
 
-    # 六个系数齐全才看 a0/a1 等的差值是否小到可视为同一条线；缺任何一个都不判 single-stage。
+    # Only with all six coefficients do the a0/a1 ... deltas argue for a single line;
+    # a missing coefficient keeps the model two-stage.
     coefficients = (
         params.get('a0'), params.get('b0'), params.get('c0'),
         params.get('a1'), params.get('b1'), params.get('c1'),
@@ -145,44 +146,43 @@ def calculate_all_parameters(
     t_Ma: np.ndarray | float | None = None,
     **kwargs: Any,
 ) -> dict[str, np.ndarray | float | int | str | None]:
-    """
-    计算所有地球化学参数 (主调用接口)
-    
-    集成功能:
-    1. 计算单阶段(CDT)和两阶段(SK)模式年龄
-    2. 计算 Delta 值和 V1-V2 坐标
-    3. 计算源区特征 (Mu, Omega, Kappa)
-    4. 计算初始同位素比值
-    
+    """Compute every geochemistry parameter (the main entry point).
+
+    Integrates:
+    1. single-stage (CDT) and two-stage (SK) model ages
+    2. delta values and V1-V2 coordinates
+    3. source characteristics (Mu, Omega, Kappa)
+    4. initial isotope ratios
+
     Args:
-        Pb206_204_S, ...: 同位素比值数据
-        a, b, c: 可选的 V1V2 回归参数覆盖
-        t_Ma: 样品真实年龄 (Ma)，用于 CalcMu/CalcKa/Calc*in（若未提供则使用 tSK）
-        
+        Pb206_204_S, ...: isotope-ratio data
+        a, b, c: optional V1V2 regression-parameter overrides
+        t_Ma: real sample age (Ma) for CalcMu/CalcKa/Calc*in (tSK when omitted)
+
     Returns:
-        dict: 包含所有计算结果的字典
+        dict: all computed results
     """
-    # 1. 数据标准化
+    # 1. Data normalization.
     Pb206 = np.asarray(Pb206_204_S)
     Pb207 = np.asarray(Pb207_204_S)
     Pb208 = np.asarray(Pb208_204_S)
-    
+
     results = {
         'Pb206_204_S': Pb206,
         'Pb207_204_S': Pb207,
         'Pb208_204_S': Pb208,
     }
-    
-    # 获取当前模型设置
+
+    # Current model settings.
     params_calc = engine.get_parameters()
     current_model = getattr(engine, 'current_model_name', '')
-    # V1V2 (Geokit) 模式特殊处理: 使用 T1=4.43Ga 计算 tCDT
+    # V1V2 (Geokit) mode: compute tCDT with T1 = 4.43 Ga.
     is_geokit = "Geokit" in current_model
-    # 使用模型参数与名称判定年龄模型
+    # Resolve the age model from parameters and name.
     age_model = resolve_age_model(params_calc, current_model)
     is_two_stage = age_model == 'two_stage'
 
-    # 2. 模式年龄计算
+    # 2. Model ages.
     if is_geokit:
         tCDT = calculate_single_stage_age(Pb206, Pb207, initial_age=engine.params['T1'])
     else:
@@ -191,11 +191,13 @@ def calculate_all_parameters(
     if calculate_ages:
         tSK = calculate_two_stage_age(Pb206, Pb207)
     else:
-        # 只取单阶段量的调用方 (V1V2 判别) 跳过两阶段求解, 退化为 tCDT 以保持有限值。
+        # Callers that only need single-stage quantities (the V1V2 discriminant)
+        # skip the two-stage solve and reuse tCDT so values stay finite.
         tSK = tCDT
 
     t_model = tSK if is_two_stage else tCDT
-    # 两阶段求解可能失败 (None/NaN) 而单阶段仍有效, 反之亦然: 相互回退。
+    # Either solver may fail (None/NaN) while the other stays valid: fall back
+    # to each other.
     if is_two_stage:
         if t_model is None:
             t_model = tCDT
@@ -213,14 +215,14 @@ def calculate_all_parameters(
                 t_input = t_model
         else:
             t_input = np.where(np.isfinite(t_input), t_input, t_model)
-    
+
     results['tCDT (Ma)'] = tCDT
     results['tSK (Ma)'] = tSK
-    # 唯一模型年龄输出: 由解析出的 age_model 决定取 tSK 还是 tCDT,
-    # 即 UI/导出/校验所用的 "模式年龄" 列。
+    # The single model-age output: tSK or tCDT per the resolved age_model - the
+    # "model age" column used by the UI, exports and validation.
     results['t_Model (Ma)'] = t_model
-    
-    # 3. Delta 值计算
+
+    # 3. Deltas.
     E1_val = kwargs.get('E1', None)
     E2_val = kwargs.get('E2', None)
 
@@ -230,14 +232,16 @@ def calculate_all_parameters(
             Pb206, Pb207, Pb208, t_model, params=params_calc, use_two_stage=True, E1=E1_val, E2=E2_val
         )
     else:
-        # 单阶段逻辑: Geokit 用 T1 计算年龄，但 Delta 地幔参考采用 T2 口径
+        # Single-stage: Geokit computes the age with T1, but the delta mantle
+        # reference uses T2.
         t_calc = tCDT if is_geokit else calculate_single_stage_age(Pb206, Pb207, params=params_calc, initial_age=params_calc.get('T2'))
         if t_calc is None:
-            # 标量求解失败: 退化为 tCDT, 避免在下面 np.maximum 处崩溃。
+            # Scalar solve failed: fall back to tCDT so the np.maximum below cannot crash.
             logger.warning("Single-stage age solve failed; falling back to tCDT")
             t_calc = tCDT
         if t_calc is None:
-            # 两种求解都失败: 用 NaN 继续, 让其余输出一并退化而不是抛 TypeError。
+            # Both solves failed: continue with NaN so the remaining outputs degrade
+            # together instead of raising TypeError.
             logger.warning("No finite single-stage age available; deltas will be NaN")
             t_calc = np.nan
         if is_geokit or params_calc.get('v1v2_formula') == 'zhu1993':
@@ -254,24 +258,27 @@ def calculate_all_parameters(
             E1=E1_val,
             E2=E2_val,
         )
-        
+
     results.update({
         'Delta_alpha': d_alpha,
         'Delta_beta': d_beta,
         'Delta_gamma': d_gamma
     })
-    
-    # 4. V1-V2 坐标计算
+
+    # 4. V1-V2 coordinates.
     params_temp = params_calc.copy()
-    if a is not None: params_temp['a'] = a
-    if b is not None: params_temp['b'] = b
-    if c is not None: params_temp['c'] = c
-    
+    if a is not None:
+        params_temp['a'] = a
+    if b is not None:
+        params_temp['b'] = b
+    if c is not None:
+        params_temp['c'] = c
+
     v1, v2 = calculate_v1v2_coordinates(d_alpha, d_beta, d_gamma, params=params_temp)
     results['V1'] = v1
     results['V2'] = v2
-    
-    # 5. 源区参数反演 — 根据模型自动选择参考参数
+
+    # 5. Source-parameter inversion - reference parameters follow the model.
     if is_two_stage:
         X_ref, Y_ref, Z_ref = params_calc['a1'], params_calc['b1'], params_calc['c1']
         T_ref = params_calc['T1']
@@ -282,7 +289,8 @@ def calculate_all_parameters(
     mu_val = _invert_mu(Pb206, Pb207, t_input, X_ref, Y_ref, T_ref, params_calc)
     omega_val = _invert_omega(Pb208, t_input, Z_ref, T_ref, params_calc)
     if mu_val is None:
-        # 求解失败: 用 NaN 继续, 避免在 calculate_source_nu / 初始比值反演处崩溃。
+        # Solve failed: continue with NaN so calculate_source_nu and the initial-ratio
+        # inversion cannot crash.
         logger.warning("Mu inversion failed; using NaN for affected samples")
         mu_val = np.nan
     if omega_val is None:
@@ -292,29 +300,30 @@ def calculate_all_parameters(
     results['nu'] = calculate_source_nu(mu_val, params=params_calc)
     results['omega'] = omega_val
 
-    # 5.2 模型参考参数（按 age_model 自动选择参考参数）
+    # 5.2 Model reference parameters (the reference follows age_model).
     mu_model = calculate_model_mu(Pb206, Pb207, t_input, params=params_calc)
     kappa_model = calculate_model_kappa(Pb206, Pb208, t_input, params=params_calc)
     results['mu_model'] = mu_model
     results['kappa_model'] = kappa_model
     results['omega_model'] = kappa_model * mu_model
-    
-    # 6. 初始比值反演 (基于真实年龄或 tSK)
+
+    # 6. Initial-ratio inversion (real age when given, else tSK).
     results['Init_206_204'] = calculate_initial_ratio_64(t_input, Pb206, Pb207, params=params_calc)
     results['Init_207_204'] = calculate_initial_ratio_74(t_input, Pb206, Pb207, params=params_calc)
     results['Init_208_204'] = calculate_initial_ratio_84(t_input, Pb206, Pb207, Pb208, params=params_calc)
-    
+
     return results
 
 
 # =============================================================================
-# Albarède & Juteau (1984) T–μ–κ 结果键名与一站式反演
+# Albarède & Juteau (1984) T–μ–κ result keys and one-stop inversion
 # =============================================================================
-# 参考: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
+# Reference: Albarède, F. & Juteau, M. (1984). GCA 48(1), 207-212.
 #       doi:10.1016/0016-7037(84)90364-8
-# 常数与解法见 engine.py §1.9 (与 ASTR::albarede_juteau_1984() 一致)。
-# 与 calculate_all_parameters() 分开: 本组量的参考组成/年龄锚点 (T0 = 3.8 Ga,
-# 现代 common Pb) 不同于 PbIso 系列预设 (CDT/a₁), 混在一个字典会让下游误用错参考。
+# Constants and solver live in engine.py §1.9 (same as ASTR::albarede_juteau_1984()).
+# Kept separate from calculate_all_parameters(): this group's reference composition
+# and age anchor (T0 = 3.8 Ga, modern common Pb) differ from the PbIso preset series
+# (CDT/a1); mixing both in one dict would let downstream code use the wrong reference.
 
 ALBAREDE_T_MODEL_KEY = 't_Albarede (Ma)'
 ALBAREDE_MU_KEY = 'mu_Albarede'
@@ -322,7 +331,8 @@ ALBAREDE_KAPPA_KEY = 'kappa_Albarede'
 ALBAREDE_OMEGA_KEY = 'omega_Albarede'
 ALBAREDE_DELTA_MU_KEY = 'Delta_mu_Albarede'
 ALBAREDE_DELTA_KAPPA_KEY = 'Delta_kappa_Albarede'
-#: dT_i/dT_0 (无量纲): 参考模型 T0 选择对模式年龄的灵敏度 (式出自 2012 版式 16)
+#: dT_i/dT_0 (dimensionless): sensitivity of the model age to the reference-model T0
+#: choice (2012 edition eq. 16)
 ALBAREDE_AGE_SENSITIVITY_KEY = 'dT_dT0_Albarede'
 
 
@@ -332,19 +342,19 @@ def calculate_albarede_parameters(
     Pb208_204_S: np.ndarray | float,
     params: dict[str, Any] | None = None,
 ) -> dict[str, np.ndarray]:
-    """
-    Albarède & Juteau (1984) T–μ–κ 一站式反演
+    """Albarède & Juteau (1984) T–μ–κ one-stop inversion.
 
-    按 AJ84 的两条生长方程解出 (T_i, μ_i), 并由 z 生长方程求 κ_i
-    (ω_i = μ_i·κ_i); 另返回相对现代 common Pb 参考的 Δμ_i/Δκ_i 与 T0 灵敏度
-    dT_i/dT0。T_i 在 (−4·T0, T0) 内无根时为 NaN (负年龄为合法结果)。
+    Solves (T_i, μ_i) from the two AJ84 growth equations and κ_i from the z growth
+    equation (ω_i = μ_i·κ_i); also returns Δμ_i/Δκ_i relative to the modern
+    common-Pb reference and the T0 sensitivity dT_i/dT0. T_i is NaN when the
+    equations have no root inside (−4·T0, T0) (negative ages are legitimate results).
 
     Args:
-        Pb206_204_S, Pb207_204_S, Pb208_204_S: 样品 206/204、207/204、208/204
-        params: 参数字典 (可选; 应为 AJ84 预设, 提供 U_ratio = 1/137.79)
+        Pb206_204_S, Pb207_204_S, Pb208_204_S: sample 206/204, 207/204, 208/204
+        params: parameter dict (optional; should be the AJ84 preset, U_ratio = 1/137.79)
 
     Returns:
-        dict: 键为 ALBAREDE_*_KEY 常量 (T_i, μ, κ, ω, Δμ, Δκ, dT/dT0)
+        dict: keyed by the ALBAREDE_*_KEY constants (T_i, μ, κ, ω, Δμ, Δκ, dT/dT0)
     """
     if params is None:
         params = engine.params
@@ -367,6 +377,7 @@ def calculate_albarede_parameters(
         ALBAREDE_AGE_SENSITIVITY_KEY: calculate_albarede_age_sensitivity(age, delta_mu, mu, params),
     }
 
+
 __all__ = [
     'T_EARTH_1ST',
     'T_EARTH_CANON',
@@ -383,6 +394,7 @@ __all__ = [
     'MU_M_DEFAULT',
     'OMEGA_M_DEFAULT',
     'U_RATIO_NATURAL',
+    'EPSILON',
     'E1_DEFAULT',
     'E2_DEFAULT',
     'ALBAREDE_T0',
