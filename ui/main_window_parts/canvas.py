@@ -147,6 +147,9 @@ class MainWindowCanvasMixin:
     _axis_lock_action = None
     #: The area that holds the panel child windows; None until one is needed.
     _panel_mdi_area = None
+    #: Whether the single-figure window has been framed once; the panels carry their own flag, so an
+    #: automatic fit never overrides a view the user has zoomed or panned.
+    _single_figure_framed = False
     #: The three navigation buttons of the main toolbar, empty until the toolbar is built; the
     #: button sync reads them, and panel activation can happen first.
     _navigation_actions: list = []
@@ -263,7 +266,7 @@ class MainWindowCanvasMixin:
         fit_action.setToolTip(
             translate("Zoom every panel so the data fills the window.")
         )
-        fit_action.triggered.connect(self._fit_panels_to_data)
+        fit_action.triggered.connect(lambda _checked=False: self._fit_panels_to_data(force=True))
         self.toolbar.addAction(fit_action)
 
         # The panels can be moved and resized one by one, which leaves the window in whatever
@@ -748,27 +751,55 @@ class MainWindowCanvasMixin:
         except Exception as err:
             logger.warning("Could not arrange the panel windows: %s", err)
 
-    def _fit_panels_to_data(self):
-        """Zoom every panel so its points fill the window."""
+    def _fit_panels_to_data(self, force: bool = False):
+        """Zoom every panel so its points fill the window.
+
+        The command frames every panel. The automatic callers - when panels are built and after a
+        reload - frame only panels that have never been framed: a view the user zoomed or panned is
+        not something a render, a panel switch or a rebuild may throw away.
+        """
         axes = self._panels_for_fit()
         fitted = 0
+        framed: list = []
         for mode, axis in axes:
+            record = self._panel_record_for(axis)
+            if not force and record is not None and record.get("framed"):
+                continue
+            if not force and record is None and self._single_figure_framed:
+                continue
             try:
                 if self._fit_one_axes(mode, axis):
                     fitted += 1
+                    framed.append(axis)
+                    if record is not None:
+                        record["framed"] = True
+                    else:
+                        self._single_figure_framed = True
             except Exception as err:
                 logger.warning("Could not fit a panel to the data: %s", err)
-        for _mode, axis in axes:
+        for axis in framed:
             canvas = getattr(getattr(axis, "figure", None), "canvas", None)
             if canvas is not None:
                 try:
                     canvas.draw_idle()
                 except Exception as err:
                     logger.warning("Could not redraw after fitting: %s", err)
-        refresh_panel_labels()
-        logger.info("Fitted %d of %d panel(s) to the data", fitted, len(axes))
-        # Fitting changes every panel's limits, so their labels are laid out again for the new view.
-        refresh_panel_labels()
+        if framed:
+            # Fitting changes the limits, so the labels are laid out again for the new view.
+            refresh_panel_labels()
+        logger.info(
+            "Fitted %d of %d panel(s) to the data%s",
+            fitted,
+            len(axes),
+            " (requested)" if force else "",
+        )
+
+    def _panel_record_for(self, axis):
+        """The panel record that draws *axis*, or None for the single-figure window."""
+        for record in list(app_state.plot_panel_windows or []):
+            if record.get("axes") is axis:
+                return record
+        return None
 
     def _build_panel_windows(self, modes) -> list:
         """Show one independent child window per panel; the records, or [] if impossible."""
