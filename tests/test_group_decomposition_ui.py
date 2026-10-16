@@ -80,6 +80,29 @@ def _install() -> pd.DataFrame:
     return frame
 
 
+def test_the_legend_panel_is_told_the_name_the_user_chose(qapp, restore_state) -> None:
+    """The panel shows the title it is told, so it must not be told the working column's name."""
+    from visualization.plotting.rendering.common.legend import _notify_legend_panel
+
+    _install()
+    window = _Window()
+    assert window.decompose_group_by("Tarim", "Phase") is True
+
+    seen: list[str] = []
+    state_gateway.set_legend_update_callback(
+        lambda title, handles, labels: seen.append(title)
+    )
+    _notify_legend_panel(window.DECOMPOSED_GROUP_COLUMN, [], [])
+
+    assert seen, "the panel was told"
+    assert all(window.DECOMPOSED_GROUP_COLUMN not in str(title) for title in seen), (
+        f"the working column is not a name to show, got {seen}"
+    )
+    assert any("Site" in str(title) for title in seen), (
+        f"the column the user chose, got {seen}"
+    )
+
+
 def test_the_title_names_the_column_the_user_chose(qapp, restore_state) -> None:
     """Reported: a group name turned into __decomposed_group__.
 

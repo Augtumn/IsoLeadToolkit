@@ -58,10 +58,14 @@ def apply_permutation(values: list[Any], permutation: list[int]) -> list[Any]:
 
 
 def _notify_legend_panel(title: str, handles: list[Any], labels: list[str]) -> None:
+    # The panel shows this title, and the panel is read by the user: a decomposition groups by a
+    # column it wrote itself, so the group it is split into is what the title has to name.
+    from .title import display_group_col
+
     callback = app_state.legend_update_callback
     if callable(callback):
         try:
-            callback(title, handles, labels)
+            callback(display_group_col(title), handles, labels)
         except Exception as err:
             logger.warning("_notify_legend_panel failed: %s", err)
 
