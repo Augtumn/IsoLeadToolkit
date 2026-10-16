@@ -13,7 +13,7 @@ import logging
 from PyQt5.QtWidgets import QMessageBox
 
 from application.use_cases.load_dataset import DatasetImport, load_dataset
-from core import app_state, translate
+from core import app_state, state_gateway, translate
 
 logger = logging.getLogger(__name__)
 
@@ -71,4 +71,9 @@ def load_dataset_via_dialogs() -> bool:
         return False
     progress.close()
     logger.info("Dataset loaded: %s", request.file_path)
+    # A newly imported dataset starts as one figure drawn the way it was chosen in the wizard. The
+    # panel list describes the previous layout, and leaving it in place made the window open several
+    # panels - the reported "I picked one algorithm and got two windows". A session restore keeps
+    # the list; importing data does not.
+    state_gateway.set_plot_panels([])
     return True
