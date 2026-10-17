@@ -664,3 +664,32 @@ def test_a_locked_column_is_refused_by_the_method_too(qapp, restore_state, monke
     assert window.decompose_group_by("Tarim / casting", "Phase") is False
     assert warned, "the refusal is reported, not silent"
     assert app_state.group_decomposition.get("Tarim\x1fcasting") is None
+
+
+def test_a_decomposition_written_for_another_dataset_is_dropped(qapp, restore_state) -> None:
+    """Reported from the log: "value 'A' is not present in 'metal_province'".
+
+    The map's paths are values of the grouping column. Loading a different sheet keeps the column name and
+    changes its values, so every stored path names a group this data does not have - decompose() rejected the
+    map and the user's action was refused. The stale map is dropped instead, and the split starts from the
+    data in front of the user.
+    """
+    from core import app_state
+
+    _install()
+    window = _Window()
+
+    first = pd.DataFrame({"metal_province": ["A", "B"], "Phase": ["casting", "casting"]})
+    state_gateway.set_dataframe_and_source(first, file_path="one.xlsx", sheet_name="s1")
+    state_gateway.set_group_data_columns(["metal_province", "Phase"], [])
+    state_gateway.set_last_group_col("metal_province")
+    assert window.decompose_group_by("A", "Phase") is True
+    assert "A" in app_state.group_decomposition
+
+    second = pd.DataFrame({"metal_province": ["X", "Y"], "Phase": ["casting", "casting"]})
+    state_gateway.set_dataframe_and_source(second, file_path="one.xlsx", sheet_name="s2")
+
+    assert window.decompose_group_by("X", "Phase") is True, (
+        "the action succeeds; the map from the earlier data is dropped, not applied to this one"
+    )
+    assert "A" not in app_state.group_decomposition, "the stale path is gone"

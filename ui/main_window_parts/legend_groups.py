@@ -106,7 +106,7 @@ class MainWindowLegendGroupMixin:
         ``set_parent_groups``, so the plot, the legend, the colours, the per-parent marker
         shape and the visibility checkboxes all keep using the pipeline that is already there.
         """
-        from visualization.plotting.decomposition import decompose, validate_spec
+        from visualization.plotting.decomposition import decompose, path_values, validate_spec
 
         frame = app_state.df_global
         if frame is None or not base or base not in frame.columns:
@@ -114,6 +114,25 @@ class MainWindowLegendGroupMixin:
                 self, translate("Warning"), translate("Please load data first.")
             )
             return False
+        if spec:
+            # The paths are values of the column the map was written for. Loading a different sheet keeps the
+            # column name but changes its values, and then every path names a group this data does not have -
+            # decompose() rejects the map and the user sees their action refused. The map is dropped instead:
+            # it cannot describe groups that are not here.
+            present = {str(value) for value in frame[base].dropna().unique()}
+            missing = [
+                str(values[0])
+                for path in spec
+                if (values := path_values(path)) and str(values[0]) not in present
+            ]
+            if missing:
+                logger.warning(
+                    "Dropping the decomposition of %r: this data has no group(s) %s. It was written for values "
+                    "of an earlier dataset.",
+                    base,
+                    ", ".join(sorted(set(missing))[:5]),
+                )
+                spec = {}
         if not spec:
             # Nothing is decomposed: drop the column and go back to the original grouping. The
             # parent/child map is captured before it is cleared, because the selection below has to
