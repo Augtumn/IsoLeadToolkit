@@ -8,6 +8,19 @@ from core import CONFIG, app_state, load_session_params, set_language, state_gat
 logger = logging.getLogger(__name__)
 
 
+def restore_algorithm_for_mode() -> None:
+    """Give the mode in force its own algorithm, when that mode picks one.
+
+    A dimensionality-reduction plot's mode is its algorithm, so the mode is what gets restored. Deriving it
+    with "UMAP if mode == UMAP else tSNE" - which is what this did - sent PCA and Robust PCA to tSNE, and
+    SET_ALGORITHM then wrote that back into the render mode, so the mode itself changed too.
+    """
+    from core.render_modes import capabilities_for
+
+    if capabilities_for(app_state.render_mode).has_algorithm:
+        state_gateway.set_algorithm(app_state.render_mode)
+
+
 class Qt5AppSessionMixin:
     """Session restoration methods for Qt5Application."""
 
@@ -164,9 +177,4 @@ class Qt5AppSessionMixin:
                         "Stored 2D column selection invalid or incomplete; will prompt user on demand."
                     )
 
-        from core.render_modes import capabilities_for
-
-        # Every mode the user picks an algorithm for restores it, not only the two that used to be
-        # listed here: a PCA or RobustPCA session kept whatever algorithm the combo happened to show.
-        if capabilities_for(app_state.render_mode).has_algorithm:
-            state_gateway.set_algorithm("UMAP" if app_state.render_mode == "UMAP" else "tSNE")
+        restore_algorithm_for_mode()
