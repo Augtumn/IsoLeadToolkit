@@ -1,6 +1,7 @@
 """Hover and click handlers for point interaction."""
 from __future__ import annotations
 import logging
+import weakref
 
 from typing import Any
 
@@ -26,7 +27,10 @@ logger = logging.getLogger(__name__)
 
 #: One hover tooltip per figure, created on demand: a window showing several figures needs one in
 #: each of them, or the tooltip appears in whichever figure happens to own the shared annotation.
-_figure_annotations: dict[int, Any] = {}
+#: Keyed by the figure itself, not by id(figure). An id is reused as soon as the old figure is collected, so a
+#: panel built afterwards could inherit a tooltip belonging to a figure that no longer existed - the tooltip was
+#: then written into a dead object and those panels showed none at all.
+_figure_annotations: "weakref.WeakKeyDictionary[Any, Any]" = weakref.WeakKeyDictionary()
 
 
 def _resolve_sample_index(event: object) -> int | None:
@@ -123,8 +127,7 @@ def _annotation_for(figure: Any) -> Any:
     """
     if figure is None:
         return None
-    key = id(figure)
-    found = _figure_annotations.get(key)
+    found = _figure_annotations.get(figure)
     if found is not None:
         return found
     axis = figure.axes[0] if getattr(figure, "axes", None) else None
@@ -157,7 +160,7 @@ def _annotation_for(figure: Any) -> Any:
     except Exception as err:
         logger.warning("Could not create the hover annotation: %s", err)
         return None
-    _figure_annotations[key] = found
+    _figure_annotations[figure] = found
     return found
 
 
