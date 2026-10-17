@@ -1333,6 +1333,15 @@ class TernaryZoomEventFilter(QObject):
                 except Exception as err:
                     logger.warning("Wheel: could not resolve the panel under the pointer: %s", err)
                 if axes is not None and coords is not None:
+                    # The wheel zooms the plot under the pointer only while this canvas's window is the one in
+                    # use: with a dialog open, the wheel belongs to the dialog and zooming the chart behind it
+                    # surprised the user. A window with no active window at all - offscreen, or before the
+                    # first focus - is left alone, and a canvas that is not a widget has no window to compare.
+                    # A dialog in front takes the wheel: without this, scrolling in a dialog that sits over the
+                    # plot zoomed the chart behind it. The test is the modal widget rather than the active
+                    # window, because the active window is the dialog only some of the time.
+                    if QApplication.activeModalWidget() is not None:
+                        return False
                     self._handle_wheel(axes, coords, event)
                     return False
             if kind == QEvent.MouseButtonPress and event.button() == Qt.MiddleButton:
