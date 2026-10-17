@@ -285,7 +285,9 @@ def on_hover(event: Any) -> None:
                     selected_status_label=translate('Status: Selected'),
                 )
 
-                annotation.xy = (x, y)
+                from visualization.plotting.tooltip import place_tooltip
+
+                place_tooltip(annotation, x, y)
                 annotation.set_text(txt)
                 annotation.set_visible(True)
                 # Hovering shows the tooltip and nothing else: the mark belongs to the double

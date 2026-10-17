@@ -8,6 +8,10 @@ overlays.
 """
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 TOOLTIP_ZORDER_OFFSET = 1
 #: Above the overlays (100/101) and any legend-driven stacking (single digits).
 TOOLTIP_MIN_ZORDER = 1000
@@ -37,3 +41,28 @@ def raise_tooltip_above_data(ax, annotation) -> None:
     annotation.set_zorder(max(highest + TOOLTIP_ZORDER_OFFSET, TOOLTIP_MIN_ZORDER))
     if arrow is not None:
         arrow.set_zorder(annotation.get_zorder() - TOOLTIP_ZORDER_OFFSET)
+
+def place_tooltip(annotation, x: float, y: float) -> None:
+    """Point *annotation* at (x, y) with its box placed where it covers least.
+
+    The offset used to be a fixed (20, 20) points - up and to the right of the point - so near the top or right
+    edge the box left the axes and was clipped, and elsewhere it covered the data it described. The box now goes
+    away from the edge the point is nearest: in the right half it opens to the left, in the upper half it opens
+    downward.
+
+    Only the annotation moves. The axes limits are not touched: a tooltip must never cost the chart its view.
+    """
+    annotation.xy = (x, y)
+    ax = getattr(annotation, "axes", None)
+    try:
+        x0, x1 = ax.get_xlim()
+        y0, y1 = ax.get_ylim()
+    except Exception as err:
+        logger.warning(
+            "Could not read the axes limits for the tooltip; using the default corner: %s", err
+        )
+        annotation.set_position((20, 20))
+        return
+    right_half = x1 > x0 and (x - x0) > (x1 - x0) / 2.0
+    upper_half = y1 > y0 and (y - y0) > (y1 - y0) / 2.0
+    annotation.set_position((-20 if right_half else 20, -28 if upper_half else 20))
