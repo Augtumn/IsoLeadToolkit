@@ -129,7 +129,14 @@ def _annotation_for(figure: Any) -> Any:
         return None
     found = _figure_annotations.get(figure)
     if found is not None:
-        return found
+        # The cached tooltip is only usable while it is still attached to an axes of this figure. A render that
+        # clears the figure takes its axes away, and the annotation is then orphaned: it exists, its axes is None,
+        # and set_visible() draws nothing. That is why some panels showed no tooltip - the cache kept handing back
+        # the orphan made by the previous render.
+        attached = getattr(found, "axes", None)
+        if attached is not None and getattr(attached, "figure", None) is figure:
+            return found
+        logger.info("hover: the cached tooltip was orphaned; building a new one for this figure")
     axis = figure.axes[0] if getattr(figure, "axes", None) else None
     if axis is None:
         return None

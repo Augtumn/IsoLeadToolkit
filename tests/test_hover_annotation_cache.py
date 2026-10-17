@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import pytest  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
 
 from visualization.event_handlers import pointer_events  # noqa: E402
@@ -46,3 +47,22 @@ def test_the_cache_is_keyed_by_the_figure() -> None:
     figure.add_subplot(111)
     pointer_events._annotation_for(figure)
     assert figure in pointer_events._figure_annotations
+
+def test_an_orphaned_tooltip_is_replaced() -> None:
+    """Reported from the log: "tooltip shown ... axes=None" on the panels that showed no tooltip.
+
+    A render that clears the figure takes the axes away, and the annotation made against it is orphaned: it exists,
+    its axes is None, and set_visible() draws nothing. The cache used to keep handing that orphan back. An
+    annotation's axes cannot be changed, so the orphan is represented by a stub with axes=None.
+    """
+    figure = Figure()
+    figure.add_subplot(111)
+
+    orphan = SimpleNamespace(axes=None)
+    pointer_events._figure_annotations[figure] = orphan
+
+    replacement = pointer_events._annotation_for(figure)
+    assert replacement is not orphan, "the orphan is not reused"
+    assert replacement.axes is not None, "the replacement hangs on an axes"
+    assert replacement.axes.figure is figure
+    assert pointer_events._figure_annotations[figure] is replacement
