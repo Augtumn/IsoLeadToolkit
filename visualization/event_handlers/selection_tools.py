@@ -196,6 +196,17 @@ def _handle_lasso_select(vertices: Any) -> None:
         logger.warning('Custom shape selection failed: %s', err)
 
 
+def refresh_selection_selectors() -> None:
+    """Bring the selection selectors onto the axes of the panel now in use.
+
+    The selector belongs to one axes, and switching panels moved the state's axes without moving
+    the selector - the panels that were not the first selected nothing. Called when the panel in use
+    changes; with the selection off both ensures return immediately.
+    """
+    _ensure_rectangle_selector()
+    _ensure_lasso_selector()
+
+
 def toggle_selection_mode(tool_type: str = 'export') -> None:
     """Toggle interactive selection mode (export/lasso/isochron)."""
     try:

@@ -731,6 +731,13 @@ class MainWindowCanvasMixin:
             state_gateway.set_figure(record["figure"])
             state_gateway.set_axis(record["axes"])
             state_gateway.set_canvas(record["canvas"])
+            # The selection selectors belong to one axes, so they follow the panel in use.
+            try:
+                from visualization.event_handlers.selection_tools import refresh_selection_selectors
+
+                refresh_selection_selectors()
+            except Exception as err:
+                logger.warning("Could not move the selection selectors to the active panel: %s", err)
             # The toolbar is NOT rebuilt here. Rebuilding it for every activation cleared it and
             # re-added the same action objects, which destroyed the checked state and the
             # connections - reported as the tools losing their state and refusing to turn on or

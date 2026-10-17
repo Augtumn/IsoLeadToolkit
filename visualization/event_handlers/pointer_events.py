@@ -95,10 +95,22 @@ def _panel_highlight_targets(sample_idx: int) -> list[tuple[Any, int]]:
 
 
 def _panel_for(axes: Any) -> dict | None:
-    """The record of the panel drawn into *axes*, if any."""
-    for state in getattr(app_state, "plot_panel_states", []) or []:
+    """The record of the panel drawn into *axes*, if any.
+
+    The axes of a panel is not stable: switching its plot type clears the figure and builds a new one, and the
+    record then points at axes that no longer exist. The figure lasts as long as the window does, so it is the
+    second key - without it the panels whose axes had been rebuilt stopped resolving, and their tooltips and
+    box selection did nothing.
+    """
+    states = list(getattr(app_state, "plot_panel_states", []) or [])
+    for state in states:
         if state.get("ax") is axes:
             return state
+    figure = getattr(axes, "figure", None)
+    if figure is not None:
+        for state in states:
+            if state.get("figure") is figure:
+                return state
     return None
 
 
