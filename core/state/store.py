@@ -75,6 +75,12 @@ def _warn_direct_mutations(state: Any, snapshot: dict[str, Any]) -> None:
             )
 
 
+def _copied(value):
+    """A copy of *value* when it is an array-like that callers may mutate in place."""
+    copier = getattr(value, "copy", None)
+    return copier() if callable(copier) else value
+
+
 class StateStore:
     """Manage selected AppState domains through action dispatch."""
 
@@ -99,9 +105,12 @@ class StateStore:
             "embedding_task_token": int(getattr(state, "embedding_task_token", 0)),
             "embedding_task_running": bool(getattr(state, "embedding_task_running", False)),
             "marginal_axes": getattr(state, "marginal_axes", None),
-            "last_pca_variance": getattr(state, "last_pca_variance", None),
-            "last_pca_components": getattr(state, "last_pca_components", None),
-            "current_feature_names": getattr(state, "current_feature_names", []),
+            # Copied, not referenced: these are the only three projections that hand an internal object
+            # out, and an in-place change then proved nothing - the direct-mutation detector compared the
+            # object with itself and always found it equal.
+            "last_pca_variance": _copied(getattr(state, "last_pca_variance", None)),
+            "last_pca_components": _copied(getattr(state, "last_pca_components", None)),
+            "current_feature_names": list(getattr(state, "current_feature_names", []) or []),
             "adjust_text_in_progress": bool(getattr(state, "adjust_text_in_progress", False)),
             "current_plot_title": str(getattr(state, "current_plot_title", "")),
             "last_2d_cols": (
@@ -306,9 +315,9 @@ class StateStore:
             "embedding_task_token": int(self._snapshot["embedding_task_token"]),
             "embedding_task_running": bool(self._snapshot["embedding_task_running"]),
             "marginal_axes": self._snapshot["marginal_axes"],
-            "last_pca_variance": self._snapshot["last_pca_variance"],
-            "last_pca_components": self._snapshot["last_pca_components"],
-            "current_feature_names": self._snapshot["current_feature_names"],
+            "last_pca_variance": _copied(self._snapshot["last_pca_variance"]),
+            "last_pca_components": _copied(self._snapshot["last_pca_components"]),
+            "current_feature_names": list(self._snapshot["current_feature_names"] or []),
             "adjust_text_in_progress": bool(self._snapshot["adjust_text_in_progress"]),
             "confidence_level": float(self._snapshot["confidence_level"]),
             "current_plot_title": str(self._snapshot["current_plot_title"]),
