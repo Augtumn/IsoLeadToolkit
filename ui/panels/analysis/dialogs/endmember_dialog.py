@@ -19,6 +19,11 @@ from ui.dialogs.geometry import remember_geometry
 logger = logging.getLogger(__name__)
 
 
+def _format_geochron_slope(value) -> str:
+    """The slope as text, or a word when it could not be computed."""
+    return translate("Unavailable") if value is None else f"{value:.6f}"
+
+
 def show_endmember_analysis(parent: Any = None) -> None:
     dialog = EndmemberAnalysisDialog(parent)
     dialog.exec_()
@@ -147,17 +152,18 @@ class EndmemberAnalysisDialog(QDialog):
         from plugins.registry import plugin_manager
 
         _endmember_plugin = plugin_manager.get("endmember_plugin")
+        # None means "not available", which the label shows as such: 0.0 is a legal slope, so using it for
+        # a failure made the failure read as a scientific result.
+        geo_slope = None
         if _endmember_plugin is None:
             logger.error("endmember_plugin is not available")
-            geo_slope = 0.0
         else:
             try:
                 geo_slope = _endmember_plugin.compute_geochron_slope()
             except Exception as exc:
                 logger.warning("Failed to compute geochron slope: %s", exc)
-                geo_slope = 0.0
         param_layout.addWidget(QLabel(translate("Geochron Slope:")), 2, 0)
-        self.slope_label = QLabel(f"{geo_slope:.6f}")
+        self.slope_label = QLabel(_format_geochron_slope(geo_slope))
         param_layout.addWidget(self.slope_label, 2, 1)
         hint_label = QLabel(translate("(computed from decay constants)"))
         hint_label.setProperty("keepStyle", True)  # survive _NativeStyleFilter
@@ -356,7 +362,7 @@ class EndmemberAnalysisDialog(QDialog):
         self.pca_label.setText(
             "  |  ".join(var_texts) +
             f"\n{translate('Cumulative')}: {cumulative[-1] * 100:.1f}%"
-            f"    {translate('Geochron Slope')}: {r['geochron_slope']:.6f}"
+            f"    {translate('Geochron Slope')}: {_format_geochron_slope(r.get('geochron_slope'))}"
         )
         self.pca_group.setVisible(True)
 
