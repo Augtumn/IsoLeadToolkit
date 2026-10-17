@@ -1039,5 +1039,6 @@
   "Place the legend outside the plot area, on the left.": "Place the legend outside the plot area, on the left.",
   "Place the legend outside the plot area, on the right.": "Place the legend outside the plot area, on the right.",
   "Place the legend inside the plot area: {position}.": "Place the legend inside the plot area: {position}.",
-  "Unavailable": "Unavailable"
+  "Unavailable": "Unavailable",
+  "The session was imported but could not be saved. The reason is in the log.": "The session was imported but could not be saved. The reason is in the log."
 }

@@ -1039,5 +1039,6 @@
   "Place the legend outside the plot area, on the left.": "把图例放在绘图区外的左侧。",
   "Place the legend outside the plot area, on the right.": "把图例放在绘图区外的右侧。",
   "Place the legend inside the plot area: {position}.": "把图例放在绘图区内：{position}。",
-  "Unavailable": "不可用"
+  "Unavailable": "不可用",
+  "The session was imported but could not be saved. The reason is in the log.": "会话已导入，但保存失败。原因见日志。"
 }

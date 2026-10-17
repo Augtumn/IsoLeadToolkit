@@ -195,16 +195,28 @@ class MainWindowLifecycleMixin:
 
         # Refresh the plot with the imported data/settings.
         self._refresh_plot()
+        save_failed = False
         try:
             from core import save_all
 
             save_all(state_gateway)
         except Exception as err:
-            logger.warning("_import_session failed: %s", err)
+            # The import did happen; writing it back did not. "Imported successfully" would be a promise the
+            # next start cannot keep, so the reason goes to the log and the user is told about it.
+            save_failed = True
+            logger.warning("_import_session could not save the imported session: %s", err)
         # restore_snapshot bypasses dispatch, so refresh the mode label here.
         self._refresh_status_info()
 
-        if flag == "data_failed":
+        if save_failed:
+            QMessageBox.warning(
+                self,
+                translate("Import Session"),
+                translate(
+                    "The session was imported but could not be saved. The reason is in the log."
+                ),
+            )
+        elif flag == "data_failed":
             QMessageBox.warning(
                 self,
                 translate("Import Session"),
