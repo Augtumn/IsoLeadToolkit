@@ -166,19 +166,50 @@ class MainWindowCanvasMixin:
     #: the hand - survives the rebuild that follows a change of panel, which is why the wheel
     #: appeared to stop working: the magnifier was no longer selected.
     _plot_toolbar = None
+    #: The canvas the plot toolbar and the application-level wheel filter were built around. Both are
+    #: replaced on every rebuild, and neither the toolbar nor the filter removes itself: four rebuilds
+    #: left four toolbars and four filters alive.
+    _plot_canvas = None
 
     # Declared by the class that uses them, so no probe is needed for widgets
     # that build() creates later (UI review item B).
+
+    def _release_plot_widgets(self) -> None:
+        """Let go of the toolbar and the filters the previous canvas owned.
+
+        The toolbar's parent is this widget, so dropping the reference left it alive; the wheel filter is
+        installed on the QApplication, so it outlived every canvas it was made for. Both are deleted here.
+        """
+        application = QApplication.instance()
+        previous_canvas = self._plot_canvas
+        filt = getattr(previous_canvas, "_ternary_zoom_filter", None) if previous_canvas is not None else None
+        if filt is not None:
+            if application is not None:
+                application.removeEventFilter(filt)
+            if previous_canvas is not None:
+                previous_canvas.removeEventFilter(filt)
+            filt.deleteLater()
+            if previous_canvas is not None:
+                previous_canvas._ternary_zoom_filter = None
+        toolbar = self._plot_toolbar
+        if toolbar is not None:
+            toolbar.setParent(None)
+            toolbar.deleteLater()
+        self._plot_toolbar = None
+        self._plot_canvas = None
 
     def set_matplotlib_figure(self, fig):
         """设置 matplotlib 图形"""
         # The panel area belongs to this layout and is reused between rebuilds, so it is left
         # alone here - removing it would leave the child windows parented to nothing and thus
         # invisible. It is dropped explicitly when the window goes back to a single figure.
+        self._release_plot_widgets()
         for i in reversed(range(self.canvas_layout.count())):
             widget = self.canvas_layout.itemAt(i).widget()
             if widget and widget is not self._panel_mdi_area:
                 widget.setParent(None)
+                # A parentless widget is not garbage: something has to delete it, and nothing else will.
+                widget.deleteLater()
         app_state.plot_panel_windows[:] = []
 
         # Several figures means independent child windows, one per panel, each with its own
@@ -200,6 +231,7 @@ class MainWindowCanvasMixin:
         toolbar = NavigationToolbar(canvas, self)
         toolbar.setVisible(False)  # Keep hidden; actions are extracted below
         self._plot_toolbar = toolbar
+        self._plot_canvas = canvas
 
         rect_select_action = QAction(self._get_selection_icon("selection_rect.svg"), translate("Box Select"), self)
         rect_select_action.setToolTip(translate("Box Select"))
@@ -582,7 +614,11 @@ class MainWindowCanvasMixin:
                 self.toolbar.addAction(action)
             navigation = NavigationToolbar(canvas, self)
             navigation.setVisible(False)
+            if previous is not None and previous is not navigation:
+                previous.setParent(None)
+                previous.deleteLater()
             self._plot_toolbar = navigation
+            self._plot_canvas = canvas
             # The tool the user is holding stays held: switching panel used to drop the magnifier,
             # and with it the wheel zoom that depends on it.
             held_tool = active.strip().lower()
