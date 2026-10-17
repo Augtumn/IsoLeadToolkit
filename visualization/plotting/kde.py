@@ -301,6 +301,15 @@ def _robust_peak_limit(peaks: list[float]) -> float:
     return max(limit, float(np.max(finite)) * 0.05)
 
 
+def marginal_axes_attached_to(fig: Any) -> bool:
+    """True when *fig* carries the divider axes that cannot coexist with constrained layout.
+
+    The bookkeeping of which figure holds marginals is this module's; a renderer that wants to turn
+    constrained layout back on has to ask, because doing it while they are attached collapses them to zero.
+    """
+    return fig is not None and fig in _marginal_axes_for_figure
+
+
 def clear_marginal_axes(ax: Any) -> None:
     """Remove the marginal axes belonging to *ax*'s figure.
 

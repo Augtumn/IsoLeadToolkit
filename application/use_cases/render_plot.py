@@ -256,8 +256,11 @@ class RenderPlotUseCase:
             else:
                 df_groups_source = df[group_col].fillna("Unknown").astype(str)
                 all_groups = sorted(df_groups_source.unique())
-        except Exception:
-            all_groups = []
+        except KeyError:
+            # The column is not in this dataset. Passing an empty list on would clear the groups the user
+            # chose, because the handler drops visible groups that are no longer available.
+            logger.warning("Cannot list the groups of %r: the column is not in the data.", group_col)
+            return
 
         self._state_write.sync_available_and_visible_groups(all_groups)
 

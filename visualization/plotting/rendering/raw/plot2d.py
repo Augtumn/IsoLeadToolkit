@@ -284,9 +284,14 @@ def _draw_2d_title_and_labels(
     Restoring the view and turning autoscale on belong to the render sequence, not to the naming: every
     mode would otherwise have to remember them, and one of them did not.
     """
-    # The ternary render switches the layout engine off (use_ternary_layout);
-    # a 2D render over the same figure takes it back.
-    configure_constrained_layout(app_state.fig)
+    # The ternary render switches the layout engine off (use_ternary_layout); a 2D render over the same
+    # figure takes it back - unless marginal KDE axes are attached, where constrained layout collapses them
+    # to zero. Whether they are attached is kde.py's book to keep, so ask it rather than assume.
+    from ...kde import marginal_axes_attached_to
+
+    figure = app_state.fig
+    if not marginal_axes_attached_to(figure):
+        configure_constrained_layout(figure)
     from ..common.title import display_group_col
 
     title = (

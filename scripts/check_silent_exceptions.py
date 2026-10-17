@@ -23,6 +23,23 @@ SCANNED = (
 )
 
 
+#: A handler counts as silent unless every statement in it either re-raises or reports at warning level or
+#: above. Looking only for ``pass`` and for a lone ``logger.debug`` missed the real cases: ``except
+#: Exception: continue``, ``except Exception: all_groups = []`` (which cleared the user's group selection)
+#: and ``except Exception: size = 8`` all slipped through that test.
+_REPORTING_CALLS = ("logger.warning", "logger.error", "logger.exception", "logger.critical")
+
+
+def _reports(statement: ast.stmt) -> bool:
+    """True when the statement re-raises the failure or reports it at warning level or above."""
+    if isinstance(statement, ast.Raise):
+        return True
+    if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
+        source = ast.unparse(statement.value)
+        return any(marker in source for marker in _REPORTING_CALLS)
+    return False
+
+
 def silent_handlers(path: Path) -> int:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -36,14 +53,8 @@ def silent_handlers(path: Path) -> int:
         if not body:
             count += 1
             continue
-        if len(body) == 1:
-            only = body[0]
-            if isinstance(only, ast.Pass):
-                count += 1
-            elif isinstance(only, ast.Expr) and isinstance(only.value, ast.Call):
-                source = ast.unparse(only.value)
-                if "logger.debug" in source or "logger.info" in source:
-                    count += 1
+        if not all(_reports(statement) for statement in body):
+            count += 1
     return count
 
 
