@@ -152,8 +152,19 @@ class StateStore:
     def dispatch(self, action: dict[str, Any]) -> dict[str, Any]:
         """Dispatch an action and return a snapshot copy."""
         _warn_direct_mutations(self._state, self._snapshot)
-        dispatch_action(self, action)
-        self._sync_state()
+        # An action is one transaction: a handler that raises halfway used to leave the snapshot partly
+        # updated and the live state not updated at all, and the next dispatch then reported the store's own
+        # leftovers as a direct mutation - the check's own noise. Roll back and bring the state back with it.
+        before = dict(self._snapshot)
+        try:
+            dispatch_action(self, action)
+            self._sync_state()
+        except Exception:
+            self._snapshot.clear()
+            self._snapshot.update(before)
+            self._sync_state()
+            logger.exception("Action %r failed; the state was rolled back", action.get("type"))
+            raise
         self._notify_render_mode_if_changed(action)
         hook = self._dispatch_hook
         if callable(hook):

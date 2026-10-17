@@ -53,7 +53,10 @@ def silent_handlers(path: Path) -> int:
         if not body:
             count += 1
             continue
-        if not all(_reports(statement) for statement in body):
+        # "Silent" means nothing reports it: a handler that cleans up and then logs or re-raises is not
+        # silent, so any reporting statement is enough. Requiring every statement to report counted real
+        # handlers - rollback, then logger.exception, then raise - as silent.
+        if not any(_reports(statement) for statement in body):
             count += 1
     return count
 
