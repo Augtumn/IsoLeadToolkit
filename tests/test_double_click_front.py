@@ -26,6 +26,10 @@ def scene(monkeypatch):
     original_mode = app_state.selection_mode
     # Mode first: a dispatch syncs the store and would roll back direct attributes.
     state_gateway.set_selection_mode(False)
+    # The reveal belongs to the tooltip and the selection features now, so this scene tests it with the
+    # tooltip on; with both off a double click does nothing, which test_double_click_gate.py covers.
+    previous_tooltip = app_state.show_tooltip
+    state_gateway.set_show_tooltip(True)
     monkeypatch.setattr(app_state, "last_group_col", "Province/Lueague", raising=False)
     monkeypatch.setattr(app_state, "group_to_scatter", {}, raising=False)
     monkeypatch.setattr(
@@ -38,6 +42,7 @@ def scene(monkeypatch):
     monkeypatch.setattr(app_state, "group_reveal_callback", calls.append, raising=False)
     yield figure, axes, calls, monkeypatch
     state_gateway.set_selection_mode(original_mode)
+    state_gateway.set_show_tooltip(previous_tooltip)
 
 
 def _double_click(figure, axes, dblclick=True):

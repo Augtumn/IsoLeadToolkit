@@ -408,7 +408,14 @@ def on_click(event: Any) -> None:
             )
             return
 
-        if not app_state.selection_mode and not getattr(event, 'dblclick', False):
+        double_click = bool(getattr(event, 'dblclick', False))
+        # A double click reveals a group and marks a sample; it used to do that whatever the user had switched
+        # on. It belongs to the two features it serves - the tooltip and the selection - so with both off the
+        # click is not this handler's business.
+        if double_click and not (app_state.selection_mode or app_state.show_tooltip):
+            logger.info("double click ignored: neither the tooltip nor the selection is on")
+            return
+        if not app_state.selection_mode and not double_click:
             return
 
         if not app_state.selection_mode:
