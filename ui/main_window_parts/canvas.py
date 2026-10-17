@@ -461,50 +461,6 @@ class MainWindowCanvasMixin:
             action.blockSignals(was_blocked)
         logger.info("Navigation buttons synced to the panel tool %r", mode or "NONE")
 
-    def _refresh_labels_for(self, axes=None) -> None:
-        """Lay the overlay labels out again for every panel whose view moved.
-
-        Only the labels: a full re-render recomputes the axes from the data and threw the user's
-        zoom away. The label data is one list of text artists belonging to different figures, so
-        the panels to refresh are found from the artists themselves, each laid out on its own axes.
-
-        This belongs to the window, which is what calls it during a fit; having it only on the
-        event filter raised AttributeError there, cut the fit short and left a panel blank.
-        """
-        try:
-            from visualization.plotting import refresh_paleoisochron_labels
-
-            targets = []
-            if axes is not None:
-                targets.append(axes)
-            # Every panel, each laid out from its own labels: the state's list only ever holds the
-            # last panel's, which is why the other panels kept stale label positions.
-            for state in list(getattr(app_state, "plot_panel_states", []) or []):
-                panel_axes = state.get("ax") if isinstance(state, dict) else None
-                if panel_axes is not None and panel_axes not in targets:
-                    targets.append(panel_axes)
-            for entry in list(getattr(app_state, "paleoisochron_label_data", None) or []):
-                text = entry.get("text") if isinstance(entry, dict) else None
-                owner = getattr(text, "axes", None)
-                if owner is not None and owner not in targets:
-                    targets.append(owner)
-            for target in targets:
-                refresh_paleoisochron_labels(ax=target)
-            # Repaint every panel whose labels were just moved: a label that moves without its
-            # canvas being redrawn leaves the panel showing its old buffer, which looks blank until
-            # something else triggers a repaint - the reported "blank until I refresh manually".
-            for target in targets:
-                figure = getattr(target, "figure", None)
-                canvas = getattr(figure, "canvas", None)
-                if canvas is not None:
-                    try:
-                        canvas.draw_idle()
-                    except Exception as err:
-                        logger.warning("Could not repaint a panel after moving its labels: %s", err)
-            logger.info("Labels refreshed for %d panel(s)", len(targets))
-        except Exception as err:
-            logger.warning("Could not refresh the labels for the panel: %s", err)
-
     def _navigation_action(self, kind: str, label: str) -> QAction:
         """A main-toolbar button that drives the toolbar of the panel in use."""
         action = QAction(self._borrowed_navigation_icon(kind), label, self)
