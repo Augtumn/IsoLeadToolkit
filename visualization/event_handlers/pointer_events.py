@@ -253,6 +253,11 @@ def on_hover(event: Any) -> None:
         # pointer on it - and hovering never disturbs it.
 
         if annotation is None:
+            # Told here so a panel that shows no tooltip can be identified from the log instead of guessed at.
+            logger.info(
+                "hover: no tooltip for figure %s (inaxes=%s)",
+                id(hovered_figure), event.inaxes,
+            )
             # No tooltip to show - the highlight above still stands.
             if redraw and hovered_figure is not None:
                 try:
@@ -308,6 +313,11 @@ def on_hover(event: Any) -> None:
                 place_tooltip(annotation, x, y)
                 annotation.set_text(txt)
                 annotation.set_visible(True)
+                logger.info(
+                    "hover: tooltip shown on figure %s axes=%s (panel=%s)",
+                    id(hovered_figure), getattr(annotation, "axes", None),
+                    panel.get("mode") if panel is not None else None,
+                )
                 # Hovering shows the tooltip and nothing else: the mark belongs to the double
                 # click, and a hover used to move it here, which is why the highlight wandered.
                 redraw = True
