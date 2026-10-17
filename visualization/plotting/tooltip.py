@@ -65,4 +65,8 @@ def place_tooltip(annotation, x: float, y: float) -> None:
         return
     right_half = x1 > x0 and (x - x0) > (x1 - x0) / 2.0
     upper_half = y1 > y0 and (y - y0) > (y1 - y0) / 2.0
+    # The box grows away from the point, not over it: with the default baseline anchor it extended downwards and
+    # covered the very point it described, which the user saw as the tooltip hiding the selected sample.
+    annotation.set_ha("right" if right_half else "left")
+    annotation.set_va("top" if upper_half else "bottom")
     annotation.set_position((-20 if right_half else 20, -28 if upper_half else 20))

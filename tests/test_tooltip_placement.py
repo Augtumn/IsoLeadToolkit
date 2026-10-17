@@ -48,3 +48,32 @@ def test_the_axes_limits_are_not_touched(scene) -> None:
     before = (ax.get_xlim(), ax.get_ylim())
     place_tooltip(annotation, 9.5, 9.5)
     assert (ax.get_xlim(), ax.get_ylim()) == before
+
+
+@pytest.mark.parametrize(
+    ("x", "y", "ha", "va"),
+    [
+        (2.0, 2.0, "left", "bottom"),
+        (8.0, 2.0, "right", "bottom"),
+        (2.0, 8.0, "left", "top"),
+        (8.0, 8.0, "right", "top"),
+    ],
+)
+def test_the_box_grows_away_from_the_point(scene, x, y, ha, va) -> None:
+    """Reported: the box covered the selected point. Its baseline anchor made it extend down over the point."""
+    ax, annotation = scene
+    place_tooltip(annotation, x, y)
+    assert (annotation.get_ha(), annotation.get_va()) == (ha, va)
+
+
+def test_the_tooltip_is_kept_out_of_the_layout() -> None:
+    """Reported: the view still moved. An artist in the layout widens the tight bbox when it appears."""
+    from matplotlib.figure import Figure
+
+    from visualization.event_handlers.pointer_events import _annotation_for
+
+    figure = Figure(figsize=(3, 3))
+    axes = figure.add_subplot(111)
+    annotation = _annotation_for(figure)
+    assert annotation is not None
+    assert annotation.get_in_layout() is False, "the box must not re-lay-out the chart it annotates"

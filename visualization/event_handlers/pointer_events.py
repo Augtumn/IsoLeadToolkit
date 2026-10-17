@@ -130,6 +130,9 @@ def _annotation_for(figure: Any) -> Any:
             bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cbd5e1", alpha=0.95),
             arrowprops=dict(arrowstyle="->", color="#475569"),
         )
+        # A tooltip must not take part in the layout: as an ordinary artist it widened the figure's tight bbox,
+        # and the axes were re-laid-out whenever the box appeared - the view moved because the tooltip existed.
+        found.set_in_layout(False)
         found.set_visible(False)
         # Raising it is what keeps the box above the data and the labels. The call sat after the handler's
         # `return None`, so it never ran and the tooltip could be drawn under the points.
