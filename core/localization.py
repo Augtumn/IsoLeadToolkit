@@ -10,7 +10,13 @@ from .config import CONFIG, LOCALES_DIR
 logger = logging.getLogger(__name__)
 
 _TRANSLATIONS: dict[str, dict[str, str]] = {}
-_FALLBACK_LANGUAGE = CONFIG.get('default_language', 'en')
+def _fallback_language() -> str:
+    """The default language, read when it is needed.
+
+    This used to be captured at import time, which is before the user's configuration is merged into CONFIG -
+    so a configured default_language never applied and the built-in value stayed in force for the whole run.
+    """
+    return str(CONFIG.get('default_language', 'en') or 'en')
 _LOCALES_DIR = LOCALES_DIR
 
 
@@ -64,20 +70,20 @@ def translate(text: str, language: str | None = None, **kwargs: Any) -> str:
             # called from module-level code); a broken install raises elsewhere.
             logger.warning(
                 'core.state unavailable while translating %r, using %s',
-                text, _FALLBACK_LANGUAGE,
+                text, _fallback_language(),
             )
             app_state = None
         if app_state is not None:
             language = app_state.language
         else:
-            language = _FALLBACK_LANGUAGE
+            language = _fallback_language()
 
     ensure_language(language)
     translation = _TRANSLATIONS.get(language, {}).get(text)
 
-    if translation is None and language != _FALLBACK_LANGUAGE:
-        ensure_language(_FALLBACK_LANGUAGE)
-        translation = _TRANSLATIONS.get(_FALLBACK_LANGUAGE, {}).get(text, text)
+    if translation is None and language != _fallback_language():
+        ensure_language(_fallback_language())
+        translation = _TRANSLATIONS.get(_fallback_language(), {}).get(text, text)
 
     if translation is None:
         translation = text
@@ -131,4 +137,4 @@ def translation_table(language: str) -> dict[str, str]:
 
 def default_language() -> str:
     """The language whose texts are the lookup keys."""
-    return _FALLBACK_LANGUAGE
+    return _fallback_language()
