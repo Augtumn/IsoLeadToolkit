@@ -107,3 +107,23 @@ def test_tiling_without_windows_does_nothing(windows) -> None:
     panel.tile()  # must not raise
     assert panel.count() == 0
     assert DEFAULT_PANEL_SIZE[0] > 0
+
+
+def test_closing_a_middle_panel_keeps_the_live_windows(windows) -> None:
+    """Reported by review: closing a window that was not the last one dropped a good one instead.
+
+    ``sync`` shrinks the record list by popping its tail. When the user closes a window in the middle, the
+    count alone cannot say which record is gone, so the rebuild removed the last window's record and kept
+    the closed window's - the state then described a window that had gone, and the area lost a live one.
+    ``close_window`` removes by identity before anything rebuilds.
+    """
+    area, panels = windows
+    panels.sync(["2D", "UMAP", "tSNE"])
+    first, middle, last = panels.records
+
+    panels.close_window(middle["window"])
+
+    left = [record["window"] for record in panels.records]
+    assert left == [first["window"], last["window"]], "the two live windows are the ones left"
+    assert middle["window"] not in left, "the closed window is gone from the bookkeeping"
+    assert middle["window"].parent() is None, "and out of the area"

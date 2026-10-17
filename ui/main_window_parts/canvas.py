@@ -675,6 +675,10 @@ class MainWindowCanvasMixin:
             record for record in list(app_state.plot_panel_windows or [])
             if record.get("window") is not window
         ]
+        # Drop this window from the panel bookkeeping by identity, before anything rebuilds: `sync`
+        # shrinks by popping the tail, which removes a live window when the one closed is not the last.
+        if self._panel_windows is not None:
+            self._panel_windows.close_window(window)
         closed_was_active = any(
             record.get("window") is window and record.get("active")
             for record in list(app_state.plot_panel_windows or [])

@@ -77,6 +77,21 @@ class PanelWindows:
         """What was built: ``mode``, ``figure``, ``canvas``, ``window`` and ``axes``."""
         return list(self._records)
 
+    def close_window(self, window) -> None:
+        """Drop exactly *window*, by identity, and take it out of the area.
+
+        `sync` shrinks the list by popping its tail, so closing a window that was not the last one removed a
+        live window from the records and left the closed one in them: the state described a window that had
+        gone and the area lost a good one.
+        """
+        for index, record in enumerate(self._records):
+            if record.get("window") is window:
+                del self._records[index]
+                break
+        if window is not None:
+            self.area.removeSubWindow(window)
+            window.setParent(None)
+
     def sync(self, modes: Sequence[str]) -> list[dict[str, Any]]:
         """Make the windows match *modes*, adding and closing as needed."""
         from visualization.plotting.core import _add_axes
