@@ -131,15 +131,17 @@ def _annotation_for(figure: Any) -> Any:
             arrowprops=dict(arrowstyle="->", color="#475569"),
         )
         found.set_visible(False)
-    except Exception as err:
-        logger.warning("Could not create the hover annotation: %s", err)
-        return None
+        # Raising it is what keeps the box above the data and the labels. The call sat after the handler's
+        # `return None`, so it never ran and the tooltip could be drawn under the points.
         try:
             from visualization.plotting.tooltip import raise_tooltip_above_data
 
             raise_tooltip_above_data(axis, found)
         except Exception as err:
             logger.warning("Could not raise the hover annotation: %s", err)
+    except Exception as err:
+        logger.warning("Could not create the hover annotation: %s", err)
+        return None
     _figure_annotations[key] = found
     return found
 
