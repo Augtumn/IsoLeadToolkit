@@ -148,6 +148,20 @@ def modes_using_geochem_params() -> tuple[str, ...]:
     return tuple(mode for mode in RENDER_MODE_VALUES if MODE_CAPABILITIES[mode].uses_geochem_params)
 
 
+def algorithm_modes() -> tuple[str, ...]:
+    """The modes that name an algorithm: they have one and can run asynchronously.
+
+    One function for the set that was written out by hand in six places - the render use case, the event bridge, two
+    dispatch handlers, the normaliser and the data panel's projection list. They all meant these four embedding
+    modes, and a mode added to one of the copies would have been forgotten in the others.
+    """
+    return tuple(
+        mode
+        for mode in RENDER_MODE_VALUES
+        if MODE_CAPABILITIES[mode].has_algorithm and MODE_CAPABILITIES[mode].asynchronous
+    )
+
+
 def asynchronous_modes() -> tuple[str, ...]:
     """The modes whose embedding is computed in the background."""
     return tuple(mode for mode in RENDER_MODE_VALUES if MODE_CAPABILITIES[mode].asynchronous)

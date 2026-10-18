@@ -70,18 +70,20 @@ def _problems() -> list[str]:
             f"{sorted(_ASYNC_EMBEDDING_ALGORITHMS)} != the recorded {sorted(recorded)}"
         )
 
-    # ...and so does the worker's caller, which keeps a second copy of the same set.
+    # ...and so does the worker's caller. A copy is accepted only when it names every recorded mode; deriving the
+    # set from algorithm_modes() is better than a copy and is accepted as such.
     events_source = (ROOT / "visualization" / "events.py").read_text(encoding="utf-8")
     marker = "_ASYNC_EMBEDDING_ALGORITHMS"
     if marker in events_source:
         start = events_source.index(marker)
         line = events_source[start : events_source.index("\n", start)]
-        missing = [mode for mode in recorded if f'"{mode}"' not in line and f"'{mode}'" not in line]
-        if missing:
-            problems.append(
-                "visualization/events.py: _ASYNC_EMBEDDING_ALGORITHMS does not name "
-                f"{sorted(missing)}"
-            )
+        if "algorithm_modes()" not in line:
+            missing = [mode for mode in recorded if f'"{mode}"' not in line and f"'{mode}'" not in line]
+            if missing:
+                problems.append(
+                    "visualization/events.py: _ASYNC_EMBEDDING_ALGORITHMS neither derives from "
+                    f"algorithm_modes() nor names {sorted(missing)}"
+                )
 
     return problems
 

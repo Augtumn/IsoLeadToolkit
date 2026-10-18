@@ -7,6 +7,8 @@ full StateStore instance so it can access ``store._snapshot`` and ``store._state
 
 from __future__ import annotations
 
+from core.render_modes import algorithm_modes
+
 import logging
 from typing import Any
 
@@ -69,7 +71,7 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
     if action_type == "SET_RENDER_MODE":
         render_mode = str(action.get("render_mode", "UMAP") or "UMAP")
         store._snapshot["render_mode"] = render_mode
-        if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
+        if render_mode in algorithm_modes():
             store._snapshot["algorithm"] = render_mode
 
     elif action_type == "SET_ALGORITHM":
@@ -78,7 +80,7 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
         # For embedding algorithms the render mode IS the algorithm; without
         # this the sync step overwrote algorithm from render_mode and
         # set_algorithm() was silently a no-op.
-        if algorithm in ("UMAP", "tSNE", "PCA", "RobustPCA"):
+        if algorithm in algorithm_modes():
             store._snapshot["render_mode"] = algorithm
 
     elif action_type == "SET_UMAP_PARAMS":

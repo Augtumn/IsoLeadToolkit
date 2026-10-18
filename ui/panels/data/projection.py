@@ -1,6 +1,8 @@
 """Data panel projection behavior mixin."""
 from __future__ import annotations
 
+from core.render_modes import algorithm_modes
+
 import logging
 
 from PyQt5.QtCore import Qt
@@ -64,7 +66,7 @@ class DataPanelProjectionMixin:
         # is respected on the next session restart.
         state_gateway.set_preserve_import_render_mode(False)
 
-        if mode in ["UMAP", "tSNE", "PCA", "RobustPCA"]:
+        if mode in algorithm_modes():
             self._set_combo_value(self.algo_combo, mode)
 
         if mode == "2D" and not app_state.selected_2d_confirmed:

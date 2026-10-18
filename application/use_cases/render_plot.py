@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from core.render_modes import algorithm_modes
+
 import logging
 from typing import Any, Callable
 
@@ -9,7 +11,7 @@ from core import state_gateway
 
 logger = logging.getLogger(__name__)
 
-_ASYNC_EMBEDDING_ALGORITHMS = {"UMAP", "tSNE", "PCA", "RobustPCA"}
+_ASYNC_EMBEDDING_ALGORITHMS = set(algorithm_modes())
 
 
 class RenderPlotUseCase:

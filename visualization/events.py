@@ -1,6 +1,8 @@
 """Event orchestration entrypoints for plotting updates and interactions."""
 from __future__ import annotations
 
+from core.render_modes import algorithm_modes
+
 import logging
 from typing import Any
 
@@ -24,7 +26,7 @@ from .plotting.rendering.common.state_access import (
 
 logger = logging.getLogger(__name__)
 
-_ASYNC_EMBEDDING_ALGORITHMS = {'UMAP', 'tSNE', 'PCA', 'RobustPCA'}
+_ASYNC_EMBEDDING_ALGORITHMS = set(algorithm_modes())
 
 
 def panel_figures() -> list[Any]:

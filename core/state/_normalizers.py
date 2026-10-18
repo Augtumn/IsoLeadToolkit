@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from core.render_modes import algorithm_modes
+
 import logging
 from collections.abc import Iterable
 from typing import Any
@@ -86,7 +88,7 @@ def sync_state_store_to_app(state: Any, snapshot: dict[str, Any]) -> None:
     """Write snapshot values back to the live app state object."""
     render_mode = str(snapshot["render_mode"])
     algorithm = str(snapshot["algorithm"])
-    if render_mode in ("UMAP", "tSNE", "PCA", "RobustPCA"):
+    if render_mode in algorithm_modes():
         algorithm = render_mode
         snapshot["algorithm"] = algorithm
 
