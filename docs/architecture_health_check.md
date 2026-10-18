@@ -17,7 +17,7 @@
 | 值得改 ⑦ paleoisochron 派生量 | ✅ 已做 | `cba957f` | `paleoisochron_age_list()` 唯一公式；不再持久化；恢复时重算 |
 | 附带扫描：可变默认值 / 浅拷贝 | ✅ 已查，**无缺陷** | — | AST 扫描：0 个可变默认参数；11 处浅拷贝的对象全为扁平表 |
 | 必须改 ① 面板 4 表示 → `PanelRecord` | ✅ 已做（读侧） | `395251d` `4277627` `7ca8672` `198e84c` | `core/panel_record.py` 14 键契约；两个生产者统一；**全部读访问点已迁到属性** ✓ 剩余 `record.get(` 只有 5 处 `isinstance(…, dict)` 守卫（设计保留：这些路径可能收到普通 mapping ✓）与 1 处文档注释；dict 基类保留作为写侧兼容层（写仍用 `record["…"] = …`）|
-| 必须改 ② `canvas.py` 拆分 | ⏳ 未做 | — | 仍是最大的一项 |
+| 必须改 ② `canvas.py` 拆分 | 🚧 阶段 1 已做 | 见本轮提交 | 视图计算下沉 `visualization/plotting/view_fit.py`：`scatter_bounds` / `fit_axes` / `panel_targets` 纯函数化并**直接单测**（7 条）；canvas.py **1380 → 1327 行**；`check_panel_singletons` 基线**未下降**（诚实记录：挪走的代码不含单例读取，调用方仍读 `app_state.ax`/`render_mode`）；剩余职责（面板窗口构建/激活、事件过滤、工具栏重定向）待后续阶段 |
 | 值得改 ⑧ 面板控件显式容器 | ⏳ 未做 | — | 98 处 `= None` 影子声明 |
 
 **两条原始判断被测量纠正**（保留原文，但以此处为准）：

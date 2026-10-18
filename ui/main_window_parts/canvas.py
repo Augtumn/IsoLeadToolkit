@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import math
 from pathlib import Path
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -12,6 +11,7 @@ from PyQt5.QtGui import QIcon, QWindow
 from PyQt5.QtWidgets import QAction, QApplication, QMenu, QStyle, QWidget
 
 from core import app_state, state_gateway, translate
+from visualization.plotting.view_fit import fit_axes, panel_targets
 
 logger = logging.getLogger(__name__)
 
@@ -67,34 +67,6 @@ def copy_toolbar_actions(source, target, translations=None) -> None:
                 action.setToolTip(translate(tr_key))
                 break
 
-
-def _scatter_bounds(axis):
-    """``(xs, ys, zs)`` of every finite point the axes currently draws."""
-    xs: list[float] = []
-    ys: list[float] = []
-    zs: list[float] = []
-    for collection in getattr(axis, "collections", []) or []:
-        try:
-            offsets = collection.get_offsets()
-        except Exception:
-            continue
-        for point in offsets if offsets is not None else []:
-            try:
-                x, y = float(point[0]), float(point[1])
-            except (TypeError, ValueError, IndexError):
-                continue
-            if not (math.isfinite(x) and math.isfinite(y)):
-                continue
-            xs.append(x)
-            ys.append(y)
-            if len(point) > 2:
-                try:
-                    z = float(point[2])
-                except (TypeError, ValueError):
-                    continue
-                if math.isfinite(z):
-                    zs.append(z)
-    return xs, ys, zs
 
 
 def refresh_panel_labels(axes=None) -> None:
@@ -511,40 +483,13 @@ class MainWindowCanvasMixin:
         logger.info("Hover readout %s", "on" if checked else "off")
 
     def _panels_for_fit(self):
-        """The axes to frame: one per panel window, or the single active axes."""
-        axes = []
-        for record in list(app_state.plot_panel_windows or []):
-            axis = record.axes
-            if axis is not None:
-                axes.append((record.mode, axis))
-        if not axes and app_state.ax is not None:
-            axes.append((str(getattr(app_state, "render_mode", "") or ""), app_state.ax))
-        return axes
+        """The axes to frame: which panels is the window's business, the framing is view_fit's."""
+        return panel_targets(app_state.plot_panel_windows, app_state.ax, app_state.render_mode)
 
     @staticmethod
     def _fit_one_axes(mode, axis) -> bool:
-        """Frame one axes around the points it draws; True when something was framed."""
-        name = getattr(axis, "name", "")
-        if name == "ternary" or str(mode).strip().upper() == "TERNARY":
-            # The whole triangle is the widest view a ternary diagram has.
-            axis.set_ternary_lim(0.0, 1.0, 0.0, 1.0, 0.0, 1.0)
-            return True
-        xs, ys, zs = _scatter_bounds(axis)
-        if not xs:
-            return False
-        if name == "3d":
-            axis.set_xlim(min(xs), max(xs))
-            axis.set_ylim(min(ys), max(ys))
-            if zs:
-                axis.set_zlim(min(zs), max(zs))
-            return True
-        span_x = max(xs) - min(xs)
-        span_y = max(ys) - min(ys)
-        pad_x = span_x * 0.05 if span_x > 0 else 1.0
-        pad_y = span_y * 0.05 if span_y > 0 else 1.0
-        axis.set_xlim(min(xs) - pad_x, max(xs) + pad_x)
-        axis.set_ylim(min(ys) - pad_y, max(ys) + pad_y)
-        return True
+        """Frame one axes around the points it draws; the rule lives in visualization.plotting.view_fit."""
+        return fit_axes(mode, axis)
 
     def _retarget_toolbar(self, canvas) -> None:
         """Point the main toolbar's navigation buttons at *canvas*, by rebuilding them.

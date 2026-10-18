@@ -12,7 +12,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pytest
 
-from ui.main_window_parts.canvas import MainWindowCanvasMixin, _scatter_bounds
+from ui.main_window_parts.canvas import MainWindowCanvasMixin
+from visualization.plotting.view_fit import scatter_bounds as _scatter_bounds
 
 
 @pytest.fixture()
