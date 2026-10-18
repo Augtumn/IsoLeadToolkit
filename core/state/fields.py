@@ -1197,6 +1197,15 @@ SIMPLE_FIELDS: tuple[StateField, ...] = (
         holder=None,
     ),
     StateField(
+        # Legend placement per panel, keyed by the panel's position, so a session keeps the legends where the user
+        # put them. The panel record holds the same dict while the window lives.
+        "plot_panel_legends",
+        {},
+        normalize=coercers._normalize_panel_legends,
+        copy=coercers._copy_panel_legends,
+        holder=None,
+    ),
+    StateField(
         # Value of the active grouping column -> the column that splits it. The children the
         # split produces are registered through parent_groups, so the plot, the legend, the
         # colours, the per-parent marker shape and the visibility checkboxes are unchanged.

@@ -12,6 +12,7 @@ from typing import Any
 # registry in core/state/fields.py); re-exported here for the existing
 # importers (store, dispatch handlers).
 from .coercers import (  # noqa: F401  (re-export)
+    _normalize_panel_legends,
     _ADJUST_TEXT_ITER_MAX,
     _ADJUST_TEXT_ITER_MIN,
     _ADJUST_TEXT_TIME_MAX,

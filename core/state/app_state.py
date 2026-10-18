@@ -60,6 +60,9 @@ class AppState:
         # Several entries put that many figures side by side, so the same data can be judged
         # by different means at once.
         self.plot_panels: list[str] = []
+        # Legend placement per panel, keyed by the panel position; the record keeps it while the window
+        # lives, and this is what carries it through a session.
+        self.plot_panel_legends: dict[str, dict] = {}
         #: Runtime, not state: what each panel drew last time (its axes, its scatter
         #: collections and both directions of the sample map). Rebuilt on every render and
         #: used by hover and click to find the same sample in the other panels.

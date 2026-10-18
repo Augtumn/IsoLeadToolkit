@@ -194,6 +194,7 @@ def _snapshot_state() -> dict[str, Any]:
             str(k): str(v) for k, v in (getattr(app_state, "group_decomposition", {}) or {}).items()
         },
         "plot_panels": list(getattr(app_state, "plot_panels", []) or []),
+        "plot_panel_legends": dict(getattr(app_state, "plot_panel_legends", {}) or {}),
         "param_presets": {
             str(k): dict(v or {}) for k, v in (getattr(app_state, "param_presets", {}) or {}).items()
         },

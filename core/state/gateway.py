@@ -829,6 +829,10 @@ class AppStateGateway:
         """The render mode per panel; [] or one entry is the ordinary one-figure window."""
         self._dispatch("SET_PLOT_PANELS", panels=[str(panel) for panel in list(panels or [])])
 
+    def set_plot_panel_legends(self, legends: dict) -> None:
+        """The legend placement per panel, keyed by the panel position."""
+        self._dispatch("SET_PLOT_PANEL_LEGENDS", legends=dict(legends or {}))
+
     def restore_snapshot(self, payload: dict) -> None:
         """Bulk-restore whitelisted persisted fields (startup only)."""
         self._store.restore_snapshot(payload)

@@ -445,3 +445,29 @@ def _normalize_ternary_value_display(value: Any) -> str:
     """
     name = str(value or "raw").strip().lower()
     return name if name in ("raw", "normalized") else "raw"
+
+
+def _normalize_panel_legends(value: Any) -> dict[str, dict[str, Any]]:
+    """Panel position -> legend placement, from whatever a saved file carried.
+
+    A legend placement is a small dict per panel (frame, position, location, offset). Anything that is not a dict is
+    dropped rather than kept, because a hand-edited file must not put a stranger in the renderer's path.
+    """
+    if not isinstance(value, dict):
+        return {}
+    placement: dict[str, dict[str, Any]] = {}
+    for key, entry in value.items():
+        if isinstance(entry, dict):
+            placement[str(key)] = dict(entry)
+    return placement
+
+
+def _copy_panel_legends(value: Any) -> dict[str, dict[str, Any]]:
+    """A copy the caller cannot change the stored placement through.
+
+    The entries are copied deeply: the placement holds tuples and numbers today, and a shallow copy would share
+    whatever mutable value is added next - the same reading of "copy" that let an export profile rewrite a preset.
+    """
+    from copy import deepcopy
+
+    return {str(key): deepcopy(entry) for key, entry in (value or {}).items() if isinstance(entry, dict)}

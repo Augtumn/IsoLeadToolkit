@@ -19,7 +19,7 @@ from matplotlib.figure import Figure
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QMdiArea, QMdiSubWindow
 
-from core import translate
+from core import app_state, translate
 
 #: The size a new child window opens at, in pixels.
 DEFAULT_PANEL_SIZE = (520, 420)
@@ -130,6 +130,10 @@ class PanelWindows:
                     # A brand-new window is the one moment the view is framed. The flag is cleared
                     # once framed, so no later render, switch or rebuild frames it again.
                     "needs_fit": True,
+                    # The placement the session held for this position, so a reopened session keeps its legends.
+                    "legend": dict(
+                        (getattr(app_state, "plot_panel_legends", None) or {}).get(str(index)) or {}
+                    ),
                 }
             )
         for record, mode in zip(self._records, wanted):

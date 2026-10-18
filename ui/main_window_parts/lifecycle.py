@@ -129,6 +129,18 @@ class MainWindowLifecycleMixin:
         try:
             from application.use_cases import export_session
 
+            # The panel records keep their legend placement while the windows live; the state has to hear about it
+            # before the save, or the placement is the one thing a session does not carry.
+            try:
+                records = list(app_state.plot_panel_windows or [])
+                state_gateway.set_plot_panel_legends({
+                    str(index): dict(record.get("legend") or {})
+                    for index, record in enumerate(records)
+                    if record.get("legend")
+                })
+            except Exception as err:
+                logger.warning("Could not record the panel legends before saving: %s", err)
+
             if export_session(path):
                 logger.info("Session exported to %s", path)
                 self.statusBar().showMessage(

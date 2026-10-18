@@ -15,6 +15,7 @@ from typing import Any
 from ..config import CONFIG
 from ..legend_state import DEFAULT_LEGEND_FRAME_ALPHA
 from ._normalizers import (
+    _normalize_panel_legends,
     _normalize_active_subset_indices,
     _normalize_adjust_text_iter_lim,
     _normalize_adjust_text_pair,
@@ -900,6 +901,9 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
 
     elif action_type == "SET_PLOT_PANELS":
         store._snapshot["plot_panels"] = [str(p) for p in list(action.get("panels") or [])]
+
+    elif action_type == "SET_PLOT_PANEL_LEGENDS":
+        store._snapshot["plot_panel_legends"] = _normalize_panel_legends(action.get("legends"))
 
     elif action_type == "SET_PARENT_SHAPE_MAP":
         store._snapshot["parent_shape_map"] = {
