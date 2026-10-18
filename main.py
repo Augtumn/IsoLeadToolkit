@@ -1,7 +1,7 @@
 """
 Isotopes Analysis - PyQt5 entry point
 """
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import os
 import sys
@@ -32,13 +32,7 @@ def _configure_qt_debug_mode(argv):
     os.environ.setdefault('QT_DEBUG_PLUGINS', '1')
     os.environ.setdefault(
         'QT_LOGGING_RULES',
-        ';'.join([
-            '*.debug=true',
-            'qt.qpa.*=true',
-            'qt.widgets.*=true',
-            'qt.gui.*=true',
-            'qt.core.qobject.*=true',
-        ])
+        '*.debug=true;qt.qpa.*=true;qt.widgets.*=true;qt.gui.*=true;qt.core.qobject.*=true'
     )
 
 
@@ -58,7 +52,7 @@ if __name__ == "__main__":
         try:
             faulthandler.enable(file=sys.stderr, all_threads=True)
             logger.info("Crash handler enabled")
-        except Exception as fh_err:
+        except Exception as fh_err:  # noqa: BLE001
             logger.warning("Failed to enable crash handler: %s", fh_err)
 
         if os.environ.get('ISOTOPES_QT_DEBUG', '').strip() == '1':
@@ -69,7 +63,7 @@ if __name__ == "__main__":
         success = app.run()
         logger.info("Application exit code: %s", 0 if success else 1)
         sys.exit(0 if success else 1)
-    except Exception as final_err:
+    except Exception as final_err:  # noqa: BLE001
         logger.critical("Uncaught exception: %s", final_err)
         traceback.print_exc()
         sys.exit(1)
