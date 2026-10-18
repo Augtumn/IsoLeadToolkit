@@ -30,6 +30,53 @@ REQUIRES_DataPanelBuildMixin = (
 logger = logging.getLogger(__name__)
 
 
+
+#: The widgets this panel builds, with the value each falls back to. One list instead of thirty
+#: assignments, so the set is visible in one place and a reset cannot forget a member. Mutable
+#: defaults are given as factories, so every reset gets a fresh object.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'group_radio_group': None,
+    'group_radio_layout': None,
+    'group_placeholder_label': None,
+    'tooltip_check': None,
+    'render_combo': None,
+    'algo_combo': None,
+    'algo_group': None,
+    'umap_group': None,
+    'tsne_group': None,
+    'pca_group': None,
+    'robust_pca_group': None,
+    'ternary_group': None,
+    'ternary_auto_zoom_check': None,
+    'ternary_limit_mode_combo': None,
+    'ternary_manual_limits_check': None,
+    'ternary_limit_spins': dict,
+    'ternary_render_margin_spin': None,
+    'spinboxes': dict,
+    'v1v2_group': None,
+    'v1v2_t1_spin': None,
+    'v1v2_t2_spin': None,
+    'twod_group': None,
+    'xaxis_combo': None,
+    'yaxis_combo': None,
+    'pca_x_spin': None,
+    'pca_y_spin': None,
+    'rpca_x_spin': None,
+    'rpca_y_spin': None,
+    'metric_combo': None,
+    'plumbotectonics_model_keys': list,
+}
+
+def reset_widget_state(owner: object) -> None:
+    """Set every declared widget back to its default on *owner*.
+
+    A function rather than a loop inside the mixin so it can be tested without a window: the panel's reset_state is
+    one call to this.
+    """
+    for name, default in _WIDGET_DEFAULTS.items():
+        setattr(owner, name, default() if callable(default) else default)
+
+
 class DataPanelBuildMixin(
     DataPanelColoringBuildMixin,
     DataPanelProjectionBuildMixin,
@@ -47,36 +94,7 @@ class DataPanelBuildMixin(
 
     def reset_state(self):
         super().reset_state()
-        self.group_radio_group = None
-        self.group_radio_layout = None
-        self.group_placeholder_label = None
-        self.tooltip_check = None
-        self.render_combo = None
-        self.algo_combo = None
-        self.algo_group = None
-        self.umap_group = None
-        self.tsne_group = None
-        self.pca_group = None
-        self.robust_pca_group = None
-        self.ternary_group = None
-        self.ternary_auto_zoom_check = None
-        self.ternary_limit_mode_combo = None
-        self.ternary_manual_limits_check = None
-        self.ternary_limit_spins = {}
-        self.ternary_render_margin_spin = None
-        self.spinboxes = {}
-        self.v1v2_group = None
-        self.v1v2_t1_spin = None
-        self.v1v2_t2_spin = None
-        self.twod_group = None
-        self.xaxis_combo = None
-        self.yaxis_combo = None
-        self.pca_x_spin = None
-        self.pca_y_spin = None
-        self.rpca_x_spin = None
-        self.rpca_y_spin = None
-        self.metric_combo = None
-        self.plumbotectonics_model_keys = []
+        reset_widget_state(self)
 
     def _update_translations(self, root: QWidget | None = None) -> None:
         """Refresh translated widget text and ternary mode combo options."""
