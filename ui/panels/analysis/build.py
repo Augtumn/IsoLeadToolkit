@@ -1,6 +1,8 @@
 """Analysis panel build mixin."""
 from __future__ import annotations
 
+from ui.panels.widget_state import reset_widget_state
+
 from PyQt5.QtCore import Qt
 
 _CONFIDENCE_LEVEL_1SIGMA: float = 0.68
@@ -31,20 +33,28 @@ REQUIRES_AnalysisPanelBuildMixin = (
 )
 
 
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'selection_button': None,
+    'ellipse_selection_button': None,
+    'lasso_selection_button': None,
+    'selection_status_label': None,
+    'mixing_group_name_edit': None,
+    'mixing_status_label': None,
+    'confidence_68_radio': None,
+    'confidence_95_radio': None,
+    'confidence_99_radio': None,
+}
+
+
 class AnalysisPanelBuildMixin:
     """Build UI widgets for the analysis tab."""
 
     def reset_state(self):
         super().reset_state()
-        self.selection_button = None
-        self.ellipse_selection_button = None
-        self.lasso_selection_button = None
-        self.selection_status_label = None
-        self.mixing_group_name_edit = None
-        self.mixing_status_label = None
-        self.confidence_68_radio = None
-        self.confidence_95_radio = None
-        self.confidence_99_radio = None
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def build(self) -> QWidget:
         widget = self._build_analysis_section()

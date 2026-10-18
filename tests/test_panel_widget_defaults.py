@@ -1,8 +1,9 @@
 """The panels declare their widgets once, and the reset follows the declaration.
 
-Three panels used to set their widget attributes one assignment per line in reset_state - thirty, fifty-four and
-twenty-one lines. They are one table each now, naming every widget and its fallback, and a shared helper applies it
-so a reset cannot forget a member. The reads did not move, which is what makes it safe.
+Every panel used to set its widget attributes one assignment per line in reset_state - 147 assignments across the
+eight of them. Each panel has one table now, naming every widget and its fallback, and ui/panels/widget_state.py
+holds the single function that applies it, so a reset cannot forget a member and the set reads in one place. The
+reads did not move, which is what makes it safe.
 
 Each table is pinned by name: dropping a widget from a declaration fails here before it fails in the application.
 """
@@ -12,14 +13,45 @@ import pathlib
 
 import pytest
 
+from ui.panels.analysis.build import _WIDGET_DEFAULTS as ANALYSIS
+from ui.panels.base_panel import _WIDGET_DEFAULTS as BASE
 from ui.panels.data.build import _WIDGET_DEFAULTS as DATA
 from ui.panels.display.build import _WIDGET_DEFAULTS as DISPLAY
-from ui.panels.geochemistry.overlays import _WIDGET_DEFAULTS as GEOCHEM
+from ui.panels.export.build import _WIDGET_DEFAULTS as EXPORT
+from ui.panels.geochemistry.overlays import _WIDGET_DEFAULTS as GEOCHEM_OVERLAYS
+from ui.panels.geochemistry.panel import _WIDGET_DEFAULTS as GEOCHEM_PANEL
+from ui.panels.legend.build import _WIDGET_DEFAULTS as LEGEND
 from ui.panels.widget_state import reset_widget_state
 
 
 class _Host:
     pass
+
+#: analysis panel
+EXPECTED_ANALYSIS = (
+    'confidence_68_radio',
+    'confidence_95_radio',
+    'confidence_99_radio',
+    'ellipse_selection_button',
+    'lasso_selection_button',
+    'mixing_group_name_edit',
+    'mixing_status_label',
+    'selection_button',
+    'selection_status_label',
+)
+
+#: base panel
+EXPECTED_BASE = (
+    '_debounce_timers',
+    '_is_initialized',
+    '_slider_steps',
+    '_slider_timers',
+    '_style_snapshot',
+    'check_vars',
+    'labels',
+    'radio_vars',
+    'sliders',
+)
 
 #: data panel
 EXPECTED_DATA = (
@@ -113,8 +145,22 @@ EXPECTED_DISPLAY = (
     'ui_theme_combo',
 )
 
-#: geochemistry panel
-EXPECTED_GEOCHEMISTRY = (
+#: export panel
+EXPECTED_EXPORT = (
+    '_scienceplots_available',
+    'export_append_button',
+    'export_csv_button',
+    'export_excel_button',
+    'export_image_button',
+    'export_origin_button',
+    'export_origin_data_button',
+    'image_preset_combo',
+    'image_style_source_label',
+    'preview_image_button',
+)
+
+#: geochem_overlays panel
+EXPECTED_GEOCHEM_OVERLAYS = (
     'calc_isochron_btn',
     'geochem_plot_group',
     'isochron_settings_btn',
@@ -138,7 +184,31 @@ EXPECTED_GEOCHEMISTRY = (
     'show_paleoisochron_check',
 )
 
-DECLARATIONS = {"data": (DATA, EXPECTED_DATA), "display": (DISPLAY, EXPECTED_DISPLAY), "geochemistry": (GEOCHEM, EXPECTED_GEOCHEMISTRY)}
+#: geochem_panel panel
+EXPECTED_GEOCHEM_PANEL = (
+    'geo_model_combo',
+    'geo_param_labels',
+    'geo_params',
+    'geo_section_labels',
+)
+
+#: legend panel
+EXPECTED_LEGEND = (
+    '_last_palette_name',
+    'auto_base_shape_combo',
+    'auto_palette_combo',
+    'auto_shape_set_combo',
+    'auto_style_btn',
+    'legend_columns_spin',
+    'legend_inside_buttons',
+    'legend_nudge_step',
+    'legend_outside_buttons',
+    'legend_step_spin',
+)
+
+DECLARATIONS = {"analysis": (ANALYSIS, EXPECTED_ANALYSIS), "base": (BASE, EXPECTED_BASE), "data": (DATA, EXPECTED_DATA), "display": (DISPLAY, EXPECTED_DISPLAY), "export": (EXPORT, EXPECTED_EXPORT), "geochem_overlays": (GEOCHEM_OVERLAYS, EXPECTED_GEOCHEM_OVERLAYS), "geochem_panel": (GEOCHEM_PANEL, EXPECTED_GEOCHEM_PANEL), "legend": (LEGEND, EXPECTED_LEGEND)}
+
+MODULES = {"analysis": "ui/panels/analysis/build.py", "base": "ui/panels/base_panel.py", "data": "ui/panels/data/build.py", "display": "ui/panels/display/build.py", "export": "ui/panels/export/build.py", "geochem_overlays": "ui/panels/geochemistry/overlays.py", "geochem_panel": "ui/panels/geochemistry/panel.py", "legend": "ui/panels/legend/build.py"}
 
 
 @pytest.mark.parametrize("label", sorted(DECLARATIONS))
@@ -165,15 +235,13 @@ def test_mutable_defaults_are_fresh_on_every_reset(label: str) -> None:
     for name in mutables:
         first = getattr(host, name)
         reset_widget_state(host, defaults)
-        assert getattr(host, name) is not first, name + " must get a fresh object per reset"
+        assert getattr(host, name) is not first, name
 
 
 @pytest.mark.parametrize("label", sorted(DECLARATIONS))
 def test_the_mixin_reset_calls_the_shared_helper(label: str) -> None:
     root = pathlib.Path(__file__).resolve().parents[1]
-    modules = {"data": "ui/panels/data/build.py", "display": "ui/panels/display/build.py",
-               "geochemistry": "ui/panels/geochemistry/overlays.py"}
-    source = (root / modules[label]).read_text(encoding="utf-8").replace("\r\n", "\n")
+    source = (root / MODULES[label]).read_text(encoding="utf-8").replace("\r\n", "\n")
     start = source.index("def reset_state")
     end = source.index("\n    def ", start + 1)
     assert "reset_widget_state(self, _WIDGET_DEFAULTS)" in source[start:end]

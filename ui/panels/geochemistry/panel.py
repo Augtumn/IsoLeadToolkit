@@ -1,6 +1,8 @@
 """Geochemistry panel: model parameters plus overlay plot controls."""
 from __future__ import annotations
 
+from ui.panels.widget_state import reset_widget_state
+
 import logging
 
 from PyQt5.QtWidgets import (
@@ -41,15 +43,23 @@ PANEL_META = {
 }
 
 
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'geo_params': dict,
+    'geo_param_labels': dict,
+    'geo_section_labels': dict,
+    'geo_model_combo': None,
+}
+
+
 class GeoPanel(GeoPanelOverlaysBuildMixin, GeoPanelOverlaysMixin, BasePanel):
     """地球化学标签页"""
 
     def reset_state(self):
         super().reset_state()
-        self.geo_params = {}
-        self.geo_param_labels = {}
-        self.geo_section_labels = {}
-        self.geo_model_combo = None
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def _build_params_section(self) -> QWidget:
         widget = QWidget()

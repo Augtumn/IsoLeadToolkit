@@ -1,6 +1,8 @@
 """Legend panel UI construction and editors."""
 from __future__ import annotations
 
+from ui.panels.widget_state import reset_widget_state
+
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import (
     QComboBox,
@@ -43,6 +45,22 @@ REQUIRES_LegendBuildMixin = (
 )
 
 
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'legend_inside_buttons': dict,
+    'legend_outside_buttons': dict,
+    'legend_columns_spin': None,
+    'legend_step_spin': None,
+    'auto_palette_combo': None,
+    'auto_shape_set_combo': None,
+    'auto_base_shape_combo': None,
+    'auto_style_btn': None,
+    'legend_nudge_step': 0.02,
+    '_last_palette_name': None,
+}
+
+
 class LegendBuildMixin:
     """Build and helper methods for legend panel."""
     legend_inside_buttons = None
@@ -53,16 +71,8 @@ class LegendBuildMixin:
 
     def reset_state(self):
         super().reset_state()
-        self.legend_inside_buttons = {}
-        self.legend_outside_buttons = {}
-        self.legend_columns_spin = None
-        self.legend_step_spin = None
-        self.auto_palette_combo = None
-        self.auto_shape_set_combo = None
-        self.auto_base_shape_combo = None
-        self.auto_style_btn = None
-        self.legend_nudge_step = 0.02
-        self._last_palette_name = None
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def build(self) -> QWidget:
         widget = QWidget()

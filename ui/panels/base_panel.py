@@ -1,6 +1,8 @@
 """面板基类 - 提供共享工具方法"""
 from __future__ import annotations
 
+from ui.panels.widget_state import reset_widget_state
+
 import json
 import logging
 from typing import Callable
@@ -84,6 +86,21 @@ _STYLE_WIDGET_MAP: list[tuple] = [
 ]
 
 from .panel_style import PanelStyleMixin
+
+
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'sliders': dict,
+    'labels': dict,
+    'radio_vars': dict,
+    'check_vars': dict,
+    '_slider_steps': dict,
+    '_slider_timers': dict,
+    '_debounce_timers': dict,
+    '_style_snapshot': dict,
+    '_is_initialized': False,
+}
 
 
 class BasePanel(PanelStyleMixin, QWidget):
@@ -170,15 +187,9 @@ class BasePanel(PanelStyleMixin, QWidget):
 
     def reset_state(self):
         """重置面板 widget 引用，子类必须实现"""
-        self.sliders = {}
-        self.labels = {}
-        self.radio_vars = {}
-        self.check_vars = {}
-        self._slider_steps = {}
-        self._slider_timers = {}
-        self._debounce_timers = {}
-        self._style_snapshot = {}
-        self._is_initialized = False
+        # The root of the panel tree: there is no reset above this one to call.
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def _update_translations(self, root: QWidget | None = None) -> None:
         """遍历控件树，根据 ``translate_key`` 属性更新文本。

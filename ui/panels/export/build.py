@@ -1,6 +1,8 @@
 """Build/reset logic for export panel."""
 from __future__ import annotations
 
+from ui.panels.widget_state import reset_widget_state
+
 import json
 
 from PyQt5.QtCore import Qt
@@ -26,21 +28,29 @@ REQUIRES_ExportPanelBuildMixin = (
 )
 
 
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'export_csv_button': None,
+    'export_excel_button': None,
+    'export_append_button': None,
+    'image_preset_combo': None,
+    'image_style_source_label': None,
+    'export_image_button': None,
+    'preview_image_button': None,
+    'export_origin_button': None,
+    'export_origin_data_button': None,
+    '_scienceplots_available': None,
+}
+
+
 class ExportPanelBuildMixin:
     """Build/reset behavior for ExportPanel."""
 
     def reset_state(self):
         super().reset_state()
-        self.export_csv_button = None
-        self.export_excel_button = None
-        self.export_append_button = None
-        self.image_preset_combo = None
-        self.image_style_source_label = None
-        self.export_image_button = None
-        self.preview_image_button = None
-        self.export_origin_button = None
-        self.export_origin_data_button = None
-        self._scienceplots_available = None
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def build(self) -> QWidget:
         export_options = state_gateway.get_export_image_options()
