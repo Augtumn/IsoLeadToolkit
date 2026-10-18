@@ -3,6 +3,28 @@
 本报告只写**可测量的事实**与**有证据的判断**。方法：静态导入图 + AST 统计 + 守卫实测，全部数字可用文末命令复现。
 范围：`main` 分支（本报告落库时的 HEAD）。
 
+
+## 〇、进度（2026-10-18 更新）
+
+报告是落库时的快照。下面这些条目已经落地，或被后续测量纠正。编号见 §四。
+
+| 条目 | 状态 | 提交 | 说明 |
+|---|---|---|---|
+| 值得改 ③ 删 `_refresh_labels_for` 死代码 | ✅ 已做 | `88aae54` | 44 行重复实现已删，仓库内已无引用 |
+| 值得改 ④ `PROJECTIONS` 并入能力表 | ✅ 已做 | `0db433d` | 投影由 `capabilities_for(mode).projection` 唯一给出，仓库内已无 `PROJECTIONS` |
+| 值得改 ⑤ 异步算法集合去重 | ✅ 已做 | `ee857dc` | `algorithm_modes()` 单一来源；`check_render_modes.py` 改为接受派生形式 |
+| 值得改 ⑥ 每面板图例做成真状态 | ✅ 已做 | `68162b2` | 新字段 `plot_panel_legends`：保存前回写、建面板时种入、深层拷贝、脏数据归一化 |
+| 值得改 ⑦ paleoisochron 派生量 | ✅ 已做 | `cba957f` | `paleoisochron_age_list()` 唯一公式；不再持久化；恢复时重算 |
+| 附带扫描：可变默认值 / 浅拷贝 | ✅ 已查，**无缺陷** | — | AST 扫描：0 个可变默认参数；11 处浅拷贝的对象全为扁平表 |
+| 必须改 ① 面板 4 表示 → `PanelRecord` | ⏳ 未做 | — | 仍是最大的一项 |
+| 必须改 ② `canvas.py` 拆分 | ⏳ 未做 | — | 仍是最大的一项 |
+| 值得改 ⑧ 面板控件显式容器 | ⏳ 未做 | — | 98 处 `= None` 影子声明 |
+
+**两条原始判断被测量纠正**（保留原文，但以此处为准）：
+
+- §3.3 "每面板图例是存在但不会持久化的选项"：**前半句不成立** ✓ —— `render_plot.py` 逐面板应用 `record["legend"]`（frame/position/location/offset），图例控件也显示该面板的放置，所以它**是真状态**，只是**没持久化** ✓；已按"做成真状态"落地（`68162b2`）。
+- 上文"异步集合两份、`PROJECTIONS` 第二份"：**两者都已消除** ✓（`ee857dc` / `0db433d`）。
+
 ## 一、总体判断
 
 **骨架是健康的；问题不是"散"，而是三处"重"与两处"多副本"。**
@@ -63,7 +85,7 @@
 
 **方向**：让 **`PanelRecord` 成为唯一契约**（纯数据、无 Qt，放在 `visualization/plotting/panels.py`），把 43 处 `record.get("…")` 换成属性访问，并让 `PanelWindows.sync` 成为唯一生产点。
 
-### 3.2 渲染模式相关：2 处真重复 ✗
+### 3.2 渲染模式相关：2 处真重复 ✗（**两处均已消除** ✓ `0db433d` / `ee857dc`）
 
 - `visualization/plotting/panels.py` 的 `PROJECTIONS` 是**第二份**投影映射（`MODE_CAPABILITIES.projection` 之外 ✓），`check_render_modes.py` **不检查它** ✗；
 - `_ASYNC_EMBEDDING_ALGORITHMS` 在 `application/use_cases/render_plot.py` 与 `visualization/events.py` **各有一份** ✗（守卫强制一致，但仍是两份 ✓）。
@@ -72,7 +94,7 @@
 
 ### 3.3 另外两处小的"多副本"
 
-- **每面板图例**：全局 `legend_position`/`legend_location` 各被引用 32/33 次，而每面板 `record["legend"]` 只被引用 **1** 次 ✗ ⇒ 这是一个"存在但不会持久化"的选项（重启即丢 ✓）⇒ 要么做成真状态，要么去掉；
+- **每面板图例**：~~全局 `legend_position`/`legend_location` 各被引用 32/33 次，而每面板 `record["legend"]` 只被引用 **1** 次 ✗ ⇒ 这是一个"存在但不会持久化"的选项（重启即丢 ✓）⇒ 要么做成真状态，要么去掉；~~ **测量纠正**：`record["legend"]` 由渲染逐面板应用、图例控件也显示它，是**真状态**，缺的只是持久化 ✓ ⇒ **已做成真状态**（新增 `plot_panel_legends` 字段，提交 `68162b2`）✓
 - **paleoisochron**：`ages` 是 `min/max/step` 的派生量却与三者一起持久化（各 ~14 次引用 ✓）⇒ 会话文件可能出现互相矛盾的组合；应由 dispatch 层重算、只持久化 min/max/step。
 
 ## 四、问题清单（分三档，避免"什么都要改"）
