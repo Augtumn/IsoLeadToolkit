@@ -82,3 +82,17 @@ def stop_analysis_worker(worker: Any, wait_ms: int = 5000) -> None:
         worker.deleteLater()
     except Exception as exc:
         logger.warning("Failed to stop analysis worker: %s", exc)
+
+
+def restore_wait_cursor() -> None:
+    """Put the cursor back after a run, whatever way the dialog ended.
+
+    A dialog sets the wait cursor when it starts a worker and clears it when the result arrives. Closing the dialog
+    during a run stops the worker, so that result never arrives, and the whole application kept showing the busy
+    cursor - which looks exactly like a freeze. Draining the stack covers a run started while another override was
+    already on, and doing nothing when the stack is empty is what makes it safe to call on every close.
+    """
+    from PyQt5.QtWidgets import QApplication
+
+    while QApplication.overrideCursor() is not None:
+        QApplication.restoreOverrideCursor()

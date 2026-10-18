@@ -342,9 +342,14 @@ class EndmemberAnalysisDialog(QDialog):
         self._endmember_worker.start()
 
     def closeEvent(self, event):
-        from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
+        from ui.panels.analysis.dialogs.analysis_worker import (
+            restore_wait_cursor,
+            stop_analysis_worker,
+        )
 
         stop_analysis_worker(self._endmember_worker)
+        # Stopping the worker means its result may never arrive, and that is where the cursor is cleared.
+        restore_wait_cursor()
         super().closeEvent(event)
 
     def _display_results(self):

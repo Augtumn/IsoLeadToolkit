@@ -1164,7 +1164,6 @@ def _restore_wait_cursor() -> None:
     against 90 references. Draining the stack also covers a search started while another cursor was
     already overridden.
     """
-    from PyQt5.QtWidgets import QApplication
+    from ui.panels.analysis.dialogs.analysis_worker import restore_wait_cursor
 
-    while QApplication.overrideCursor() is not None:
-        QApplication.restoreOverrideCursor()
+    restore_wait_cursor()
