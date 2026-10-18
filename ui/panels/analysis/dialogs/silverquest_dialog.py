@@ -940,7 +940,10 @@ class SilverQuestDialog(QDialog):
     def closeEvent(self, event):
         from ui.panels.analysis.dialogs.analysis_worker import stop_analysis_worker
 
+        # Stopping the worker may mean its finished signal never comes, and that is the only other place the wait
+        # cursor is restored - closing the dialog during a search used to leave it on for the whole application.
         stop_analysis_worker(self._search_worker)
+        _restore_wait_cursor()
         super().closeEvent(event)
 
     def _populate_results(self, payload: dict) -> None:
