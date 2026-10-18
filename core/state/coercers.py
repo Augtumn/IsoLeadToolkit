@@ -204,7 +204,13 @@ def _normalize_adjust_text_pair(
             try:
                 values.append(float(item))
             except Exception:
-                values.append(0.0)
+                # A label-spacing pair is two numbers; an entry that is not one keeps the documented default for
+                # its slot. Becoming 0.0 would silently collapse the spacing instead.
+                fallback = float(default[len(values)])
+                logger.warning(
+                    "Ignoring a non-numeric label-spacing value %r; using the default %s.", item, fallback
+                )
+                values.append(fallback)
             if len(values) >= 2:
                 break
     if not values:
@@ -304,8 +310,16 @@ def _normalize_pca_component_indices(indices: Any) -> list[int]:
     else:
         values = [int(indices)]
     if len(values) < 2:
-        values = (values + [1])[:2]
-    return [max(0, values[0]), max(0, values[1])]
+        # Fill from the component the user did not name, so the two axes are different components.
+        spare = next((candidate for candidate in (0, 1, 2) if candidate not in values), 1)
+        values = (values + [spare])[:2]
+    first, second = max(0, values[0]), max(0, values[1])
+    if first == second:
+        logger.warning(
+            "PCA component indices %r name the same component on both axes; using the first two.", indices
+        )
+        return [0, 1]
+    return [first, second]
 
 
 def _normalize_ternary_limit_mode(mode: Any) -> str:
