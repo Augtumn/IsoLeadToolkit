@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import ast
+import re
+
 import logging
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -332,31 +335,71 @@ def collect_geochem_curve_data() -> dict[str, pd.DataFrame]:
     return sheets
 
 
-_LINEAR_EXPRESSION_RE = None
+def _linear_terms(node: ast.AST) -> tuple[float, float] | None:
+    """(slope, intercept) of *node*, or None when it is not linear in x."""
+    if isinstance(node, ast.Expression):
+        return _linear_terms(node.body)
+    if isinstance(node, ast.Name) and node.id == "x":
+        return (1.0, 0.0)
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+        return (0.0, float(node.value))
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
+        inner = _linear_terms(node.operand)
+        if inner is None:
+            return None
+        sign = -1.0 if isinstance(node.op, ast.USub) else 1.0
+        return (sign * inner[0], sign * inner[1])
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub)):
+        left, right = _linear_terms(node.left), _linear_terms(node.right)
+        if left is None or right is None:
+            return None
+        sign = 1.0 if isinstance(node.op, ast.Add) else -1.0
+        return (left[0] + sign * right[0], left[1] + sign * right[1])
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        left, right = _linear_terms(node.left), _linear_terms(node.right)
+        if left is None or right is None:
+            return None
+        if left[0] == 0.0:
+            return (left[1] * right[0], left[1] * right[1])
+        if right[0] == 0.0:
+            return (right[1] * left[0], right[1] * left[1])
+        return None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        left, right = _linear_terms(node.left), _linear_terms(node.right)
+        if left is None or right is None or right[0] != 0.0 or right[1] == 0.0:
+            return None
+        return (left[0] / right[1], left[1] / right[1])
+    return None
 
 
 def _parse_linear_expression(expression: str) -> tuple[float | None, float | None]:
-    """Parse ``y = m*x + b`` style overlay expressions into (slope, intercept).
+    """Parse an equation overlay into (slope, intercept).
 
-    Returns (None, None) when the expression is not a simple linear form.
+    Overlays store the right-hand side - "1.0049*x+20.259", "x" - and the parser used to insist on a leading "y=", a
+    form this application never writes. Every row of the exported Equations sheet therefore had blank Slope and
+    Intercept columns, which is what prompted this: measured against the two default overlays, both parsed to
+    (None, None).
+
+    The expression is now parsed rather than matched, so a linear one gives its two numbers exactly and a non-linear
+    one gives (None, None) instead of a plausible wrong answer. "y=" is still accepted for expressions typed that way.
     """
-    global _LINEAR_EXPRESSION_RE
-    if _LINEAR_EXPRESSION_RE is None:
-        import re
-
-        _LINEAR_EXPRESSION_RE = re.compile(
-            r"y\s*=\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)"
-            r"\s*\*?\s*x\s*([+-]\s*(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)"
-        )
-    match = _LINEAR_EXPRESSION_RE.search(str(expression))
-    if not match:
+    text = str(expression or "").strip()
+    if not text:
         return None, None
+    if "=" in text:
+        text = text.split("=", 1)[1].strip()
+    # Tolerate the coefficient-written-against-x form, "1.5x", which the old pattern accepted.
+    text = re.sub(r"(?<=[\d.])\s*(?=x\b)", "*", text)
     try:
-        slope = float(match.group(1))
-        intercept = float(match.group(2).replace(" ", ""))
-    except (TypeError, ValueError):
+        node = ast.parse(text, mode="eval")
+    except SyntaxError:
+        logger.warning("Overlay expression %r could not be parsed; Slope and Intercept stay blank.", text)
         return None, None
-    return slope, intercept
+    terms = _linear_terms(node)
+    if terms is None:
+        logger.info("Overlay expression %r is not linear; Slope and Intercept stay blank.", text)
+        return None, None
+    return terms
 
 
 def _csv_comment_value(value: Any) -> str:
