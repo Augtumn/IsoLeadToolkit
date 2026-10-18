@@ -407,10 +407,10 @@ class MainWindowCanvasMixin:
         """The record of the panel in use: the active one, else the one the state mirrors, else none."""
         records = list(app_state.plot_panel_windows or [])
         for record in records:
-            if record.get("active"):
+            if record.active:
                 return record
         for record in records:
-            axis = record.get("axes")
+            axis = record.axes
             if axis is not None and axis is app_state.ax:
                 return record
         return records[0] if records else None
@@ -418,14 +418,14 @@ class MainWindowCanvasMixin:
     def _focused_toolbar(self):
         """The hidden navigation toolbar of the panel in use, so the buttons act on that panel."""
         record = self._focused_panel_record()
-        if record is not None and record.get("toolbar") is not None:
+        if record is not None and record.toolbar is not None:
             return record["toolbar"]
         return self._plot_toolbar
 
     def _borrowed_navigation_icon(self, kind: str):
         """matplotlib's own icon for a navigation button, borrowed so the look matches."""
         for record in list(app_state.plot_panel_windows or []):
-            toolbar = record.get("toolbar")
+            toolbar = record.toolbar
             if toolbar is None:
                 continue
             for candidate in list(getattr(toolbar, "actions", lambda: [])()):
@@ -514,9 +514,9 @@ class MainWindowCanvasMixin:
         """The axes to frame: one per panel window, or the single active axes."""
         axes = []
         for record in list(app_state.plot_panel_windows or []):
-            axis = record.get("axes")
+            axis = record.axes
             if axis is not None:
-                axes.append((str(record.get("mode", "")), axis))
+                axes.append((record.mode, axis))
         if not axes and app_state.ax is not None:
             axes.append((str(getattr(app_state, "render_mode", "") or ""), app_state.ax))
         return axes
@@ -633,11 +633,11 @@ class MainWindowCanvasMixin:
             # A single-figure window: the chosen mode is the window's own.
             return
         active = next(
-            (record for record in records if record.get("active")), records[0]
+            (record for record in records if record.active), records[0]
         )
-        if str(active.get("mode")) == str(mode):
+        if active.mode == str(mode):
             return
-        modes = [str(record.get("mode")) for record in records]
+        modes = [record.mode for record in records]
         index = records.index(active)
         modes[index] = str(mode)
         panel = self._panel_windows
@@ -665,17 +665,17 @@ class MainWindowCanvasMixin:
         """
         records = [
             record for record in list(app_state.plot_panel_windows or [])
-            if record.get("window") is not window
+            if record.window is not window
         ]
         # Drop this window from the panel bookkeeping by identity, before anything rebuilds: `sync`
         # shrinks by popping the tail, which removes a live window when the one closed is not the last.
         if self._panel_windows is not None:
             self._panel_windows.close_window(window)
         closed_was_active = any(
-            record.get("window") is window and record.get("active")
+            record.window is window and record.active
             for record in list(app_state.plot_panel_windows or [])
         )
-        modes = [str(record.get("mode")) for record in records]
+        modes = [record.mode for record in records]
         state_gateway.set_plot_panels(modes if len(modes) > 1 else [])
         figure = records[0].get("figure") if records else app_state.fig
         app_state.plot_panel_windows[:] = records
@@ -698,7 +698,7 @@ class MainWindowCanvasMixin:
         if window is None:
             return
         for index, record in enumerate(list(app_state.plot_panel_windows or [])):
-            if record.get("window") is not window:
+            if record.window is not window:
                 continue
             # Exactly one panel is the active one, and the tools act on it. The flag lives in the
             # records rather than in a new state field, and the single-figure references are
@@ -708,7 +708,7 @@ class MainWindowCanvasMixin:
             # The mode of the panel in use is mirrored too, so the code that reads the single
             # render mode (titles, exports, parts of the render) agrees with the active panel
             # instead of being left on whichever mode the single-figure window last had.
-            mode = str(record.get("mode") or "")
+            mode = record.mode
             if mode and mode != str(getattr(app_state, "render_mode", "")):
                 state_gateway.set_render_mode(mode)
             # The render-mode control follows the panel, as the navigation buttons do. Only while
@@ -746,7 +746,7 @@ class MainWindowCanvasMixin:
             # The highlight of the three navigation buttons follows the panel in use, so a tool
             # held in one panel does not stay lit after the focus moves to another.
             self._sync_navigation_buttons()
-            logger.info("Active panel is now %s (index %d)", record.get("mode"), index)
+            logger.info("Active panel is now %s (index %d)", record.mode, index)
             return
 
     def _arrange_panels(self, kind: str = "grid") -> None:
@@ -774,7 +774,7 @@ class MainWindowCanvasMixin:
             record = self._panel_record_for(axis)
             if not force:
                 if record is not None:
-                    if not record.get("needs_fit"):
+                    if not record.needs_fit:
                         # This window has already been framed once: the view is the user's now.
                         continue
                 elif not self._single_figure_needs_fit:
@@ -809,7 +809,7 @@ class MainWindowCanvasMixin:
     def _panel_record_for(self, axis):
         """The panel record that draws *axis*, or None for the single-figure window."""
         for record in list(app_state.plot_panel_windows or []):
-            if record.get("axes") is axis:
+            if record.axes is axis:
                 return record
         return None
 
@@ -847,7 +847,7 @@ class MainWindowCanvasMixin:
             record["active"] = index == 0
         # A sub-window that was never shown, or shown at no size, would draw nothing.
         for record in records:
-            window = record.get("window")
+            window = record.window
             if window is None:
                 continue
             if window.width() < 50 or window.height() < 50:
@@ -864,7 +864,7 @@ class MainWindowCanvasMixin:
         from visualization.events import on_click, on_hover, on_legend_click
 
         for record in records:
-            canvas = record.get("canvas")
+            canvas = record.canvas
             if canvas is None:
                 continue
             canvas.mpl_connect("motion_notify_event", on_hover)
@@ -1054,9 +1054,9 @@ class TernaryZoomEventFilter(QObject):
         from the panel the event is over.
         """
         for record in list(getattr(app_state, "plot_panel_windows", []) or []):
-            if record.get("canvas") is not canvas:
+            if record.canvas is not canvas:
                 continue
-            toolbar = record.get("toolbar")
+            toolbar = record.toolbar
             mode = str(getattr(getattr(toolbar, "mode", None), "name", "") or "")
             return mode.upper() == "ZOOM"
         return self._zoom_tool_active()

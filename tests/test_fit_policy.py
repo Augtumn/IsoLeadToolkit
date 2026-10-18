@@ -8,6 +8,7 @@ matplotlib.use("Qt5Agg")
 from matplotlib.figure import Figure  # noqa: E402
 
 from core import app_state  # noqa: E402
+from core.panel_record import PanelRecord  # noqa: E402
 from ui.main_window_parts.canvas import MainWindowCanvasMixin  # noqa: E402
 
 
@@ -45,7 +46,7 @@ def test_the_automatic_fit_only_frames_a_new_window(qapp, monkeypatch) -> None:
     _ignore_label_refresh(monkeypatch)
     host = _FitHost()
     app_state.plot_panel_windows[:] = [
-        {"axes": _Axes(index), "mode": "2D", "needs_fit": True} for index in range(2)
+        PanelRecord({"axes": _Axes(index), "mode": "2D", "needs_fit": True}) for index in range(2)
     ]
     try:
         host._fit_panels_to_data()
@@ -62,7 +63,7 @@ def test_the_automatic_fit_only_frames_a_new_window(qapp, monkeypatch) -> None:
         )
 
         app_state.plot_panel_windows.append(
-            {"axes": _Axes(9), "mode": "2D", "needs_fit": True}
+            PanelRecord({"axes": _Axes(9), "mode": "2D", "needs_fit": True})
         )
         host._fit_panels_to_data()
         assert host.framed == [9], "only the window that was just created"

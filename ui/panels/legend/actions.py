@@ -128,11 +128,11 @@ class LegendActionsMixin:
         report "no plot figure is initialized" and do nothing.
         """
         records = list(getattr(app_state, "plot_panel_windows", None) or [])
-        panel = next((record for record in records if record.get("active")), records[0] if records else None)
+        panel = next((record for record in records if record.active), records[0] if records else None)
         if panel is None and (app_state.fig is None or app_state.ax is None):
             logger.warning("Nudge ignored: no plot figure is initialized")
             return
-        current = panel.get("legend", {}).get("legend_offset", app_state.legend_offset) if panel else app_state.legend_offset
+        current = panel.legend.get("legend_offset", app_state.legend_offset) if panel else app_state.legend_offset
         try:
             new_offset = (float(current[0]) + float(dx), float(current[1]) + float(dy))
         except Exception:

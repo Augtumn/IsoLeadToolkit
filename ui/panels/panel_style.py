@@ -61,10 +61,10 @@ def record_panel_legend(**values) -> None:
     if legend_applies_to_all_panels():
         targets = records
     else:
-        targets = [next((record for record in records if record.get("active")), records[0])]
+        targets = [next((record for record in records if record.active), records[0])]
     kept = dict(values)
     for panel in targets:
-        panel["legend"] = {**(panel.get("legend") or {}), **kept}
+        panel["legend"] = {**panel.legend, **kept}
 
 def _safe_color(widget, default):
     """从 widget 安全提取颜色值。

@@ -181,7 +181,7 @@ class Qt5Application(Qt5AppStyleMixin, Qt5AppSessionMixin, Qt5AppPlottingMixin):
             # A window showing several figures has several canvases, and a handler connected to
             # one canvas never sees another's events, so each of them is connected too.
             for record in list(getattr(app_state, "plot_panel_windows", []) or []):
-                self._connect_event_handlers(record.get("canvas"))
+                self._connect_event_handlers(record.canvas)
 
             # 渲染初始绘图
             self._render_initial_plot()
