@@ -1,7 +1,8 @@
 {
   "application/use_cases/export_data.py": 1,
   "application/use_cases/render_plot.py": 1,
-  "ui/main_window_parts/canvas.py": 7,
+  "ui/main_window_parts/canvas.py": 3,
+  "ui/main_window_parts/canvas_panels.py": 3,
   "ui/main_window_parts/legend_core.py": 4,
   "ui/main_window_parts/legend_interaction.py": 3,
   "ui/panels/display/kde_style.py": 1,
@@ -27,7 +28,7 @@
   "visualization/plotting/rendering/common/scatter.py": 8,
   "visualization/plotting/rendering/common/title.py": 18,
   "visualization/plotting/rendering/embedding_plot.py": 2,
-  "visualization/plotting/rendering/geo_layers.py": 15,
+  "visualization/plotting/rendering/geo_layers.py": 11,
   "visualization/plotting/rendering/kde.py": 2,
   "visualization/plotting/rendering/pipeline.py": 1,
   "visualization/plotting/rendering/raw/plot2d.py": 19,

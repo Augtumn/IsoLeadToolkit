@@ -253,6 +253,8 @@ def test_the_main_toolbar_is_populated_when_panels_are_shown(host, monkeypatch) 
     from core import translate
 
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", _Gateway(), raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", _Gateway(), raising=False)
     previous = list(app_state.plot_panels)
     app_state.plot_panels = ["2D", "UMAP"]
     try:
@@ -273,6 +275,8 @@ def test_the_toolbar_is_populated_without_panels_too(host, monkeypatch) -> None:
     from core import translate
 
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", _Gateway(), raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", _Gateway(), raising=False)
     previous = list(app_state.plot_panels)
     app_state.plot_panels = []
     try:
@@ -294,6 +298,8 @@ def test_the_toolbar_is_rebuilt_for_the_panel_in_use(host, monkeypatch) -> None:
     """
     gateway = _Gateway()
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", gateway, raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", gateway, raising=False)
     records = host._build_panel_windows(["2D", "UMAP"])
     host._plot_actions = []
 
@@ -307,6 +313,8 @@ def test_activating_a_panel_switches_the_application_state(host, monkeypatch) ->
     """Activation still moves the active figure, axes and canvas, which hover and selection use."""
     gateway = _Gateway()
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", gateway, raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", gateway, raising=False)
     records = host._build_panel_windows(["2D", "UMAP"])
 
     host._on_panel_activated(records[1]["window"])
@@ -319,6 +327,8 @@ def test_activating_a_panel_switches_the_application_state(host, monkeypatch) ->
 def test_activating_an_unknown_window_changes_nothing(host, monkeypatch) -> None:
     gateway = _Gateway()
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", gateway, raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", gateway, raising=False)
     host._nav_toolbar = "unchanged"
 
     host._on_panel_activated(object())
@@ -339,6 +349,8 @@ def test_switching_the_panel_count_does_not_duplicate_the_toolbar(host, monkeypa
     from core import translate
 
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", _Gateway(), raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", _Gateway(), raising=False)
     previous = list(app_state.plot_panels)
     try:
         app_state.plot_panels = ["2D", "UMAP"]
@@ -364,6 +376,8 @@ def test_a_closed_panel_leaves_the_list_and_the_state(host, monkeypatch) -> None
     gateway.panels = None
     gateway.set_plot_panels = lambda panels: setattr(gateway, "panels", list(panels))
     monkeypatch.setattr("ui.main_window_parts.canvas.state_gateway", gateway, raising=False)
+    # The panel methods moved to canvas_panels; its gateway reference is the one they use.
+    monkeypatch.setattr("ui.main_window_parts.canvas_panels.state_gateway", gateway, raising=False)
     monkeypatch.setattr(
         "ui.main_window_parts.canvas.MainWindowCanvasMixin.set_matplotlib_figure",
         lambda self, fig: setattr(gateway, "rebuilt", True),
