@@ -2,6 +2,8 @@
 
 本文件记录对 UI 层结构性缺陷的评审结论与收敛顺序。**过程由 git 历史承担**；本文件只保留"问题 → 证据 → 方向 → 状态"。
 
+本文件的状态数字在 **2026-10-18** 按实测更新过一次（`canvas.py` 拆分、`PanelRecord` 契约、状态投影清理之后）；数字均可复现：`scripts/check_*.py --list`、`check_state_field_coverage.py`、golden 往返测试。
+
 ## 量化事实（评审时实测）
 
 | 指标 | 数值 |
@@ -46,13 +48,13 @@
 
 `setup_logging()` 把 stderr 整体接到 ERROR，而 `warnings` 模块正是写到 stderr 的 → `isotopes_analyse.error.log` 被 `UserWarning` 淹没；同时视图层大量 `except Exception: pass/debug` 把真实错误吞成静默。
 
-- 状态：**已完成**。`level_for_stderr_line()` 降级 + `enable_warning_capture()` 从源头改道；视图层 **148 处静默异常处理器（47 个文件）全部改为可见的 WARNING**（保留原操作名），并由棘轮守卫 `check_silent_exceptions.py` 固定在 0（基线为空，新增即失败）。
+- 状态：**已完成**。`level_for_stderr_line()` 降级 + `enable_warning_capture()` 从源头改道；视图层静默异常处理器经棘轮守卫 `check_silent_exceptions.py` 固定在**只降不升**：当前 **163 处 / 74 文件**（基线 `scripts/silent_exceptions_baseline.json`），新增即失败；`check_self_attribute_probes.py` 的基线**为空**（属性探测已为 0）。
 
 ## 收敛顺序与状态
 
 | 项 | 内容 | 状态 |
 |---|---|---|
-| **A** | 声明式状态字段注册表 | **已完成（全量）**：`core/state/fields.py` 驱动 **159 个字段**（默认值 + `normalize`/`copy` + 非对称时的 `project`/`restore` + `holder`；带参强转用 `functools.partial`）；**所有已持久化字段均由注册表驱动**，store 两个字典各只剩一处 `**` 解包、`_normalizers` 只剩一次 `sync_fields()`；仅 **40 个瞬态字段**（运行时不持久化）保持显式，由 `check_state_field_coverage.py` 登记；`check_state_sync_coverage.py` 扰动 174 字段无缺口 |
+| **A** | 声明式状态字段注册表 | **已完成（全量）**：`core/state/fields.py` 驱动 **166 个字段**（默认值 + `normalize`/`copy` + 非对称时的 `project`/`restore` + `holder`；带参强转用 `functools.partial`）；**所有已持久化字段均由注册表驱动**，store 两个字典各只剩一处 `**` 解包、`_normalizers` 只剩一次 `sync_fields()`；**补充（本次会话实测并修复）**：`snapshot()` 原先还有 **142 条手写投影**，其中 **102 条被注册表同名键覆盖**（死代码），已删除（`store.py` 419 → 322 行，快照键数 206 → 206 不变，golden 往返网通过）—— 在此之前本条'所有已持久化字段均由注册表驱动'并不成立；仅 **40 个瞬态字段**（运行时不持久化）保持显式，由 `check_state_field_coverage.py` 登记；`check_state_sync_coverage.py` 扰动 174 字段无缺口 |
 | **B** | 组合根 + 显式依赖 | **已完成**：组合根 `build_main_window()`（`ui/app.py` 亦使用）、`tests/conftest.py` 的 `qapp`/`main_window` 夹具、4 个真实窗口测试；**95 处 `hasattr/getattr(self, …)` 探测全部迁移为显式类属性声明（现为 0）**，迁移工具 `scripts/migrate_self_probes.py`，棘轮守卫 `check_self_attribute_probes.py` 保持为 0 |
 | **C** | 图例单一真源 | **已完成**：显示策略收敛到 `core/legend_state.py`（原先 8 处重复、三种写法）；模型为面板列表顺序（`app_state.legend_item_order`，拖拽时持久化），图内图例条目顺序经 `legend_order_permutation()` 由模型派生（保留 30 项上限与父分组折叠，并行数组同步重排以免图例点击错配图层），zorder 由列表顺序派生；`tests/test_legend_policy.py`、`tests/test_legend_projection.py` 覆盖 |
 | **D** | 统一输入管线并写入 `docs/dev_conventions.md` | **已完成**：`docs/dev_conventions.md` §19 规定画布手势一律走 Qt 事件过滤器（`mpl_connect` 实测收不到事件）、多副本经 `globalPos()` 映射、不得在不可映射副本上销毁手势、交互按工具/模式分流、必须用真实 Qt 事件测试 |
@@ -67,6 +69,6 @@
 
 | 项 | 内容 | 状态 |
 |---|---|---|
-| **G** | 视图层静默异常全部改为可见 WARNING（148 处 / 47 文件），棘轮守卫 `check_silent_exceptions.py` 固定为 0 | **已完成** |
+| **G** | 视图层静默异常处理器收敛，棘轮守卫 `check_silent_exceptions.py` 固定为**只降不升**（当前 163 处 / 74 文件） | **已完成** |
 | **H** | `core/state/fields.py` 声明的形状校验：名称唯一、`default` 可被自身强转接受、三个方向类型稳定、`holder` 存在、可变默认值不被共享 | **已完成**（`tests/test_state_field_declarations.py`；上线即抓出 9 个字段的 `or {}` 回退语义在迁移中丢失，已修正为规范默认值） |
-| **I** | 消除 mixin 间隐式依赖 | **已完成（第一阶段）**：**167 处跨类依赖 / 39 个类**全部在模块内声明为 `REQUIRES_<Class>`（显式接口）；守卫 `check_cross_mixin_calls.py` 强制「发现即声明、声明必存在」，并**检测同名类**；`tests/test_mixin_contracts.py` 校验组合类（Qt5MainWindow 与各 Panel/Dialog）提供全部所声明方法。过程中发现并删除一个**空壳同名类**（`projection_groups_build.py` 里 0 方法的 `DataPanelProjectionBuildMixin`）及其误置声明 |
+| **I** | 消除 mixin 间隐式依赖 | **已完成（第一阶段）**：**191 处跨类依赖 / 43 个类**全部在模块内声明为 `REQUIRES_<Class>`（显式接口）；守卫 `check_cross_mixin_calls.py` 强制「发现即声明、声明必存在」，并**检测同名类**；`tests/test_mixin_contracts.py` 校验组合类（Qt5MainWindow 与各 Panel/Dialog）提供全部所声明方法。过程中发现并删除一个**空壳同名类**（`projection_groups_build.py` 里 0 方法的 `DataPanelProjectionBuildMixin`）及其误置声明 |
