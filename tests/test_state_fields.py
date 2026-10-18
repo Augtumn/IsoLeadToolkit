@@ -29,9 +29,19 @@ def test_the_registry_covers_a_large_part_of_the_state() -> None:
     assert len(SIMPLE_FIELDS) >= 100, len(SIMPLE_FIELDS)
 
 
-def test_every_registered_field_is_persisted() -> None:
-    missing = REGISTERED - PERSISTED
-    assert not missing, f"registered but not persisted: {sorted(missing)}"
+#: Registered fields whose value is derived from other fields. They are recomputed on load from the fields they
+#: come from, so they are not written to the file and cannot contradict what they describe.
+DERIVED = {"paleoisochron_ages"}
+
+
+def test_every_registered_field_is_persisted_or_derived() -> None:
+    missing = REGISTERED - PERSISTED - DERIVED
+    assert not missing, f"registered but neither persisted nor derived: {sorted(missing)}"
+
+
+def test_a_derived_field_is_not_persisted() -> None:
+    """The two sets must not overlap: a value that is written must not also be recomputed over it."""
+    assert not (DERIVED & PERSISTED), sorted(DERIVED & PERSISTED)
 
 
 @pytest.mark.parametrize(

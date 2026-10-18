@@ -351,15 +351,9 @@ class GeoPanelOverlaysMixin:
     def _on_paleo_step_change(self, value):
         """Handle paleoisochron step changes."""
         step_val = max(10, int(value))
+        # The ages follow from the three controls in the dispatch layer, so setting the step is enough - and changing
+        # min/max keeps them true too, which a formula here could not do for those two.
         state_gateway.set_paleoisochron_step(step_val)
-        min_age = int(app_state.paleoisochron_min_age)
-        max_age = int(app_state.paleoisochron_max_age)
-        if max_age < min_age:
-            max_age, min_age = min_age, max_age
-        ages = list(range(max_age, min_age - 1, -step_val))
-        if not ages or ages[-1] != min_age:
-            ages.append(min_age)
-        state_gateway.set_paleoisochron_ages(ages)
         self._on_change()
 
     def reset_state(self):

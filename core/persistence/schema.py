@@ -76,7 +76,8 @@ UI_STATE_FIELDS: frozenset[str] = frozenset({
     "isochron_error_mode", "isochron_sx_col", "isochron_sy_col", "isochron_rxy_col",
     "isochron_sx_value", "isochron_sy_value", "isochron_rxy_value",
     "isochron_label_options",
-    "paleoisochron_ages", "paleoisochron_min_age", "paleoisochron_max_age",
+    # paleoisochron_ages is derived from the three controls and is recomputed on load.
+    "paleoisochron_min_age", "paleoisochron_max_age",
     "paleoisochron_step",
     "plumbotectonics_variant", "plumbotectonics_group_visibility",
     "geo_model_name", "use_real_age_for_mu_kappa", "mu_kappa_age_col",

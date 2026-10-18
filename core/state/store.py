@@ -205,10 +205,13 @@ class StateStore:
         # Metadata keys carried by persisted session payloads that are not
         # snapshot fields; they are expected and silently ignored.
         _META_KEYS = frozenset({"session_version", "saved_at"})
+        # Derived keys an archive written by an earlier version still carries. They are recomputed from the fields
+        # they come from, so they are dropped without the "non-persisted key" warning.
+        _DERIVED_KEYS = frozenset({"paleoisochron_ages"})
 
         allowed = SESSION_FIELDS | UI_STATE_FIELDS
         accepted = {key: value for key, value in payload.items() if key in allowed}
-        skipped = sorted(set(payload) - allowed - _META_KEYS)
+        skipped = sorted(set(payload) - allowed - _META_KEYS - _DERIVED_KEYS)
         if skipped:
             logger.warning(
                 "Ignored %s non-persisted key(s) during snapshot restore: %s",
@@ -236,6 +239,10 @@ class StateStore:
         # cannot abort startup.
         previous = {key: self._snapshot.get(key) for key in accepted}
         self._snapshot.update(accepted)
+        # The derived ages follow the three controls that were just restored, never the file's own copy of them.
+        from ._dispatch_handlers import _recompute_paleoisochron_ages
+
+        _recompute_paleoisochron_ages(self._snapshot)
         try:
             self._sync_state()
         except Exception as exc:

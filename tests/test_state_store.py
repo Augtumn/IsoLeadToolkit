@@ -892,7 +892,10 @@ def test_app_state_overlay_detail_property_setters_dispatch_to_state_store() -> 
         assert app_state.equation_overlays == [{"id": "eq_custom_2", "visible": True}]
         assert app_state.line_styles == {"model_curve": "--", "isochron": ":"}
         assert app_state.paleoisochron_step == 250
-        assert app_state.paleoisochron_ages == [250, 500, 750]
+        # The ages are derived from the three controls now, so the last min/max set decides them.
+        from core.overlay_state import paleoisochron_age_list
+
+        assert app_state.paleoisochron_ages == paleoisochron_age_list(100, 2500, 250)
         assert app_state.paleoisochron_min_age == 100
         assert app_state.paleoisochron_max_age == 2500
         assert app_state.plumbotectonics_variant == "2"
@@ -916,7 +919,7 @@ def test_app_state_overlay_detail_property_setters_dispatch_to_state_store() -> 
         assert store_snapshot["equation_overlays"] == [{"id": "eq_custom_2", "visible": True}]
         assert store_snapshot["line_styles"] == {"model_curve": "--", "isochron": ":"}
         assert store_snapshot["paleoisochron_step"] == 250
-        assert store_snapshot["paleoisochron_ages"] == [250, 500, 750]
+        assert store_snapshot["paleoisochron_ages"] == paleoisochron_age_list(100, 2500, 250)
         assert store_snapshot["paleoisochron_min_age"] == 100
         assert store_snapshot["paleoisochron_max_age"] == 2500
         assert store_snapshot["plumbotectonics_variant"] == "2"

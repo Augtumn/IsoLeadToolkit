@@ -59,6 +59,21 @@ from .coercers import DEFAULT_CONFIDENCE_LEVEL
 logger = logging.getLogger(__name__)
 
 
+def _recompute_paleoisochron_ages(snapshot: dict) -> None:
+    """Derive the paleoisochron ages from the three controls, so the pair cannot disagree.
+
+    The ages are not a fact of their own: they are min/max/step written out. Recomputing here means changing any of
+    the three keeps the list true, which the panel used to do for the step alone.
+    """
+    from ..overlay_state import paleoisochron_age_list
+
+    snapshot["paleoisochron_ages"] = paleoisochron_age_list(
+        snapshot.get("paleoisochron_min_age", 0),
+        snapshot.get("paleoisochron_max_age", 3000),
+        snapshot.get("paleoisochron_step", 1000),
+    )
+
+
 def dispatch_action(store: Any, action: dict[str, Any]) -> None:
     """Apply *action* mutations to *store._snapshot* in-place.
 
@@ -506,12 +521,15 @@ def dispatch_action(store: Any, action: dict[str, Any]) -> None:
 
     elif action_type == "SET_PALEOISOCHRON_MIN_AGE":
         store._snapshot["paleoisochron_min_age"] = int(action.get("age", 0))
+        _recompute_paleoisochron_ages(store._snapshot)
 
     elif action_type == "SET_PALEOISOCHRON_MAX_AGE":
         store._snapshot["paleoisochron_max_age"] = int(action.get("age", 3000))
+        _recompute_paleoisochron_ages(store._snapshot)
 
     elif action_type == "SET_PALEOISOCHRON_STEP":
         store._snapshot["paleoisochron_step"] = int(action.get("step", 1000))
+        _recompute_paleoisochron_ages(store._snapshot)
 
     elif action_type == "SET_PALEOISOCHRON_AGES":
         store._snapshot["paleoisochron_ages"] = list(action.get("ages") or [])

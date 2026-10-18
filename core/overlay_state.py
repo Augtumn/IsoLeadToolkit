@@ -133,8 +133,8 @@ class OverlayState:
         self.paleoisochron_min_age = 0
         self.paleoisochron_max_age = 3000
         self.paleoisochron_step = 1000
-        self.paleoisochron_ages: list[int] = list(
-            range(self.paleoisochron_max_age, self.paleoisochron_min_age - 1, -self.paleoisochron_step)
+        self.paleoisochron_ages: list[int] = paleoisochron_age_list(
+            self.paleoisochron_min_age, self.paleoisochron_max_age, self.paleoisochron_step
         )
 
         # Plumbotectonics
@@ -208,3 +208,22 @@ class OverlayState:
         self.paleoisochron_label_data = []
         self.plumbotectonics_label_data = []
         self.plumbotectonics_isoage_label_data = []
+
+
+def paleoisochron_age_list(min_age: int, max_age: int, step: int) -> list[int]:
+    """The ages the three controls describe, oldest first down to the youngest.
+
+    The ages are derived from min/max/step, and the derivation lives here alone: the overlay container, the panel's
+    controls and the dispatch layer all need it, and the panel used to compute its own copy - which is how changing
+    min/max could leave the ages describing the old range.
+    """
+    minimum, maximum, stride = int(min_age), int(max_age), int(step)
+    if stride <= 0:
+        return []
+    if maximum < minimum:
+        minimum, maximum = maximum, minimum
+    ages = list(range(maximum, minimum - 1, -stride))
+    if not ages or ages[-1] != minimum:
+        # Land on the youngest age even when the step does not divide the range.
+        ages.append(minimum)
+    return ages
