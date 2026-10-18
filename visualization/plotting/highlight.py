@@ -12,6 +12,7 @@ or in all of them.
 from __future__ import annotations
 
 import logging
+import weakref
 from typing import Any, Iterable
 
 #: How much larger the hovered point is drawn.
@@ -33,36 +34,35 @@ class HoverHighlighter:
 
     def __init__(self, scale: float = HOVER_SCALE) -> None:
         self._scale = scale
-        self._base_sizes: dict[int, list[float]] = {}
-        self._base_widths: dict[int, list[float]] = {}
-        self._collections: dict[int, Any] = {}
-        self._highlighted: list[tuple[int, int]] = []
+        # Keyed by the collection itself, weakly. Keying by id() needed a strong reference beside each id to keep
+        # the number from being reused, and that reference kept every collection a re-render detached - and its data
+        # arrays - alive for the life of the application: fifty renders, fifty kept collections, proven.
+        self._base_sizes: "weakref.WeakKeyDictionary[Any, list[float]]" = weakref.WeakKeyDictionary()
+        self._base_widths: "weakref.WeakKeyDictionary[Any, list[float]]" = weakref.WeakKeyDictionary()
+        self._highlighted: list[HighlightTarget] = []
         self._sample: int | None = None
 
     def _base_for(self, collection: Any) -> list[float]:
-        key = id(collection)
-        if key not in self._base_sizes:
+        if collection not in self._base_sizes:
             sizes = collection.get_sizes()
-            self._base_sizes[key] = [float(size) for size in sizes] if sizes is not None and len(sizes) else []
-            self._collections[key] = collection
-        return self._base_sizes[key]
+            self._base_sizes[collection] = [float(size) for size in sizes] if sizes is not None and len(sizes) else []
+        return self._base_sizes[collection]
 
     def _base_widths_for(self, collection: Any) -> list[float]:
         """The outline widths a collection had before anything highlighted it."""
-        key = id(collection)
-        if key not in self._base_widths:
+        if collection not in self._base_widths:
             try:
                 widths = collection.get_linewidths()
             except Exception:
                 widths = None
             count = len(self._base_for(collection))
             if widths is None or len(widths) == 0:
-                self._base_widths[key] = [1.0] * count
+                self._base_widths[collection] = [1.0] * count
             elif len(widths) == 1 and count > 1:
-                self._base_widths[key] = [float(widths[0])] * count
+                self._base_widths[collection] = [float(widths[0])] * count
             else:
-                self._base_widths[key] = [float(width) for width in widths]
-        return self._base_widths[key]
+                self._base_widths[collection] = [float(width) for width in widths]
+        return self._base_widths[collection]
 
     def highlighted_widths(self, collection: Any, index: int) -> list[float] | None:
         """The outline widths with *index* emphasised - the thicker edge of the highlight."""
@@ -104,7 +104,7 @@ class HoverHighlighter:
         usable = self._usable(targets)
         if not usable:
             return self.clear()
-        state = [(id(collection), index) for collection, index, _sizes in usable]
+        state = [(collection, index) for collection, index, _sizes in usable]
         if int(sample) == self._sample and state == self._highlighted:
             return False
         self.clear(restore=True)
@@ -133,13 +133,12 @@ class HoverHighlighter:
         self._highlighted = []
         self._sample = None
         if restore:
-            for key, _index in highlighted:
-                collection = self._collections.get(key)
-                base = self._base_sizes.get(key)
-                if collection is not None and base:
+            for collection, _index in highlighted:
+                base = self._base_sizes.get(collection)
+                if base:
                     collection.set_sizes(list(base))
-                widths = self._base_widths.get(key)
-                if collection is not None and widths:
+                widths = self._base_widths.get(collection)
+                if widths:
                     try:
                         collection.set_linewidths(list(widths))
                     except Exception as err:
@@ -147,8 +146,8 @@ class HoverHighlighter:
         return True
 
     @property
-    def current(self) -> tuple[int, int] | None:
-        """The highlighted ``(collection id, index)`` of the first panel, if any."""
+    def current(self) -> HighlightTarget | None:
+        """The highlighted ``(collection, index)`` of the first panel, if any."""
         return self._highlighted[0] if self._highlighted else None
 
     @property
