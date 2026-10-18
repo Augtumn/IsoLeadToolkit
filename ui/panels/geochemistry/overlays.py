@@ -8,6 +8,8 @@ from PyQt5.QtWidgets import QMessageBox
 
 from core import app_state, state_gateway, translate
 
+from ui.panels.widget_state import reset_widget_state
+
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
 REQUIRES_GeoPanelOverlaysMixin = (
@@ -16,6 +18,33 @@ REQUIRES_GeoPanelOverlaysMixin = (
 )
 
 logger = logging.getLogger(__name__)
+
+
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'geochem_plot_group': None,
+    'modeling_show_model_check': None,
+    'modeling_show_paleoisochron_check': None,
+    'modeling_show_plumbotectonics_check': None,
+    'modeling_show_model_age_check': None,
+    'modeling_show_isochron_check': None,
+    'modeling_show_growth_curve_check': None,
+    'modeling_use_real_age_check': None,
+    'mu_kappa_age_title_label': None,
+    'mu_kappa_age_label': None,
+    'mu_kappa_age_button': None,
+    'show_model_check': None,
+    'show_paleoisochron_check': None,
+    'show_model_age_check': None,
+    'show_isochron_check': None,
+    'paleo_step_spin': None,
+    'calc_isochron_btn': None,
+    'isochron_settings_btn': None,
+    'isochron_swatch': None,
+    'plumbotectonics_model_label': None,
+    'plumbotectonics_model_combo': None,
+}
 
 
 class GeoPanelOverlaysMixin:
@@ -357,31 +386,10 @@ class GeoPanelOverlaysMixin:
         self._on_change()
 
     def reset_state(self):
-        """Overlay widgets are rebuilt with the panel."""
+        """Widgets are rebuilt with the panel."""
         super().reset_state()
-        if not hasattr(super(), "reset_state"):
-            return
-        self.geochem_plot_group = None
-        self.modeling_show_model_check = None
-        self.modeling_show_paleoisochron_check = None
-        self.modeling_show_plumbotectonics_check = None
-        self.modeling_show_model_age_check = None
-        self.modeling_show_isochron_check = None
-        self.modeling_show_growth_curve_check = None
-        self.modeling_use_real_age_check = None
-        self.mu_kappa_age_title_label = None
-        self.mu_kappa_age_label = None
-        self.mu_kappa_age_button = None
-        self.show_model_check = None
-        self.show_paleoisochron_check = None
-        self.show_model_age_check = None
-        self.show_isochron_check = None
-        self.paleo_step_spin = None
-        self.calc_isochron_btn = None
-        self.isochron_settings_btn = None
-        self.isochron_swatch = None
-        self.plumbotectonics_model_label = None
-        self.plumbotectonics_model_combo = None
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def _sync_geochem_toggle_widgets(self, checked, *widgets):
         """Synchronize geochemistry toggle states."""

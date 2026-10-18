@@ -1,6 +1,8 @@
 """Display panel UI construction and control helpers."""
 from __future__ import annotations
 
+from ui.panels.widget_state import reset_widget_state
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -40,6 +42,66 @@ REQUIRES_DisplayBuildMixin = (
 )
 
 
+#: Every widget this panel builds, with its fallback. One table instead of one assignment per line:
+#: the set is visible in one place and a reset cannot forget a member.
+_WIDGET_DEFAULTS: dict[str, object] = {
+    'ui_theme_combo': None,
+    'theme_name_edit': None,
+    'theme_load_combo': None,
+    'grid_check': None,
+    'primary_font_combo': None,
+    'cjk_font_combo': None,
+    'font_size_spins': dict,
+    'show_title_check': None,
+    'marker_size_spin': None,
+    'marker_alpha_spin': None,
+    'scatter_edge_check': None,
+    'figure_dpi_spin': None,
+    'figure_bg_edit': None,
+    'axes_bg_edit': None,
+    'grid_color_edit': None,
+    'grid_width_spin': None,
+    'grid_alpha_spin': None,
+    'grid_style_combo': None,
+    'tick_dir_combo': None,
+    'tick_color_edit': None,
+    'tick_length_spin': None,
+    'tick_width_spin': None,
+    'minor_ticks_check': None,
+    'minor_tick_length_spin': None,
+    'minor_tick_width_spin': None,
+    'axis_linewidth_spin': None,
+    'axis_line_color_edit': None,
+    'show_top_spine_check': None,
+    'show_right_spine_check': None,
+    'minor_grid_check': None,
+    'minor_grid_color_edit': None,
+    'minor_grid_width_spin': None,
+    'minor_grid_alpha_spin': None,
+    'minor_grid_style_combo': None,
+    'scatter_edgecolor_edit': None,
+    'scatter_edgewidth_spin': None,
+    'label_color_edit': None,
+    'label_weight_combo': None,
+    'label_pad_spin': None,
+    'title_color_edit': None,
+    'title_weight_combo': None,
+    'title_pad_spin': None,
+    'adjust_force_text_x_spin': None,
+    'adjust_force_text_y_spin': None,
+    'adjust_force_static_x_spin': None,
+    'adjust_force_static_y_spin': None,
+    'adjust_expand_x_spin': None,
+    'adjust_expand_y_spin': None,
+    'adjust_iter_lim_spin': None,
+    'adjust_time_lim_spin': None,
+    '_section_toolbox': None,
+    '_search_edit': None,
+    '_search_match_label': None,
+    '_search_hidden_pages': list,
+}
+
+
 class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
     """Build and widget helpers for display panel."""
 
@@ -47,61 +109,10 @@ class DisplayBuildMixin(DisplayBuildPagesMixin, DisplayBuildAxesMixin):
         super().__init__(callback, parent)
 
     def reset_state(self):
+        """Widgets are rebuilt with the panel."""
         super().reset_state()
-        self.ui_theme_combo = None
-        self.theme_name_edit = None
-        self.theme_load_combo = None
-        self.grid_check = None
-        self.primary_font_combo = None
-        self.cjk_font_combo = None
-        self.font_size_spins = {}
-        self.show_title_check = None
-        self.marker_size_spin = None
-        self.marker_alpha_spin = None
-        self.scatter_edge_check = None
-        self.figure_dpi_spin = None
-        self.figure_bg_edit = None
-        self.axes_bg_edit = None
-        self.grid_color_edit = None
-        self.grid_width_spin = None
-        self.grid_alpha_spin = None
-        self.grid_style_combo = None
-        self.tick_dir_combo = None
-        self.tick_color_edit = None
-        self.tick_length_spin = None
-        self.tick_width_spin = None
-        self.minor_ticks_check = None
-        self.minor_tick_length_spin = None
-        self.minor_tick_width_spin = None
-        self.axis_linewidth_spin = None
-        self.axis_line_color_edit = None
-        self.show_top_spine_check = None
-        self.show_right_spine_check = None
-        self.minor_grid_check = None
-        self.minor_grid_color_edit = None
-        self.minor_grid_width_spin = None
-        self.minor_grid_alpha_spin = None
-        self.minor_grid_style_combo = None
-        self.scatter_edgecolor_edit = None
-        self.scatter_edgewidth_spin = None
-        self.label_color_edit = None
-        self.label_weight_combo = None
-        self.label_pad_spin = None
-        self.title_color_edit = None
-        self.title_weight_combo = None
-        self.title_pad_spin = None
-        self.adjust_force_text_x_spin = None
-        self.adjust_force_text_y_spin = None
-        self.adjust_force_static_x_spin = None
-        self.adjust_force_static_y_spin = None
-        self.adjust_expand_x_spin = None
-        self.adjust_expand_y_spin = None
-        self.adjust_iter_lim_spin = None
-        self.adjust_time_lim_spin = None
-        self._section_toolbox = None
-        self._search_edit = None
-        self._search_match_label = None
-        self._search_hidden_pages = []
+        reset_widget_state(self, _WIDGET_DEFAULTS)
+
 
     def _collect_widget_text(self, widget) -> str:
         """Recursively collect display text from a page's widgets.

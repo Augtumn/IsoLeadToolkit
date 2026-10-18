@@ -14,6 +14,8 @@ from .projection_build import DataPanelProjectionBuildMixin
 from .render_build import DataPanelRenderBuildMixin
 from core import translate
 
+from ui.panels.widget_state import reset_widget_state
+
 #: Methods this class expects from the classes it is composed with
 #: (explicit interface, UI review item I).
 REQUIRES_DataPanelBuildMixin = (
@@ -67,16 +69,6 @@ _WIDGET_DEFAULTS: dict[str, object] = {
     'plumbotectonics_model_keys': list,
 }
 
-def reset_widget_state(owner: object) -> None:
-    """Set every declared widget back to its default on *owner*.
-
-    A function rather than a loop inside the mixin so it can be tested without a window: the panel's reset_state is
-    one call to this.
-    """
-    for name, default in _WIDGET_DEFAULTS.items():
-        setattr(owner, name, default() if callable(default) else default)
-
-
 class DataPanelBuildMixin(
     DataPanelColoringBuildMixin,
     DataPanelProjectionBuildMixin,
@@ -94,7 +86,7 @@ class DataPanelBuildMixin(
 
     def reset_state(self):
         super().reset_state()
-        reset_widget_state(self)
+        reset_widget_state(self, _WIDGET_DEFAULTS)
 
     def _update_translations(self, root: QWidget | None = None) -> None:
         """Refresh translated widget text and ternary mode combo options."""
