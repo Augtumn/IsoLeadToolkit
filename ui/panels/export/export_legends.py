@@ -91,14 +91,22 @@ class ExportPanelLegendMixin:
         except Exception as err:
             logger.warning("_refresh_preview_overlay_labels failed: %s", err)
         finally:
-            state_gateway.set_figure_axes(backup['fig'], backup['ax'])
-            state_gateway.set_overlay_label_flags(
-                refreshing=backup['overlay_label_refreshing'],
-                adjust_in_progress=backup['adjust_text_in_progress'],
+            # Each restore is attempted even when an earlier one fails: the label state is the dangerous one - left
+            # pointing at the preview's data it draws the preview's labels on the live plot, which is worse than a
+            # restore that reports itself. One failing restore must not cost the other two.
+            restores = (
+                lambda: state_gateway.set_figure_axes(backup['fig'], backup['ax']),
+                lambda: state_gateway.set_overlay_label_flags(
+                    refreshing=backup['overlay_label_refreshing'],
+                    adjust_in_progress=backup['adjust_text_in_progress'],
+                ),
+                lambda: state_gateway.set_overlay_label_state({key: backup[key] for key in keys}),
             )
-            state_gateway.set_overlay_label_state({
-                key: backup[key] for key in keys
-            })
+            for restore in restores:
+                try:
+                    restore()
+                except Exception as restore_err:
+                    logger.warning("Could not restore the label state after the preview: %s", restore_err)
 
     def _normalize_export_legends(
         self,
