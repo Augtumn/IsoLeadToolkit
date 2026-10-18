@@ -8,6 +8,8 @@ from PyQt5.QtCore import QPointF, QRectF, QSize, Qt
 from PyQt5.QtGui import QBrush, QColor, QIcon, QPainter, QPen, QPixmap, QPolygonF
 from PyQt5.QtWidgets import QLabel, QPushButton, QWidget
 
+from core import translate
+
 logger = logging.getLogger(__name__)
 
 # Filled marker set.
@@ -189,3 +191,39 @@ def _regular_polygon_points(
         angle = rotation + (i * 2.0 * math.pi / sides)
         points.append(QPointF(cx + r * math.cos(angle), cy - r * math.sin(angle)))
     return points
+
+
+def marker_shape_map() -> dict[str, str]:
+    """The marker names the user sees, mapped to their matplotlib characters.
+
+    A table built at import time would freeze the language that was active then - the same mistake the
+    default-language snapshot made - so the names are translated when the map is asked for. One table: the
+    legend list and the shape editor each used to hold their own copy of these twenty-five rows.
+    """
+    return {
+        translate("Point (.)"): ".",
+        translate("Pixel (,)"): ",",
+        translate("Circle (o)"): "o",
+        translate("Triangle down (v)"): "v",
+        translate("Triangle Up (^)"): "^",
+        translate("Triangle Left (<)"): "<",
+        translate("Triangle Right (>)"): ">",
+        translate("Triangle down (1)"): "1",
+        translate("Tri Up (2)"): "2",
+        translate("Tri Left (3)"): "3",
+        translate("Tri Right (4)"): "4",
+        translate("Octagon (8)"): "8",
+        translate("Square (s)"): "s",
+        translate("Pentagon (p)"): "p",
+        translate("Plus Filled (P)"): "P",
+        translate("Star (*)"): "*",
+        translate("Hexagon (h)"): "h",
+        translate("Hexagon rotated (H)"): "H",
+        translate("Diamond (D)"): "D",
+        translate("Plus (+)"): "+",
+        translate("Cross (x)"): "x",
+        translate("X (X)"): "X",
+        translate("Thin Diamond (d)"): "d",
+        translate("Vline (|)"): "|",
+        translate("Hline (_)"): "_",
+    }

@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import app_state, state_gateway, translate
-from ui.icons import build_marker_icon
+from ui.icons import build_marker_icon, marker_shape_map
 
 logger = logging.getLogger(__name__)
 
@@ -325,31 +325,5 @@ class LegendEditorsMixin:
         return name, shapes
 
     def _ensure_marker_shape_map(self):
-        if not self._marker_shape_map is not None:
-            self._marker_shape_map = {
-                translate("Point (.)"): '.',
-                translate("Pixel (,)"): ',',
-                translate("Circle (o)"): 'o',
-                translate("Triangle down (v)"): 'v',
-                translate("Triangle Up (^)"): '^',
-                translate("Triangle Left (<)"): '<',
-                translate("Triangle Right (>)"): '>',
-                translate("Triangle down (1)"): '1',
-                translate("Tri Up (2)"): '2',
-                translate("Tri Left (3)"): '3',
-                translate("Tri Right (4)"): '4',
-                translate("Octagon (8)"): '8',
-                translate("Square (s)"): 's',
-                translate("Pentagon (p)"): 'p',
-                translate("Plus Filled (P)"): 'P',
-                translate("Star (*)"): '*',
-                translate("Hexagon (h)"): 'h',
-                translate("Hexagon rotated (H)"): 'H',
-                translate("Diamond (D)"): 'D',
-                translate("Plus (+)"): '+',
-                translate("Cross (x)"): 'x',
-                translate("X (X)"): 'X',
-                translate("Thin Diamond (d)"): 'd',
-                translate("Vline (|)"): '|',
-                translate("Hline (_)"): '_',
-            }
+        if self._marker_shape_map is None:
+            self._marker_shape_map = marker_shape_map()
