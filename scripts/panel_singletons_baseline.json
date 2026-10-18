@@ -1,10 +1,11 @@
 {
   "application/use_cases/export_data.py": 1,
   "application/use_cases/render_plot.py": 1,
-  "ui/main_window_parts/canvas.py": 3,
+  "ui/main_window_parts/canvas.py": 1,
   "ui/main_window_parts/canvas_panels.py": 3,
   "ui/main_window_parts/legend_core.py": 4,
   "ui/main_window_parts/legend_interaction.py": 3,
+  "ui/main_window_parts/ternary_zoom.py": 2,
   "ui/panels/display/kde_style.py": 1,
   "ui/panels/export/data_export.py": 1,
   "ui/panels/export/export_legends.py": 2,
