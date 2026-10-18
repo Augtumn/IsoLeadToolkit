@@ -155,6 +155,9 @@ def _annotation_for(figure: Any) -> Any:
         # A tooltip must not take part in the layout: as an ordinary artist it widened the figure's tight bbox,
         # and the axes were re-laid-out whenever the box appeared - the view moved because the tooltip existed.
         found.set_in_layout(False)
+        # A tooltip is drawn outside the point it describes and often near the edge, where the axes would clip it.
+        found.set_clip_on(False)
+        found.set_annotation_clip(False)
         found.set_visible(False)
         # Raising it is what keeps the box above the data and the labels. The call sat after the handler's
         # `return None`, so it never ran and the tooltip could be drawn under the points.
@@ -320,6 +323,14 @@ def on_hover(event: Any) -> None:
                 place_tooltip(annotation, x, y)
                 annotation.set_text(txt)
                 annotation.set_visible(True)
+                # Always on top: artists added since the tooltip was made - a re-render, an overlay, the selection
+                # marks - would otherwise paint over it. Re-raising on every show is cheap and needs no bookkeeping.
+                try:
+                    from visualization.plotting.tooltip import raise_tooltip_above_data
+
+                    raise_tooltip_above_data(getattr(annotation, "axes", None), annotation)
+                except Exception as raise_err:
+                    logger.warning("Could not raise the tooltip above the data: %s", raise_err)
                 logger.info(
                     "hover: tooltip shown on figure %s axes=%s (panel=%s)",
                     id(hovered_figure), getattr(annotation, "axes", None),
