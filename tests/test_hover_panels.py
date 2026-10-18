@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import pytest
 
+from core.panel_record import PanelRecord
+
 from core import app_state
 from visualization.event_handlers import pointer_events as pe
 
@@ -48,9 +50,9 @@ def panels(monkeypatch):
     """Two panels drawing the same samples, with their own collection each."""
     first, second = _Collection([0, 1]), _Collection([0, 1])
     states = [
-        {"mode": "2D", "ax": f"axes-{index}", "collections": [collection],
-         "artist_to_sample": {(id(collection), j): j for j in range(2)},
-         "sample_to_artist": {j: (id(collection), j) for j in range(2)}}
+        PanelRecord({"mode": "2D", "ax": f"axes-{index}", "collections": [collection],
+                     "artist_to_sample": {(id(collection), j): j for j in range(2)},
+                     "sample_to_artist": {j: (id(collection), j) for j in range(2)}})
         for index, collection in enumerate((first, second))
     ]
     previous = list(app_state.plot_panel_states)

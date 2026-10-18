@@ -41,11 +41,11 @@ def _resolve_sample_index(event: object) -> int | None:
         # double click in another window found no sample at all.
         panel = _panel_for(getattr(event, "inaxes", None))
         collections = (
-            list(panel.get("collections") or []) if panel is not None
+            list(panel.collections) if panel is not None
             else list(app_state.scatter_collections)
         )
         mapping = (
-            dict(panel.get("artist_to_sample") or {}) if panel is not None
+            panel.artist_to_sample if panel is not None
             else dict(app_state.artist_to_sample)
         )
 
@@ -87,11 +87,11 @@ def _panel_highlight_targets(sample_idx: int) -> list[tuple[Any, int]]:
     """
     targets: list[tuple[Any, int]] = []
     for state in getattr(app_state, "plot_panel_states", []) or []:
-        pair = (state.get("sample_to_artist") or {}).get(int(sample_idx))
+        pair = state.sample_to_artist.get(int(sample_idx))
         if not pair:
             continue
         artist_id, index = pair
-        for collection in state.get("collections") or []:
+        for collection in state.collections:
             if id(collection) == artist_id:
                 targets.append((collection, int(index)))
                 break
@@ -108,12 +108,12 @@ def _panel_for(axes: Any) -> dict | None:
     """
     states = list(getattr(app_state, "plot_panel_states", []) or [])
     for state in states:
-        if state.get("ax") is axes:
+        if state.ax is axes:
             return state
     figure = getattr(axes, "figure", None)
     if figure is not None:
         for state in states:
-            if state.get("figure") is figure:
+            if state.figure is figure:
                 return state
     return None
 
@@ -203,7 +203,7 @@ def on_hover(event: Any) -> None:
         panel = _panel_for(event.inaxes)
         if event.inaxes != app_state.ax and panel is None:
             return
-        if panel is not None and str(panel.get("mode", "")).upper() == "3D":
+        if panel is not None and panel.mode.upper() == "3D":
             # A 3D panel has no hit testing; the others still do.
             return
         # Resolve and apply the highlight first, independently of the tooltip. Both checks that
@@ -211,11 +211,11 @@ def on_hover(event: Any) -> None:
         # annotation belongs to another figure or does not exist yet, and the readout is off by
         # default - which is why the highlight never appeared.
         collections = (
-            list(panel.get("collections") or []) if panel is not None
+            list(panel.collections) if panel is not None
             else list(app_state.scatter_collections)
         )
         mapping = (
-            dict(panel.get("artist_to_sample") or {}) if panel is not None
+            panel.artist_to_sample if panel is not None
             else dict(app_state.artist_to_sample)
         )
 
@@ -323,7 +323,7 @@ def on_hover(event: Any) -> None:
                 logger.info(
                     "hover: tooltip shown on figure %s axes=%s (panel=%s)",
                     id(hovered_figure), getattr(annotation, "axes", None),
-                    panel.get("mode") if panel is not None else None,
+                    panel.mode if panel is not None else None,
                 )
                 # Hovering shows the tooltip and nothing else: the mark belongs to the double
                 # click, and a hover used to move it here, which is why the highlight wandered.
@@ -385,7 +385,7 @@ def _figures_for_panels() -> list[Any]:
     """The figures the panels draw into, so a change can be repainted in all of them."""
     figures: list[Any] = []
     for record in getattr(app_state, "plot_panel_windows", []) or []:
-        figure = record.get("figure")
+        figure = record.figure
         if figure is not None and figure not in figures:
             figures.append(figure)
     if not figures and app_state.fig is not None:
@@ -407,7 +407,7 @@ def _log_click(event: Any) -> None:
         getattr(event, "button", None),
         getattr(event, "dblclick", False),
         "none" if inaxes is None else getattr(inaxes, "name", "axes"),
-        "none" if panel is None else panel.get("mode"),
+        "none" if panel is None else panel.mode,
         app_state.selection_mode,
         inaxes is app_state.ax,
     )

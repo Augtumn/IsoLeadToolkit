@@ -11,6 +11,8 @@ from typing import Any
 
 import pytest
 
+from core.panel_record import PanelRecord
+
 from application.use_cases.render_plot import RenderPlotUseCase
 
 
@@ -44,7 +46,7 @@ def use_case(monkeypatch):
 
 
 def _windows(count):
-    return [{"figure": f"figure-{i}", "axes": f"axes-{i}"} for i in range(count)]
+    return [PanelRecord({"figure": f"figure-{i}", "axes": f"axes-{i}"}) for i in range(count)]
 
 
 def test_every_panel_is_drawn_in_its_own_mode_and_figure(use_case) -> None:

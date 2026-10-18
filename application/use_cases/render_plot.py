@@ -153,15 +153,15 @@ class RenderPlotUseCase:
         rendered_ok = False
         pending_async = False
         for mode, record in zip(panels, windows):
-            figure = record.get("figure")
-            ax = record.get("axes")
+            figure = record.figure
+            ax = record.axes
             if figure is not None:
                 # The plotters draw into the active figure; this window's figure is the panel's.
                 state_gateway.set_figure(figure)
             state_gateway.set_axis(ax)
             # The legend frame belongs to this panel: the control panel keeps it with the panel in
             # use, and each panel draws with its own rather than with the last one set.
-            legend = record.get("legend")
+            legend = record.legend
             if legend:
                 try:
                     frames = {
@@ -210,16 +210,16 @@ class RenderPlotUseCase:
         # The panels are equals, so none of them owns the state: the active one is mirrored into
         # the single-figure references for the code that still reads them, and a tool acts on that
         # panel. Mirroring the first panel instead is what made every tool act on the first one.
-        active = next((record for record in windows if record.get("active")), windows[0])
-        if active.get("figure") is not None:
+        active = next((record for record in windows if record.active), windows[0])
+        if active.figure is not None:
             state_gateway.set_figure(active["figure"])
         state_gateway.set_axis(active["axes"])
         # What each panel ended up showing: a panel that renders blank can then be told from one
         # whose view was set to something empty.
         for record in windows:
-            axis = record.get("axes")
+            axis = record.axes
             drawn = next(
-                (len(state.get("collections") or []) for state in states if state.get("ax") is axis),
+                (len(state.collections) for state in states if state.ax is axis),
                 0,
             )
             try:
@@ -227,7 +227,7 @@ class RenderPlotUseCase:
                 ylim = axis.get_ylim()
                 logger.info(
                     "Panel %s: xlim=(%.4g, %.4g) ylim=(%.4g, %.4g) artists=%d",
-                    record.get("mode"),
+                    record.mode,
                     xlim[0],
                     xlim[1],
                     ylim[0],
