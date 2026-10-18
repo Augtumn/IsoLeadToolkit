@@ -649,9 +649,11 @@ def _store_age_model(
                 return False
             rows.append(candidate)
             row = candidate
+            created = True
             logger.info("Created a %s row (group=%s, parent_id=%s) for A15",
                         sheet.name, _A15_GROUP, record_id)
     else:
+        created = False
         row = next((item for item in rows if _record_id(sheet, item) == record_id), None)
         if row is None:
             logger.warning("No row on sheet %s carries id %r; A15 was not written",
@@ -665,6 +667,11 @@ def _store_age_model(
     if len(blocking) > before:
         for key in available.values():
             row.pop(key, None)
+        if created:
+            # The row exists only for this write: dropping the values but keeping the row would leave an id and a
+            # group with no data behind, which is not a rollback.
+            rows.remove(candidate)
+            logger.info("Removed the %s row created for A15 on sheet %s", _A15_GROUP, sheet.name)
         logger.warning("Rolled back A15 on sheet %s for %s: %d new error(s): %s",
                        sheet.name, record_id, len(blocking) - before,
                        "; ".join(validate.format_message(i) for i in blocking[:3]))
