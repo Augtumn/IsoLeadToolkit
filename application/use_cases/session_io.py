@@ -106,6 +106,10 @@ def import_session(path: str) -> tuple[bool, str | None]:
             except Exception as exc:
                 logger.exception("Failed to hydrate session data: %s", exc)
                 data_ok = False
+                # Step 1 has already restored the data contract, and it describes the archive's dataset - which
+                # is not the one in front of the user now that hydration failed. Dropping the contract keys with
+                # the data is what step 3 does for a contract that could not be applied; do it here too.
+                contract_safe = False
 
     # 3) Restore the full session + UI state (covers visible groups, column
     #    selections and styles wiped by the hydration reset). When the archive
