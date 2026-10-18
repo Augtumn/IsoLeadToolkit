@@ -403,12 +403,12 @@ class MainWindowLegendInteractionMixin:
 
     def _raise_group_in(self, panel, group) -> None:
         """Raise one group's artist inside one panel, using that panel's own map."""
-        artist = (panel.get("group_to_scatter") or {}).get(group)
+        artist = panel.group_to_scatter.get(group)
         if artist is None:
             return
         try:
             highest = 2
-            for collection in panel.get("collections") or []:
+            for collection in panel.collections:
                 highest = max(highest, collection.get_zorder())
             artist.set_zorder(highest + 1)
         except Exception as exc:

@@ -30,12 +30,15 @@ class _State:
 
 
 def _panel(axes, collection, mapping):
-    return {
+    """A render-state record. PanelRecord is what the renderer produces, so the overlay reads it as one."""
+    from core.panel_record import PanelRecord
+
+    return PanelRecord({
         "ax": axes,
         "collections": [collection],
         "sample_to_artist": mapping,
         "artist_to_sample": {(id(collection), position): sample for sample, (_a, position) in mapping.items()},
-    }
+    })
 
 
 def test_the_same_sample_is_marked_at_its_own_place_in_each_panel() -> None:

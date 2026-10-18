@@ -95,7 +95,7 @@ def _overlay_axes(state: Any) -> list[Any]:
     """
     axes: list[Any] = []
     for panel in getattr(state, "plot_panel_states", []) or []:
-        axis = panel.get("ax")
+        axis = panel.ax
         if axis is not None and not any(axis is seen for seen in axes):
             axes.append(axis)
     if not axes and state.ax is not None:
@@ -112,10 +112,10 @@ def _panel_points(state, axis, indices, fallback_xs, fallback_ys):
     fallback for a single-figure window with no panel record.
     """
     for panel in getattr(state, "plot_panel_states", []) or []:
-        if panel.get("ax") is not axis:
+        if panel.ax is not axis:
             continue
-        mapping = panel.get("sample_to_artist") or {}
-        collections = list(panel.get("collections") or [])
+        mapping = panel.sample_to_artist
+        collections = panel.collections
         xs: list[float] = []
         ys: list[float] = []
         for idx in indices:

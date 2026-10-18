@@ -85,7 +85,7 @@ class PanelWindows:
         gone and the area lost a good one.
         """
         for index, record in enumerate(self._records):
-            if record.get("window") is window:
+            if record.window is window:
                 del self._records[index]
                 break
         if window is not None:
@@ -99,7 +99,7 @@ class PanelWindows:
         wanted = [str(mode) or "2D" for mode in modes]
         while len(self._records) > len(wanted):
             record = self._records.pop()
-            window = record.get("window")
+            window = record.window
             if window is not None:
                 self.area.removeSubWindow(window)
                 window.setParent(None)
@@ -139,7 +139,7 @@ class PanelWindows:
                 })
             )
         for record, mode in zip(self._records, wanted):
-            if record.get("mode") != mode:
+            if record.mode != mode:
                 # The mode changed: the figure is rebuilt with the projection that mode needs, which
                 # is a new view - the limits of the old projection cannot apply to it.
                 record["figure"].clf()
@@ -147,7 +147,7 @@ class PanelWindows:
                 record["mode"] = mode
                 record["needs_fit"] = True
         for record in self._records:
-            window = record.get("window")
+            window = record.window
             if window is not None and not window.isVisible():
                 window.show()
         return list(self._records)
@@ -176,9 +176,9 @@ class PanelWindows:
     def grid(self) -> None:
         """Fill the area with a grid sized from the number of panels."""
         windows = [
-            record.get("window")
+            record.window
             for record in self._records
-            if record.get("window") is not None
+            if record.window is not None
         ]
         if not windows:
             return
@@ -210,7 +210,7 @@ class PanelWindows:
     def maximize(self) -> None:
         """Show the windows filled to the area."""
         for record in self._records:
-            window = record.get("window")
+            window = record.window
             if window is not None:
                 window.showMaximized()
 
@@ -221,7 +221,7 @@ class PanelWindows:
         else:
             self.grid()
         for record in self._records:
-            window = record.get("window")
+            window = record.window
             if window is not None and not window.isVisible():
                 window.show()
 
@@ -229,7 +229,7 @@ class PanelWindows:
         """Close every child window and forget it."""
         while self._records:
             record = self._records.pop()
-            window = record.get("window")
+            window = record.window
             if window is not None:
                 self.area.removeSubWindow(window)
                 window.setParent(None)
@@ -240,6 +240,6 @@ class PanelWindows:
         if active is None:
             return -1
         for index, record in enumerate(self._records):
-            if record.get("window") is active:
+            if record.window is active:
                 return index
         return -1

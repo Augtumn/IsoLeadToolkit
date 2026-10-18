@@ -134,9 +134,9 @@ class MainWindowLifecycleMixin:
             try:
                 records = list(app_state.plot_panel_windows or [])
                 state_gateway.set_plot_panel_legends({
-                    str(index): dict(record.get("legend") or {})
+                    str(index): record.legend
                     for index, record in enumerate(records)
-                    if record.get("legend")
+                    if record.legend
                 })
             except Exception as err:
                 logger.warning("Could not record the panel legends before saving: %s", err)
