@@ -119,8 +119,10 @@ class PanelWindows:
             window.setAttribute(Qt.WA_DeleteOnClose, False)
             self.area.addSubWindow(window)
             window.resize(*DEFAULT_PANEL_SIZE)
+            from core.panel_record import PanelRecord
+
             self._records.append(
-                {
+                PanelRecord({
                     "mode": wanted[index],
                     "figure": figure,
                     "canvas": canvas,
@@ -134,7 +136,7 @@ class PanelWindows:
                     "legend": dict(
                         (getattr(app_state, "plot_panel_legends", None) or {}).get(str(index)) or {}
                     ),
-                }
+                })
             )
         for record, mode in zip(self._records, wanted):
             if record.get("mode") != mode:

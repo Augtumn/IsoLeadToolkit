@@ -189,8 +189,10 @@ class RenderPlotUseCase:
             sample_to_artist: dict[int, tuple[int, int]] = {}
             for (artist_id, index), sample in self._state.artist_to_sample.items():
                 sample_to_artist.setdefault(int(sample), (int(artist_id), int(index)))
+            from core.panel_record import PanelRecord
+
             states.append(
-                {
+                PanelRecord({
                     "mode": mode,
                     "ax": ax,
                     "collections": list(self._state.scatter_collections),
@@ -201,7 +203,7 @@ class RenderPlotUseCase:
                     # - colour, stacking - must use this panel's own map, or it edits the last
                     # panel's artist and the other panels keep the old look.
                     "group_to_scatter": dict(getattr(self._state, "group_to_scatter", None) or {}),
-                }
+                })
             )
 
         self._state.plot_panel_states = states

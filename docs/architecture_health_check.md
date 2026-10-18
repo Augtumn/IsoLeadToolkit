@@ -16,7 +16,7 @@
 | 值得改 ⑥ 每面板图例做成真状态 | ✅ 已做 | `68162b2` | 新字段 `plot_panel_legends`：保存前回写、建面板时种入、深层拷贝、脏数据归一化 |
 | 值得改 ⑦ paleoisochron 派生量 | ✅ 已做 | `cba957f` | `paleoisochron_age_list()` 唯一公式；不再持久化；恢复时重算 |
 | 附带扫描：可变默认值 / 浅拷贝 | ✅ 已查，**无缺陷** | — | AST 扫描：0 个可变默认参数；11 处浅拷贝的对象全为扁平表 |
-| 必须改 ① 面板 4 表示 → `PanelRecord` | ⏳ 未做 | — | 仍是最大的一项 |
+| 必须改 ① 面板 4 表示 → `PanelRecord` | 🚧 阶段 1 已做 | 见本轮提交 | `core/panel_record.py` 立起 14 键契约；窗口记录与渲染状态记录两个生产者都已用它；仍保留 dict 兼容（71 个访问点待逐点迁移 ✓ 之后才能按文档口径验证 `record.get(` 归零） |
 | 必须改 ② `canvas.py` 拆分 | ⏳ 未做 | — | 仍是最大的一项 |
 | 值得改 ⑧ 面板控件显式容器 | ⏳ 未做 | — | 98 处 `= None` 影子声明 |
 
@@ -84,6 +84,8 @@
 **这四个表示今天必须手工保持一致** ⇒ 今天修的两个面板 bug（关非末位面板丢错窗口 ✓ 边缘 KDE 只能一个面板显示 ✓）都出在这里 ✓。
 
 **方向**：让 **`PanelRecord` 成为唯一契约**（纯数据、无 Qt，放在 `visualization/plotting/panels.py`），把 43 处 `record.get("…")` 换成属性访问，并让 `PanelWindows.sync` 成为唯一生产点。
+
+**位置纠正（测量）**：`PanelRecord` 不能放在 `visualization/plotting/` ✓ —— 渲染用例 `application/use_cases/render_plot.py` 也要建渲染状态记录，而 `check_layer_dependencies.py` 禁止 `application` 导入 `visualization`（第一次放那里时守卫立刻报出 ✓）⇒ 已放在 **`core/panel_record.py`** ✓
 
 ### 3.2 渲染模式相关：2 处真重复 ✗（**两处均已消除** ✓ `0db433d` / `ee857dc`）
 
