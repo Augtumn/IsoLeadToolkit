@@ -504,7 +504,7 @@ def on_click(event: Any) -> None:
                 logger.info(
                     'Selection overlay refreshed for %d panel(s): %s',
                     len(app_state.plot_panel_states or []),
-                    [str(state.get('mode')) for state in (app_state.plot_panel_states or [])],
+                    [state.mode for state in (app_state.plot_panel_states or [])],
                 )
             return
 
