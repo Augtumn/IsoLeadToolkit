@@ -184,6 +184,9 @@ def build_image_export_profile(preset_key: str) -> dict:
     source = _IMAGE_EXPORT_PROFILES.get(preset_key, _IMAGE_EXPORT_PROFILES["science_single"])
     profile = dict(source)
     profile["legend"] = dict(source.get("legend", {}) or {})
+    # The lists in a preset are the module-level table's own: a caller that edited the returned profile would
+    # rewrite the preset for the rest of the run. The two mutable containers are copied here.
+    profile["styles"] = list(source.get("styles", []) or [])
     width_in = mm_to_inch(float(profile["width_mm"]))
     height_in = max(
         2.0, width_in * float(profile.get("height_ratio", DEFAULT_EXPORT_HEIGHT_RATIO))
