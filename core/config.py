@@ -182,21 +182,23 @@ def _validate_config_value(key: str, value: object, default: object) -> object:
         return value
     expected_type, extra = schema
     if not isinstance(value, expected_type):
-        logger.debug(
+        # A warning, not debug: the user wrote this file, and a value that was quietly replaced with the built-in
+        # default looks exactly like a setting that was applied. It is said once, at startup, so it does not repeat.
+        logger.warning(
             'Config key %r expected type %s, got %s; using default.',
             key, expected_type, type(value).__name__,
         )
         return default
     if isinstance(value, str) and key == 'default_language':
         if value not in CONFIG.get('languages', {}):
-            logger.debug(
+            logger.warning(
                 'Config key %r has unsupported language %r; using default.',
                 key, value,
             )
             return default
     if key == 'figure_size' and extra == 2:
         if len(value) != 2:  # type: ignore[arg-type]
-            logger.debug(
+            logger.warning(
                 'Config key %r expected 2-element sequence; using default.',
                 key,
             )
@@ -217,7 +219,7 @@ def merge_config(user_config: dict[str, object]) -> None:
 
     for key, value in user_config.items():
         if key not in CONFIG:
-            logger.debug('Unknown config key %r; ignoring.', key)
+            logger.warning('Unknown config key %r; ignoring.', key)
             continue
 
         if key in _MERGEABLE_KEYS:
@@ -227,14 +229,14 @@ def merge_config(user_config: dict[str, object]) -> None:
                     if sub_key in merged:
                         merged[sub_key] = sub_value
                     else:
-                        logger.debug(
+                        logger.warning(
                             'Unknown sub-key %r in %r config; ignoring.',
                             sub_key, key,
                         )
                 CONFIG[key] = merged
                 logger.info('Merged user config for %r', key)
                 continue
-            logger.debug(
+            logger.warning(
                 'Config key %r is mergeable but user value is not a dict; skipping.',
                 key,
             )
