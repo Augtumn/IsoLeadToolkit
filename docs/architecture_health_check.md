@@ -17,7 +17,7 @@
 | 值得改 ⑦ paleoisochron 派生量 | ✅ 已做 | `cba957f` | `paleoisochron_age_list()` 唯一公式；不再持久化；恢复时重算 |
 | 附带扫描：可变默认值 / 浅拷贝 | ✅ 已查，**无缺陷** | — | AST 扫描：0 个可变默认参数；11 处浅拷贝的对象全为扁平表 |
 | 必须改 ① 面板 4 表示 → `PanelRecord` | ✅ 已做（读侧） | `395251d` `4277627` `7ca8672` `198e84c` | `core/panel_record.py` 14 键契约；两个生产者统一；**全部读访问点已迁到属性** ✓ 剩余 `record.get(` 只有 5 处 `isinstance(…, dict)` 守卫（设计保留：这些路径可能收到普通 mapping ✓）与 1 处文档注释；dict 基类保留作为写侧兼容层（写仍用 `record["…"] = …`）|
-| 必须改 ② `canvas.py` 拆分 | 🚧 阶段 1-3 已做 | `e6779b5` `567cf21` `c49650b` | 视图计算 → `visualization/plotting/view_fit.py`(76) ✓ 工具栏/选择工具 → `canvas_toolbar.py`(228) / `canvas_selection.py`(99) ✓ 面板窗口 → `canvas_panels.py`(249) ✓ 跨 mixin 依赖用 `REQUIRES_*` 声明 ✓ **canvas.py 1380 → 817 行** ✓；单例基线 canvas.py 7 → 3（新文件 3 ✓ 净降 1 ✓）；剩余：图形生命周期（`set_matplotlib_figure` ≈205 行）与缩放过事件过滤器（≈420 行）| | 值得改 ⑧ 面板控件显式容器 | ⏳ 未做 | — | 98 处 `= None` 影子声明 |
+| 必须改 ② `canvas.py` 拆分 | ✅ 已做 | `e6779b5` `567cf21` `f0345ce` `fb16c92` `cb66fee` `f236d64` | 按职责拆成七个文件：`canvas.py` **1380 → 121 行** ✓ `canvas_figure.py`(214) `canvas_panels.py`(249) `canvas_toolbar.py`(228) `canvas_selection.py`(99) `ternary_zoom.py`(483) + 可视化层 `view_fit.py`(76) `panel_labels.py`(49) ✓ 跨 mixin 依赖全部用 `REQUIRES_*` 声明 ✓ 六个面板测试文件全绿 ✓ 单例基线：canvas.py 7 → 1（净降 ✓ 总数不变的是纯搬移部分）| | 值得改 ⑧ 面板控件显式容器 | ⏳ 未做 | — | 98 处 `= None` 影子声明 |
 
 **两条原始判断被测量纠正**（保留原文，但以此处为准）：
 
