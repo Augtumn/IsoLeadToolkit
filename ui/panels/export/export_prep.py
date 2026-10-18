@@ -279,23 +279,31 @@ class ExportPanelPrepMixin:
                 self._attach_preview_label_state(export_fig)
                 return export_fig
         finally:
-            state_gateway.set_plot_marker_size(original_marker_size)
-            state_gateway.set_plot_font_sizes(original_font_sizes)
-            state_gateway.set_figure_axes(original_fig, original_ax)
-            state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
-            state_gateway.set_show_marginal_kde(original_show_marginal_kde)
-            state_gateway.set_marginal_axes(original_marginal_axes)
+            # The restore runs whatever happened above, and the wait cursor is restored even when a step of the
+            # restore itself fails: a cursor stuck on the wait arrow makes the application look frozen, and it is
+            # the one piece of state the user notices at once. One restore call, not two - the cursor stack would
+            # lose an entry of the application's own.
             try:
-                self._render_current_mode_sync(point_size=int(app_state.point_size))
-                # Restore the user's zoom/pan on the interactive canvas: the
-                # re-render above resets limits, but the captured view must
-                # be reapplied so exports do not silently reset the plot.
-                self._apply_axis_view(original_ax, original_view)
-                from visualization.events import repaint_panels
+                state_gateway.set_plot_marker_size(original_marker_size)
+                state_gateway.set_plot_font_sizes(original_font_sizes)
+                state_gateway.set_figure_axes(original_fig, original_ax)
+                state_gateway.set_palette_and_marker_map(original_palette, original_marker_map)
+                state_gateway.set_show_marginal_kde(original_show_marginal_kde)
+                state_gateway.set_marginal_axes(original_marginal_axes)
+                try:
+                    self._render_current_mode_sync(point_size=int(app_state.point_size))
+                    # Restore the user's zoom/pan on the interactive canvas: the
+                    # re-render above resets limits, but the captured view must
+                    # be reapplied so exports do not silently reset the plot.
+                    self._apply_axis_view(original_ax, original_view)
+                    from visualization.events import repaint_panels
 
-                repaint_panels()
-            except Exception as restore_err:
-                logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
-            # Keep the wait cursor through the restore re-render so the user
-            # does not see a frozen UI without feedback after exporting.
-            QApplication.restoreOverrideCursor()
+                    repaint_panels()
+                except Exception as restore_err:
+                    logger.warning("Failed to restore interactive canvas after export: %s", restore_err)
+            except Exception as state_err:
+                logger.warning("Failed to restore the state after export: %s", state_err)
+            finally:
+                # Keep the wait cursor through the restore re-render so the user
+                # does not see a frozen UI without feedback after exporting.
+                QApplication.restoreOverrideCursor()
